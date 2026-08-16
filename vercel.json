@@ -1,0 +1,6 @@
+{
+  "buildCommand": "cd \"ROYAL 21 GAME\" && npm install && npm run build",
+  "outputDirectory": "ROYAL 21 GAME/dist",
+  "installCommand": "cd \"ROYAL 21 GAME\" && npm install",
+  "framework": null
+}
