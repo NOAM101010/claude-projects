@@ -1,8 +1,9 @@
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useT } from '@/hooks/useT';
 import { useIsCompact } from '@/hooks/useMediaQuery';
 import { useSound } from '@/hooks/useSound';
+import { useNavigateSafe } from '@/hooks/useNavigateSafe';
 
 /** Scenes that are already home, or that own their own exit. */
 const HIDDEN_ON = ['/', '/hub', '/login'];
@@ -15,7 +16,7 @@ const HIDDEN_ON = ['/', '/hub', '/login'];
  * somewhere arbitrary, which is exactly the trap this button exists to avoid.
  */
 export function BackButton() {
-  const navigate = useNavigate();
+  const navigate = useNavigateSafe();
   const location = useLocation();
   const { t } = useT();
   const compact = useIsCompact();

@@ -67,9 +67,37 @@ export function SeatView({ seat, hero, active, activeHand = 0, cardFace, cardBac
           {seat.hands.map((hand, index) => {
             const total = handValue(hand.cards).total;
             const bj = isBlackjack(hand);
-            const dim = seat.hands.length > 1 && !(active && index === activeHand) && !hand.done;
+            const split = seat.hands.length > 1;
+            const isActive = split && active && index === activeHand && !hand.done;
+            const dim = split && !isActive && !hand.done;
             return (
-              <div key={index} className="text-center" style={{ opacity: dim ? 0.6 : 1 }}>
+              <div
+                key={index}
+                className="text-center relative rounded-[10px] px-1.5 pt-2 pb-1.5"
+                style={{
+                  opacity: dim ? 0.55 : 1,
+                  border: isActive ? '1.5px solid var(--gold-hi)' : '1.5px solid transparent',
+                  background: isActive ? 'rgba(227,178,60,.10)' : 'transparent',
+                  boxShadow: isActive ? '0 0 22px rgba(227,178,60,.35)' : 'none',
+                  transition: 'all .2s ease',
+                }}
+              >
+                {/* Split-hand marker: which hand of two you're currently on.
+                    The opacity dim alone was too subtle — players kept losing
+                    track of which split they were acting on. */}
+                {split && (
+                  <div
+                    className="absolute -top-2.5 start-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[9.5px] font-black tracking-wide"
+                    style={{
+                      background: isActive ? 'var(--brushed-gold)' : 'rgba(0,0,0,.65)',
+                      color: isActive ? '#1a1206' : 'var(--muted)',
+                      border: '1px solid var(--gold-line)',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {isActive && '▼ '}{t('blackjack.handOf', { current: index + 1, total: seat.hands.length })}
+                  </div>
+                )}
                 <div className="flex justify-center" style={{ marginInlineStart: 18 }}>
                   {hand.cards.map((card, cardIndex) => (
                     <div key={cardIndex} style={{ marginInlineStart: -18 }}>

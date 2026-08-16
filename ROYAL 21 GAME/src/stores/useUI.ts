@@ -21,6 +21,16 @@ export interface Toast {
 
 export type PanelKind = 'friends' | 'notifications' | 'settings' | 'chips' | null;
 
+export interface ConfirmRequest {
+  title: string;
+  body?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  tone?: 'danger' | 'default';
+  onConfirm: () => void;
+  onCancel?: () => void;
+}
+
 interface UIState {
   toasts: Toast[];
   moment: Moment | null;
@@ -29,6 +39,8 @@ interface UIState {
   navOpen: boolean;
   loading: string | null;
   connectionLost: boolean;
+  /** Modal confirmation prompt — used for "leave game?" and similar destructive actions. */
+  confirmPrompt: ConfirmRequest | null;
   setNavOpen: (value: boolean) => void;
   toggleNav: () => void;
   toast: (text: string, tone?: Toast['tone'], icon?: string) => void;
@@ -38,6 +50,8 @@ interface UIState {
   openPanel: (panel: PanelKind) => void;
   setLoading: (label: string | null) => void;
   setConnectionLost: (value: boolean) => void;
+  confirm: (request: ConfirmRequest) => void;
+  closeConfirm: () => void;
 }
 
 export const useUI = create<UIState>()((set) => ({
@@ -47,6 +61,7 @@ export const useUI = create<UIState>()((set) => ({
   navOpen: false,
   loading: null,
   connectionLost: false,
+  confirmPrompt: null,
 
   setNavOpen: (navOpen) => set({ navOpen }),
   toggleNav: () => set((state) => ({ navOpen: !state.navOpen })),
@@ -62,4 +77,6 @@ export const useUI = create<UIState>()((set) => ({
   openPanel: (panel) => set({ panel }),
   setLoading: (loading) => set({ loading }),
   setConnectionLost: (connectionLost) => set({ connectionLost }),
+  confirm: (request) => set({ confirmPrompt: request }),
+  closeConfirm: () => set({ confirmPrompt: null }),
 }));

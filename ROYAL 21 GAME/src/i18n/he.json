@@ -26,7 +26,11 @@
     "leave": "יציאה",
     "brand": "ROYAL 21",
     "tagline": "החדר הפרטי שלך",
-    "someone": "מישהו"
+    "someone": "מישהו",
+    "leaveGameTitle": "לצאת מהמשחק?",
+    "leaveGameBody": "אתה באמצע משחק — יציאה כרגע תעזוב את השולחן ותפסיק את היד שלך.",
+    "leaveGameConfirm": "כן, צא",
+    "stayInGame": "השאר במשחק"
   },
   "intro": {
     "welcome": "ברוכים הבאים",
@@ -401,6 +405,7 @@
     "stand": "עצור",
     "double": "כפול",
     "split": "פיצול",
+    "handOf": "יד {current} מתוך {total}",
     "yourTurn": "התור שלך",
     "turnOf": "התור של {name}",
     "win": "ניצחת",
@@ -438,7 +443,10 @@
     "startHand": "התחל יד",
     "waitingRoom": "ממתין לשחקנים",
     "needPlayers": "צריך לפחות 2 שחקנים כדי להתחיל",
-    "everyoneReady": "כל השחקנים מוכנים — המארח יכול להתחיל",
+    "everyoneReady": "כולם מוכנים — היד מתחילה!",
+    "waitingReady": "מחכים למוכנים · {count}/{total}",
+    "pressReady": "לחץ מוכן",
+    "ready": "מוכן",
     "onlyHostStarts": "רק המארח יכול להתחיל יד",
     "pot": "קופה",
     "yourTurn": "התור שלך",

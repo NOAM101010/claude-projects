@@ -26,7 +26,11 @@
     "leave": "Leave",
     "brand": "ROYAL 21",
     "tagline": "Your private room",
-    "someone": "Someone"
+    "someone": "Someone",
+    "leaveGameTitle": "Leave the game?",
+    "leaveGameBody": "You're in the middle of a game — leaving now will forfeit your current hand.",
+    "leaveGameConfirm": "Yes, leave",
+    "stayInGame": "Stay in game"
   },
   "intro": {
     "welcome": "Welcome",
@@ -401,6 +405,7 @@
     "stand": "Stand",
     "double": "Double",
     "split": "Split",
+    "handOf": "Hand {current} of {total}",
     "yourTurn": "Your turn",
     "turnOf": "{name}'s turn",
     "win": "You win",
@@ -438,7 +443,10 @@
     "startHand": "Start hand",
     "waitingRoom": "Waiting for players",
     "needPlayers": "Need at least 2 players to start",
-    "everyoneReady": "Everyone's seated — the host can start",
+    "everyoneReady": "Everyone's ready — dealing now!",
+    "waitingReady": "Waiting for ready · {count}/{total}",
+    "pressReady": "Press Ready",
+    "ready": "Ready",
     "onlyHostStarts": "Only the host can start a hand",
     "pot": "Pot",
     "yourTurn": "Your turn",

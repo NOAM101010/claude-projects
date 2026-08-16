@@ -11,6 +11,7 @@ import { NotificationsPanel } from '@/components/social/NotificationsPanel';
 import { InviteOverlay } from '@/components/social/InviteOverlay';
 import { ChipsPanel } from '@/components/layout/ChipsPanel';
 import { ConnectionBanner } from '@/components/layout/ConnectionBanner';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { usePlayer } from '@/stores/usePlayer';
 import { useSettings } from '@/stores/useSettings';
 import { useSocial } from '@/stores/useSocial';
@@ -149,6 +150,7 @@ export function App() {
       <ChipsPanel />
       <InviteOverlay />
       <MomentLayer />
+      <ConfirmModal />
       <Toasts />
       {loading && <Loading label={t(loading)} />}
     </MotionConfig>

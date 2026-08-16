@@ -105,11 +105,18 @@ export default function SitAndGoScene() {
     return () => clearInterval(tick);
   }, [state?.toAct]);
   useEffect(() => {
-    if (!isHost || !state || state.toAct === -1) return;
+    if (!state || state.toAct === -1) return;
     const actor = state.seats[state.toAct];
     if (!actor) return;
-    if (!state.deadline) { void send(profile.id, { type: 'setDeadline', deadline: Date.now() + ACTION_SECONDS * 1000 }); return; }
-    if (Date.now() > state.deadline) void send(profile.id, { type: 'timeout', userId: actor.userId });
+    if (isHost) {
+      if (!state.deadline) { void send(profile.id, { type: 'setDeadline', deadline: Date.now() + ACTION_SECONDS * 1000 }); return; }
+      if (Date.now() > state.deadline) void send(profile.id, { type: 'timeout', userId: actor.userId });
+      return;
+    }
+    // Failsafe when the host is the AFK player themselves — see PokerScene for details.
+    if (state.deadline && Date.now() > state.deadline + 5000) {
+      void send(profile.id, { type: 'timeout', userId: actor.userId });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHost, state?.toAct, state?.deadline, now]);
   const secondsLeft = state?.deadline ? Math.max(0, Math.ceil((state.deadline - now) / 1000)) : null;
@@ -293,6 +300,7 @@ export default function SitAndGoScene() {
                   isDealer={state.dealerSeat >= 0 && state.seats[state.dealerSeat]?.userId === occupant.userId}
                   street={state.street}
                   showdown={displayShowdown}
+                  runoutReveal={state.allInEquity !== null}
                   cardFace={profile.equipped.cardFace}
                   cardBack={profile.equipped.cardBack}
                   label={{ fold: t('poker.folded'), sitOut: t('sng.eliminated'), allin: t('poker.allInLabel') }}

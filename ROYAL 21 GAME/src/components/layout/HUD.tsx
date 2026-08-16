@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Avatar } from '@/components/social/Avatar';
 import { Meter } from '@/components/ui/Meter';
@@ -14,13 +13,14 @@ import { useCountUp } from '@/hooks/useCountUp';
 import { xpForLevel } from '@/services/profileService';
 import { chipGlyphOf } from '@/components/game/CoinFace';
 import { fmt } from '@/lib/format';
+import { useNavigateSafe } from '@/hooks/useNavigateSafe';
 
 /**
  * Minimal top bar (§31). The world is still the main navigation, but the menu
  * button and the SideNav rail mean nothing is ever more than one click away.
  */
 export function HUD({ compact }: { compact?: boolean }) {
-  const navigate = useNavigate();
+  const navigate = useNavigateSafe();
   const { t } = useT();
   const profile = usePlayer((s) => s.profile);
   const daily = usePlayer((s) => s.daily);

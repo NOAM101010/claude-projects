@@ -141,14 +141,27 @@ export default function PokerScene() {
     return () => clearInterval(tick);
   }, [state?.toAct]);
   useEffect(() => {
-    if (!isHost || !state || state.toAct === -1) return;
+    if (!state || state.toAct === -1) return;
     const actor = state.seats[state.toAct];
     if (!actor) return;
-    if (!state.deadline) {
-      void send(profile.id, { type: 'setDeadline', deadline: Date.now() + ACTION_SECONDS * 1000 });
+    if (isHost) {
+      // Host stamps the deadline and, once it's blown, fires the timeout that folds
+      // the AFK seat and hands play to the next player.
+      if (!state.deadline) {
+        void send(profile.id, { type: 'setDeadline', deadline: Date.now() + ACTION_SECONDS * 1000 });
+        return;
+      }
+      if (Date.now() > state.deadline) void send(profile.id, { type: 'timeout', userId: actor.userId });
       return;
     }
-    if (Date.now() > state.deadline) void send(profile.id, { type: 'timeout', userId: actor.userId });
+    // Failsafe: if the host is themselves the AFK player (or their own timer effect
+    // is stuck), the table used to freeze forever. After a 5-second grace past the
+    // deadline, any seated client can send the same timeout intent — the reducer
+    // validates it the same way and the host loop will process it. Race-safe:
+    // repeat sends after the fold are rejected because state.toAct has advanced.
+    if (state.deadline && Date.now() > state.deadline + 5000) {
+      void send(profile.id, { type: 'timeout', userId: actor.userId });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHost, state?.toAct, state?.deadline, now]);
   const secondsLeft = state?.deadline ? Math.max(0, Math.ceil((state.deadline - now) / 1000)) : null;
@@ -210,6 +223,18 @@ export default function PokerScene() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.street, state?.handNumber]);
 
+  /* Auto-start the next hand the instant every seated player has hit "Ready" —
+     no host click, no wait. Guarded by isHost so only one client actually
+     dispatches, and by street==='waiting' so it can't fire in the middle of
+     a hand from a stale ready flag. */
+  useEffect(() => {
+    if (!isHost || !state || state.street !== 'waiting') return;
+    const seated = state.seats.filter((s) => !s.sittingOut);
+    if (seated.length < 2 || !seated.every((s) => s.ready)) return;
+    void send(profile.id, { type: 'startHand' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHost, state?.street, state?.seats.map((s) => `${s.userId}:${s.ready}:${s.sittingOut}`).join('|')]);
+
   const link = useMemo(() => (room ? `${window.location.origin}/poker/${room.code}` : ''), [room]);
   const copy = async (text: string) => {
     try { await navigator.clipboard.writeText(text); audio.play('click'); toast(t('common.copied'), 'good', '📋'); }
@@ -219,7 +244,12 @@ export default function PokerScene() {
   const sitDown = async (amount: number) => {
     if (amount > profile.chips) { toast(t('poker.notEnoughChips'), 'bad', '⚠'); return; }
     addChips(-amount, { silent: true });
-    await send(profile.id, { type: 'join', userId: profile.id, username: profile.username, avatar: profile.avatar, level: profile.level, buyIn: amount });
+    if (mySeat) {
+      // Already seated → this is a rebuy/top-up, not a fresh sit-down.
+      await send(profile.id, { type: 'topUp', userId: profile.id, amount });
+    } else {
+      await send(profile.id, { type: 'join', userId: profile.id, username: profile.username, avatar: profile.avatar, level: profile.level, buyIn: amount });
+    }
     setBuyInOpen(false);
     audio.play('chip');
   };
@@ -283,8 +313,10 @@ export default function PokerScene() {
     );
   }
 
-  const seatedCount = state.seats.filter((s) => !s.sittingOut).length;
+  const seatedPlayers = state.seats.filter((s) => !s.sittingOut);
+  const seatedCount = seatedPlayers.length;
   const canStart = state.street === 'waiting' && seatedCount >= 2;
+  const allReady = canStart && seatedPlayers.every((s) => s.ready);
   const recommendedBuyIn = buyInFor(state.bigBlind);
 
   return (
@@ -309,6 +341,14 @@ export default function PokerScene() {
               >
                 👁 {spectators.length}
               </span>
+            )}
+            {/* Rebuy is always reachable while you're seated — including mid-hand.
+                Waiting until the next hand is what got players stuck after losing
+                a big pot: the "everyone ready" panel only draws in street==='waiting'. */}
+            {mySeat && mySeat.stack < recommendedBuyIn * 2 && (
+              <GameButton size="sm" tone="gold" onClick={() => setBuyInOpen(true)}>
+                + {t('poker.topUp')}
+              </GameButton>
             )}
             <GameButton size="sm" tone="metal" onClick={() => copy(room.code)}>{t('rooms.copyCode')}</GameButton>
             <GameButton size="sm" tone="metal" onClick={() => copy(link)}>{t('rooms.copyLink')}</GameButton>
@@ -367,6 +407,7 @@ export default function PokerScene() {
                   isDealer={state.dealerSeat >= 0 && state.seats[state.dealerSeat]?.userId === occupant.userId}
                   street={state.street}
                   showdown={displayShowdown}
+                  runoutReveal={state.allInEquity !== null}
                   cardFace={profile.equipped.cardFace}
                   cardBack={profile.equipped.cardBack}
                   label={{
@@ -436,11 +477,19 @@ export default function PokerScene() {
         {state.street === 'waiting' ? (
           <GlassPanel className="p-3.5 flex items-center justify-between gap-3 flex-wrap">
             <span className="text-[13px]" style={{ color: 'var(--muted)' }}>
-              {canStart ? t('poker.everyoneReady') : t('poker.needPlayers')} · {seatedCount}/{MAX_SEATS}
+              {allReady ? t('poker.everyoneReady')
+                : canStart ? t('poker.waitingReady', { count: seatedPlayers.filter((s) => s.ready).length, total: seatedCount })
+                : t('poker.needPlayers')} · {seatedCount}/{MAX_SEATS}
             </span>
-            <div className="flex gap-2">
-              {mySeat && mySeat.stack < recommendedBuyIn && (
-                <GameButton size="sm" tone="metal" onClick={() => setBuyInOpen(true)}>{t('poker.topUp')}</GameButton>
+            <div className="flex gap-2 flex-wrap">
+              {mySeat && !mySeat.sittingOut && (
+                <GameButton
+                  size="sm"
+                  tone={mySeat.ready ? 'jade' : 'metal'}
+                  onClick={() => void send(profile.id, { type: 'setReady', userId: profile.id, ready: !mySeat.ready })}
+                >
+                  {mySeat.ready ? `✓ ${t('poker.ready')}` : t('poker.pressReady')}
+                </GameButton>
               )}
               {isHost && (
                 <GameButton tone="gold" disabled={!canStart} onClick={() => void send(profile.id, { type: 'startHand' })}>
@@ -502,14 +551,18 @@ export default function PokerScene() {
   );
 }
 
-export function SeatCard({ seat, isMe, isTurn, isDealer, street, showdown, cardFace, cardBack, label }: {
+export function SeatCard({ seat, isMe, isTurn, isDealer, street, showdown, runoutReveal, cardFace, cardBack, label }: {
   seat: PokerSeat; isMe: boolean; isTurn: boolean; isDealer: boolean; street: string;
   showdown: ShowdownEntry[] | null;
+  /** True whenever we're in an all-in runout — flip everyone still in the hand
+   *  face-up so the players can see who's ahead as the board comes out. */
+  runoutReveal?: boolean;
   cardFace: string; cardBack: string;
   label: { fold: string; sitOut: string; allin: string };
 }) {
   const revealed = showdown?.some((s) => s.userId === seat.userId) && !seat.folded;
-  const showHole = isMe || revealed;
+  const runoutShow = runoutReveal && !seat.folded && seat.hole.length === 2;
+  const showHole = isMe || revealed || runoutShow;
   return (
     <div className="flex flex-col items-center gap-1" style={{ opacity: seat.folded ? 0.45 : seat.sittingOut ? 0.55 : 1 }}>
       <div className="flex gap-0.5">
@@ -586,7 +639,7 @@ export function ActionBar({ seat, state, myTurn, raiseTo, setRaiseTo, onAct, sec
           <div
             className="h-full rounded-full"
             style={{
-              width: `${Math.max(0, Math.min(100, (secondsLeft / 30) * 100))}%`,
+              width: `${Math.max(0, Math.min(100, (secondsLeft / ACTION_SECONDS) * 100))}%`,
               background: secondsLeft <= 8 ? 'var(--crimson-hi)' : 'var(--gold-hi)',
               transition: 'width .3s linear',
             }}

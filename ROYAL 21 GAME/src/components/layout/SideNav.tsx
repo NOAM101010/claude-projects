@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { usePlayer } from '@/stores/usePlayer';
 import { useUI } from '@/stores/useUI';
@@ -7,6 +7,7 @@ import { useSocial } from '@/stores/useSocial';
 import { useT } from '@/hooks/useT';
 import { useIsCompact } from '@/hooks/useMediaQuery';
 import { useSound } from '@/hooks/useSound';
+import { useNavigateSafe } from '@/hooks/useNavigateSafe';
 
 const RAIL = 62;
 const OPEN = 214;
@@ -49,7 +50,7 @@ const ENTRIES: Entry[] = [
  * list as a drawer behind the HUD's menu button.
  */
 export function SideNav() {
-  const navigate = useNavigate();
+  const navigate = useNavigateSafe();
   const location = useLocation();
   const { t } = useT();
   const compact = useIsCompact();
