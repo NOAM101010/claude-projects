@@ -1,0 +1,65 @@
+import { create } from 'zustand';
+
+export type MomentKind = 'levelUp' | 'blackjack' | 'bigWin' | 'rareItem' | 'friendJoined' | 'sessionEnd';
+
+export interface Moment {
+  id: string;
+  kind: MomentKind;
+  title: string;
+  subtitle?: string;
+  icon?: string;
+  /** ms; hero moments stay short on purpose (§103) */
+  duration?: number;
+}
+
+export interface Toast {
+  id: string;
+  text: string;
+  tone: 'neutral' | 'good' | 'bad';
+  icon?: string;
+}
+
+export type PanelKind = 'friends' | 'notifications' | 'settings' | 'chips' | null;
+
+interface UIState {
+  toasts: Toast[];
+  moment: Moment | null;
+  panel: PanelKind;
+  /** Side menu drawer. On desktop the rail is always visible; this is the compact drawer. */
+  navOpen: boolean;
+  loading: string | null;
+  connectionLost: boolean;
+  setNavOpen: (value: boolean) => void;
+  toggleNav: () => void;
+  toast: (text: string, tone?: Toast['tone'], icon?: string) => void;
+  dropToast: (id: string) => void;
+  showMoment: (moment: Omit<Moment, 'id'>) => void;
+  clearMoment: () => void;
+  openPanel: (panel: PanelKind) => void;
+  setLoading: (label: string | null) => void;
+  setConnectionLost: (value: boolean) => void;
+}
+
+export const useUI = create<UIState>()((set) => ({
+  toasts: [],
+  moment: null,
+  panel: null,
+  navOpen: false,
+  loading: null,
+  connectionLost: false,
+
+  setNavOpen: (navOpen) => set({ navOpen }),
+  toggleNav: () => set((state) => ({ navOpen: !state.navOpen })),
+
+  toast: (text, tone = 'neutral', icon) => {
+    const id = Math.random().toString(36).slice(2);
+    set((state) => ({ toasts: [...state.toasts, { id, text, tone, icon }] }));
+    setTimeout(() => set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) })), 3200);
+  },
+  dropToast: (id) => set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) })),
+  showMoment: (moment) => set({ moment: { ...moment, id: Math.random().toString(36).slice(2) } }),
+  clearMoment: () => set({ moment: null }),
+  openPanel: (panel) => set({ panel }),
+  setLoading: (loading) => set({ loading }),
+  setConnectionLost: (connectionLost) => set({ connectionLost }),
+}));

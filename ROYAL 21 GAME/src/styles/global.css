@@ -1,0 +1,149 @@
+@import './tokens.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    overscroll-behavior-y: none;
+    touch-action: manipulation;
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    font-weight: 900;
+    margin: 0;
+    line-height: 1.12;
+    letter-spacing: -0.015em;
+  }
+  h1 { font-size: clamp(28px, 5vw, 46px); }
+  h2 { font-size: clamp(20px, 3vw, 28px); }
+  h3 { font-size: 17px; }
+  p { margin: 0; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  input, select, textarea { font: inherit; color: inherit; }
+  a { color: var(--gold); text-decoration: none; }
+  ::selection { background: var(--gold); color: #000; }
+  :focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 3px; border-radius: 6px; }
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 9px; }
+}
+
+@layer components {
+  /* ---- type helpers ---- */
+  .num { font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: var(--track-wide);
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 700;
+  }
+  .hairline {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .hairline::before,
+  .hairline::after {
+    content: '';
+    height: 1px;
+    flex: 1;
+    background: linear-gradient(90deg, transparent, var(--gold-line), transparent);
+  }
+
+  /* ---- glass panel: the one window material in the game ---- */
+  .glass {
+    background: linear-gradient(180deg, var(--glass-strong), var(--glass));
+    border: 1px solid var(--glass-line);
+    border-radius: var(--r-lg);
+    backdrop-filter: var(--blur);
+    -webkit-backdrop-filter: var(--blur);
+    box-shadow: var(--shadow-deep), var(--rim-light);
+  }
+  .glass-gold { border-color: var(--gold-line); }
+
+  /* ---- light pools & atmosphere ---- */
+  .light-pool {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    filter: blur(30px);
+    mix-blend-mode: screen;
+  }
+  .vignette::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse at 50% 45%, transparent 42%, rgba(0, 0, 0, 0.72) 100%);
+  }
+
+  /* ---- felt ---- */
+  .felt-surface {
+    background:
+      radial-gradient(ellipse 60% 45% at 50% 12%, rgba(255, 255, 255, 0.1), transparent 70%),
+      radial-gradient(ellipse at 50% 30%, var(--felt-lit), var(--felt) 62%, #08150f);
+    box-shadow: var(--shadow-inset), var(--shadow-deep);
+    border: 2px solid var(--felt-rim);
+  }
+}
+
+@layer utilities {
+  .press { transition: transform var(--d-fast) var(--ease-out); }
+  .press:active { transform: scale(0.97); }
+  .no-scroll { overflow: hidden; }
+}
+
+/* ---- boot veil (before React paints; removed by main.tsx) ---- */
+#boot-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--ink);
+  display: grid;
+  place-items: center;
+  transition: opacity 0.5s var(--ease-out);
+}
+#boot-veil.gone { opacity: 0; pointer-events: none; }
+.boot-mark {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 22px;
+  letter-spacing: var(--track-wide);
+  background: var(--brushed-gold);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: bootPulse 1.6s ease-in-out infinite;
+}
+@keyframes bootPulse { 50% { opacity: 0.35; } }
+
+/* ---- reduced motion: keep feedback, drop travel ---- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.06s !important;
+    scroll-behavior: auto !important;
+  }
+}
+html[data-motion='reduced'] .ambient { animation: none !important; }

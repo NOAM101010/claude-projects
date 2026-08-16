@@ -1,0 +1,476 @@
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { SceneShell } from '@/components/layout/SceneShell';
+import { GlassPanel } from '@/components/ui/GlassPanel';
+import { GameButton } from '@/components/ui/GameButton';
+import { Meter } from '@/components/ui/Meter';
+import { Avatar } from '@/components/social/Avatar';
+import { LightPool } from '@/components/effects/LightPool';
+import { ItemPreview } from '@/scenes/vault/ItemPreview';
+import { useCountUp } from '@/hooks/useCountUp';
+import { usePlayer } from '@/stores/usePlayer';
+import { useSocial } from '@/stores/useSocial';
+import { useT } from '@/hooks/useT';
+import { ACHIEVEMENTS, TIER_STYLE, byTierDesc } from '@/data/achievements';
+import { ITEMS, itemById } from '@/data/items';
+import { MILESTONE_EVERY } from '@/data/economy';
+import { VIP_MIN_LEVEL, VIP_MIN_CHIPS, isVipEligible, vipProgress } from '@/data/vip';
+import { roomBackgroundOf } from '@/data/roomThemes';
+import { profileService, rankOf, xpForLevel } from '@/services/profileService';
+import { chipGlyphOf } from '@/components/game/CoinFace';
+import { fmt, fmtSigned, pct, shortDate } from '@/lib/format';
+import type { GameKey, Profile, Stats } from '@/types';
+
+function StatTile({ label, value, tone = 'gold', delay = 0 }: { label: string; value: number | string; tone?: 'gold' | 'jade'; delay?: number }) {
+  const numeric = typeof value === 'number';
+  const counted = useCountUp(numeric ? (value as number) : 0, 900);
+  return (
+    <motion.div
+      className="p-3 rounded-[var(--r-sm)]"
+      style={{ background: 'rgba(255,255,255,.035)', border: '1px solid var(--glass-line)' }}
+      initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}
+    >
+      <b className="num block" style={{ fontFamily: 'var(--font-display)', fontSize: 21, color: tone === 'gold' ? 'var(--gold-hi)' : 'var(--jade-hi)' }}>
+        {numeric ? fmt(counted) : value}
+      </b>
+      <span className="text-[11.5px]" style={{ color: 'var(--muted)' }}>{label}</span>
+    </motion.div>
+  );
+}
+
+/** My Room: a place with a trophy shelf, not a dashboard. */
+export default function MyRoomScene() {
+  const { userId } = useParams();
+  const navigate = useNavigate();
+  const { t, lang } = useT();
+  const me = usePlayer((s) => s.profile);
+  const stats = usePlayer((s) => s.stats);
+  const owned = usePlayer((s) => s.owned);
+  const favorites = usePlayer((s) => s.favorites);
+  const achievements = usePlayer((s) => s.achievements);
+  const activity = usePlayer((s) => s.activity);
+  const rivalries = usePlayer((s) => s.rivalries);
+  const friends = useSocial((s) => s.friends);
+
+  const isMe = !userId || userId === me.id;
+  const friend = friends.find((entry) => entry.id === userId);
+  const [remote, setRemote] = useState<{ profile: Profile | null; stats: Partial<Stats> | null }>({ profile: null, stats: null });
+
+  useEffect(() => {
+    if (isMe || !userId) return;
+    void (async () => {
+      const [row, remoteStats] = await Promise.all([
+        profileService.fetchProfile(userId),
+        profileService.fetchStats(userId),
+      ]);
+      setRemote({ profile: row as Profile | null, stats: remoteStats });
+    })();
+  }, [isMe, userId]);
+
+  const profile = isMe
+    ? me
+    : (remote.profile ?? (friend
+      ? { ...me, id: friend.id, username: friend.username, avatar: friend.avatar, level: friend.level, chips: friend.chips }
+      : me));
+  const view = isMe ? stats : ({ ...stats, ...(remote.stats ?? {}) } as Stats);
+
+  /* Trophies already standing on the shelf, best plating first. */
+  const earnedTrophies = useMemo(
+    () => ACHIEVEMENTS.filter((entry) => achievements.includes(entry.id)).sort(byTierDesc),
+    [achievements],
+  );
+
+  /* The closest one still missing, as a nudge under the shelf. */
+  const nextTrophy = useMemo(() => {
+    const locked = ACHIEVEMENTS.filter((entry) => !achievements.includes(entry.id));
+    const progress = (entry: (typeof ACHIEVEMENTS)[number]) => {
+      const value = entry.stat === 'level'
+        ? me.level
+        : entry.stat === 'itemCount'
+          ? owned.length
+          : entry.stat === 'friendCount'
+            ? friends.length
+            : ((stats as unknown as Record<string, number>)[entry.stat] ?? 0);
+      return value / entry.goal;
+    };
+    return locked.sort((a, b) => progress(b) - progress(a))[0] ?? null;
+  }, [achievements, me.level, owned.length, friends.length, stats]);
+
+  const shelf = useMemo(() => {
+    const favored = favorites.map(itemById).filter(Boolean);
+    const rare = ITEMS.filter((item) => owned.includes(item.id) && ['legendary', 'mythic', 'epic'].includes(item.rarity));
+    return [...new Set([...favored, ...rare])].slice(0, 6);
+  }, [favorites, owned]);
+
+  const roomBg = roomBackgroundOf(profile.equipped?.roomBackground ?? null);
+
+  const winRate = pct(view.wins, Math.max(1, view.games));
+  const rank = rankOf(profile.level);
+  const vip = isVipEligible(me);
+  const vipProg = vipProgress(me);
+  const nextMilestone = (Math.floor(me.lastMilestoneClaimed / MILESTONE_EVERY) + 1) * MILESTONE_EVERY;
+
+  /* head-to-head, shown only for a friend's room (§86) — pulled from the real
+     per-friend record, not from two unrelated lifetime win counts. */
+  const rivalry = !isMe && friend ? (() => {
+    const entry = rivalries.find((r) => r.friendId === friend.id);
+    const byGame = Object.entries(entry?.byGame ?? {}) as [GameKey, { me: number; them: number }][];
+    return {
+      together: entry?.gamesTogether ?? 0, mine: entry?.myWins ?? 0, theirs: entry?.theirWins ?? 0,
+      byGame: byGame.filter(([, g]) => g.me + g.them > 0).sort((a, b) => (b[1].me + b[1].them) - (a[1].me + a[1].them)),
+    };
+  })() : null;
+
+  /* Every friend I have a recorded history with, worst rival first. */
+  const rivalryTable = useMemo(
+    () => friends
+      .map((f) => ({ friend: f, entry: rivalries.find((r) => r.friendId === f.id) ?? null }))
+      .filter((row) => row.entry && row.entry.gamesTogether > 0)
+      .sort((a, b) => (b.entry!.gamesTogether) - (a.entry!.gamesTogether)),
+    [friends, rivalries],
+  );
+
+  return (
+    <SceneShell compactHud>
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute inset-0" style={{ background: roomBg.gradient }} />
+        <LightPool x="50%" y="16%" size={640} color={roomBg.glowColor} />
+      </div>
+
+      <div className="mx-auto px-4 py-3 flex flex-col gap-3" style={{ maxWidth: 900 }}>
+        {/* the room itself */}
+        <GlassPanel gold className="p-5">
+          <div className="flex items-center gap-4 flex-wrap">
+            <motion.div initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 20 }}>
+              <Avatar config={profile.avatar} size={86} level={profile.level} frame={profile.equipped?.frame} presence={isMe ? 'online' : friend?.presence} id="myroom" />
+            </motion.div>
+            <div className="flex-1 min-w-[180px]">
+              <span className="eyebrow">{lang === 'he' ? rank.he : rank.en}</span>
+              <h1 className="mt-0.5">{profile.username}</h1>
+              <p className="text-[12.5px] num" style={{ color: 'var(--muted)' }}>
+                {profile.tag} · {t('profile.joined')} {shortDate(profile.joinedAt ?? new Date().toISOString(), lang)}
+              </p>
+            </div>
+            <div className="min-w-[190px] flex-1">
+              <div className="flex justify-between text-[12px] mb-1">
+                <span style={{ color: 'var(--muted)' }}>{t('common.level')} {profile.level}</span>
+                <b className="num" style={{ color: 'var(--gold)' }}>{fmt(profile.xp)} / {fmt(xpForLevel(profile.level))}</b>
+              </div>
+              <Meter value={profile.xp} max={xpForLevel(profile.level)} />
+              <div className="flex gap-2 mt-2.5 flex-wrap">
+                <span className="px-2.5 py-1 rounded-full text-[11.5px] num" style={{ background: 'rgba(227,178,60,.1)', color: 'var(--gold)' }}>
+                  {chipGlyphOf(profile.equipped.currencySkin)} {fmt(profile.chips)}
+                </span>
+                {profile.favoriteGame && (
+                  <span className="px-2.5 py-1 rounded-full text-[11.5px]" style={{ background: 'rgba(255,255,255,.05)', color: 'var(--muted)' }}>
+                    ⭐ {t(`games.${profile.favoriteGame}`)}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </GlassPanel>
+
+        {isMe && (
+          <GlassPanel gold={vip} className="p-4">
+            <div className="flex items-baseline justify-between mb-3">
+              <div className="eyebrow" style={vip ? { color: 'var(--gold-hi)' } : undefined}>{t('profile.vip')}</div>
+              {vip && (
+                <span
+                  className="px-2 py-0.5 rounded-full text-[10px] font-black tracking-[.12em]"
+                  style={{
+                    background: 'linear-gradient(90deg, var(--gold), var(--gold-hi))',
+                    color: '#1a1206',
+                  }}
+                >
+                  👑 VIP
+                </span>
+              )}
+            </div>
+
+            {vip ? (
+              <div className="flex items-center gap-3">
+                <div className="text-[42px] leading-none">👑</div>
+                <div className="flex-1">
+                  <b className="block text-[14px]" style={{ color: 'var(--gold-hi)' }}>
+                    {t('profile.vipActive')}
+                  </b>
+                  <p className="text-[11.5px] mt-0.5" style={{ color: 'var(--muted)' }}>
+                    {t('profile.vipPerks')}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="text-[12.5px] mb-3" style={{ color: 'var(--muted)' }}>
+                  {t('profile.vipLockedHint')}
+                </p>
+                <div className="flex flex-col gap-2">
+                  <div>
+                    <div className="flex justify-between text-[12px] mb-1">
+                      <span>{vipProg.level.done ? '✅' : '⏳'} {t('vip.reqLevel')}</span>
+                      <b className="num" style={{ color: vipProg.level.done ? 'var(--gold-hi)' : 'var(--muted)' }}>
+                        {me.level} / {VIP_MIN_LEVEL}
+                      </b>
+                    </div>
+                    <Meter value={me.level} max={VIP_MIN_LEVEL} />
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-[12px] mb-1">
+                      <span>{vipProg.chips.done ? '✅' : '⏳'} {t('vip.reqChips')}</span>
+                      <b className="num" style={{ color: vipProg.chips.done ? 'var(--gold-hi)' : 'var(--muted)' }}>
+                        {me.chips.toLocaleString()} / {VIP_MIN_CHIPS.toLocaleString()}
+                      </b>
+                    </div>
+                    <Meter value={me.chips} max={VIP_MIN_CHIPS} />
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div className="mt-3 pt-3 flex items-center gap-2.5" style={{ borderTop: '1px solid var(--glass-line)' }}>
+              <span className="text-[20px]">🎁</span>
+              <div className="flex-1 min-w-0">
+                <b className="block text-[12px]">{t('profile.vipMilestone', { level: nextMilestone })}</b>
+                <span className="block text-[10.5px]" style={{ color: 'var(--dim)' }}>{t('profile.vipMilestoneHint')}</span>
+              </div>
+            </div>
+          </GlassPanel>
+        )}
+
+
+        {rivalry && (
+          <GlassPanel className="p-4">
+            <div className="eyebrow text-center mb-3">{t('profile.rivalry')}</div>
+            <div className="flex items-center justify-center gap-5">
+              <div className="text-center">
+                <Avatar config={me.avatar} size={44} level={me.level} id="riv-me" />
+                <b className="block num mt-1" style={{ fontFamily: 'var(--font-display)', fontSize: 26, color: 'var(--gold-hi)' }}>{rivalry.mine}</b>
+              </div>
+              <span className="text-[13px] font-black" style={{ color: 'var(--muted)' }}>{t('common.vs')}</span>
+              <div className="text-center">
+                <Avatar config={profile.avatar} size={44} level={profile.level} id="riv-them" />
+                <b className="block num mt-1" style={{ fontFamily: 'var(--font-display)', fontSize: 26, color: 'var(--gold-hi)' }}>{rivalry.theirs}</b>
+              </div>
+            </div>
+            <p className="text-center text-[12.5px] mt-2" style={{ color: 'var(--muted)' }}>
+              {rivalry.mine === rivalry.theirs
+                ? t('profile.tied')
+                : t('profile.leads', {
+                  name: rivalry.mine > rivalry.theirs ? me.username : profile.username,
+                  n: Math.abs(rivalry.mine - rivalry.theirs),
+                })}
+            </p>
+            {rivalry.byGame.length > 0 && (
+              <div className="mt-3 pt-3 flex flex-col gap-1.5" style={{ borderTop: '1px solid var(--glass-line)' }}>
+                {rivalry.byGame.map(([game, g]) => {
+                  const total = g.me + g.them;
+                  const rate = pct(g.me, total);
+                  return (
+                    <div key={game} className="flex items-center gap-3 text-[12.5px]">
+                      <span className="flex-1 truncate" style={{ color: 'var(--muted)' }}>{t(`games.${game}`)}</span>
+                      <span className="text-[10.5px] num" style={{ color: 'var(--dim)' }}>{total} {t('profile.together')}</span>
+                      <b className="num" style={{ color: g.me > g.them ? 'var(--jade-hi)' : g.me < g.them ? 'var(--crimson-hi)' : 'var(--muted)', minWidth: 46, textAlign: 'end' }}>
+                        {g.me}–{g.them}
+                      </b>
+                      <span className="num text-[11px]" style={{ color: 'var(--gold)', minWidth: 34, textAlign: 'end' }}>{rate}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </GlassPanel>
+        )}
+
+        {/* the trophies you earned — the shelf proper */}
+        <GlassPanel className="p-4">
+          <div className="flex items-baseline justify-between mb-3">
+            <div className="eyebrow">{t('profile.trophies')}</div>
+            <span className="text-[11.5px] num" style={{ color: 'var(--muted)' }}>
+              {earnedTrophies.length} / {ACHIEVEMENTS.length}
+            </span>
+          </div>
+          {earnedTrophies.length ? (
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {earnedTrophies.map((entry, index) => {
+                const style = TIER_STYLE[entry.tier];
+                return (
+                  <motion.div
+                    key={entry.id}
+                    className="shrink-0 text-center"
+                    style={{ width: 88 }}
+                    initial={{ opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.04, type: 'spring', stiffness: 240, damping: 22 }}
+                    whileHover={{ y: -5 }}
+                    title={`${entry.name[lang]} — ${entry.desc[lang]}`}
+                  >
+                    <div
+                      className="grid place-items-center mx-auto"
+                      style={{
+                        width: 62, height: 62, borderRadius: '50%', fontSize: 28,
+                        background: `radial-gradient(circle at 38% 30%, ${style.glow}, rgba(0,0,0,.35) 72%)`,
+                        border: `2px solid ${style.ring}`,
+                        boxShadow: `0 6px 18px ${style.glow}`,
+                      }}
+                    >
+                      {entry.trophy}
+                    </div>
+                    <div className="text-[10.5px] font-bold mt-1.5 leading-tight" style={{ color: 'var(--text)' }}>
+                      {entry.name[lang]}
+                    </div>
+                    <div className="text-[9px] uppercase tracking-[.14em]" style={{ color: style.ring }}>
+                      {style.label[lang]}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-[13px] py-4 text-center" style={{ color: 'var(--muted)' }}>{t('profile.noTrophies')}</p>
+          )}
+          {/* The shelf fills up as achievements unlock; the next one is the nudge. */}
+          {isMe && nextTrophy && (
+            <div className="mt-3 pt-3 flex items-center gap-2.5" style={{ borderTop: '1px solid var(--glass-line)' }}>
+              <span className="text-[20px] grayscale opacity-60">{nextTrophy.trophy}</span>
+              <div className="flex-1 min-w-0">
+                <b className="block text-[12px]">{nextTrophy.name[lang]}</b>
+                <span className="block text-[10.5px]" style={{ color: 'var(--dim)' }}>{nextTrophy.desc[lang]}</span>
+              </div>
+              <span className="text-[10px] uppercase tracking-[.14em]" style={{ color: TIER_STYLE[nextTrophy.tier].ring }}>
+                {TIER_STYLE[nextTrophy.tier].label[lang]}
+              </span>
+            </div>
+          )}
+        </GlassPanel>
+
+        {/* head-to-head against every friend I've actually played (§rivalry) */}
+        {isMe && (
+          <GlassPanel className="p-4">
+            <div className="flex items-baseline justify-between mb-3">
+              <div className="eyebrow">{t('profile.rivalryTable')}</div>
+              {rivalryTable.length > 0 && (
+                <span className="text-[11.5px] num" style={{ color: 'var(--muted)' }}>{rivalryTable.length}</span>
+              )}
+            </div>
+            {rivalryTable.length ? (
+              <div className="flex flex-col gap-1.5">
+                {rivalryTable.map(({ friend: f, entry }) => (
+                  <button
+                    key={f.id}
+                    className="flex items-center gap-3 px-3 py-2 rounded-[var(--r-xs)] text-[13px] text-start press w-full"
+                    style={{ background: 'rgba(255,255,255,.03)' }}
+                    onClick={() => navigate(`/profile/${f.id}`)}
+                  >
+                    <Avatar config={f.avatar} size={30} level={f.level} presence={f.presence} id={`rt-${f.id}`} />
+                    <b className="flex-1 truncate">{f.username}</b>
+                    <span className="text-[11px] num" style={{ color: 'var(--dim)' }}>
+                      {entry!.gamesTogether} {t('profile.together')}
+                    </span>
+                    <b className="num" style={{ color: entry!.myWins > entry!.theirWins ? 'var(--jade-hi)' : entry!.myWins < entry!.theirWins ? 'var(--crimson-hi)' : 'var(--muted)' }}>
+                      {entry!.myWins}–{entry!.theirWins}
+                    </b>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[13px] py-4 text-center" style={{ color: 'var(--muted)' }}>{t('profile.noRivalries')}</p>
+            )}
+          </GlassPanel>
+        )}
+
+        {/* favourite and rare items on display */}
+        <GlassPanel className="p-4">
+          <div className="eyebrow mb-3">{t('profile.shelf')}</div>
+          {shelf.length ? (
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {shelf.map((item) => item && (
+                <motion.div key={item.id} className={`p-2.5 rounded-[var(--r-sm)] rar-card rar-${item.rarity} shrink-0`}
+                  style={{ background: 'rgba(0,0,0,.28)', width: 104 }} whileHover={{ y: -4 }}>
+                  <div className="h-[62px] grid place-items-center"><ItemPreview item={item} compact /></div>
+                  <div className="text-[10px] text-center truncate mt-1" style={{ color: 'var(--muted)' }}>{item.name[lang]}</div>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[13px] py-4 text-center" style={{ color: 'var(--muted)' }}>{t('vault.empty')}</p>
+          )}
+        </GlassPanel>
+
+        {/* the numbers */}
+        <GlassPanel className="p-4">
+          <div className="eyebrow mb-3">{t('profile.stats')}</div>
+          <div className="grid gap-2.5" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(120px,1fr))' }}>
+            <StatTile label={t('profile.games')} value={view.games} delay={0.02} />
+            <StatTile label={t('profile.wins')} value={view.wins} tone="jade" delay={0.04} />
+            <StatTile label={t('profile.losses')} value={view.losses} delay={0.06} />
+            <StatTile label={t('profile.winRate')} value={winRate} delay={0.08} />
+            <StatTile label={t('profile.blackjacks')} value={view.blackjacks} delay={0.1} />
+            <StatTile label={t('profile.bestStreak')} value={view.bestStreak} delay={0.12} />
+            <StatTile label={t('profile.biggestWin')} value={view.biggestWin} tone="jade" delay={0.14} />
+            <StatTile label={t('profile.biggestBet')} value={view.biggestBet} delay={0.16} />
+            <StatTile label={t('profile.handsPlayed')} value={view.bjHands} delay={0.18} />
+            <StatTile label={t('profile.doubleWins')} value={view.doubleWins} delay={0.2} />
+            <StatTile label={t('profile.splitWins')} value={view.splitWins} delay={0.22} />
+            <StatTile label={t('profile.avgBet')} value={view.betCount ? Math.round(view.betTotal / view.betCount) : 0} delay={0.24} />
+          </div>
+        </GlassPanel>
+
+        {/* achievements */}
+        {isMe && (
+          <GlassPanel className="p-4">
+            <div className="eyebrow mb-3">{t('profile.achievements')}</div>
+            <div className="grid gap-2.5" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))' }}>
+              {ACHIEVEMENTS.map((achievement) => {
+                const unlocked = achievements.includes(achievement.id);
+                const value = achievement.stat === 'level' ? me.level
+                  : achievement.stat === 'itemCount' ? owned.length
+                    : achievement.stat === 'friendCount' ? friends.length
+                      : (stats as unknown as Record<string, number>)[achievement.stat] ?? 0;
+                return (
+                  <div key={achievement.id} className="p-3 rounded-[var(--r-sm)]"
+                    style={{ background: unlocked ? 'rgba(227,178,60,.08)' : 'rgba(255,255,255,.025)', border: '1px solid var(--glass-line)' }}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[16px]">{unlocked ? '🎖️' : '🔒'}</span>
+                      <b className="text-[13px]">{achievement.name[lang]}</b>
+                    </div>
+                    <p className="text-[11.5px] mb-2" style={{ color: 'var(--muted)' }}>{achievement.desc[lang]}</p>
+                    <Meter value={Math.min(value, achievement.goal)} max={achievement.goal} height={5} tone={unlocked ? 'gold' : 'jade'} />
+                  </div>
+                );
+              })}
+            </div>
+          </GlassPanel>
+        )}
+
+        {/* recent hands */}
+        {isMe && (
+          <GlassPanel className="p-4">
+            <div className="eyebrow mb-3">{t('profile.recent')}</div>
+            {activity.length ? (
+              <div className="flex flex-col gap-1.5">
+                {activity.slice(0, 8).map((entry) => (
+                  <div key={entry.id} className="flex items-center justify-between px-3 py-2 rounded-[var(--r-xs)] text-[13px]"
+                    style={{ background: 'rgba(255,255,255,.03)' }}>
+                    <span>{t(`games.${entry.game}`)}</span>
+                    <b className="num" style={{ color: entry.net > 0 ? 'var(--jade-hi)' : entry.net < 0 ? 'var(--crimson-hi)' : 'var(--muted)' }}>
+                      {fmtSigned(entry.net)}
+                    </b>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[13px] py-4 text-center" style={{ color: 'var(--muted)' }}>{t('profile.empty')}</p>
+            )}
+          </GlassPanel>
+        )}
+
+        <div className="flex gap-2.5">
+          <GameButton tone="gold" block onClick={() => navigate('/vault')}>{t('vault.title')}</GameButton>
+          <GameButton tone="ghost" block onClick={() => navigate('/hub')}>{t('common.back')}</GameButton>
+        </div>
+      </div>
+    </SceneShell>
+  );
+}

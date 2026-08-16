@@ -1,0 +1,95 @@
+/* ============================================================================
+   ROYAL 21 — Design tokens.
+   Every colour, radius, shadow, glow, spacing and duration in the game
+   comes from here. Components never invent raw values.
+   ========================================================================== */
+:root {
+  /* --- surfaces: near-black -> charcoal, warm (not blue) undertone --- */
+  --ink: #08090b;
+  --ink-2: #0c0e12;
+  --surface: #14161b;
+  --surface-2: #1b1e25;
+  --surface-3: #23262f;
+
+  /* --- casino felt --- */
+  --felt: #0f2a20;
+  --felt-lit: #17402f;
+  --felt-rim: rgba(227, 178, 60, 0.22);
+
+  /* --- warm gold: the only real accent --- */
+  --gold: #e3b23c;
+  --gold-hi: #f8e3a8;
+  --gold-deep: #8a6a1f;
+  --glow-gold: rgba(227, 178, 60, 0.35);
+
+  /* --- state colours, used sparingly --- */
+  --jade: #2e9e6b;
+  --jade-hi: #4fd39a;
+  --crimson: #a8413e;
+  --crimson-hi: #e8807d;
+  --social: #4aa8c8;
+  --violet: #7b5bd6;
+
+  /* --- text --- */
+  --text: #f3efe6;
+  --muted: #9a958c;
+  --dim: #6a665f;
+
+  /* --- materials --- */
+  --glass: rgba(255, 255, 255, 0.045);
+  --glass-strong: rgba(255, 255, 255, 0.075);
+  --glass-line: rgba(255, 255, 255, 0.08);
+  --gold-line: rgba(227, 178, 60, 0.18);
+  --metal: linear-gradient(160deg, #2a2d35, #14161b 55%, #23262f);
+  --brushed-gold: linear-gradient(150deg, var(--gold-hi), var(--gold) 45%, var(--gold-deep));
+  --wood: linear-gradient(170deg, #241812, #150d09 60%, #2a1c14);
+  --velvet: radial-gradient(ellipse at 50% 0%, #2a1420, #150a10 70%);
+  --leather: linear-gradient(165deg, #1d1a17, #100e0c);
+  --blur: blur(16px);
+
+  /* --- radii --- */
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 18px;
+  --r-lg: 26px;
+  --r-xl: 36px;
+
+  /* --- shadows & light --- */
+  --shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-deep: 0 26px 60px rgba(0, 0, 0, 0.62);
+  --shadow-inset: inset 0 0 90px rgba(0, 0, 0, 0.6);
+  --rim-light: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+
+  /* --- spacing scale --- */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+
+  /* --- typography --- */
+  --font-display: 'Heebo', 'Rubik', 'Assistant', 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'Rubik', 'Heebo', 'Segoe UI', system-ui, sans-serif;
+  --track-wide: 0.32em;
+
+  /* --- animation tokens (JS mirror in lib/motion.ts) --- */
+  --d-fast: 140ms;
+  --d-ui: 240ms;
+  --d-slow: 420ms;
+  --d-cinematic: 900ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.25, 1);
+  --ease-in-out: cubic-bezier(0.6, 0, 0.35, 1);
+
+  /* --- layout --- */
+  --hud-h: 62px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+
+/* Quality tiers, set on <html> by the settings store. Low = fewer light layers. */
+html[data-quality='low'] {
+  --blur: blur(6px);
+  --shadow-deep: 0 10px 24px rgba(0, 0, 0, 0.55);
+}

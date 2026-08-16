@@ -1,0 +1,229 @@
+/* ============================================================================
+   Game-object materials: cards, chips, tables, frames.
+   Cosmetics are plain classes so an equipped item is visible to every player
+   at the table without any extra plumbing (§95).
+   ========================================================================== */
+
+/* ---------- playing cards ---------- */
+.pc {
+  position: relative;
+  flex: 0 0 auto;
+  transform-style: preserve-3d;
+  border-radius: 9px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.55);
+}
+.pc-face,
+.pc-back {
+  position: absolute;
+  inset: 0;
+  border-radius: 9px;
+  backface-visibility: hidden;
+  overflow: hidden;
+}
+.pc-face {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 6px 7px;
+  border: 1px solid rgba(0, 0, 0, 0.28);
+  background: linear-gradient(160deg, #fffdf6, #e9e3d4);
+  color: #15161a;
+}
+.pc-back { transform: rotateY(180deg); border: 1px solid rgba(255, 255, 255, 0.16); }
+.pc-rank { font-family: var(--font-display); font-weight: 900; line-height: 1; }
+.pc-pip { align-self: center; line-height: 1; }
+.pc-foot { transform: rotate(180deg); opacity: 0.9; }
+.pc-red { color: #b0201f; }
+
+/* card face skins */
+.cf-noir .pc-face { background: linear-gradient(160deg, #20222a, #111318); color: #f0ece2; }
+.cf-noir .pc-red { color: #f26d6a; }
+.cf-gold .pc-face { background: linear-gradient(160deg, #fbf1d2, #e9d296); color: #4a3a12; }
+.cf-gold .pc-red { color: #a83a1e; }
+.cf-neon .pc-face { background: linear-gradient(160deg, #10131c, #161c2c); color: #5ef2d6; box-shadow: inset 0 0 16px rgba(94, 242, 214, 0.28); }
+.cf-neon .pc-red { color: #ff5fa2; }
+.cf-ice .pc-face { background: linear-gradient(160deg, #eaf6ff, #c3dcef); color: #123048; }
+.cf-ice .pc-red { color: #1f6fa8; }
+.cf-fire .pc-face { background: linear-gradient(160deg, #2a0f06, #521a08); color: #ffd9a3; box-shadow: inset 0 0 18px rgba(224, 84, 19, 0.45); }
+.cf-fire .pc-red { color: #ff7a3d; }
+
+/* card backs */
+.bk-crimson { background: repeating-linear-gradient(45deg, #7d2523 0 6px, #93302d 6px 12px); }
+.bk-noir { background: repeating-linear-gradient(45deg, #15161a 0 6px, #22242b 6px 12px); }
+.bk-crown { background: linear-gradient(140deg, #6d5316, #e3b23c 45%, #6d5316); }
+.bk-crown::after { content: '♛'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 26px; color: rgba(0, 0, 0, 0.4); }
+.bk-galaxy { background: radial-gradient(circle at 30% 25%, #5b3fa8, #1a1233 60%, #08060f); }
+.bk-galaxy::after { content: '✦'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 22px; color: rgba(255, 255, 255, 0.5); }
+.bk-ember { background: linear-gradient(160deg, #4a1104, #c2470f 55%, #f0a04a); }
+.bk-ember::after { content: '✦'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 20px; color: rgba(0, 0, 0, 0.35); }
+.bk-frost { background: linear-gradient(160deg, #0d3a4d, #38b6c8 60%, #bdf0f7); }
+.bk-frost::after { content: '❄'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 24px; color: rgba(255, 255, 255, 0.55); }
+
+/* ---------- chips ---------- */
+.chip-obj {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+  background: var(--chip-color);
+  border: 3px dashed rgba(255, 255, 255, 0.7);
+  box-shadow:
+    0 6px 14px rgba(0, 0, 0, 0.5),
+    inset 0 -3px 8px rgba(0, 0, 0, 0.35),
+    inset 0 3px 7px rgba(255, 255, 255, 0.28);
+}
+.chip-obj::after {
+  content: '';
+  position: absolute;
+  inset: 15%;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+.ck-gold .chip-obj { filter: saturate(0.5) sepia(0.55) brightness(1.1); }
+.ck-neon .chip-obj { filter: saturate(1.8) brightness(1.15); box-shadow: 0 0 18px var(--chip-color), 0 6px 14px rgba(0, 0, 0, 0.5); }
+.ck-ivory .chip-obj { filter: saturate(0.2) brightness(1.35); }
+.ck-obsidian .chip-obj { filter: saturate(0.35) brightness(0.55); border-color: rgba(255, 255, 255, 0.35); }
+.ck-ember .chip-obj { filter: hue-rotate(-22deg) saturate(1.6) brightness(1.12); }
+
+/* the All-In chip — always red/gold regardless of the equipped chip skin, so it reads as a distinct action */
+.all-in-chip {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-weight: 900;
+  font-size: 8.5px;
+  line-height: 1.05;
+  text-align: center;
+  padding: 2px;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  background: linear-gradient(150deg, var(--crimson-hi), var(--crimson) 55%, #3d0d0b);
+  border: 3px dashed rgba(255, 255, 255, 0.75);
+  box-shadow:
+    0 0 16px rgba(232, 128, 125, 0.5),
+    0 6px 14px rgba(0, 0, 0, 0.5),
+    inset 0 -3px 8px rgba(0, 0, 0, 0.35),
+    inset 0 3px 7px rgba(255, 255, 255, 0.28);
+  cursor: pointer;
+}
+.all-in-chip::after {
+  content: '';
+  position: absolute;
+  inset: 15%;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* ---------- tables ---------- */
+.tb-green { --table-a: #17402f; --table-b: #0f2a20; --table-rim: rgba(227, 178, 60, 0.22); }
+.tb-noir { --table-a: #2a2028; --table-b: #141018; --table-rim: rgba(227, 178, 60, 0.34); }
+.tb-midnight { --table-a: #16294d; --table-b: #0c1730; --table-rim: rgba(120, 170, 255, 0.26); }
+.tb-gold { --table-a: #4a3a14; --table-b: #2b210c; --table-rim: rgba(248, 227, 168, 0.45); }
+.tb-cyber { --table-a: #10233d; --table-b: #0a1226; --table-rim: rgba(56, 182, 200, 0.4); }
+.tb-crimson { --table-a: #3d1220; --table-b: #200912; --table-rim: rgba(232, 128, 125, 0.32); }
+.table-felt {
+  background:
+    radial-gradient(ellipse 58% 42% at 50% 10%, rgba(255, 255, 255, 0.1), transparent 70%),
+    radial-gradient(ellipse at 50% 32%, var(--table-a), var(--table-b) 62%, #06100c);
+  border: 2px solid var(--table-rim);
+  box-shadow: var(--shadow-inset), var(--shadow-deep);
+}
+
+/* ---------- avatar frames ---------- */
+.fr-gold { box-shadow: 0 0 0 2px var(--gold), 0 0 18px var(--glow-gold); }
+.fr-ice { box-shadow: 0 0 0 2px #9fe3f2, 0 0 20px rgba(56, 182, 200, 0.5); }
+.fr-ember { box-shadow: 0 0 0 2px #f0894a, 0 0 22px rgba(224, 84, 19, 0.55); }
+
+/* rank rings, used when no frame is equipped */
+.rk-bronze { box-shadow: 0 0 0 2px #a06a34; }
+.rk-silver { box-shadow: 0 0 0 2px #b9c0cb; }
+.rk-gold { box-shadow: 0 0 0 2px var(--gold), 0 0 14px var(--glow-gold); }
+.rk-platinum { box-shadow: 0 0 0 2px #d7f0f5; }
+.rk-diamond { box-shadow: 0 0 0 2px #6fd8ec, 0 0 18px rgba(56, 182, 200, 0.4); }
+.rk-master { box-shadow: 0 0 0 2px #a882ff, 0 0 20px rgba(123, 91, 214, 0.45); }
+.rk-royal { box-shadow: 0 0 0 2px var(--gold-hi), 0 0 24px rgba(248, 227, 168, 0.55); }
+
+/* ---------- rarity ---------- */
+.rar-common { --rar: #8b8f98; }
+.rar-rare { --rar: #4a9be0; }
+.rar-epic { --rar: #a878f0; }
+.rar-legendary { --rar: #e3b23c; }
+.rar-mythic { --rar: #ff5fa2; }
+.rar-card { border: 1px solid color-mix(in srgb, var(--rar) 45%, transparent); }
+.rar-epic.rar-card { box-shadow: 0 0 18px color-mix(in srgb, var(--rar) 25%, transparent); }
+/* Legendary/mythic get a contained glow pulse + shimmer sweep instead of a
+   spinning ring — the ring escaped its box on any card missing `position:
+   relative` in its own markup, so containment now lives here instead. */
+.rar-legendary.rar-card,
+.rar-mythic.rar-card {
+  position: relative;
+  overflow: hidden;
+  animation: rarGlow 3s ease-in-out infinite;
+}
+.rar-legendary.rar-card::before,
+.rar-mythic.rar-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(75deg, transparent 42%, color-mix(in srgb, var(--rar) 65%, white) 50%, transparent 58%);
+  transform: translateX(-120%);
+  animation: rarShimmer 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes rarGlow {
+  0%, 100% { box-shadow: 0 0 10px color-mix(in srgb, var(--rar) 16%, transparent); }
+  50% { box-shadow: 0 0 20px color-mix(in srgb, var(--rar) 36%, transparent); }
+}
+@keyframes rarShimmer {
+  0% { transform: translateX(-120%); }
+  55%, 100% { transform: translateX(120%); }
+}
+
+/* ---------- ambient life ---------- */
+@keyframes floatY { 50% { transform: translateY(-6px); } }
+@keyframes breathe { 50% { opacity: 0.55; } }
+@keyframes slowSpin { to { transform: rotate(360deg); } }
+.ambient-float { animation: floatY 5s ease-in-out infinite; }
+.ambient-breathe { animation: breathe 4.5s ease-in-out infinite; }
+.ambient-spin { animation: slowSpin 26s linear infinite; }
+
+/* ---------- slot machine themes (cabinet only — symbols/odds never change) ---------- */
+.reel-well.sl-classic { background: linear-gradient(180deg,#0a0b0e,#15171d 45%,#0a0b0e); border-color: rgba(255,255,255,.09); }
+.reel-well.sl-fruit { background: linear-gradient(180deg,#1a0d08,#2b1710 45%,#1a0d08); border-color: rgba(255,150,60,.22); }
+.reel-well.sl-neon { background: linear-gradient(180deg,#06131a,#0c2430 45%,#06131a); border-color: rgba(53,224,201,.3); }
+.reel-well.sl-egypt { background: linear-gradient(180deg,#1c1607,#2e2410 45%,#1c1607); border-color: rgba(227,178,60,.35); }
+.reel-well.sl-galaxy { background: linear-gradient(180deg,#0c0a1c,#1a1436 45%,#0c0a1c); border-color: rgba(168,120,240,.35); }
+
+/* ---------- site-wide ambient background ---------- */
+.ambient-cursor-glow {
+  position: absolute;
+  left: var(--gx, 50vw);
+  top: var(--gy, 40vh);
+  width: 480px;
+  height: 480px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(227, 178, 60, 0.10), transparent 70%);
+  transition: left 0.35s ease-out, top 0.35s ease-out;
+  will-change: left, top;
+}
+@keyframes ambientRise {
+  from { transform: translateY(108vh) rotate(0deg); opacity: 0; }
+  6%, 92% { opacity: 0.5; }
+  to { transform: translateY(-14vh) translateX(var(--drift-x, 0px)) rotate(360deg); opacity: 0; }
+}
+.ambient-drift {
+  position: absolute;
+  bottom: 0;
+  color: rgba(227, 178, 60, 0.4);
+  animation-name: ambientRise;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  line-height: 1;
+  filter: drop-shadow(0 0 6px rgba(227, 178, 60, 0.15));
+}
+.ambient-drift-spin { animation-name: ambientRise; }
