@@ -223,6 +223,24 @@ export default function PokerScene() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.street, state?.handNumber]);
 
+  /* When a player just closes their tab (or otherwise drops without clicking
+     "cash out"), Supabase notices they've left the room and members updates —
+     but the poker state still has their seat, and if it was their turn the
+     table freezes forever. The host reconciles: any seat whose userId isn't in
+     the current members list gets a synthetic 'leave' dispatched, which the
+     reducer already handles (removes the seat, finishes uncontested if
+     everyone else has folded, etc). Only the host runs this so two clients
+     don't race the same cleanup. */
+  useEffect(() => {
+    if (!isHost || !state || members.length === 0) return;
+    const present = new Set(members.map((m) => m.userId));
+    const ghosts = state.seats.filter((s) => !present.has(s.userId));
+    for (const ghost of ghosts) {
+      void send(profile.id, { type: 'leave', userId: ghost.userId });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHost, members.map((m) => m.userId).sort().join('|'), state?.seats.map((s) => s.userId).sort().join('|')]);
+
   /* Auto-start the next hand the instant every seated player has hit "Ready" —
      no host click, no wait. Guarded by isHost so only one client actually
      dispatches, and by street==='waiting' so it can't fire in the middle of

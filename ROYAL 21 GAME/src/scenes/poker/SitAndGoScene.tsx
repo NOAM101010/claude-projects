@@ -123,6 +123,19 @@ export default function SitAndGoScene() {
 
   const { displayCommunity, displayShowdown, liveEquity, revealing } = usePokerReveal(state);
 
+  /* Ghost cleanup: a player who closes their tab without cashing out leaves
+     their seat behind in game state, freezing the table if it was their turn.
+     Host reconciles by dispatching leave for any seat missing from members. */
+  useEffect(() => {
+    if (!isHost || !state || members.length === 0) return;
+    const present = new Set(members.map((m) => m.userId));
+    const ghosts = state.seats.filter((s) => !present.has(s.userId));
+    for (const ghost of ghosts) {
+      void send(profile.id, { type: 'leave', userId: ghost.userId });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHost, members.map((m) => m.userId).sort().join('|'), state?.seats.map((s) => s.userId).sort().join('|')]);
+
   /* The host keeps the tournament moving on its own — a turbo Sit & Go doesn't wait
      for anyone to click "next hand". `state.street` flips to 'waiting' the instant
      a hand resolves, even mid all-in-runout reveal (the engine settles everything

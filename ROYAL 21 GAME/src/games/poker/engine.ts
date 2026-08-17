@@ -464,9 +464,48 @@ export function reduce(prev: PokerState, action: PokerAction): PokerState {
       return state;
     }
     case 'leave': {
+      // Remember which userId was about to act (if any) so we can re-find
+      // their new index — or advance past them — after the filter shifts every
+      // seat left of them.
+      const wasActingId = state.toAct >= 0 ? state.seats[state.toAct]?.userId : null;
+      const wasDealerId = state.dealerSeat >= 0 ? state.seats[state.dealerSeat]?.userId : null;
+      const wasAggressorId = state.lastAggressorSeat >= 0 ? state.seats[state.lastAggressorSeat]?.userId : null;
+
       state.seats = state.seats.filter((s) => s.userId !== action.userId);
-      if (state.toAct >= state.seats.length) state.toAct = -1;
-      if (contenders(state).length <= 1 && state.street !== 'waiting') finishHand(state, true);
+
+      // Re-anchor dealer/aggressor to their new indices (or -1 if they were
+      // the leaver). Without this, the button and last-raiser would silently
+      // point at a different seat and every downstream nextSeat() would look
+      // for the "next after the button" from the wrong place.
+      state.dealerSeat = wasDealerId
+        ? state.seats.findIndex((s) => s.userId === wasDealerId)
+        : -1;
+      state.lastAggressorSeat = wasAggressorId
+        ? state.seats.findIndex((s) => s.userId === wasAggressorId)
+        : -1;
+
+      if (contenders(state).length <= 1 && state.street !== 'waiting') {
+        finishHand(state, true);
+        return state;
+      }
+
+      // Reset toAct correctly. If the leaver was the one about to act, or their
+      // old index no longer resolves to the same player, pick the next seat
+      // that can still act starting from where the leaver was.
+      if (wasActingId === action.userId || wasActingId === null) {
+        // Leaver was to act — advance to the next eligible seat, or -1 if
+        // nobody can (which triggers street resolution above via bettingDone).
+        const anchor = state.dealerSeat >= 0 ? state.dealerSeat : 0;
+        const next = nextSeat(state, anchor - 1 + state.seats.length, (s) => canAct(s) && !(s.hasActed && s.committed === state.currentBet));
+        state.toAct = next;
+        state.deadline = null;
+        if (state.toAct === -1 && state.street !== 'waiting') resolveStreetEnd(state);
+      } else {
+        // Leaver was NOT to act — re-find the actor at their new index.
+        const newIdx = state.seats.findIndex((s) => s.userId === wasActingId);
+        state.toAct = newIdx;
+        if (newIdx === -1) state.deadline = null;
+      }
       return state;
     }
     case 'topUp': {
