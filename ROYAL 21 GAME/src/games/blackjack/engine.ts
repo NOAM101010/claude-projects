@@ -219,6 +219,19 @@ export function reduce(prev: BjState, action: BjAction): BjState {
       return state;
     }
     case 'openBetting': {
+      // Only accept a new betting window from a settled state. Without this,
+      // a rogue openBetting mid-round (double-click "new round", stale
+      // action queued behind the settle) wiped every seat's placed bets —
+      // chips deducted client-side, no refund. Silently dropping the intent
+      // preserves the round in flight.
+      if (state.phase !== 'settled' && state.phase !== 'betting') return prev;
+      // While already in 'betting' with no active bets/hands, treat as a
+      // no-op to be safe against double-fires. Only refresh round if we
+      // came from a settled round.
+      if (state.phase === 'betting') {
+        // Already open; nothing to reset. Ignore.
+        return prev;
+      }
       state.phase = 'betting';
       state.round += 1;
       state.dealer = { cards: [], hidden: true };

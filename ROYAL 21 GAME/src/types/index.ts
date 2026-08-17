@@ -57,6 +57,9 @@ export interface Profile {
    * edits this in local storage gets a badge and nothing else.
    */
   isAdmin?: boolean;
+  /** Set once the player has qualified for VIP (level + chips at the same
+   *  time). Sticky: dropping chips later doesn't lose them the VIP room. */
+  everVip?: boolean;
 }
 
 export interface Stats {

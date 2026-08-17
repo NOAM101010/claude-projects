@@ -9,7 +9,7 @@ import type { Profile } from '@/types';
  */
 export const VIP_MIN_LEVEL = 5;
 export const VIP_MIN_CHIPS = 150_000;
-export const VIP_DAILY_BONUS = 2000;
+export const VIP_DAILY_BONUS = 10_000;
 
 /** High-stakes coin flip bets — VIP only. */
 export const VIP_COINFLIP_STAKES = [5000, 10000, 25000, 50000, 100000] as const;
@@ -19,7 +19,19 @@ export const VIP_HIGHCARD_STAKES = [5000, 10000, 25000, 50000, 100000] as const;
  *  so a VIP has something to spend seven figures of chips on at the felt. */
 export const VIP_BLACKJACK_BETS = [5000, 10000, 25000, 50000, 100000] as const;
 
+/** VIP is sticky: once a player has qualified (level + chips at the same
+ *  time), they stay VIP forever — losing chips at the tables shouldn't
+ *  lock them out of the room they just qualified for. `everVip` on the
+ *  profile is stamped the first time both thresholds are met. */
 export function isVipEligible(profile: Profile): boolean {
+  if (profile.everVip) return true;
+  return profile.level >= VIP_MIN_LEVEL && profile.chips >= VIP_MIN_CHIPS;
+}
+
+/** True the moment a player crosses BOTH thresholds — call from anywhere
+ *  the profile updates so we can flip `everVip` on. */
+export function shouldMarkEverVip(profile: Profile): boolean {
+  if (profile.everVip) return false;
   return profile.level >= VIP_MIN_LEVEL && profile.chips >= VIP_MIN_CHIPS;
 }
 

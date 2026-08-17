@@ -18,6 +18,7 @@ import {
 } from '@/services/localStore';
 import { useUI } from './useUI';
 import { useSettings } from './useSettings';
+import { shouldMarkEverVip } from '@/data/vip';
 import type { AvatarConfig, GameKey, Profile, Stats } from '@/types';
 
 interface PlayerState extends SaveData {
@@ -314,10 +315,17 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   },
 
   addChips: (delta, opts) => {
-    set((s) => ({
-      profile: withAdminFloor({ ...s.profile, chips: Math.max(0, Math.round(s.profile.chips + delta)) }),
-      stats: delta > 0 ? { ...s.stats, chipsWon: s.stats.chipsWon + delta } : s.stats,
-    }));
+    set((s) => {
+      const chips = Math.max(0, Math.round(s.profile.chips + delta));
+      const nextProfile = withAdminFloor({ ...s.profile, chips });
+      // Sticky VIP: the moment both thresholds are met, flip everVip on and
+      // keep it there. Loses no chips or level to demote them later.
+      if (shouldMarkEverVip(nextProfile)) nextProfile.everVip = true;
+      return {
+        profile: nextProfile,
+        stats: delta > 0 ? { ...s.stats, chipsWon: s.stats.chipsWon + delta } : s.stats,
+      };
+    });
     if (delta > 0 && !opts?.silent) {
       audio.play('chip');
       haptic('chip');

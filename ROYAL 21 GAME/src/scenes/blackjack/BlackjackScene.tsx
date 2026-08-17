@@ -322,24 +322,56 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [duel?.winner]);
 
+  /* Track how much I've spent this round via addBet, and reconcile against
+     the seat's actual bet in state after each version bump. If the deal
+     fires before my bet action lands (host processes deal locally, my bet
+     is still travelling through room_actions), the reducer rejects the
+     bet — this refunds the chips that were optimistically debited. */
+  const pendingBetTotal = useRef(0);
+  const pendingBetRound = useRef(-1);
+
   /* ------------------------------------------------------------ actions -- */
-  /* In duel mode, the buy-in was locked into the pot when the match started
-     and per-hand bets do not touch profile.chips at all — only points move
-     the scoreboard. So addChips is skipped whenever duel is set. Same for
-     clearBet and act(double/split) below. */
   const addBet = useCallback((value: number) => {
     const inDuel = Boolean(duel);
     if (!inDuel && profile.chips < value) { audio.play('error'); toast(t('blackjack.notEnough'), 'bad', '⚠'); return; }
     if (!inDuel) addChips(-value, solo ? { silent: true } : { silent: true, localOnly: true });
+    // Track expected bet total so a rejected bet gets refunded.
+    if (!solo && state) {
+      if (pendingBetRound.current !== state.round) {
+        pendingBetTotal.current = 0;
+        pendingBetRound.current = state.round;
+      }
+      pendingBetTotal.current += value;
+    }
     audio.play('chip');
     haptic('chip');
     void send(profile.id, { type: 'bet', userId: profile.id, amount: value }).then((ok) => {
       if (!ok) {
         if (!inDuel) addChips(value, solo ? { silent: true } : { silent: true, localOnly: true });
+        pendingBetTotal.current = Math.max(0, pendingBetTotal.current - value);
         toast(t('common.retry'), 'bad', '⚠');
       }
     });
-  }, [profile.chips, profile.id, addChips, send, toast, t, solo, duel]);
+  }, [profile.chips, profile.id, addChips, send, toast, t, solo, duel, state]);
+
+  /* Watch the state: if we tried to bet X this round but the phase already
+     left 'betting' (deal fired before our bet arrived), refund the delta.
+     This turns "you got made a spectator and lost your money" into "you
+     got made a spectator and kept your money". */
+  useEffect(() => {
+    if (solo || !state || !mySeat) return;
+    // Only reconcile once the round has moved out of betting.
+    if (state.phase === 'betting') return;
+    if (pendingBetRound.current !== state.round) return;
+    const actuallyBet = mySeat.bet + (mySeat.hands ?? []).reduce((sum, h) => sum + h.bet, 0);
+    const missing = pendingBetTotal.current - actuallyBet;
+    if (missing > 0 && !duel) {
+      addChips(missing, { silent: true, localOnly: true });
+    }
+    pendingBetTotal.current = 0;
+    pendingBetRound.current = -1;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state?.phase, state?.round]);
 
   const clearBet = () => {
     if (!mySeat?.bet) return;
