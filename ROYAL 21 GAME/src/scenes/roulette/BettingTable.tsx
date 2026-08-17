@@ -13,7 +13,30 @@ interface Contribution { color: string; amount: number; userId: string }
 interface Props {
   seats: RouletteSeat[];
   disabled: boolean;
+  /** Set once a spin resolves — draws the classic casino "marker" (dolly) on
+   *  the winning number so the whole table can see it at a glance. Clears when
+   *  the next betting window opens. */
+  winningNumber?: number | null;
   onBet: (kind: RouletteBetKind, numbers: number[]) => void;
+}
+
+/** Casino "dolly" — the crystal marker croupiers drop on the winning number
+ *  after a spin. Sits above the chip cluster and pulses to draw the eye. */
+function WinnerMarker() {
+  return (
+    <motion.span
+      initial={{ scale: 0, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: 'spring', stiffness: 240, damping: 15, delay: 0.15 }}
+      className="absolute pointer-events-none"
+      style={{
+        top: -6, right: -6, width: 18, height: 18, borderRadius: '50%',
+        background: 'radial-gradient(circle at 35% 30%, #fff8d6, #e3b23c 55%, #7a5822)',
+        boxShadow: '0 0 12px rgba(227,178,60,.9), inset 0 -2px 3px rgba(0,0,0,.4)',
+        border: '1px solid #fff8d6', zIndex: 5,
+      }}
+    />
+  );
 }
 
 function ChipCluster({ contributions }: { contributions: Contribution[] }) {
@@ -40,7 +63,7 @@ function ChipCluster({ contributions }: { contributions: Contribution[] }) {
 }
 
 /** The felt: 0 + 3x12 grid, dozens, columns and the classic even-money bets. */
-export function BettingTable({ seats, disabled, onBet }: Props) {
+export function BettingTable({ seats, disabled, winningNumber, onBet }: Props) {
   const { t } = useT();
 
   const byKey = useMemo(() => {
@@ -107,26 +130,35 @@ export function BettingTable({ seats, disabled, onBet }: Props) {
       {/* zero */}
       <motion.div
         whileTap={!disabled ? { scale: 0.93 } : undefined}
-        style={{ ...cellStyle(0, { gridColumn: '1 / 2', gridRow: '1 / 4', alignItems: 'center', borderRadius: 6 }) }}
+        style={{ ...cellStyle(0, { gridColumn: '1 / 2', gridRow: '1 / 4', alignItems: 'center', borderRadius: 6 }),
+          ...(winningNumber === 0 ? { boxShadow: 'inset 0 0 0 3px var(--gold-hi), 0 0 24px rgba(227,178,60,.6)' } : {}) }}
         onClick={() => handle('straight', [0])}
       >
         0
+        {winningNumber === 0 && <WinnerMarker />}
         <ChipCluster contributions={byKey.get(betKey('straight', [0])) ?? []} />
       </motion.div>
 
       {/* number grid */}
       {GRID_ROWS.map((row, r) =>
-        row.map((n, c) => (
-          <motion.div
-            key={n}
-            whileTap={!disabled ? { scale: 0.93 } : undefined}
-            style={cellStyle(n, { gridColumn: `${c + 2} / ${c + 3}`, gridRow: `${r + 1} / ${r + 2}` })}
-            onClick={() => handle('straight', [n])}
-          >
-            {n}
-            <ChipCluster contributions={byKey.get(betKey('straight', [n])) ?? []} />
-          </motion.div>
-        )),
+        row.map((n, c) => {
+          const isWinner = winningNumber === n;
+          return (
+            <motion.div
+              key={n}
+              whileTap={!disabled ? { scale: 0.93 } : undefined}
+              style={cellStyle(n, {
+                gridColumn: `${c + 2} / ${c + 3}`, gridRow: `${r + 1} / ${r + 2}`,
+                ...(isWinner ? { boxShadow: 'inset 0 0 0 3px var(--gold-hi), 0 0 24px rgba(227,178,60,.6)' } : {}),
+              })}
+              onClick={() => handle('straight', [n])}
+            >
+              {n}
+              {isWinner && <WinnerMarker />}
+              <ChipCluster contributions={byKey.get(betKey('straight', [n])) ?? []} />
+            </motion.div>
+          );
+        }),
       )}
 
       {/* column bets, one per row */}

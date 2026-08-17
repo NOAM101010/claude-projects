@@ -192,6 +192,34 @@ export default function RouletteScene({ mode, roomCode }: Props) {
     void send(profile.id, { type: 'clearBets', userId: profile.id });
   };
 
+  /* Repeat the same bets we made last round. Nice for spamming a hot number
+     or a favourite pattern without re-clicking every cell. */
+  const handleRepeatLastBet = () => {
+    if (!state || state.phase !== 'betting' || mySeat?.spectator) return;
+    const prev = state.lastBets?.[profile.id];
+    if (!prev || prev.length === 0) return;
+    const total = prev.reduce((sum, b) => sum + b.amount, 0);
+    if (profile.chips < total) {
+      audio.play('error');
+      toast(t('games.tooPoor', { amount: fmt(total - profile.chips) }), 'bad', '⚠');
+      return;
+    }
+    audio.play('chip');
+    haptic('chip');
+    // Deduct up front so the HUD updates once instead of per-bet flicker.
+    addChips(-total, { silent: true });
+    let failed = 0;
+    prev.forEach((bet) => {
+      void send(profile.id, {
+        type: 'placeBet', userId: profile.id,
+        kind: bet.kind, numbers: bet.numbers, amount: bet.amount,
+      }).then((ok) => {
+        if (!ok) { addChips(bet.amount, { silent: true }); failed += 1; }
+      });
+    });
+    if (failed > 0) toast(t('common.retry'), 'bad', '⚠');
+  };
+
   const handleSpin = () => {
     audio.play('door');
     void send(profile.id, { type: 'spin' });
@@ -288,8 +316,27 @@ export default function RouletteScene({ mode, roomCode }: Props) {
           </div>
         )}
 
-        {/* wheel + result */}
-        <div className="relative grid place-items-center" style={{ height: 220 }}>
+        {/* wheel + result — during the spin the wheel scales up and its
+            surroundings dim so it feels like the camera cuts in close, then
+            eases back to the felt when it settles. Matches how a real casino
+            broadcast cuts to the wheel then back to the table. */}
+        <motion.div
+          className="relative grid place-items-center"
+          style={{ height: 220, zIndex: wheelSpinning ? 30 : 1 }}
+          animate={{ scale: wheelSpinning ? 1.35 : 1 }}
+          transition={{ type: 'spring', stiffness: 120, damping: 22, mass: 0.9 }}
+        >
+          {/* Dim the rest of the page while zoomed in. */}
+          <AnimatePresence>
+            {wheelSpinning && (
+              <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                transition={{ duration: 0.35 }}
+                className="fixed inset-0 pointer-events-none"
+                style={{ background: 'radial-gradient(ellipse at 50% 35%, transparent 20%, rgba(0,0,0,.72) 65%)', zIndex: -1 }}
+              />
+            )}
+          </AnimatePresence>
           <RouletteWheel spinning={wheelSpinning} winningNumber={state?.winningNumber ?? null} onSettled={handleWheelSettled} size={210} />
           <AnimatePresence>
             {phase === 'settled' && !pendingReveal && mySeat && (
@@ -304,7 +351,7 @@ export default function RouletteScene({ mode, roomCode }: Props) {
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
+        </motion.div>
 
         {/* controls */}
         <GlassPanel className="p-3 w-full">
@@ -319,8 +366,16 @@ export default function RouletteScene({ mode, roomCode }: Props) {
               </button>
             ))}
           </div>
-          <div className="flex gap-2">
-            <GameButton tone="ghost" block disabled={!canBet || !mySeat?.bets.length} onClick={handleClear}>{t('blackjack.clear')}</GameButton>
+          <div className="flex gap-2 flex-wrap">
+            <GameButton size="sm" tone="ghost" disabled={!canBet || !mySeat?.bets.length} onClick={handleClear}>{t('blackjack.clear')}</GameButton>
+            <GameButton
+              size="sm"
+              tone="metal"
+              disabled={!canBet || !(state?.lastBets?.[profile.id]?.length)}
+              onClick={handleRepeatLastBet}
+            >
+              🔁 {t('blackjack.lastBet')}
+            </GameButton>
             {phase === 'betting' ? (
               <GameButton tone="gold" block disabled={!(mode === 'solo' || isHost) || !anyBets || bettingWindowOpen} onClick={handleSpin}>
                 {bettingWindowOpen ? t('roulette.spinIn', { s: bettingSecondsLeft }) : t('roulette.spin')}
@@ -341,8 +396,15 @@ export default function RouletteScene({ mode, roomCode }: Props) {
           )}
         </GlassPanel>
 
-        {/* felt */}
-        <BettingTable seats={state?.seats ?? []} disabled={!canBet} onBet={handleBet} />
+        {/* felt — pass the winning number so the dolly (casino marker) lands
+            on it after the wheel reveal. Hidden during pendingReveal so the
+            number doesn't leak on the felt before the wheel finishes spinning. */}
+        <BettingTable
+          seats={state?.seats ?? []}
+          disabled={!canBet}
+          winningNumber={phase !== 'betting' && !pendingReveal ? state?.winningNumber ?? null : null}
+          onBet={handleBet}
+        />
 
         {/* players */}
         {mode === 'room' && !!state?.seats.length && (

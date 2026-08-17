@@ -170,6 +170,33 @@ export default function PokerScene() {
   }, [isHost, state?.toAct, state?.deadline, now]);
   const secondsLeft = state?.deadline ? Math.max(0, Math.ceil((state.deadline - now) / 1000)) : null;
 
+  /* Freeze watchdog: track when we last saw the state.version change. If the
+     table hasn't progressed for 30s AND we're not the host AND the deadline
+     is past, aggressively claim the host role — the current host is probably
+     dead or badly throttled and the normal 5s liveness poll wasn't enough. */
+  const lastVersionRef = useRef<{ version: number; at: number } | null>(null);
+  useEffect(() => {
+    if (!state) return;
+    const v = state.version ?? 0;
+    if (!lastVersionRef.current || lastVersionRef.current.version !== v) {
+      lastVersionRef.current = { version: v, at: Date.now() };
+    }
+  }, [state?.version]);
+  useEffect(() => {
+    if (!room || !state || isHost) return;
+    if (state.toAct === -1 || !state.deadline) return;
+    if (Date.now() < state.deadline + 15000) return;
+    const stale = lastVersionRef.current
+      ? Date.now() - lastVersionRef.current.at > 15000
+      : false;
+    if (!stale) return;
+    // The state hasn't moved for 15s past its deadline. The host is truly
+    // gone or stuck — try to claim host right now instead of waiting for the
+    // 5s liveness tick.
+    void roomsService.claimHostIfStale(room.id, profile.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHost, state?.version, state?.deadline, state?.toAct, now, room?.id, profile.id]);
+
   const { displayCommunity, displayShowdown, liveEquity, revealing } = usePokerReveal(state);
 
   const seatSlots = useMemo(() => {
@@ -279,6 +306,11 @@ export default function PokerScene() {
     if (amount > profile.chips) { toast(t('poker.notEnoughChips'), 'bad', '⚠'); return; }
     const wasSeated = Boolean(mySeat);
     addChips(-amount, { silent: true });
+    // Snapshot the state version BEFORE dispatching, so we can watch for the
+    // reducer's response. The old 800ms fixed-timer refund was a race: on slow
+    // networks the join landed at 1200ms after the refund had already fired at
+    // 800ms — player pocketed the buy-in AND kept their seat.
+    const startVersion = usePokerRoom.getState().state?.version ?? 0;
     if (wasSeated) {
       await send(profile.id, { type: 'topUp', userId: profile.id, amount });
     } else {
@@ -286,19 +318,30 @@ export default function PokerScene() {
     }
     setBuyInOpen(false);
     audio.play('chip');
-    /* Refund if the reducer refused the join — the seat cap is full, a config
-       gate rejected us, or we lost a race. Without this the chips silently
-       vanish. Rebuy (topUp) has no such rejection paths so we only guard the
-       join case. */
+    /* Refund only if the reducer refused the join. Poll state.version until it
+       advances (proof the intent was processed), OR give up after 8 seconds. */
     if (!wasSeated) {
-      setTimeout(() => {
+      const deadline = Date.now() + 8000;
+      const check = () => {
         const latest = usePokerRoom.getState().state;
-        const seated = latest?.seats.some((s) => s.userId === profile.id);
-        if (!seated) {
+        if (!latest) return;
+        const seated = latest.seats.some((s) => s.userId === profile.id);
+        if (seated) return; // success — nothing to do
+        if (latest.version > startVersion) {
+          // The version advanced but we're still not seated → reducer rejected.
           addChips(amount, { silent: true });
           toast(t('rooms.notFound'), 'bad', '⚠');
+          return;
         }
-      }, 800);
+        if (Date.now() > deadline) {
+          // Never got a response at all — network dropped. Refund conservatively.
+          addChips(amount, { silent: true });
+          toast(t('common.retry'), 'bad', '⚠');
+          return;
+        }
+        setTimeout(check, 300);
+      };
+      setTimeout(check, 300);
     }
   };
 

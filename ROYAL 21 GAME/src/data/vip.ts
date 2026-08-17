@@ -15,6 +15,9 @@ export const VIP_DAILY_BONUS = 2000;
 export const VIP_COINFLIP_STAKES = [5000, 10000, 25000, 50000, 100000] as const;
 /** High-stakes high card bets — VIP only. */
 export const VIP_HIGHCARD_STAKES = [5000, 10000, 25000, 50000, 100000] as const;
+/** High-stakes blackjack bets — VIP only. Larger than the base BetRail options
+ *  so a VIP has something to spend seven figures of chips on at the felt. */
+export const VIP_BLACKJACK_BETS = [5000, 10000, 25000, 50000, 100000] as const;
 
 export function isVipEligible(profile: Profile): boolean {
   return profile.level >= VIP_MIN_LEVEL && profile.chips >= VIP_MIN_CHIPS;

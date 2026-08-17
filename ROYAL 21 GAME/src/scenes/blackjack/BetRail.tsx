@@ -3,6 +3,7 @@ import { Chip } from '@/components/game/Chip';
 import { ChipStack } from '@/components/game/ChipStack';
 import { GameButton } from '@/components/ui/GameButton';
 import { BLACKJACK_BETS } from '@/data/economy';
+import { VIP_BLACKJACK_BETS } from '@/data/vip';
 import { useT } from '@/hooks/useT';
 import { fmt } from '@/lib/format';
 
@@ -14,6 +15,8 @@ interface Props {
   multiplayer: boolean;
   chipSkin: string;
   countdown: number | null;
+  /** When true, the VIP high-stakes chip row is added underneath the base rail. */
+  vip?: boolean;
   onAdd: (value: number) => void;
   onClear: () => void;
   onRepeat: () => void;
@@ -23,7 +26,7 @@ interface Props {
 
 /** Betting is done with physical chips on a rail, never with square buttons. */
 export function BetRail({
-  bet, chips, lastBet, ready, multiplayer, chipSkin, countdown,
+  bet, chips, lastBet, ready, multiplayer, chipSkin, countdown, vip,
   onAdd, onClear, onRepeat, onAll, onReady,
 }: Props) {
   const { t } = useT();
@@ -43,7 +46,7 @@ export function BetRail({
         </span>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-2 mb-3">
+      <div className="flex flex-wrap justify-center gap-2 mb-2">
         {BLACKJACK_BETS.map((value) => (
           <Chip
             key={value}
@@ -56,6 +59,26 @@ export function BetRail({
           />
         ))}
       </div>
+      {vip && (
+        <div className="flex flex-wrap justify-center gap-2 mb-3 pt-2"
+          style={{ borderTop: '1px dashed var(--gold-line)' }}>
+          <span className="w-full text-center text-[10.5px] font-black tracking-widest"
+            style={{ color: 'var(--gold-hi)', letterSpacing: '0.15em' }}>
+            💎 VIP HIGH STAKES
+          </span>
+          {VIP_BLACKJACK_BETS.map((value) => (
+            <Chip
+              key={value}
+              value={value}
+              size={44}
+              skin={chipSkin}
+              interactive
+              disabled={chips < value || ready}
+              onClick={() => onAdd(value)}
+            />
+          ))}
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2 justify-center">
         <GameButton size="sm" tone="ghost" disabled={!bet || ready} onClick={onClear}>{t('blackjack.clear')}</GameButton>

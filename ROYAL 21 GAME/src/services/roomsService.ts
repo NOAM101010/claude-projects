@@ -127,10 +127,14 @@ export const roomsService = {
    * safe to run from every seated client at once.
    */
   watchHostLiveness(roomId: string, userId: string, isCurrentlyHost: () => boolean, onTakeover: () => void) {
+    // Was 15s. The server-side `reassign_room_host` refuses unless the room
+    // has been quiet for 20s+ anyway, so shortening the client-side poll only
+    // reduces the "how quickly can we notice a dead host" latency — worst-case
+    // freeze time is now ~5-25s instead of ~15-35s. Cheap RPC either way.
     const interval = setInterval(() => {
       if (isCurrentlyHost()) return;
       void this.claimHostIfStale(roomId, userId).then((claimed) => { if (claimed) onTakeover(); });
-    }, 15000);
+    }, 5000);
     return () => clearInterval(interval);
   },
 

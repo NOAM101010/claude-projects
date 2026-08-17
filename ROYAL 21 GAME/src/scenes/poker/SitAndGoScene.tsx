@@ -203,19 +203,30 @@ export default function SitAndGoScene() {
     const buyIn = tournament.buyIn;
     addChips(-buyIn, { silent: true });
     audio.play('chip');
+    const startVersion = useSngRoom.getState().state?.version ?? 0;
     await send(profile.id, { type: 'join', userId: profile.id, username: profile.username, avatar: profile.avatar, level: profile.level, buyIn: 0 });
-    /* The engine rejects a join once the tournament has begun (no late reg,
-       no rebuys) and returns the previous state unchanged — the client's
-       optimistic debit then had no matching seat, so the buy-in silently
-       disappeared. Refund locally when the join didn't produce our seat. */
-    setTimeout(() => {
+    /* Refund only after the reducer has actually responded — polling
+       state.version, not a fixed 800ms timer. The old fixed-time refund
+       raced slow networks and handed out free tournament entries. */
+    const deadline = Date.now() + 8000;
+    const check = () => {
       const latest = useSngRoom.getState().state;
-      const seated = latest?.seats.some((s) => s.userId === profile.id);
-      if (!seated) {
+      if (!latest) return;
+      const seated = latest.seats.some((s) => s.userId === profile.id);
+      if (seated) return;
+      if (latest.version > startVersion) {
         addChips(buyIn, { silent: true });
         toast(t('sng.registrationFailed'), 'bad', '⚠');
+        return;
       }
-    }, 800);
+      if (Date.now() > deadline) {
+        addChips(buyIn, { silent: true });
+        toast(t('common.retry'), 'bad', '⚠');
+        return;
+      }
+      setTimeout(check, 300);
+    };
+    setTimeout(check, 300);
   };
 
   const leaveTable = async () => {

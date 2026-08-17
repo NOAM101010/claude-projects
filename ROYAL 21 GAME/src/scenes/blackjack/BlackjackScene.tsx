@@ -30,6 +30,7 @@ import { audio } from '@/audio/AudioManager';
 import { haptic } from '@/lib/haptics';
 import { fmt } from '@/lib/format';
 import { XP_REWARDS } from '@/data/economy';
+import { isVipEligible } from '@/data/vip';
 import { isOnline } from '@/services/supabase';
 import type { BjSeat } from '@/games/blackjack/types';
 
@@ -209,9 +210,26 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
     const roomMode = Boolean(room && isOnline());
     if (payout > 0) addChips(payout, roomMode ? { localOnly: true } : undefined);
     if (roomMode && room) {
-      void blackjackService.claimPayout(room.id, state.round).then((balance) => {
-        if (typeof balance === 'number') setChips(balance);
-      });
+      /* claimPayout is server-authoritative for room hands. It can fail (net
+         hiccup, RLS reject, expired session) — retry twice with backoff, then
+         fall through to the local-only path so a lost win doesn't silently
+         disappear the way it used to before this guard. */
+      const claim = async () => {
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          const balance = await blackjackService.claimPayout(room.id, state.round);
+          if (typeof balance === 'number') { setChips(balance); return; }
+          await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
+        }
+        /* All retries failed. Downgrade to local-only credit so the player
+           at least sees the win. lastSyncedChips was already stamped by the
+           earlier localOnly addChips, so we need to bump the baseline too or
+           the next reconcile push will send the delta and double-credit
+           whenever the server later comes back — do a setChips to plant an
+           authoritative baseline matching what we're showing. */
+        setChips(usePlayer.getState().profile.chips);
+        toast(t('common.retry'), 'bad', '⚠');
+      };
+      void claim();
     }
 
     const outcome = net > 0 ? 'win' : net < 0 ? 'lose' : 'push';
@@ -506,6 +524,7 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
                 multiplayer={!solo}
                 chipSkin={profile.equipped.chipSkin}
                 countdown={countdown}
+                vip={isVipEligible(profile)}
                 onAdd={addBet}
                 onClear={clearBet}
                 onRepeat={repeatBet}

@@ -606,6 +606,12 @@ export function reduce(prev: PokerState, action: PokerAction): PokerState {
       const idx = idxOf(state, action.userId);
       if (idx === -1 || state.toAct !== idx) return prev;
       const seat = state.seats[idx];
+      // Short-all-in guard: if this seat already acted this street at a lower
+      // current bet, they're being asked to call because a subsequent short
+      // jam only bumped the price. Standard tournament rule — they may
+      // call or fold, but not raise. Without this the seat could re-raise off
+      // a short all-in that had no legal reopen.
+      if (seat.hasActed && seat.committed < state.currentBet) return prev;
       const maxLevel = seat.committed + seat.stack;
       const requested = Math.round(action.amount);
       const minLevel = state.currentBet + state.minRaise;
@@ -631,6 +637,10 @@ export function reduce(prev: PokerState, action: PokerAction): PokerState {
       const seat = state.seats[idx];
       const level = seat.committed + seat.stack;
       const isRaise = level > state.currentBet;
+      // Short-all-in guard, same rationale as the raise case. A seat that
+      // already acted at a lower current bet can call (level<=currentBet) but
+      // can't re-jam over it as a raise.
+      if (seat.hasActed && seat.committed < state.currentBet && isRaise) return prev;
       applyContribution(state, seat, level);
       seat.lastAction = 'allin';
       if (isRaise) {
