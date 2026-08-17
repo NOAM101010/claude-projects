@@ -305,6 +305,19 @@ export default function PokerScene() {
     navigate('/hub');
   };
 
+  /* Cleanup when the tab closes: dispatch leave so the seat doesn't hang
+     forever with a ghost player at the table. beforeunload fires before
+     the page truly unloads, so send() can complete. */
+  useEffect(() => {
+    const cleanup = () => {
+      const st = usePokerRoom.getState();
+      const s = st.state?.seats.find((seat) => seat.userId === profile.id);
+      if (s) void send(profile.id, { type: 'leave', userId: profile.id });
+    };
+    window.addEventListener('beforeunload', cleanup);
+    return () => window.removeEventListener('beforeunload', cleanup);
+  }, [profile.id, send]);
+
   if (!isOnline() || !roomsService.canHost(profile.id)) {
     return (
       <SceneShell>

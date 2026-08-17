@@ -156,6 +156,20 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHost, solo, members.map((m) => m.userId).sort().join('|'), state?.seats.map((s) => s.userId).sort().join('|')]);
 
+  /* Cleanup when tab closes: dispatch leave so disconnected seats don't
+     hang forever. beforeunload fires early enough for send() to complete. */
+  useEffect(() => {
+    if (solo) return;
+    const cleanup = () => {
+      const st = useRoom.getState();
+      if (st.state?.seats.some((seat) => seat.userId === profile.id)) {
+        void send(profile.id, { type: 'leave', userId: profile.id });
+      }
+    };
+    window.addEventListener('beforeunload', cleanup);
+    return () => window.removeEventListener('beforeunload', cleanup);
+  }, [profile.id, send, solo]);
+
   /* Multiplayer betting window: the host starts the clock once anyone is ready.
      Was firing openBetting to stamp the deadline, which the reducer treats as
      "reset the whole round" — wiping every seat's bet + ready. setDeadline is
