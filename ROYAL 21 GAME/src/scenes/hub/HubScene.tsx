@@ -231,6 +231,16 @@ export default function HubScene() {
           </HubCard>
 
           <HubCard
+            label={t('games.baccarat')}
+            action={t('baccarat.deal')}
+            blurb={t('games.baccaratHint')}
+            hoverSound="card"
+            onEnter={() => navigate('/game/baccarat')}
+          >
+            {(focused) => <HighCardArt focused={focused} />}
+          </HubCard>
+
+          <HubCard
             label={t('hub.counter')}
             action={t('hub.scratchIt')}
             blurb={t('hub.blurbScratch')}

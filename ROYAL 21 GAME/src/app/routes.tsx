@@ -19,6 +19,7 @@ const ScratchScene = lazy(() => import('@/games/scratch/ScratchScene'));
 const SlotsScene = lazy(() => import('@/games/slots/SlotsScene'));
 const NightScene = lazy(() => import('@/scenes/night/NightScene'));
 const HighCardScene = lazy(() => import('@/games/highcard/HighCardScene'));
+const BaccaratScene = lazy(() => import('@/games/baccarat/BaccaratScene'));
 const AdminScene = lazy(() => import('@/scenes/admin/AdminScene'));
 const PokerScene = lazy(() => import('@/scenes/poker/PokerScene'));
 const SitAndGoScene = lazy(() => import('@/scenes/poker/SitAndGoScene'));
@@ -82,6 +83,7 @@ export function AppRoutes() {
         <Route path="/game/slots" element={<RequireSession><SlotsScene /></RequireSession>} />
         <Route path="/game/highcard" element={<RequireSession><HighCardScene mode="solo" /></RequireSession>} />
         <Route path="/game/highcard/room/:roomCode" element={<RequireSession><HighCardRoomRoute /></RequireSession>} />
+        <Route path="/game/baccarat" element={<RequireSession><BaccaratScene /></RequireSession>} />
         <Route path="/game/roulette/solo" element={<RequireSession><RouletteScene mode="solo" /></RequireSession>} />
         <Route path="/game/roulette/room/:roomCode" element={<RequireSession><RouletteRoomRoute /></RequireSession>} />
         <Route path="/lobby" element={<RequireSession><LobbyScene /></RequireSession>} />

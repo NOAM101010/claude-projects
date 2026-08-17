@@ -36,6 +36,20 @@ export interface AdminRoom {
   updated_at: string;
 }
 
+/** One row of the "who's live right now" panel. */
+export interface AdminActivePlayer {
+  id: string;
+  username: string;
+  tag: string;
+  level: number;
+  chips: number;
+  presence: string;
+  current_game: string | null;
+  last_seen: string;
+  is_admin: boolean;
+  is_guest: boolean;
+}
+
 /** One line per thing that can be silently wrong, with the answer. */
 export interface HealthCheck {
   key: string;
@@ -90,6 +104,24 @@ export const adminService = {
     const { data, error } = await client.rpc('transfer_chips', { target_tag: targetTag, amount: Math.round(amount) });
     if (error || !data?.success) return null;
     return { username: data.username, balance: data.new_balance };
+  },
+
+  /** Set another player's balance to an exact value (not a delta). */
+  async setUserChips(targetTag: string, chips: number): Promise<{ username: string; balance: number } | null> {
+    const client = db();
+    if (!client) return null;
+    const { data, error } = await client.rpc('admin_set_user_chips', { target_tag: targetTag, p_chips: Math.round(chips) });
+    if (error || !data?.success) return null;
+    return { username: data.username, balance: data.new_balance };
+  },
+
+  /** Live "who's online right now" list. Updated presence + current game per row. */
+  async activePlayers(limit = 30): Promise<AdminActivePlayer[]> {
+    const client = db();
+    if (!client) return [];
+    const { data, error } = await client.rpc('admin_active_players', { p_limit: limit });
+    if (error) return [];
+    return (data ?? []) as AdminActivePlayer[];
   },
 
   /**

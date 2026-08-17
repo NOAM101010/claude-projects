@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { PlayingCard } from '@/components/game/PlayingCard';
 import { ChipStack } from '@/components/game/ChipStack';
 import { Avatar } from '@/components/social/Avatar';
@@ -99,11 +99,23 @@ export function SeatView({ seat, hero, active, activeHand = 0, cardFace, cardBac
                   </div>
                 )}
                 <div className="flex justify-center" style={{ marginInlineStart: 18 }}>
+                  <AnimatePresence mode="popLayout">
                   {hand.cards.map((card, cardIndex) => (
-                    <div key={cardIndex} style={{ marginInlineStart: -18 }}>
+                    <motion.div
+                      key={`${index}-${cardIndex}-${card.r}${card.s}`}
+                      style={{ marginInlineStart: -18 }}
+                      initial={{ y: -70, x: 30, opacity: 0, rotate: -18, scale: 0.85 }}
+                      animate={{ y: 0, x: 0, opacity: 1, rotate: 0, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{
+                        type: 'spring', stiffness: 320, damping: 22,
+                        delay: cardIndex * 0.08,
+                      }}
+                    >
                       <PlayingCard card={card} size={size} index={cardIndex} face={cardFace} back={cardBack} />
-                    </div>
+                    </motion.div>
                   ))}
+                  </AnimatePresence>
                 </div>
                 <div className="flex items-center justify-center gap-1.5 mt-1.5">
                   <span

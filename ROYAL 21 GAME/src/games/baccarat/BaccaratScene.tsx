@@ -1,0 +1,405 @@
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
+import { SceneShell } from '@/components/layout/SceneShell';
+import { GlassPanel } from '@/components/ui/GlassPanel';
+import { GameButton } from '@/components/ui/GameButton';
+import { Modal } from '@/components/ui/Modal';
+import { PlayingCard } from '@/components/game/PlayingCard';
+import { Chip } from '@/components/game/Chip';
+import { LightPool } from '@/components/effects/LightPool';
+import { VictoryEffect } from '@/components/effects/VictoryEffect';
+import { usePlayer } from '@/stores/usePlayer';
+import { useUI } from '@/stores/useUI';
+import { useT } from '@/hooks/useT';
+import { audio } from '@/audio/AudioManager';
+import { haptic } from '@/lib/haptics';
+import { fmt } from '@/lib/format';
+import { XP_REWARDS } from '@/data/economy';
+import { newSeed } from '@/lib/random';
+import {
+  createState, reduce, handTotal, betCost, PAYTABLE, BACCARAT_BETS, outcomeLabel,
+} from './engine';
+import type { BaccaratOutcome, BaccaratSide, BaccaratState } from './types';
+
+const MAIN_BETS: { side: BaccaratOutcome; labelKey: string; color: string }[] = [
+  { side: 'player', labelKey: 'baccarat.player', color: '#4a86d6' },
+  { side: 'tie',    labelKey: 'baccarat.tie',    color: '#5aa563' },
+  { side: 'banker', labelKey: 'baccarat.banker', color: '#c14040' },
+];
+
+const SIDE_BETS: { side: BaccaratSide; labelKey: string }[] = [
+  { side: 'playerPair',  labelKey: 'baccarat.playerPair' },
+  { side: 'bankerPair',  labelKey: 'baccarat.bankerPair' },
+  { side: 'perfectPair', labelKey: 'baccarat.perfectPair' },
+  { side: 'big',         labelKey: 'baccarat.big' },
+  { side: 'small',       labelKey: 'baccarat.small' },
+];
+
+/** Solo baccarat — Punto Banco. Sync-across-devices multiplayer would be a
+ *  separate room-based scene later. */
+export default function BaccaratScene() {
+  const navigate = useNavigate();
+  const { t } = useT();
+  const profile = usePlayer((s) => s.profile);
+  const addChips = usePlayer((s) => s.addChips);
+  const addXp = usePlayer((s) => s.addXp);
+  const recordResult = usePlayer((s) => s.recordResult);
+  const toast = useUI((s) => s.toast);
+  const showMoment = useUI((s) => s.showMoment);
+
+  const [state, setState] = useState<BaccaratState>(() => createState(newSeed()));
+  const [stake, setStake] = useState<number>(100);
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const [payOpen, setPayOpen] = useState(false);
+  const [victory, setVictory] = useState(false);
+  const settledRound = useRef(-1);
+
+  const dispatch = (action: Parameters<typeof reduce>[1]) => setState((s) => reduce(s, action));
+  const totalStaked = betCost(state.bet);
+
+  /* When the hand resolves, credit the net delta and let the moment layer
+     celebrate. Only fires once per round via the ref latch, so a re-render
+     doesn't re-credit. */
+  useEffect(() => {
+    if (state.phase !== 'settled' || state.outcome === null) return;
+    if (settledRound.current === state.round) return;
+    settledRound.current = state.round;
+    const staked = betCost(state.lastBet);
+    // net is a NET delta (already accounts for staked). Credit staked back +
+    // net so the running balance moves by exactly `net`.
+    addChips(staked + state.net, { silent: true });
+    recordResult('scratch', state.net > 0 ? 'win' : state.net < 0 ? 'lose' : 'push', state.net);
+    addXp(XP_REWARDS.handPlayed + (state.net > 0 ? XP_REWARDS.handWon : 0));
+    if (state.net > 0) {
+      audio.duck(1400);
+      audio.play(state.net >= staked * 4 ? 'bigWin' : 'win');
+      haptic('win');
+      setVictory(true);
+      setTimeout(() => setVictory(false), 2200);
+      showMoment({
+        kind: 'bigWin',
+        title: t(state.outcome === 'player' ? 'baccarat.playerWins' : state.outcome === 'banker' ? 'baccarat.bankerWins' : 'baccarat.tieWins'),
+        subtitle: `+${fmt(state.net)}`,
+        icon: state.outcome === 'tie' ? '🤝' : state.outcome === 'player' ? '👤' : '🏦',
+        duration: 2000,
+      });
+    } else if (state.net < 0) {
+      audio.play('lose');
+    } else {
+      audio.play('push');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.phase, state.round]);
+
+  const placeMain = (side: BaccaratOutcome) => {
+    if (state.phase !== 'betting') return;
+    const currentMain = state.bet.main?.side === side ? state.bet.main.amount : 0;
+    const needed = stake;
+    if (profile.chips < needed) {
+      audio.play('error'); toast(t('games.tooPoor', { amount: fmt(needed - profile.chips) }), 'bad', '⚠');
+      return;
+    }
+    if (state.bet.main && state.bet.main.side !== side) {
+      // Refund the previous main bet before switching sides.
+      addChips(state.bet.main.amount, { silent: true });
+    }
+    addChips(-needed, { silent: true });
+    dispatch({ type: 'setMainBet', side, amount: currentMain + needed });
+    audio.play('chip'); haptic('chip');
+  };
+
+  const placeSide = (side: BaccaratSide) => {
+    if (state.phase !== 'betting') return;
+    if (profile.chips < stake) {
+      audio.play('error'); toast(t('games.tooPoor', { amount: fmt(stake - profile.chips) }), 'bad', '⚠');
+      return;
+    }
+    const current = state.bet.sides[side] ?? 0;
+    addChips(-stake, { silent: true });
+    dispatch({ type: 'setSideBet', side, amount: current + stake });
+    audio.play('chip'); haptic('chip');
+  };
+
+  const clearBet = () => {
+    if (totalStaked <= 0 || state.phase !== 'betting') return;
+    addChips(totalStaked, { silent: true });
+    dispatch({ type: 'clearBet' });
+    audio.play('click');
+  };
+
+  const repeatLast = () => {
+    if (state.phase !== 'betting') return;
+    const need = betCost(state.lastBet);
+    if (need <= 0) return;
+    if (profile.chips + totalStaked < need) {
+      audio.play('error'); toast(t('games.tooPoor', { amount: fmt(need - profile.chips - totalStaked) }), 'bad', '⚠');
+      return;
+    }
+    if (totalStaked > 0) addChips(totalStaked, { silent: true });
+    addChips(-need, { silent: true });
+    dispatch({ type: 'repeatLast' });
+    audio.play('chip');
+  };
+
+  const deal = () => {
+    if (state.phase !== 'betting' || totalStaked <= 0) return;
+    audio.play('cardFlip');
+    dispatch({ type: 'deal' });
+  };
+
+  const newRound = () => {
+    dispatch({ type: 'newRound' });
+  };
+
+  const face = profile.equipped.cardFace;
+  const back = profile.equipped.cardBack;
+  const chipSkin = profile.equipped.chipSkin;
+
+  return (
+    <SceneShell compactHud>
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 0%, #221730, #100c17 55%, #08090b 85%)' }} />
+        <LightPool x="50%" y="18%" size={720} color="rgba(180,120,240,.16)" />
+      </div>
+
+      <VictoryEffect kind={victory ? 'bigWin' : null} />
+
+      <div className="mx-auto px-4 py-3 flex flex-col items-center gap-3" style={{ maxWidth: 640 }}>
+        <div className="text-center">
+          <span className="eyebrow">Punto Banco</span>
+          <h1 className="mt-1">{t('baccarat.title')}</h1>
+        </div>
+
+        {/* road / history strip */}
+        {state.history.length > 0 && (
+          <div className="flex gap-1 overflow-x-auto w-full px-1" style={{ scrollbarWidth: 'none' }}>
+            {state.history.map((o, i) => (
+              <span key={i}
+                className="shrink-0 rounded-full flex items-center justify-center num font-black"
+                style={{
+                  width: 20, height: 20, fontSize: 10,
+                  background: o === 'player' ? '#4a86d6' : o === 'banker' ? '#c14040' : '#5aa563',
+                  color: '#fff', opacity: i === 0 ? 1 : 0.55,
+                }}>
+                {outcomeLabel(o)}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* felt: two hands + totals */}
+        <GlassPanel gold className="w-full p-4 flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-4">
+            {(['player', 'banker'] as const).map((side) => {
+              const cards = state[side];
+              const total = cards.length ? handTotal(cards) : null;
+              const isWinner = state.outcome === side;
+              return (
+                <div key={side} className="flex flex-col items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[12px] font-black tracking-widest"
+                      style={{ color: side === 'player' ? '#8ab4ff' : '#ff8a8a' }}>
+                      {side === 'player' ? t('baccarat.player').toUpperCase() : t('baccarat.banker').toUpperCase()}
+                    </span>
+                    {total !== null && (
+                      <span className="num font-black rounded-full px-2 text-[13px]"
+                        style={{
+                          background: isWinner ? 'var(--brushed-gold)' : 'rgba(0,0,0,.5)',
+                          color: isWinner ? '#1a1206' : 'var(--gold-hi)',
+                          border: '1px solid var(--gold-line)', minWidth: 26, textAlign: 'center',
+                        }}>{total}</span>
+                    )}
+                  </div>
+                  <div className="flex justify-center min-h-[76px] items-end"
+                    style={{ marginInlineStart: 14 }}>
+                    <AnimatePresence mode="popLayout">
+                      {cards.map((card, i) => (
+                        <motion.div
+                          key={`${side}-${state.round}-${i}`}
+                          initial={{ y: -80, opacity: 0, rotate: -10 }}
+                          animate={{ y: 0, opacity: 1, rotate: 0 }}
+                          transition={{ delay: i * 0.18, type: 'spring', stiffness: 240, damping: 20 }}
+                          style={{ marginInlineStart: -14 }}
+                        >
+                          <PlayingCard card={card} size="md" index={i} face={face} back={back} />
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                    {cards.length === 0 && (
+                      <div className="rounded-[6px] border-2 border-dashed w-[52px] h-[72px]"
+                        style={{ borderColor: 'rgba(255,255,255,.12)' }} />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {state.phase === 'settled' && state.outcome && (
+            <div className="text-center">
+              <b className="text-[15px]"
+                style={{ color: state.net > 0 ? 'var(--gold-hi)' : state.net < 0 ? 'var(--crimson-hi)' : 'var(--muted)' }}>
+                {state.net > 0 ? `+${fmt(state.net)}` : state.net < 0 ? fmt(state.net) : t('blackjack.push')}
+              </b>
+              <div className="text-[11px] mt-0.5" style={{ color: 'var(--muted)' }}>
+                {t(state.outcome === 'player' ? 'baccarat.playerWins' : state.outcome === 'banker' ? 'baccarat.bankerWins' : 'baccarat.tieWins')}
+              </div>
+            </div>
+          )}
+        </GlassPanel>
+
+        {/* main bets — real casino P / T / B layout */}
+        <div className="grid grid-cols-3 gap-2 w-full">
+          {MAIN_BETS.map(({ side, labelKey, color }) => {
+            const on = state.bet.main?.side === side ? state.bet.main.amount : 0;
+            const hit = state.phase === 'settled' && state.outcome === side;
+            return (
+              <button
+                key={side}
+                onClick={() => placeMain(side)}
+                disabled={state.phase !== 'betting'}
+                className="relative rounded-[var(--r-sm)] press"
+                style={{
+                  border: `2px solid ${hit ? 'var(--gold-hi)' : color}`,
+                  background: on > 0 ? `${color}30` : `${color}12`,
+                  padding: '14px 10px',
+                  boxShadow: hit ? '0 0 24px rgba(227,178,60,.55)' : 'none',
+                  opacity: state.phase === 'betting' ? 1 : 0.75,
+                  transition: 'all .25s',
+                }}
+              >
+                <div className="text-[13px] font-black" style={{ color: '#fff' }}>{t(labelKey)}</div>
+                <div className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,.7)' }}>
+                  {side === 'tie' ? '8:1' : side === 'banker' ? '0.95:1' : '1:1'}
+                </div>
+                {on > 0 && (
+                  <div className="absolute -top-2 -end-2 rounded-full px-2 py-0.5 num text-[11px] font-black"
+                    style={{ background: 'var(--brushed-gold)', color: '#1a1206', border: '1px solid rgba(0,0,0,.4)' }}>
+                    {fmt(on)}
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* side bets row */}
+        <GlassPanel className="w-full p-2.5">
+          <div className="text-[10.5px] text-center mb-1.5 font-black tracking-widest"
+            style={{ color: 'var(--gold-hi)', letterSpacing: '.15em' }}>
+            ✨ {t('baccarat.sideBets').toUpperCase()}
+          </div>
+          <div className="grid grid-cols-5 gap-1.5">
+            {SIDE_BETS.map(({ side, labelKey }) => {
+              const on = state.bet.sides[side] ?? 0;
+              const hit = (state.sideResults[side] ?? 0) > 0 && state.phase === 'settled';
+              return (
+                <button
+                  key={side}
+                  onClick={() => placeSide(side)}
+                  disabled={state.phase !== 'betting'}
+                  className="relative rounded-[6px] press"
+                  style={{
+                    border: `1px solid ${hit ? 'var(--gold-hi)' : 'var(--gold-line)'}`,
+                    background: on > 0 ? 'rgba(227,178,60,.15)' : 'rgba(255,255,255,.03)',
+                    padding: '10px 4px',
+                    boxShadow: hit ? '0 0 14px rgba(227,178,60,.55)' : 'none',
+                    opacity: state.phase === 'betting' ? 1 : 0.75,
+                  }}
+                >
+                  <div className="text-[10.5px] font-bold" style={{ color: 'var(--text)', lineHeight: 1.15 }}>
+                    {t(labelKey)}
+                  </div>
+                  {on > 0 && (
+                    <div className="absolute -top-1.5 -end-1.5 rounded-full px-1.5 num text-[10px] font-black"
+                      style={{ background: 'var(--brushed-gold)', color: '#1a1206' }}>
+                      {fmt(on)}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </GlassPanel>
+
+        {/* chip rail + actions */}
+        <GlassPanel className="w-full p-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="eyebrow">{t('games.chooseStake')}</span>
+            <span className="num text-[12px]" style={{ color: 'var(--gold)' }}>
+              {t('baccarat.onTable')} · {fmt(totalStaked)}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2 justify-center mb-3">
+            {BACCARAT_BETS.map((s) => (
+              <button key={s} onClick={() => { audio.play('click'); setStake(s); }}
+                style={{ opacity: stake === s ? 1 : 0.4, transform: stake === s ? 'translateY(-4px)' : 'none', transition: '.2s' }}>
+                <Chip value={s} size={38} skin={chipSkin} interactive />
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2 justify-center">
+            <GameButton size="sm" tone="ghost" disabled={totalStaked === 0 || state.phase !== 'betting'} onClick={clearBet}>
+              {t('blackjack.clear')}
+            </GameButton>
+            <GameButton size="sm" tone="metal" disabled={state.phase !== 'betting' || betCost(state.lastBet) === 0} onClick={repeatLast}>
+              🔁 {t('blackjack.lastBet')}
+            </GameButton>
+            {state.phase === 'settled' ? (
+              <GameButton tone="gold" onClick={newRound}>{t('blackjack.newRound')}</GameButton>
+            ) : (
+              <GameButton tone="gold" disabled={totalStaked === 0 || state.phase !== 'betting'} onClick={deal}>
+                {t('baccarat.deal')}
+              </GameButton>
+            )}
+          </div>
+        </GlassPanel>
+
+        <div className="flex gap-2">
+          <GameButton tone="ghost" size="sm" onClick={() => setRulesOpen(true)}>📖 {t('baccarat.howToPlay')}</GameButton>
+          <GameButton tone="ghost" size="sm" onClick={() => setPayOpen(true)}>{t('games.paytable')}</GameButton>
+          <GameButton tone="ghost" size="sm" onClick={() => navigate('/hub')}>{t('common.back')}</GameButton>
+        </div>
+      </div>
+
+      {/* Rulebook — the "how to play" the user asked for. */}
+      <Modal open={rulesOpen} onClose={() => setRulesOpen(false)} title={t('baccarat.howToPlay')}>
+        <div className="text-[13px] leading-relaxed flex flex-col gap-3" style={{ color: 'var(--text)' }}>
+          <div>
+            <b style={{ color: 'var(--gold-hi)' }}>{t('baccarat.rulesGoal')}</b>
+            <p style={{ color: 'var(--muted)' }}>{t('baccarat.rulesGoalText')}</p>
+          </div>
+          <div>
+            <b style={{ color: 'var(--gold-hi)' }}>{t('baccarat.rulesValues')}</b>
+            <p style={{ color: 'var(--muted)' }}>{t('baccarat.rulesValuesText')}</p>
+          </div>
+          <div>
+            <b style={{ color: 'var(--gold-hi)' }}>{t('baccarat.rulesDeal')}</b>
+            <p style={{ color: 'var(--muted)' }}>{t('baccarat.rulesDealText')}</p>
+          </div>
+          <div>
+            <b style={{ color: 'var(--gold-hi)' }}>{t('baccarat.rulesDraw')}</b>
+            <p style={{ color: 'var(--muted)' }}>{t('baccarat.rulesDrawText')}</p>
+          </div>
+          <div>
+            <b style={{ color: 'var(--gold-hi)' }}>{t('baccarat.rulesSideBets')}</b>
+            <p style={{ color: 'var(--muted)' }}>{t('baccarat.rulesSideBetsText')}</p>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={payOpen} onClose={() => setPayOpen(false)} title={t('games.paytable')}>
+        <div className="flex flex-col gap-1.5">
+          {PAYTABLE.map((row) => (
+            <div key={row.key} className="flex items-center gap-3 px-3 py-2 rounded-[var(--r-xs)]"
+              style={{ background: 'var(--glass)', border: '1px solid var(--glass-line)' }}>
+              <b className="flex-1 text-[13px]">{t(`baccarat.${row.key}`)}</b>
+              <b className="num text-[12.5px]" style={{ color: 'var(--gold-hi)' }}>{row.payout}</b>
+            </div>
+          ))}
+        </div>
+      </Modal>
+    </SceneShell>
+  );
+}
