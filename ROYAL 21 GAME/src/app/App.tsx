@@ -114,6 +114,24 @@ export function App() {
     return listen(profile.id);
   }, [profile.id, listen, refresh]);
 
+  /* Same account on two devices used to drift silently — device A's balance
+     only pushed deltas up, it never pulled what device B had done. When the
+     tab becomes visible again (foreground on mobile, alt-tab back on
+     desktop) we ask the server for the authoritative balance and adopt it,
+     so returning to the tab always shows real money, not stale local math. */
+  useEffect(() => {
+    if (!profile.id) return;
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void usePlayer.getState().refreshFromServer();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, [profile.id]);
+
   useEffect(() => {
     if (!profile.id) return;
     const { presence, game, zone } = zoneOf(location.pathname);

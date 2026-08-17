@@ -26,6 +26,10 @@ interface PlayerState extends SaveData {
   staked: number;
 
   hydrate: () => Promise<void>;
+  /** Pull the authoritative chip balance from the server and stamp it locally.
+   *  Called on tab-visible so a device that was in the background picks up
+   *  what the same account earned/lost on another device. */
+  refreshFromServer: () => Promise<void>;
   setProfile: (profile: Profile) => void;
   setAvatar: (avatar: AvatarConfig) => void;
   addChips: (delta: number, opts?: { silent?: boolean; localOnly?: boolean }) => void;
@@ -93,9 +97,26 @@ async function reconcileChips(profile: Profile) {
     if (typeof balance === 'number') lastSyncedChips[profile.id] = balance;
     return;
   }
+  // Clamp per adjust_chips' ±100,000 limit; if the true delta is bigger, only
+  // that much moves this call and the next persist() catches up with the
+  // remainder. Use the RPC's returned balance (authoritative) as the baseline,
+  // not `known + delta` — the server may floor at 0 or clamp differently and
+  // trusting our own math there is how the two sides drift apart.
   const delta = Math.max(-100000, Math.min(100000, profile.chips - known));
   const balance = await profileService.adjustChips(delta);
-  if (typeof balance === 'number') lastSyncedChips[profile.id] = known + delta;
+  if (typeof balance === 'number') {
+    lastSyncedChips[profile.id] = balance;
+    // If the server ended up somewhere we did not expect (offline race with
+    // another device, RPC floor at 0), correct the local profile too so the
+    // HUD stops showing a ghost balance. The `set` runs outside a React tick,
+    // so it's fine to call here.
+    if (balance !== profile.chips) {
+      const s = usePlayer.getState();
+      if (s.profile.id === profile.id) {
+        usePlayer.setState({ profile: { ...s.profile, chips: balance } });
+      }
+    }
+  }
 }
 
 /** Nobody, signed in nowhere. An empty id is what the router reads as "logged out". */
@@ -196,6 +217,18 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
       return;
     }
     set({ ...emptySave(blankProfile()), ready: true });
+  },
+
+  refreshFromServer: async () => {
+    const s = get();
+    if (!s.profile.id || !isRemoteId(s.profile.id)) return;
+    const fresh = await authService.restore();
+    if (!fresh || fresh.id !== s.profile.id) return;
+    // Stamp the server balance as the baseline BEFORE writing profile, so the
+    // reconcile pass triggered by persist() sees no delta to push. Otherwise a
+    // pending local +N (still in memory) would race and re-apply.
+    lastSyncedChips[fresh.id] = fresh.chips;
+    set({ profile: { ...s.profile, chips: fresh.chips, level: fresh.level, xp: fresh.xp } });
   },
 
   /**
