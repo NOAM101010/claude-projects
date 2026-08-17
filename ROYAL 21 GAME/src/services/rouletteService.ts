@@ -35,11 +35,12 @@ export const rouletteService = {
   },
 
   /** Players (including the host) push intents here. */
-  async sendAction(roomId: string, userId: string, action: RouletteAction) {
+  async sendAction(roomId: string, userId: string, action: RouletteAction): Promise<boolean> {
     const client = db();
-    if (!client) return;
-    if (!checkLimit(userId, 'gameAction')) return;
-    await client.from('room_actions').insert({ room_id: roomId, user_id: userId, action });
+    if (!client) return false;
+    if (!checkLimit(userId, 'gameAction')) return false;
+    const { error } = await client.from('room_actions').insert({ room_id: roomId, user_id: userId, action });
+    return !error;
   },
 
   /** Every client watches the authoritative state row. */

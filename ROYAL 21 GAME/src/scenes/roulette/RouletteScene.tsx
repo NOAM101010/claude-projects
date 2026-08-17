@@ -126,11 +126,21 @@ export default function RouletteScene({ mode, roomCode }: Props) {
     const tick = setInterval(() => setNow(Date.now()), 400);
     return () => clearInterval(tick);
   }, [state?.phase, state?.deadline]);
+  /* Auto-spin when the betting window closes. Guarded by a ref keyed to the
+     round so a rejected spin (nobody bet, reducer returns prev and leaves
+     state.deadline in the past) doesn't fire again on every 400ms tick — that
+     used to spam a spin intent per tick, wasting rate-limit budget and
+     realtime traffic. */
+  const autoSpunRound = useRef<number>(-1);
   useEffect(() => {
     if (!isHost || !state || state.phase !== 'betting' || !state.deadline) return;
-    if (Date.now() >= state.deadline) void send(profile.id, { type: 'spin' });
+    if (autoSpunRound.current === state.round) return;
+    if (Date.now() >= state.deadline) {
+      autoSpunRound.current = state.round;
+      void send(profile.id, { type: 'spin' });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isHost, state?.phase, state?.deadline, now]);
+  }, [isHost, state?.phase, state?.deadline, state?.round, now]);
   const bettingSecondsLeft = state?.phase === 'betting' && state?.deadline
     ? Math.max(0, Math.ceil((state.deadline - now) / 1000))
     : null;
@@ -166,7 +176,14 @@ export default function RouletteScene({ mode, roomCode }: Props) {
     audio.play('chip');
     haptic('chip');
     addChips(-stake, { silent: true });
-    void send(profile.id, { type: 'placeBet', userId: profile.id, kind, numbers, amount: stake });
+    void send(profile.id, { type: 'placeBet', userId: profile.id, kind, numbers, amount: stake }).then((ok) => {
+      // Rate-limit / network drop: refund the stake so it doesn't vanish
+      // silently when the bet never landed on the wheel.
+      if (!ok) {
+        addChips(stake, { silent: true });
+        toast(t('common.retry'), 'bad', '⚠');
+      }
+    });
   };
 
   const handleClear = () => {

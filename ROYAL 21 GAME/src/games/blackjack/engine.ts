@@ -216,7 +216,7 @@ export function reduce(prev: BjState, action: BjAction): BjState {
       state.dealer = { cards: [], hidden: true };
       state.activeSeat = -1;
       state.activeHand = 0;
-      state.deadline = action.deadline ?? null;
+      state.deadline = null;
       for (const seat of state.seats) {
         seat.bet = 0;
         seat.ready = false;
@@ -224,6 +224,13 @@ export function reduce(prev: BjState, action: BjAction): BjState {
         seat.spectator = false;
         seat.net = 0;
       }
+      return state;
+    }
+    case 'setDeadline': {
+      // Cheap on its own — the whole point is to avoid the openBetting reset
+      // when the host just wants to arm the countdown timer.
+      if (state.phase !== 'betting') return prev;
+      state.deadline = action.deadline;
       return state;
     }
     case 'deal': {

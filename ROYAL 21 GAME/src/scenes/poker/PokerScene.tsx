@@ -223,6 +223,18 @@ export default function PokerScene() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.street, state?.handNumber]);
 
+  /* Best-effort leave when the tab closes / navigates away. pagehide is more
+     reliable than beforeunload across mobile browsers, and Supabase's insert
+     is fire-and-forget so we don't rely on await surviving the unload. This
+     shortens the freeze window before the host's ghost cleanup catches on. */
+  useEffect(() => {
+    if (!room || !mySeat) return;
+    const bail = () => { void send(profile.id, { type: 'leave', userId: profile.id }); };
+    window.addEventListener('pagehide', bail);
+    return () => window.removeEventListener('pagehide', bail);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room?.id, Boolean(mySeat), profile.id]);
+
   /* When a player just closes their tab (or otherwise drops without clicking
      "cash out"), Supabase notices they've left the room and members updates —
      but the poker state still has their seat, and if it was their turn the
@@ -261,15 +273,29 @@ export default function PokerScene() {
 
   const sitDown = async (amount: number) => {
     if (amount > profile.chips) { toast(t('poker.notEnoughChips'), 'bad', '⚠'); return; }
+    const wasSeated = Boolean(mySeat);
     addChips(-amount, { silent: true });
-    if (mySeat) {
-      // Already seated → this is a rebuy/top-up, not a fresh sit-down.
+    if (wasSeated) {
       await send(profile.id, { type: 'topUp', userId: profile.id, amount });
     } else {
       await send(profile.id, { type: 'join', userId: profile.id, username: profile.username, avatar: profile.avatar, level: profile.level, buyIn: amount });
     }
     setBuyInOpen(false);
     audio.play('chip');
+    /* Refund if the reducer refused the join — the seat cap is full, a config
+       gate rejected us, or we lost a race. Without this the chips silently
+       vanish. Rebuy (topUp) has no such rejection paths so we only guard the
+       join case. */
+    if (!wasSeated) {
+      setTimeout(() => {
+        const latest = usePokerRoom.getState().state;
+        const seated = latest?.seats.some((s) => s.userId === profile.id);
+        if (!seated) {
+          addChips(amount, { silent: true });
+          toast(t('rooms.notFound'), 'bad', '⚠');
+        }
+      }, 800);
+    }
   };
 
   const cashOut = async () => {

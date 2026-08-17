@@ -350,6 +350,10 @@ function CoinFlipRoom({ roomCode }: { roomCode: string }) {
 
   const pick = (side: CfSide) => {
     if (!state || state.phase !== 'betting') return;
+    // Guard against a rapid double-tap racing the seat's pick update — before
+    // this, both taps fired addChips(-stake) but the reducer only records one
+    // stake, so on flip the refund was short a full stake.
+    if (mySeat?.pick) return;
     if (profile.chips < stake) {
       audio.play('error');
       toast(t('games.tooPoor', { amount: fmt(stake - profile.chips) }), 'bad', '⚠');
@@ -358,7 +362,14 @@ function CoinFlipRoom({ roomCode }: { roomCode: string }) {
     audio.play('chip');
     haptic('chip');
     addChips(-stake, { silent: true });
-    void send(profile.id, { type: 'pick', userId: profile.id, side, amount: stake });
+    void send(profile.id, { type: 'pick', userId: profile.id, side, amount: stake }).then((ok) => {
+      // Rate-limit / network drop: refund locally so the stake doesn't
+      // silently disappear when the pick never made it to the table.
+      if (!ok) {
+        addChips(stake, { silent: true });
+        toast(t('common.retry'), 'bad', '⚠');
+      }
+    });
   };
 
   const clearPick = () => {

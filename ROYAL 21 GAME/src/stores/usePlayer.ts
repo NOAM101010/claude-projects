@@ -28,7 +28,7 @@ interface PlayerState extends SaveData {
   hydrate: () => Promise<void>;
   setProfile: (profile: Profile) => void;
   setAvatar: (avatar: AvatarConfig) => void;
-  addChips: (delta: number, opts?: { silent?: boolean }) => void;
+  addChips: (delta: number, opts?: { silent?: boolean; localOnly?: boolean }) => void;
   setChips: (value: number) => void;
   addXp: (gain: number) => void;
   recordResult: (game: GameKey, outcome: 'win' | 'lose' | 'push', net: number, extra?: Partial<Stats>) => void;
@@ -253,6 +253,15 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
     if (delta > 0 && !opts?.silent) {
       audio.play('chip');
       haptic('chip');
+    }
+    if (opts?.localOnly) {
+      // Optimistic UI update only — caller owns the server sync (e.g. a room's
+      // claim RPC will return the authoritative balance). Stamp lastSyncedChips
+      // to the new local value so the next reconcile pass sees no delta to push
+      // and doesn't double-count the change against the RPC.
+      const s = get();
+      if (s.profile.id) lastSyncedChips[s.profile.id] = s.profile.chips;
+      return;
     }
     get().persist();
   },

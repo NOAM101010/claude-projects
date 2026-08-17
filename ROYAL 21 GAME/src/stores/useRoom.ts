@@ -23,7 +23,7 @@ interface RoomState {
   create: (userId: string, game: GameKey) => Promise<Room | null>;
   joinByCode: (code: string, userId: string) => Promise<Room | null>;
   connect: (room: Room, userId: string) => Promise<void>;
-  send: (userId: string, action: BjAction) => Promise<void>;
+  send: (userId: string, action: BjAction) => Promise<boolean>;
   leave: (userId: string) => Promise<void>;
   setStatus: (status: Status) => void;
 }
@@ -108,18 +108,18 @@ export const useRoom = create<RoomState>()((set, get) => ({
   send: async (userId, action) => {
     const { solo, room, isHost, state } = get();
     if (solo || !room) {
-      if (!state) return;
+      if (!state) return true;
       set({ state: reduce(state, { ...action, userId } as BjAction) });
-      return;
+      return true;
     }
     if (isHost && state) {
       // The host applies its own intent immediately, then publishes it.
       const next = reduce(state, { ...action, userId } as BjAction);
       set({ state: next });
       await blackjackService.publish(room.id, next);
-      return;
+      return true;
     }
-    await blackjackService.sendAction(room.id, userId, action);
+    return blackjackService.sendAction(room.id, userId, action);
   },
 
   leave: async (userId) => {

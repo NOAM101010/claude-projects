@@ -67,7 +67,10 @@ export type BjAction =
   | { type: 'bet'; userId: string; amount: number }
   | { type: 'clearBet'; userId: string }
   | { type: 'ready'; userId: string }
-  | { type: 'openBetting'; deadline?: number | null }
+  | { type: 'openBetting' }
+  /** Host-only: stamp the betting-window deadline once someone is ready. Separate
+   *  from openBetting so setting the clock doesn't reset everyone's bet/ready. */
+  | { type: 'setDeadline'; deadline: number | null }
   | { type: 'deal' }
   | { type: 'hit'; userId: string }
   | { type: 'stand'; userId: string }

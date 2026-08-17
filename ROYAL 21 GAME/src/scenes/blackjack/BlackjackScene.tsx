@@ -131,12 +131,40 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
     return () => { void channel.unsubscribe(); };
   }, [room]);
 
-  /* Multiplayer betting window: the host starts the clock once anyone is ready. */
+  /* Best-effort leave when the tab closes / navigates away. Shortens the
+     freeze window before the host's ghost cleanup catches on. */
+  useEffect(() => {
+    if (solo || !room || !mySeat) return;
+    const bail = () => { void send(profile.id, { type: 'leave', userId: profile.id }); };
+    window.addEventListener('pagehide', bail);
+    return () => window.removeEventListener('pagehide', bail);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room?.id, Boolean(mySeat), solo, profile.id]);
+
+  /* Ghost cleanup: when a player closes their tab without cashing out, they're
+     removed from room_members but their seat stays in game state. If it was
+     their turn to act, the table freezes forever. Host reconciles by
+     dispatching a leave for anyone missing from members. Same pattern the
+     poker table uses. */
+  useEffect(() => {
+    if (!isHost || solo || !state || members.length === 0) return;
+    const present = new Set(members.map((m) => m.userId));
+    const ghosts = state.seats.filter((s) => !present.has(s.userId));
+    for (const ghost of ghosts) {
+      void send(profile.id, { type: 'leave', userId: ghost.userId });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHost, solo, members.map((m) => m.userId).sort().join('|'), state?.seats.map((s) => s.userId).sort().join('|')]);
+
+  /* Multiplayer betting window: the host starts the clock once anyone is ready.
+     Was firing openBetting to stamp the deadline, which the reducer treats as
+     "reset the whole round" — wiping every seat's bet + ready. setDeadline is
+     the cheap variant that only writes state.deadline. */
   useEffect(() => {
     if (!state || solo || state.phase !== 'betting') { setCountdown(null); return; }
     if (!state.seats.some((seat) => seat.ready)) { setCountdown(null); return; }
     const deadline = state.deadline ?? Date.now() + 15000;
-    if (isHost && !state.deadline) void send(profile.id, { type: 'openBetting', deadline } as never);
+    if (isHost && !state.deadline) void send(profile.id, { type: 'setDeadline', deadline } as never);
     const timer = setInterval(() => {
       const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
       setCountdown(left);
@@ -168,8 +196,15 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
     const dealerBusted = handValue(state.dealer.cards).total > 21;
 
     // Chips: locally first for feel, then reconciled by the server in a room.
-    if (payout > 0) addChips(payout);
-    if (room && isOnline()) {
+    // In room mode `claimPayout` is authoritative and does the entire server-side
+    // net (payout - staked). If we also pushed the +payout via addChips, the
+    // server would receive that delta on top of the RPC's own net, drifting the
+    // balance up by roughly `net` every hand. `localOnly` gives the UI its
+    // instant feedback without any push, and setChips(balance) plants the true
+    // server value once claimPayout returns.
+    const roomMode = Boolean(room && isOnline());
+    if (payout > 0) addChips(payout, roomMode ? { localOnly: true } : undefined);
+    if (roomMode && room) {
       void blackjackService.claimPayout(room.id, state.round).then((balance) => {
         if (typeof balance === 'number') setChips(balance);
       });
@@ -224,11 +259,15 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
     }
     setTimeout(() => setVictory(false), 2200);
 
-    /* duel scoring is the host's job, exactly like the cards */
+    /* duel scoring is the host's job, exactly like the cards. Bump the
+       version so peers don't drop this publish — their subscribe callback
+       rejects updates whose version isn't strictly greater than what they
+       already have, which used to silently discard the duel scoreboard for
+       everyone but the host. */
     if (duel && isHost) {
       const scored = scoreHand(duel.config, duel.scores, state);
       const winner = duelWinner(duel.config, scored);
-      const next = { ...state, duel: { ...duel, scores: scored, winner } };
+      const next = { ...state, version: state.version + 1, duel: { ...duel, scores: scored, winner } };
       useRoom.setState({ state: next });
       if (room) void blackjackService.publish(room.id, next);
     }
@@ -255,15 +294,25 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
   /* ------------------------------------------------------------ actions -- */
   const addBet = useCallback((value: number) => {
     if (profile.chips < value) { audio.play('error'); toast(t('blackjack.notEnough'), 'bad', '⚠'); return; }
-    addChips(-value, { silent: true });
+    // Room mode: chip movement is server-authoritative via claimPayout.
+    // Optimistic local deduction only — never push it to the server, or the
+    // RPC's net will land on top and drift the balance.
+    addChips(-value, solo ? { silent: true } : { silent: true, localOnly: true });
     audio.play('chip');
     haptic('chip');
-    void send(profile.id, { type: 'bet', userId: profile.id, amount: value });
-  }, [profile.chips, profile.id, addChips, send, toast, t]);
+    void send(profile.id, { type: 'bet', userId: profile.id, amount: value }).then((ok) => {
+      // Rate-limit / network drop: refund locally so the bet doesn't vanish
+      // when it never actually reached the table.
+      if (!ok) {
+        addChips(value, solo ? { silent: true } : { silent: true, localOnly: true });
+        toast(t('common.retry'), 'bad', '⚠');
+      }
+    });
+  }, [profile.chips, profile.id, addChips, send, toast, t, solo]);
 
   const clearBet = () => {
     if (!mySeat?.bet) return;
-    addChips(mySeat.bet, { silent: true });
+    addChips(mySeat.bet, solo ? { silent: true } : { silent: true, localOnly: true });
     void send(profile.id, { type: 'clearBet', userId: profile.id });
   };
 
@@ -285,7 +334,7 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
     const hand = mySeat?.hands[state?.activeHand ?? 0];
     if ((type === 'double' || type === 'split') && hand) {
       if (profile.chips < hand.bet) { audio.play('error'); toast(t('blackjack.notEnough'), 'bad', '⚠'); return; }
-      addChips(-hand.bet, { silent: true });
+      addChips(-hand.bet, solo ? { silent: true } : { silent: true, localOnly: true });
     }
     audio.play(type === 'hit' ? 'card' : 'click');
     haptic(type === 'hit' ? 'card' : 'tap');

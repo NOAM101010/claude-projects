@@ -630,10 +630,22 @@ export function reduce(prev: PokerState, action: PokerAction): PokerState {
       seat.lastAction = 'allin';
       if (isRaise) {
         const raiseSize = level - state.currentBet;
-        if (raiseSize >= state.minRaise) state.minRaise = raiseSize;
-        state.currentBet = level;
-        state.lastAggressorSeat = idx;
-        reopenAction(state, idx);
+        // Standard tournament rule: a short all-in — a jam that comes to less
+        // than a full min-raise — is treated as a call, not a raise. The
+        // current bet climbs to accommodate it, but players who already acted
+        // this street do NOT get another decision. Previously the engine
+        // always reopened action, letting someone re-raise off a short jam.
+        const isFullRaise = raiseSize >= state.minRaise;
+        if (isFullRaise) {
+          state.minRaise = raiseSize;
+          state.currentBet = level;
+          state.lastAggressorSeat = idx;
+          reopenAction(state, idx);
+        } else {
+          // Short all-in: bump the price to call for anyone still to act, but
+          // don't reopen action for players already square with the pot.
+          state.currentBet = level;
+        }
       }
       seat.hasActed = true;
       pushLog(state, `${seat.username} is all-in for ${level}`);

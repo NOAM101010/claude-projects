@@ -363,6 +363,8 @@ function HighCardRoom({ roomCode }: { roomCode: string }) {
 
   const ante = () => {
     if (!state || state.phase !== 'betting') return;
+    // Guard against a rapid double-tap racing the seat's ante update.
+    if (mySeat?.stake) return;
     if (profile.chips < stake) {
       audio.play('error');
       toast(t('games.tooPoor', { amount: fmt(stake - profile.chips) }), 'bad', '⚠');
@@ -371,7 +373,13 @@ function HighCardRoom({ roomCode }: { roomCode: string }) {
     audio.play('chip');
     haptic('chip');
     addChips(-stake, { silent: true });
-    void send(profile.id, { type: 'ante', userId: profile.id, amount: stake });
+    void send(profile.id, { type: 'ante', userId: profile.id, amount: stake }).then((ok) => {
+      // Rate-limit / network drop: refund locally so the ante doesn't vanish.
+      if (!ok) {
+        addChips(stake, { silent: true });
+        toast(t('common.retry'), 'bad', '⚠');
+      }
+    });
   };
 
   const clearAnte = () => {

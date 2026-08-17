@@ -135,6 +135,13 @@ export default function SlotsScene() {
     void jackpotService.addContribution('slots', currentStake);
 
     const result = pull(currentStake, undefined, themeSymbols);
+    // Credit the win silently the moment the outcome is decided. Before this,
+    // the payout was only credited inside the reveal-settled timeout — so
+    // navigating away during the reveal (a common thing when you spam back
+    // right after seeing a triple line up) meant the timer got cancelled and
+    // the win never landed. The animation below now purely reveals what was
+    // already accounted for.
+    if (result.payout > 0) addChips(result.payout, { silent: true });
     const reelStop = fromAuto ? REEL_STOP_AUTO : REEL_STOP;
     const tick = fromAuto ? TICK_AUTO : TICK;
 
@@ -164,7 +171,10 @@ export default function SlotsScene() {
       setOutcome(result);
 
       const net = result.payout - currentStake;
-      if (result.payout > 0) addChips(result.payout);
+      // Payout was already credited above the moment `pull()` decided it.
+      // Only trigger the sound + haptic here so the reveal still feels
+      // rewarding.
+      if (result.payout > 0) { audio.play('chip'); haptic('chip'); }
 
       if (result.kind === 'triple') {
         audio.duck(1400);

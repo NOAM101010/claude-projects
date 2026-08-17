@@ -23,7 +23,7 @@ interface HcRoomState {
   create: (userId: string) => Promise<Room | null>;
   joinByCode: (code: string, userId: string) => Promise<Room | null>;
   connect: (room: Room, userId: string) => Promise<void>;
-  send: (userId: string, action: HcAction) => Promise<void>;
+  send: (userId: string, action: HcAction) => Promise<boolean>;
   leave: (userId: string) => Promise<void>;
 }
 
@@ -107,18 +107,18 @@ export const useHighcardRoom = create<HcRoomState>()((set, get) => ({
   send: async (userId, action) => {
     const { solo, room, isHost, state } = get();
     if (solo || !room) {
-      if (!state) return;
+      if (!state) return true;
       set({ state: reduce(state, { ...action, userId } as HcAction) });
-      return;
+      return true;
     }
     if (isHost && state) {
       // The host applies its own intent immediately, then publishes it.
       const next = reduce(state, { ...action, userId } as HcAction);
       set({ state: next });
       await highcardService.publish(room.id, next);
-      return;
+      return true;
     }
-    await highcardService.sendAction(room.id, userId, action);
+    return highcardService.sendAction(room.id, userId, action);
   },
 
   leave: async (userId) => {

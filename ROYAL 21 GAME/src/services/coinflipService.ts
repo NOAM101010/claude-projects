@@ -31,12 +31,15 @@ export const coinflipService = {
     return fresh;
   },
 
-  /** Players (including the host) push intents here. */
-  async sendAction(roomId: string, userId: string, action: CfAction) {
+  /** Players (including the host) push intents here. Returns true on success
+   *  so callers that already debited chips locally can refund on a drop
+   *  (rate-limit trip, network error, no auth). */
+  async sendAction(roomId: string, userId: string, action: CfAction): Promise<boolean> {
     const client = db();
-    if (!client) return;
-    if (!checkLimit(userId, 'gameAction')) return;
-    await client.from('room_actions').insert({ room_id: roomId, user_id: userId, action });
+    if (!client) return false;
+    if (!checkLimit(userId, 'gameAction')) return false;
+    const { error } = await client.from('room_actions').insert({ room_id: roomId, user_id: userId, action });
+    return !error;
   },
 
   /** Every client watches the authoritative state row. */

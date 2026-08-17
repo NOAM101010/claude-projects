@@ -507,7 +507,8 @@
     "youAreOut": "You're out — you can keep watching",
     "spectating": "Spectating the tournament",
     "youWon": "You won the tournament! 🏆",
-    "winnerIs": "{name} won the tournament"
+    "winnerIs": "{name} won the tournament",
+    "registrationFailed": "Registration failed — the tournament already started. Your chips are refunded."
   },
   "roulette": {
     "title": "Roulette",

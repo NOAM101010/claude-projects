@@ -194,9 +194,22 @@ export default function SitAndGoScene() {
 
   const register = async () => {
     if (!tournament || profile.chips < tournament.buyIn) { toast(t('poker.notEnoughChips'), 'bad', '⚠'); return; }
-    addChips(-tournament.buyIn, { silent: true });
-    await send(profile.id, { type: 'join', userId: profile.id, username: profile.username, avatar: profile.avatar, level: profile.level, buyIn: 0 });
+    const buyIn = tournament.buyIn;
+    addChips(-buyIn, { silent: true });
     audio.play('chip');
+    await send(profile.id, { type: 'join', userId: profile.id, username: profile.username, avatar: profile.avatar, level: profile.level, buyIn: 0 });
+    /* The engine rejects a join once the tournament has begun (no late reg,
+       no rebuys) and returns the previous state unchanged — the client's
+       optimistic debit then had no matching seat, so the buy-in silently
+       disappeared. Refund locally when the join didn't produce our seat. */
+    setTimeout(() => {
+      const latest = useSngRoom.getState().state;
+      const seated = latest?.seats.some((s) => s.userId === profile.id);
+      if (!seated) {
+        addChips(buyIn, { silent: true });
+        toast(t('sng.registrationFailed'), 'bad', '⚠');
+      }
+    }, 800);
   };
 
   const leaveTable = async () => {
