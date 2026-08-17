@@ -183,15 +183,22 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
       const equipped = mergeEquipped(restored.equipped, saved.profile.equipped);
       set({ ...saved, daily, profile: { ...saved.profile, ...restored, equipped }, ready: true });
       analytics.setUser(restored.id);
-      // Also merge remote owned items — server is authoritative. Without this,
-      // items bought on another device (or lost from local save) wouldn't show
-      // up in the inventory even though they're equipped. The shop and
-      // inventory both read `owned`, so a mismatch shows the item as "must
-      // buy again" even after the player already owns it.
-      const ownedRemote = await shopService.ownedIds(restored.id);
-      if (ownedRemote?.length) {
-        set({ owned: Array.from(new Set([...get().owned, ...ownedRemote])) });
-      }
+      /* Server-authoritative reads for the three things a stale localStorage
+         could otherwise let you re-claim: owned items, achievements, and the
+         daily bonus. Merge (not replace) owned so client-only exclusives
+         stick; adopt achievements outright — the server list is the truth
+         of "already earned" and the client shouldn't be allowed to lose it;
+         adopt daily too so a device that missed today can't grant the gift. */
+      const [ownedRemote, achRemote, dailyRemote] = await Promise.all([
+        shopService.ownedIds(restored.id),
+        profileService.fetchAchievements(),
+        profileService.fetchDailyState(),
+      ]);
+      const patch: Partial<PlayerState> = {};
+      if (ownedRemote?.length) patch.owned = Array.from(new Set([...get().owned, ...ownedRemote]));
+      if (achRemote) patch.achievements = Array.from(new Set([...get().achievements, ...achRemote]));
+      if (dailyRemote && dailyRemote.lastClaim) patch.daily = dailyRemote;
+      if (Object.keys(patch).length > 0) set(patch);
       return;
     }
 
@@ -210,8 +217,16 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
         ready: true,
       });
       analytics.setUser(restored.id);
-      const ownedRemote = await shopService.ownedIds(restored.id);
-      if (ownedRemote?.length) set({ owned: Array.from(new Set([...get().owned, ...ownedRemote])) });
+      const [ownedRemote, achRemote, dailyRemote] = await Promise.all([
+        shopService.ownedIds(restored.id),
+        profileService.fetchAchievements(),
+        profileService.fetchDailyState(),
+      ]);
+      const patch: Partial<PlayerState> = {};
+      if (ownedRemote?.length) patch.owned = Array.from(new Set([...get().owned, ...ownedRemote]));
+      if (achRemote?.length) patch.achievements = Array.from(new Set([...get().achievements, ...achRemote]));
+      if (dailyRemote && dailyRemote.lastClaim) patch.daily = dailyRemote;
+      if (Object.keys(patch).length > 0) set(patch);
       return;
     }
 
@@ -539,17 +554,63 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   claimDaily: () => {
     const s = get();
     const today = todayKey();
-    /* Trust the mirror over in-memory state — the mirror is the last line of
-       defense against a stale hydrate handing us daily.lastClaim=null when
-       the previous session actually did claim today's gift. */
     const mirror = s.profile.id ? localStore.readDaily(s.profile.id) : null;
     const effectiveDaily = mirror && mirror.lastClaim === today ? mirror : s.daily;
     if (effectiveDaily.lastClaim === today) {
-      /* Mirror said we already claimed today but the store thought otherwise.
-         Reconcile the in-memory state so the "gift ready" HUD dot goes away. */
       if (s.daily.lastClaim !== today) set({ daily: effectiveDaily });
       return null;
     }
+
+    /* Signed-in players: fire-and-check the server RPC. The RPC is atomic,
+       so opening the app on two devices within the same day only grants
+       once. If the server says already-claimed, we still refresh the local
+       mirror so the "gift" dot goes away. Guest / offline players fall
+       through to the local grant. */
+    if (isRemoteId(s.profile.id)) {
+      const day = nextStreakDay(effectiveDaily);
+      const comeback = effectiveDaily.lastClaim ? daysSince(effectiveDaily.lastClaim) >= COMEBACK_THRESHOLD_DAYS : false;
+      const chips = STREAK_REWARD(day) + (comeback ? COMEBACK_BONUS : 0);
+
+      void profileService
+        .claimDailyBonus(STREAK_REWARD(day), comeback ? COMEBACK_BONUS : 0, COMEBACK_THRESHOLD_DAYS)
+        .then((res) => {
+          if (!res) return;
+          if (!res.granted) {
+            // Server already saw a claim today (another device, or a stale
+            // hydrate). Roll the local grant back — mirror + in-memory.
+            const current = get();
+            set({
+              daily: { lastClaim: today, day: res.day || current.daily.day },
+              profile: { ...current.profile, chips: res.new_balance },
+            });
+            lastSyncedChips[current.profile.id] = res.new_balance;
+            get().persist();
+            return;
+          }
+          // Server-granted — adopt the balance (RPC is authoritative) so
+          // reconcileChips doesn't push our local optimistic delta again.
+          lastSyncedChips[s.profile.id] = res.new_balance;
+          const current = get();
+          set({
+            daily: { lastClaim: today, day: res.day },
+            profile: { ...current.profile, chips: res.new_balance },
+          });
+          get().persist();
+        });
+
+      // Optimistic local grant so the UI feels instant. If the server rejects,
+      // the callback above corrects it. Baseline is stamped so the reconcile
+      // pass doesn't double-push the delta before the RPC returns.
+      set({
+        daily: { lastClaim: today, day },
+        profile: { ...s.profile, chips: s.profile.chips + chips },
+      });
+      lastSyncedChips[s.profile.id] = s.profile.chips + chips;
+      get().persist();
+      return { chips, day, comeback };
+    }
+
+    // Guest / offline path unchanged.
     const day = nextStreakDay(effectiveDaily);
     const comeback = effectiveDaily.lastClaim ? daysSince(effectiveDaily.lastClaim) >= COMEBACK_THRESHOLD_DAYS : false;
     const chips = STREAK_REWARD(day) + (comeback ? COMEBACK_BONUS : 0);
@@ -591,20 +652,59 @@ function statValue(state: PlayerState, key: string): number {
 
 export function checkAchievements(get: Getter, set: Setter, friendCount = 0) {
   const state = get();
-  const unlocked = [...state.achievements];
-  let rewarded = 0;
+  const alreadyLocal = new Set(state.achievements);
+  const newlyEarned: typeof ACHIEVEMENTS = [];
+
   ACHIEVEMENTS.forEach((achievement) => {
-    if (unlocked.includes(achievement.id)) return;
+    if (alreadyLocal.has(achievement.id)) return;
     const value = achievement.stat === 'friendCount' ? friendCount : statValue(state, achievement.stat);
-    if (value >= achievement.goal) {
-      unlocked.push(achievement.id);
-      rewarded += achievement.reward;
-      const lang = useSettings.getState().lang;
-      useUI.getState().toast(`${achievement.name[lang]} · +${achievement.reward}`, 'good', '🎖️');
-      audio.play('win');
-    }
+    if (value >= achievement.goal) newlyEarned.push(achievement);
   });
-  if (unlocked.length !== state.achievements.length) {
+
+  if (newlyEarned.length === 0) return;
+
+  /* Guest / offline: no server to arbitrate — grant locally exactly like
+     before. The duplication risk here is only "clear your own browser data
+     to re-farm rewards" and guests don't survive that anyway. */
+  if (!isRemoteId(state.profile.id)) {
+    const unlocked = [...state.achievements, ...newlyEarned.map((a) => a.id)];
+    const rewarded = newlyEarned.reduce((sum, a) => sum + a.reward, 0);
+    const lang = useSettings.getState().lang;
+    newlyEarned.forEach((a) => useUI.getState().toast(`${a.name[lang]} · +${a.reward}`, 'good', '🎖️'));
+    if (rewarded > 0) audio.play('win');
     set({ achievements: unlocked, profile: { ...state.profile, chips: state.profile.chips + rewarded } });
+    return;
   }
+
+  /* Signed in: every claim goes through claim_achievement RPC, which is
+     atomic and refuses a second grant. So a device with an empty local
+     achievements list still cannot re-farm rewards after re-hydrating from
+     a stale cache — the RPC will return null and no chips will be granted. */
+  const lang = useSettings.getState().lang;
+  const grantOne = async (achievement: typeof ACHIEVEMENTS[number]) => {
+    const balance = await profileService.claimAchievement(achievement.id, achievement.reward);
+    if (balance === null) {
+      // Server said "already claimed" — just adopt the id locally so the
+      // trophy shelf shows it and we stop asking on every tick.
+      const s = get();
+      if (!s.achievements.includes(achievement.id)) {
+        set({ achievements: [...s.achievements, achievement.id] });
+      }
+      return;
+    }
+    // First-time grant. Server already added the reward — stamp the baseline
+    // and adopt the balance locally so reconcileChips doesn't push it again.
+    lastSyncedChips[state.profile.id] = balance;
+    const s = get();
+    set({
+      achievements: s.achievements.includes(achievement.id) ? s.achievements : [...s.achievements, achievement.id],
+      profile: { ...s.profile, chips: balance },
+    });
+    useUI.getState().toast(`${achievement.name[lang]} · +${achievement.reward}`, 'good', '🎖️');
+    audio.play('win');
+  };
+  // Optimistically stamp all the newly-earned ids first so a re-entrant
+  // checkAchievements this same tick doesn't double-fire RPCs.
+  set({ achievements: [...state.achievements, ...newlyEarned.map((a) => a.id)] });
+  newlyEarned.forEach((a) => void grantOne(a));
 }

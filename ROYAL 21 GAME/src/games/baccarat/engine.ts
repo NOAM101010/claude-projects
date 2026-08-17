@@ -64,6 +64,8 @@ export function createState(seed: number): BaccaratState {
     sideResults: {},
     history: [],
     lastBet: { main: null, sides: {} },
+    seats: [],
+    deadline: null,
   };
 }
 
@@ -122,32 +124,31 @@ function playHand(state: BaccaratState): void {
   state.phase = 'settled';
 }
 
-/** Apply all payouts and return the net chip delta for the player. */
-function settlePayouts(state: BaccaratState): number {
+/** Compute the payout for a single BaccaratBet against the resolved hand. */
+export function settleOne(bet: BaccaratBet, outcome: BaccaratOutcome, player: Card[], banker: Card[]): {
+  net: number; sideResults: Partial<Record<BaccaratSide, number>>;
+} {
   let net = 0;
-  state.sideResults = {};
+  const sideResults: Partial<Record<BaccaratSide, number>> = {};
 
-  // Main bet.
-  if (state.bet.main) {
-    const { side, amount } = state.bet.main;
-    if (side === state.outcome) {
-      if (side === 'player') net += amount;              // 1:1
-      else if (side === 'banker') net += Math.round(amount * 0.95); // 5% commission
-      else net += amount * 8;                            // tie 8:1
-    } else if (state.outcome === 'tie' && side !== 'tie') {
-      // Ties push the P/B bet, not lose it (real casino rule).
-      net += 0;
+  if (bet.main) {
+    const { side, amount } = bet.main;
+    if (side === outcome) {
+      if (side === 'player') net += amount;
+      else if (side === 'banker') net += Math.round(amount * 0.95);
+      else net += amount * 8;
+    } else if (outcome === 'tie' && side !== 'tie') {
+      net += 0; // push
     } else {
       net -= amount;
     }
   }
 
-  // Side bets — each is independent.
-  const playerPair = samePair(state.player);
-  const bankerPair = samePair(state.banker);
-  const totalCards = state.player.length + state.banker.length;
+  const playerPair = samePair(player);
+  const bankerPair = samePair(banker);
+  const totalCards = player.length + banker.length;
 
-  for (const [key, amount] of Object.entries(state.bet.sides)) {
+  for (const [key, amount] of Object.entries(bet.sides)) {
     if (!amount) continue;
     const side = key as BaccaratSide;
     let payout = -amount;
@@ -156,9 +157,16 @@ function settlePayouts(state: BaccaratState): number {
     else if (side === 'perfectPair' && (playerPair.perfect || bankerPair.perfect)) payout = amount * 25;
     else if (side === 'big' && (totalCards === 5 || totalCards === 6)) payout = Math.round(amount * 0.54);
     else if (side === 'small' && totalCards === 4) payout = Math.round(amount * 1.5);
-    state.sideResults[side] = payout;
+    sideResults[side] = payout;
     net += payout;
   }
+  return { net, sideResults };
+}
+
+/** Apply all payouts and return the net chip delta for the SOLO player. */
+function settlePayouts(state: BaccaratState): number {
+  const { net, sideResults } = settleOne(state.bet, state.outcome as BaccaratOutcome, state.player, state.banker);
+  state.sideResults = sideResults;
   return net;
 }
 
@@ -180,42 +188,129 @@ export const PAYTABLE = [
   { key: 'small', payout: '1.5 : 1' },
 ] as const;
 
-/** Solo baccarat is entirely local — no multiplayer table. Same reducer style
- *  as the other games so the scene can stay familiar. */
+/** Baccarat reducer — handles solo (bet lives on state.bet) and multiplayer
+ *  (bet lives per-seat, cards shared). Same shape as the other games so the
+ *  scenes stay familiar. */
 export function reduce(prev: BaccaratState, action: BaccaratAction): BaccaratState {
-  const state: BaccaratState = { ...prev, version: prev.version + 1, bet: { main: prev.bet.main, sides: { ...prev.bet.sides } } };
+  const state: BaccaratState = {
+    ...prev,
+    version: prev.version + 1,
+    bet: { main: prev.bet.main, sides: { ...prev.bet.sides } },
+    seats: prev.seats.map((s) => ({
+      ...s, bet: { main: s.bet.main, sides: { ...s.bet.sides } },
+      sideResults: { ...s.sideResults },
+      lastBet: { main: s.lastBet.main, sides: { ...s.lastBet.sides } },
+    })),
+  };
+
+  const isMulti = state.seats.length > 0 || action.type === 'join';
+  const seatOf = (userId: string | undefined) =>
+    userId ? state.seats.find((s) => s.userId === userId) : null;
 
   switch (action.type) {
+    case 'join': {
+      if (state.seats.some((s) => s.userId === action.userId)) return prev;
+      state.seats.push({
+        userId: action.userId, username: action.username, avatar: action.avatar, level: action.level,
+        bet: { main: null, sides: {} }, net: 0, sideResults: {},
+        lastBet: { main: null, sides: {} }, ready: false,
+      });
+      return state;
+    }
+    case 'leave': {
+      state.seats = state.seats.filter((s) => s.userId !== action.userId);
+      return state;
+    }
+    case 'setReady': {
+      const seat = seatOf(action.userId);
+      if (!seat || state.phase !== 'betting') return prev;
+      seat.ready = action.ready;
+      return state;
+    }
+    case 'setDeadline': {
+      if (state.phase !== 'betting') return prev;
+      state.deadline = action.deadline;
+      return state;
+    }
     case 'setMainBet': {
       if (state.phase !== 'betting') return prev;
       if (action.amount <= 0) return prev;
-      state.bet.main = { side: action.side, amount: action.amount };
+      if (isMulti && action.userId) {
+        const seat = seatOf(action.userId);
+        if (!seat) return prev;
+        seat.bet.main = { side: action.side, amount: action.amount };
+      } else {
+        state.bet.main = { side: action.side, amount: action.amount };
+      }
       return state;
     }
     case 'setSideBet': {
       if (state.phase !== 'betting') return prev;
-      if (action.amount <= 0) delete state.bet.sides[action.side];
-      else state.bet.sides[action.side] = action.amount;
+      if (isMulti && action.userId) {
+        const seat = seatOf(action.userId);
+        if (!seat) return prev;
+        if (action.amount <= 0) delete seat.bet.sides[action.side];
+        else seat.bet.sides[action.side] = action.amount;
+      } else {
+        if (action.amount <= 0) delete state.bet.sides[action.side];
+        else state.bet.sides[action.side] = action.amount;
+      }
       return state;
     }
     case 'clearBet': {
       if (state.phase !== 'betting') return prev;
-      state.bet = { main: null, sides: {} };
+      if (isMulti && action.userId) {
+        const seat = seatOf(action.userId);
+        if (!seat) return prev;
+        seat.bet = { main: null, sides: {} };
+      } else {
+        state.bet = { main: null, sides: {} };
+      }
       return state;
     }
     case 'repeatLast': {
       if (state.phase !== 'betting') return prev;
-      if (!prev.lastBet.main && Object.keys(prev.lastBet.sides).length === 0) return prev;
-      state.bet = { main: prev.lastBet.main ? { ...prev.lastBet.main } : null, sides: { ...prev.lastBet.sides } };
+      if (isMulti && action.userId) {
+        const seat = seatOf(action.userId);
+        if (!seat) return prev;
+        if (!seat.lastBet.main && Object.keys(seat.lastBet.sides).length === 0) return prev;
+        seat.bet = {
+          main: seat.lastBet.main ? { ...seat.lastBet.main } : null,
+          sides: { ...seat.lastBet.sides },
+        };
+      } else {
+        if (!prev.lastBet.main && Object.keys(prev.lastBet.sides).length === 0) return prev;
+        state.bet = { main: prev.lastBet.main ? { ...prev.lastBet.main } : null, sides: { ...prev.lastBet.sides } };
+      }
       return state;
     }
     case 'deal': {
       if (state.phase !== 'betting') return prev;
-      if (!state.bet.main && Object.keys(state.bet.sides).length === 0) return prev;
+      if (isMulti) {
+        // At least one seat must have a bet.
+        if (!state.seats.some((s) => s.bet.main || Object.keys(s.bet.sides).length > 0)) return prev;
+      } else {
+        if (!state.bet.main && Object.keys(state.bet.sides).length === 0) return prev;
+      }
       state.phase = 'dealing';
       state.round += 1;
-      state.lastBet = { main: state.bet.main ? { ...state.bet.main } : null, sides: { ...state.bet.sides } };
+      state.deadline = null;
+      if (isMulti) {
+        state.seats.forEach((seat) => {
+          seat.lastBet = { main: seat.bet.main ? { ...seat.bet.main } : null, sides: { ...seat.bet.sides } };
+        });
+      } else {
+        state.lastBet = { main: state.bet.main ? { ...state.bet.main } : null, sides: { ...state.bet.sides } };
+      }
       playHand(state);
+      if (isMulti) {
+        // Compute per-seat net from the shared hand.
+        state.seats.forEach((seat) => {
+          const res = settleOne(seat.bet, state.outcome as BaccaratOutcome, state.player, state.banker);
+          seat.net = res.net;
+          seat.sideResults = res.sideResults;
+        });
+      }
       return state;
     }
     case 'newRound': {
@@ -225,7 +320,17 @@ export function reduce(prev: BaccaratState, action: BaccaratAction): BaccaratSta
       state.outcome = null;
       state.net = 0;
       state.sideResults = {};
-      state.bet = { main: null, sides: {} };
+      state.deadline = null;
+      if (isMulti) {
+        state.seats.forEach((seat) => {
+          seat.bet = { main: null, sides: {} };
+          seat.net = 0;
+          seat.sideResults = {};
+          seat.ready = false;
+        });
+      } else {
+        state.bet = { main: null, sides: {} };
+      }
       return state;
     }
     default:

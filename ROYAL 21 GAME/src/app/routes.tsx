@@ -63,6 +63,11 @@ function HighCardRoomRoute() {
   return <HighCardScene mode="room" roomCode={roomCode} />;
 }
 
+function BaccaratRoomRoute() {
+  const { roomCode } = useParams();
+  return <BaccaratScene mode="room" roomCode={roomCode} />;
+}
+
 export function AppRoutes() {
   const { t } = useT();
   return (
@@ -83,7 +88,8 @@ export function AppRoutes() {
         <Route path="/game/slots" element={<RequireSession><SlotsScene /></RequireSession>} />
         <Route path="/game/highcard" element={<RequireSession><HighCardScene mode="solo" /></RequireSession>} />
         <Route path="/game/highcard/room/:roomCode" element={<RequireSession><HighCardRoomRoute /></RequireSession>} />
-        <Route path="/game/baccarat" element={<RequireSession><BaccaratScene /></RequireSession>} />
+        <Route path="/game/baccarat" element={<RequireSession><BaccaratScene mode="solo" /></RequireSession>} />
+        <Route path="/game/baccarat/room/:roomCode" element={<RequireSession><BaccaratRoomRoute /></RequireSession>} />
         <Route path="/game/roulette/solo" element={<RequireSession><RouletteScene mode="solo" /></RequireSession>} />
         <Route path="/game/roulette/room/:roomCode" element={<RequireSession><RouletteRoomRoute /></RequireSession>} />
         <Route path="/lobby" element={<RequireSession><LobbyScene /></RequireSession>} />

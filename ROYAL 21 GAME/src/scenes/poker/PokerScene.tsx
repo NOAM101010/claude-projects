@@ -254,13 +254,21 @@ export default function PokerScene() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.street, state?.handNumber]);
 
-  /* Best-effort leave when the tab closes / navigates away. pagehide is more
-     reliable than beforeunload across mobile browsers, and Supabase's insert
-     is fire-and-forget so we don't rely on await surviving the unload. This
-     shortens the freeze window before the host's ghost cleanup catches on. */
+  /* Best-effort leave when the tab closes / navigates away. Same shape as
+     cashOut so the seat's stack is credited back to profile.chips before
+     the leave dispatch. Without this, closing the tab mid-hand permanently
+     lost every chip you had at the table — the server's leave reducer just
+     drops the seat, and profile.chips was down by the buy-in with nothing
+     to reconcile it. Read the freshest seat via store getState so a stale
+     closure of mySeat doesn't cheat the player. */
   useEffect(() => {
     if (!room || !mySeat) return;
-    const bail = () => { void send(profile.id, { type: 'leave', userId: profile.id }); };
+    const bail = () => {
+      const st = usePokerRoom.getState().state;
+      const seat = st?.seats.find((s) => s.userId === profile.id);
+      if (seat && seat.stack > 0) addChips(seat.stack, { silent: true });
+      void send(profile.id, { type: 'leave', userId: profile.id });
+    };
     window.addEventListener('pagehide', bail);
     return () => window.removeEventListener('pagehide', bail);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -345,12 +353,33 @@ export default function PokerScene() {
     }
   };
 
+  /* True once cashOut has run, so the unmount-time safety net below doesn't
+     credit the stack a second time. */
+  const cashedOut = useRef(false);
   const cashOut = async () => {
+    cashedOut.current = true;
     if (mySeat && mySeat.stack > 0) addChips(mySeat.stack, { silent: true });
     if (mySeat) await send(profile.id, { type: 'leave', userId: profile.id });
     await leave(profile.id);
     navigate('/hub');
   };
+
+  /* Unmount safety net: if the player navigates away without cashing out
+     (accepted the "leave the game?" prompt, or the scene got unmounted for
+     any other reason), credit their table stack back to profile.chips and
+     fire a leave so the seat clears. Without this, closing the tab or
+     confirming an escape from the modal dropped every chip you had at the
+     table on the floor. */
+  useEffect(() => {
+    return () => {
+      if (cashedOut.current) return;
+      const st = usePokerRoom.getState().state;
+      const seat = st?.seats.find((s) => s.userId === profile.id);
+      if (seat && seat.stack > 0) addChips(seat.stack, { silent: true });
+      if (seat) void send(profile.id, { type: 'leave', userId: profile.id });
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile.id]);
 
   /* Cleanup when the tab closes: dispatch leave so the seat doesn't hang
      forever with a ghost player at the table. pagehide is the reliable

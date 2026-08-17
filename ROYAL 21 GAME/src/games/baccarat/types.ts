@@ -23,6 +23,24 @@ export interface BaccaratBet {
   sides: Partial<Record<BaccaratSide, number>>;
 }
 
+/** One player at a multiplayer Baccarat table. Same shared cards; each seat
+ *  places its own bets and settles into its own `net`. */
+export interface BaccaratSeat {
+  userId: string;
+  username: string;
+  avatar: import('@/types').AvatarConfig;
+  level: number;
+  bet: BaccaratBet;
+  /** Set on settle so the per-seat "you won X" / "lost X" toast can fire. */
+  net: number;
+  sideResults: Partial<Record<BaccaratSide, number>>;
+  /** Last round's bet, per player — used for their own 🔁 button. */
+  lastBet: BaccaratBet;
+  /** True once this seat is ready for the round to start. Auto-clears when
+   *  a new betting window opens. */
+  ready: boolean;
+}
+
 export interface BaccaratState {
   version: number;
   seed: number;
@@ -31,25 +49,31 @@ export interface BaccaratState {
   phase: BaccaratPhase;
   player: Card[];
   banker: Card[];
-  /** The stakes for this round, once the deal has started. */
+  /** Solo mode only: the single player's bets — kept for backwards compat
+   *  with the existing solo scene. Multiplayer uses `seats` instead. */
   bet: BaccaratBet;
-  /** Set once the hand resolves. */
   outcome: BaccaratOutcome | null;
-  /** Chip delta for the player: positive on a win, negative on a loss.
-   *  Includes both the main bet and every side bet in one number. */
+  /** Solo mode only: single-player net. Multiplayer uses per-seat net. */
   net: number;
-  /** Per-side payout breakdown, so the UI can highlight which side hit. */
+  /** Solo mode only: single-player side results. Multiplayer uses per-seat. */
   sideResults: Partial<Record<BaccaratSide, number>>;
-  /** Recent outcomes, most recent first — displayed as the "road" trail. */
   history: BaccaratOutcome[];
-  /** What we bet last round, for the one-tap "same again" button. */
+  /** Solo mode only: single-player last bet. Multiplayer uses per-seat. */
   lastBet: BaccaratBet;
+  /** Multiplayer: everyone at the table. Empty in solo. */
+  seats: BaccaratSeat[];
+  /** Multiplayer: epoch ms when the betting window auto-deals. Null in solo. */
+  deadline: number | null;
 }
 
 export type BaccaratAction =
-  | { type: 'setMainBet'; side: BaccaratOutcome; amount: number }
-  | { type: 'clearBet' }
-  | { type: 'setSideBet'; side: BaccaratSide; amount: number }
-  | { type: 'repeatLast' }
+  | { type: 'setMainBet'; side: BaccaratOutcome; amount: number; userId?: string }
+  | { type: 'clearBet'; userId?: string }
+  | { type: 'setSideBet'; side: BaccaratSide; amount: number; userId?: string }
+  | { type: 'repeatLast'; userId?: string }
+  | { type: 'setReady'; userId: string; ready: boolean }
+  | { type: 'setDeadline'; deadline: number | null }
   | { type: 'deal' }
-  | { type: 'newRound' };
+  | { type: 'newRound' }
+  | { type: 'join'; userId: string; username: string; avatar: import('@/types').AvatarConfig; level: number }
+  | { type: 'leave'; userId: string };

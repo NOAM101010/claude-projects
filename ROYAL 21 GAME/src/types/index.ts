@@ -3,7 +3,7 @@
 export type Lang = 'he' | 'en';
 export type Rarity = 'common' | 'rare' | 'epic' | 'legendary' | 'mythic';
 export type Presence = 'online' | 'hub' | 'blackjack' | 'duel' | 'roulette' | 'away' | 'offline';
-export type GameKey = 'blackjack' | 'duel' | 'coinflip' | 'highcard' | 'scratch' | 'slots' | 'poker' | 'sng' | 'roulette';
+export type GameKey = 'blackjack' | 'duel' | 'coinflip' | 'highcard' | 'scratch' | 'slots' | 'poker' | 'sng' | 'roulette' | 'baccarat';
 
 export interface AvatarConfig {
   skin: number;

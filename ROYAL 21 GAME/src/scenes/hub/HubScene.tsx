@@ -195,6 +195,21 @@ export default function HubScene() {
           >
             {(focused) => <GameNightArt focused={focused} />}
           </HubCard>
+
+          {/* Baccarat promoted to the main-games section (§ user request):
+              a Punto Banco table with shared cards + per-seat bets. Room
+              mode by default so friends land at the same table. */}
+          <HubCard
+            label={t('games.baccarat')}
+            action={t('baccarat.deal')}
+            blurb={t('games.baccaratHint')}
+            badge={t('hub.badgeNew')}
+            hoverSound="card"
+            glow="rgba(180,120,240,.26)"
+            onEnter={() => navigate('/game/baccarat/room/new')}
+          >
+            {(focused) => <HighCardArt focused={focused} />}
+          </HubCard>
         </Section>
 
         {/* --------------------------- quick games --------------------------- */}
@@ -226,16 +241,6 @@ export default function HubScene() {
             blurb={t('hub.blurbHighcard')}
             hoverSound="card"
             onEnter={() => navigate('/game/highcard')}
-          >
-            {(focused) => <HighCardArt focused={focused} />}
-          </HubCard>
-
-          <HubCard
-            label={t('games.baccarat')}
-            action={t('baccarat.deal')}
-            blurb={t('games.baccaratHint')}
-            hoverSound="card"
-            onEnter={() => navigate('/game/baccarat')}
           >
             {(focused) => <HighCardArt focused={focused} />}
           </HubCard>

@@ -20,6 +20,7 @@ const GAME_ICON: Record<GameKey, string> = {
   sng: '🏆',
   roulette: '🎡',
   duel: '⚔️',
+  baccarat: '🎴',
 };
 
 export function ChipsPanel() {

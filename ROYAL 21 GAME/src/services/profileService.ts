@@ -90,6 +90,51 @@ export const profileService = {
     return typeof data === 'number' ? data : null;
   },
 
+  /** Atomic achievement claim. Returns the new chip balance on first claim,
+   *  null if already claimed (so no chips are given twice on a fresh device). */
+  async claimAchievement(achievementId: string, reward: number): Promise<number | null> {
+    const client = db();
+    if (!client) return null;
+    const { data, error } = await client.rpc('claim_achievement', {
+      p_achievement_id: achievementId,
+      p_reward: Math.round(reward),
+    });
+    if (error) return null;
+    return typeof data === 'number' ? data : null;
+  },
+
+  /** Pull the server-authoritative list of already-earned achievement ids. */
+  async fetchAchievements(): Promise<string[] | null> {
+    const client = db();
+    if (!client) return null;
+    const { data, error } = await client.rpc('fetch_achievements');
+    if (error) return null;
+    return Array.isArray(data) ? (data as string[]) : null;
+  },
+
+  /** Atomic daily bonus claim. Server returns granted/chips/day/comeback. */
+  async claimDailyBonus(streakReward: number, comebackBonus: number, comebackThreshold = 3): Promise<{
+    granted: boolean; chips: number; day: number; comeback: boolean; new_balance: number;
+  } | null> {
+    const client = db();
+    if (!client) return null;
+    const { data, error } = await client.rpc('claim_daily_bonus', {
+      p_streak_reward: Math.round(streakReward),
+      p_comeback_bonus: Math.round(comebackBonus),
+      p_comeback_threshold: comebackThreshold,
+    });
+    if (error || !data) return null;
+    return data as { granted: boolean; chips: number; day: number; comeback: boolean; new_balance: number };
+  },
+
+  async fetchDailyState(): Promise<{ lastClaim: string | null; day: number } | null> {
+    const client = db();
+    if (!client) return null;
+    const { data, error } = await client.rpc('fetch_daily_state');
+    if (error || !data) return null;
+    return data as { lastClaim: string | null; day: number };
+  },
+
   async setPresence(userId: string, presence: Presence, game: GameKey | null) {
     const client = db();
     if (!client || !isRemoteId(userId)) return;
