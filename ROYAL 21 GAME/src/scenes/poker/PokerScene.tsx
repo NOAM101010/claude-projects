@@ -140,26 +140,30 @@ export default function PokerScene() {
     const tick = setInterval(() => setNow(Date.now()), 400);
     return () => clearInterval(tick);
   }, [state?.toAct]);
+  // Latch to fire the timeout once per (toAct, deadline) pair. Without this,
+  // once the deadline elapses the effect below re-fires on every 400ms `now`
+  // tick — burning rate-limit tokens and flooding room_actions until the seat
+  // finally advances.
+  const timeoutFiredFor = useRef<string>('');
   useEffect(() => {
     if (!state || state.toAct === -1) return;
     const actor = state.seats[state.toAct];
     if (!actor) return;
+    const key = `${state.toAct}:${state.deadline ?? 0}`;
     if (isHost) {
-      // Host stamps the deadline and, once it's blown, fires the timeout that folds
-      // the AFK seat and hands play to the next player.
       if (!state.deadline) {
         void send(profile.id, { type: 'setDeadline', deadline: Date.now() + ACTION_SECONDS * 1000 });
         return;
       }
-      if (Date.now() > state.deadline) void send(profile.id, { type: 'timeout', userId: actor.userId });
+      if (Date.now() > state.deadline && timeoutFiredFor.current !== key) {
+        timeoutFiredFor.current = key;
+        void send(profile.id, { type: 'timeout', userId: actor.userId });
+      }
       return;
     }
-    // Failsafe: if the host is themselves the AFK player (or their own timer effect
-    // is stuck), the table used to freeze forever. After a 5-second grace past the
-    // deadline, any seated client can send the same timeout intent — the reducer
-    // validates it the same way and the host loop will process it. Race-safe:
-    // repeat sends after the fold are rejected because state.toAct has advanced.
-    if (state.deadline && Date.now() > state.deadline + 5000) {
+    // Failsafe for a stuck host — same one-shot latch.
+    if (state.deadline && Date.now() > state.deadline + 5000 && timeoutFiredFor.current !== key) {
+      timeoutFiredFor.current = key;
       void send(profile.id, { type: 'timeout', userId: actor.userId });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -306,17 +310,10 @@ export default function PokerScene() {
   };
 
   /* Cleanup when the tab closes: dispatch leave so the seat doesn't hang
-     forever with a ghost player at the table. beforeunload fires before
-     the page truly unloads, so send() can complete. */
-  useEffect(() => {
-    const cleanup = () => {
-      const st = usePokerRoom.getState();
-      const s = st.state?.seats.find((seat) => seat.userId === profile.id);
-      if (s) void send(profile.id, { type: 'leave', userId: profile.id });
-    };
-    window.addEventListener('beforeunload', cleanup);
-    return () => window.removeEventListener('beforeunload', cleanup);
-  }, [profile.id, send]);
+     forever with a ghost player at the table. pagehide is the reliable
+     unload signal that also fires on mobile navigations beforeunload misses;
+     the earlier version registered both and inserted leave twice on every
+     desktop close, spending the client's last rate-limit token. */
 
   if (!isOnline() || !roomsService.canHost(profile.id)) {
     return (

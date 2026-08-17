@@ -121,15 +121,14 @@ export function App() {
      so returning to the tab always shows real money, not stale local math. */
   useEffect(() => {
     if (!profile.id) return;
+    // visibilitychange fires on both tab focus and window focus in modern
+    // browsers; window.focus would double-fire and race two restore() calls
+    // against each other. Keep just the one signal.
     const onVisible = () => {
       if (document.visibilityState === 'visible') void usePlayer.getState().refreshFromServer();
     };
     document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('focus', onVisible);
-    return () => {
-      document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('focus', onVisible);
-    };
+    return () => document.removeEventListener('visibilitychange', onVisible);
   }, [profile.id]);
 
   useEffect(() => {

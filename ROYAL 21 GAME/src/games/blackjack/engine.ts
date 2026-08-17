@@ -187,7 +187,15 @@ export function reduce(prev: BjState, action: BjAction): BjState {
     }
     case 'leave': {
       state.seats = state.seats.filter((s) => s.userId !== action.userId);
-      if (state.phase === 'playing') advance(state);
+      if (state.phase === 'playing') {
+        advance(state);
+        // If advance() ran off the last player and transitioned to the dealer
+        // phase, run resolveDealer inline. Every other action does this at its
+        // tail; leave used to skip it, and now that pagehide + ghost cleanup
+        // routinely dispatch leave during a hand, the table used to hang
+        // forever in 'dealer' phase with nothing dealing the dealer's cards.
+        if ((state.phase as Phase) === 'dealer') return reduce(state, { type: 'resolveDealer' });
+      }
       return state;
     }
     case 'bet': {

@@ -183,6 +183,15 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
       const equipped = mergeEquipped(restored.equipped, saved.profile.equipped);
       set({ ...saved, daily, profile: { ...saved.profile, ...restored, equipped }, ready: true });
       analytics.setUser(restored.id);
+      // Also merge remote owned items — server is authoritative. Without this,
+      // items bought on another device (or lost from local save) wouldn't show
+      // up in the inventory even though they're equipped. The shop and
+      // inventory both read `owned`, so a mismatch shows the item as "must
+      // buy again" even after the player already owns it.
+      const ownedRemote = await shopService.ownedIds(restored.id);
+      if (ownedRemote?.length) {
+        set({ owned: Array.from(new Set([...get().owned, ...ownedRemote])) });
+      }
       return;
     }
 
@@ -222,13 +231,24 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   refreshFromServer: async () => {
     const s = get();
     if (!s.profile.id || !isRemoteId(s.profile.id)) return;
+    // Guard against clobbering an in-flight chip delta: if the local balance
+    // differs from the last known-synced value, a reconcile push is either
+    // in flight or pending. Adopting the server snapshot now would erase a
+    // just-won hand. Skip this refresh; next persist() will settle the delta
+    // and the next visibility flip will pick up the true value.
+    const known = lastSyncedChips[s.profile.id];
+    if (known !== undefined && s.profile.chips !== known) return;
     const fresh = await authService.restore();
     if (!fresh || fresh.id !== s.profile.id) return;
-    // Stamp the server balance as the baseline BEFORE writing profile, so the
-    // reconcile pass triggered by persist() sees no delta to push. Otherwise a
-    // pending local +N (still in memory) would race and re-apply.
     lastSyncedChips[fresh.id] = fresh.chips;
     set({ profile: { ...s.profile, chips: fresh.chips, level: fresh.level, xp: fresh.xp } });
+    // Also refresh owned items so a purchase made on another device shows up.
+    // Merge with local — never drop items the client owns that server hasn't
+    // seen yet (client-only exclusives, in-flight buys).
+    const ownedRemote = await shopService.ownedIds(fresh.id);
+    if (ownedRemote?.length) {
+      set({ owned: Array.from(new Set([...get().owned, ...ownedRemote])) });
+    }
   },
 
   /**

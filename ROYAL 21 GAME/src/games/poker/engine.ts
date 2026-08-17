@@ -473,14 +473,19 @@ export function reduce(prev: PokerState, action: PokerAction): PokerState {
 
       state.seats = state.seats.filter((s) => s.userId !== action.userId);
 
-      // Re-anchor dealer/aggressor to their new indices (or -1 if they were
-      // the leaver). Without this, the button and last-raiser would silently
-      // point at a different seat and every downstream nextSeat() would look
-      // for the "next after the button" from the wrong place.
-      state.dealerSeat = wasDealerId
-        ? state.seats.findIndex((s) => s.userId === wasDealerId)
+      // Re-anchor dealer/aggressor to their new indices. If they were the
+      // leaver, hand the button to the seat that *would* have been to their
+      // left (post-filter, this is the index one before where they sat).
+      // Setting dealerSeat=-1 broke button rotation for the rest of the hand
+      // and started openNewStreet from index 0 — unfair to whoever happened
+      // to be seated there.
+      const dealerLeft = state.dealerSeat >= 0 && wasDealerId === action.userId
+        ? Math.max(0, Math.min(state.dealerSeat - 1, state.seats.length - 1))
         : -1;
-      state.lastAggressorSeat = wasAggressorId
+      state.dealerSeat = wasDealerId === action.userId
+        ? dealerLeft
+        : (wasDealerId ? state.seats.findIndex((s) => s.userId === wasDealerId) : -1);
+      state.lastAggressorSeat = wasAggressorId && wasAggressorId !== action.userId
         ? state.seats.findIndex((s) => s.userId === wasAggressorId)
         : -1;
 

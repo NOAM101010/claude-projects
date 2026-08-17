@@ -104,17 +104,23 @@ export default function SitAndGoScene() {
     const tick = setInterval(() => setNow(Date.now()), 400);
     return () => clearInterval(tick);
   }, [state?.toAct]);
+  // One-shot latch per (toAct, deadline) — see PokerScene for the reasoning.
+  const timeoutFiredFor = useRef<string>('');
   useEffect(() => {
     if (!state || state.toAct === -1) return;
     const actor = state.seats[state.toAct];
     if (!actor) return;
+    const key = `${state.toAct}:${state.deadline ?? 0}`;
     if (isHost) {
       if (!state.deadline) { void send(profile.id, { type: 'setDeadline', deadline: Date.now() + ACTION_SECONDS * 1000 }); return; }
-      if (Date.now() > state.deadline) void send(profile.id, { type: 'timeout', userId: actor.userId });
+      if (Date.now() > state.deadline && timeoutFiredFor.current !== key) {
+        timeoutFiredFor.current = key;
+        void send(profile.id, { type: 'timeout', userId: actor.userId });
+      }
       return;
     }
-    // Failsafe when the host is the AFK player themselves — see PokerScene for details.
-    if (state.deadline && Date.now() > state.deadline + 5000) {
+    if (state.deadline && Date.now() > state.deadline + 5000 && timeoutFiredFor.current !== key) {
+      timeoutFiredFor.current = key;
       void send(profile.id, { type: 'timeout', userId: actor.userId });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
