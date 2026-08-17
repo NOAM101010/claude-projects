@@ -147,12 +147,35 @@ export default function RouletteScene({ mode, roomCode }: Props) {
   const realPlayerCount = state?.seats.filter((s) => !s.spectator).length ?? 0;
   const bettingWindowOpen = bettingSecondsLeft !== null && bettingSecondsLeft > 0 && realPlayerCount > 1;
 
+  /* Snapshot my payout the instant the round settles server-side, so a
+     race — another player rushing to open a new round while my wheel is
+     still spinning — can't wipe seat.net back to 0 before I've credited
+     the win. Without this, the loser of that race lost every winning
+     bet from the round. Keyed by (round, phase==='settled') so it fires
+     exactly once per round even under StrictMode remounts. */
+  const pendingPayout = useRef<{ round: number; payout: number; net: number } | null>(null);
+  useEffect(() => {
+    if (!state || state.phase !== 'settled' || !mySeat) return;
+    if (creditedRound.current === state.round) return;
+    if (pendingPayout.current?.round === state.round) return;
+    pendingPayout.current = {
+      round: state.round,
+      payout: mySeat.net + seatStake(mySeat),
+      net: mySeat.net,
+    };
+  }, [state?.round, state?.phase, mySeat?.userId]);
+
   const handleWheelSettled = () => {
     setWheelSpinning(false);
-    if (!state || !mySeat) return;
-    if (creditedRound.current === state.round) return;
-    creditedRound.current = state.round;
-    const payout = mySeat.net + seatStake(mySeat);
+    if (!state) return;
+    // Prefer the snapshot captured at phase→settled — mySeat.net may have
+    // been reset by an incoming openBetting from another client between
+    // the wheel starting and here.
+    const snap = pendingPayout.current;
+    if (!snap || creditedRound.current === snap.round) return;
+    creditedRound.current = snap.round;
+    const { payout, net } = snap;
+    pendingPayout.current = null;
     haptic('land');
     if (payout > 0) {
       addChips(payout);
@@ -162,9 +185,26 @@ export default function RouletteScene({ mode, roomCode }: Props) {
     } else {
       audio.play('lose');
     }
-    recordResult('roulette', mySeat.net > 0 ? 'win' : mySeat.net === 0 ? 'push' : 'lose', mySeat.net);
-    addXp(XP_REWARDS.handPlayed + (mySeat.net > 0 ? XP_REWARDS.gameWon : 0));
+    recordResult('roulette', net > 0 ? 'win' : net === 0 ? 'push' : 'lose', net);
+    addXp(XP_REWARDS.handPlayed + (net > 0 ? XP_REWARDS.gameWon : 0));
   };
+
+  /* Safety net: if the wheel animation never fires onSettled (page hidden,
+     tab throttled, wheel component crashed), the pending payout should
+     still be credited. Runs 2.5s after the snapshot was captured. */
+  useEffect(() => {
+    if (!pendingPayout.current) return;
+    const snap = pendingPayout.current;
+    const timer = setTimeout(() => {
+      if (creditedRound.current === snap.round) return;
+      if (pendingPayout.current?.round !== snap.round) return;
+      creditedRound.current = snap.round;
+      if (snap.payout > 0) addChips(snap.payout);
+      pendingPayout.current = null;
+    }, 6000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state?.round]);
 
   const handleBet = (kind: RouletteBetKind, numbers: number[]) => {
     if (!state || state.phase !== 'betting' || mySeat?.spectator) return;

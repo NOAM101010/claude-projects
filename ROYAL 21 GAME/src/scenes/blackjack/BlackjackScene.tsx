@@ -200,36 +200,28 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
     const busted = mySeat.hands.every((hand) => handValue(hand.cards).total > 21);
     const dealerBusted = handValue(state.dealer.cards).total > 21;
 
-    // Chips: locally first for feel, then reconciled by the server in a room.
-    // In room mode `claimPayout` is authoritative and does the entire server-side
-    // net (payout - staked). If we also pushed the +payout via addChips, the
-    // server would receive that delta on top of the RPC's own net, drifting the
-    // balance up by roughly `net` every hand. `localOnly` gives the UI its
-    // instant feedback without any push, and setChips(balance) plants the true
-    // server value once claimPayout returns.
+    /* In duel mode, chips are locked in the pot at start and stay untouched
+       for every hand — the ONLY payout is the pot at end. So per-hand
+       addChips and claimPayout are both skipped. Points still tick up on
+       the scoreboard (that block runs below). This kills the "sometimes I
+       get more chips than I should" bug where a duel hand would settle
+       chips AND then the pot payout would also credit at match end. */
+    const inDuel = Boolean(duel);
     const roomMode = Boolean(room && isOnline());
-    if (payout > 0) addChips(payout, roomMode ? { localOnly: true } : undefined);
-    if (roomMode && room) {
-      /* claimPayout is server-authoritative for room hands. It can fail (net
-         hiccup, RLS reject, expired session) — retry twice with backoff, then
-         fall through to the local-only path so a lost win doesn't silently
-         disappear the way it used to before this guard. */
-      const claim = async () => {
-        for (let attempt = 0; attempt < 3; attempt += 1) {
-          const balance = await blackjackService.claimPayout(room.id, state.round);
-          if (typeof balance === 'number') { setChips(balance); return; }
-          await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
-        }
-        /* All retries failed. Downgrade to local-only credit so the player
-           at least sees the win. lastSyncedChips was already stamped by the
-           earlier localOnly addChips, so we need to bump the baseline too or
-           the next reconcile push will send the delta and double-credit
-           whenever the server later comes back — do a setChips to plant an
-           authoritative baseline matching what we're showing. */
-        setChips(usePlayer.getState().profile.chips);
-        toast(t('common.retry'), 'bad', '⚠');
-      };
-      void claim();
+    if (!inDuel) {
+      if (payout > 0) addChips(payout, roomMode ? { localOnly: true } : undefined);
+      if (roomMode && room) {
+        const claim = async () => {
+          for (let attempt = 0; attempt < 3; attempt += 1) {
+            const balance = await blackjackService.claimPayout(room.id, state.round);
+            if (typeof balance === 'number') { setChips(balance); return; }
+            await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
+          }
+          setChips(usePlayer.getState().profile.chips);
+          toast(t('common.retry'), 'bad', '⚠');
+        };
+        void claim();
+      }
     }
 
     const outcome = net > 0 ? 'win' : net < 0 ? 'lose' : 'push';
@@ -296,45 +288,62 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.phase, state?.round]);
 
-  /* A finished duel pays the pot and shows the night's card. */
+  /* When a duel starts, lock every player's buy-in into the pot exactly once.
+     Ref-latched so a re-render (or a subscribe callback bumping state.duel)
+     doesn't debit the same player twice per match. Clears on duel end so a
+     rematch pays another entry. */
+  const paidDuelBuyIn = useRef<string | null>(null);
+  useEffect(() => {
+    if (!duel || duel.winner) return;
+    const key = `${duel.config.buyIn}:${state?.round ?? 0}`;
+    if (paidDuelBuyIn.current === key) return;
+    if (paidDuelBuyIn.current && paidDuelBuyIn.current.startsWith(`${duel.config.buyIn}:`)) return;
+    paidDuelBuyIn.current = key;
+    if (duel.config.buyIn > 0) addChips(-duel.config.buyIn, { silent: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [duel?.config?.buyIn, duel?.winner]);
+
+  /* A finished duel pays the pot to the winner. Both players already paid
+     their own buy-in, so the winner gets the FULL pot back (their own
+     buy-in + the loser's). Loser gets nothing — same as any friendly bet. */
   useEffect(() => {
     if (!duel?.winner) return;
     const pot = potOf(duel.config, state?.seats.length ?? 1);
     if (duel.winner === profile.id) {
-      addChips(pot - duel.config.buyIn);
+      addChips(pot);
       addXp(XP_REWARDS.duelWon);
-      // Taking the pot off a friend is its own trophy line.
       bumpStat({ duelWins: stats.duelWins + 1 });
       audio.duck(1800);
       audio.play('bigWin');
       showMoment({ kind: 'sessionEnd', title: 'duel.youWon', subtitle: `+${fmt(pot - duel.config.buyIn)}`, icon: '👑', duration: 2600 });
     }
+    paidDuelBuyIn.current = null;
     setSummaryOpen(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [duel?.winner]);
 
   /* ------------------------------------------------------------ actions -- */
+  /* In duel mode, the buy-in was locked into the pot when the match started
+     and per-hand bets do not touch profile.chips at all — only points move
+     the scoreboard. So addChips is skipped whenever duel is set. Same for
+     clearBet and act(double/split) below. */
   const addBet = useCallback((value: number) => {
-    if (profile.chips < value) { audio.play('error'); toast(t('blackjack.notEnough'), 'bad', '⚠'); return; }
-    // Room mode: chip movement is server-authoritative via claimPayout.
-    // Optimistic local deduction only — never push it to the server, or the
-    // RPC's net will land on top and drift the balance.
-    addChips(-value, solo ? { silent: true } : { silent: true, localOnly: true });
+    const inDuel = Boolean(duel);
+    if (!inDuel && profile.chips < value) { audio.play('error'); toast(t('blackjack.notEnough'), 'bad', '⚠'); return; }
+    if (!inDuel) addChips(-value, solo ? { silent: true } : { silent: true, localOnly: true });
     audio.play('chip');
     haptic('chip');
     void send(profile.id, { type: 'bet', userId: profile.id, amount: value }).then((ok) => {
-      // Rate-limit / network drop: refund locally so the bet doesn't vanish
-      // when it never actually reached the table.
       if (!ok) {
-        addChips(value, solo ? { silent: true } : { silent: true, localOnly: true });
+        if (!inDuel) addChips(value, solo ? { silent: true } : { silent: true, localOnly: true });
         toast(t('common.retry'), 'bad', '⚠');
       }
     });
-  }, [profile.chips, profile.id, addChips, send, toast, t, solo]);
+  }, [profile.chips, profile.id, addChips, send, toast, t, solo, duel]);
 
   const clearBet = () => {
     if (!mySeat?.bet) return;
-    addChips(mySeat.bet, solo ? { silent: true } : { silent: true, localOnly: true });
+    if (!duel) addChips(mySeat.bet, solo ? { silent: true } : { silent: true, localOnly: true });
     void send(profile.id, { type: 'clearBet', userId: profile.id });
   };
 
@@ -355,8 +364,11 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
   const act = (type: 'hit' | 'stand' | 'double' | 'split') => {
     const hand = mySeat?.hands[state?.activeHand ?? 0];
     if ((type === 'double' || type === 'split') && hand) {
-      if (profile.chips < hand.bet) { audio.play('error'); toast(t('blackjack.notEnough'), 'bad', '⚠'); return; }
-      addChips(-hand.bet, solo ? { silent: true } : { silent: true, localOnly: true });
+      // In duel mode, doubling/splitting doesn't cost real chips — buy-in
+      // already covers the whole match. Guest/solo/room paths keep the old
+      // per-hand cost.
+      if (!duel && profile.chips < hand.bet) { audio.play('error'); toast(t('blackjack.notEnough'), 'bad', '⚠'); return; }
+      if (!duel) addChips(-hand.bet, solo ? { silent: true } : { silent: true, localOnly: true });
     }
     audio.play(type === 'hit' ? 'card' : 'click');
     haptic(type === 'hit' ? 'card' : 'tap');

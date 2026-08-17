@@ -156,6 +156,12 @@ export function reduce(prev: RouletteState, action: RouletteAction): RouletteSta
       return state;
     }
     case 'openBetting': {
+      // Guard: only accept a new round from a settled state. Without this,
+      // a rogue openBetting during the betting phase itself resets every
+      // seat's placed bets — chips deducted client-side, no winnings,
+      // no refund. Silently dropping the intent leaves the bettors' round
+      // intact.
+      if (state.phase !== 'settled') return prev;
       state.phase = 'betting';
       state.round += 1;
       state.winningNumber = null;
