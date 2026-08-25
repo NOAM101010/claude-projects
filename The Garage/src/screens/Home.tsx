@@ -96,6 +96,40 @@ export default function Home() {
         </div>
       </div>
 
+      <div style={{ padding: '0 30px 34px' }}>
+        {!s.driving ? (
+          <button onClick={s.startDrive} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: 16, borderRadius: 20, cursor: 'pointer', textAlign: 'start', color: 'inherit', border: '1px solid rgba(78,190,130,.3)', background: 'rgba(78,190,130,.08)' }}>
+            <span style={{ width: 40, height: 40, flex: 'none', borderRadius: 12, background: 'rgba(78,190,130,.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17 }}>🚗</span>
+            <span style={{ flex: 1 }}>
+              <span style={{ display: 'block', font: '400 13px/1 Jost,sans-serif' }}>{he ? 'התחל נסיעה' : 'Start driving'}</span>
+              <span style={{ display: 'block', font: '400 11px/1.5 Jost,sans-serif', color: 'rgba(241,240,238,.42)', marginTop: 6 }}>{he ? 'עוקב אחרי המסלול והמהירות כל עוד המסך פתוח' : 'Tracks route and speed while the screen is open'}</span>
+            </span>
+          </button>
+        ) : (
+          <div style={{ padding: 18, borderRadius: 20, border: '1px solid rgba(232,163,61,.3)', background: 'rgba(232,163,61,.08)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ width: 8, height: 8, borderRadius: 999, background: '#4EBE82', animation: 'gPulse 1.4s ease-in-out infinite' }} />
+              <span style={{ font: '400 11.5px/1 Jost,sans-serif', color: gold }}>{he ? 'הנסיעה מתועדת…' : 'Recording drive…'}</span>
+            </div>
+            <div style={{ display: 'flex', gap: 22, marginTop: 16 }}>
+              <div>
+                <div style={{ font: '300 20px/1 Jost,sans-serif' }}>{Math.floor(s.driveTick / 60)}:{String(s.driveTick % 60).padStart(2, '0')}</div>
+                <div style={{ font: '400 10px/1 Jost,sans-serif', color: 'rgba(241,240,238,.4)', marginTop: 6 }}>{he ? 'זמן' : 'time'}</div>
+              </div>
+              <div>
+                <div style={{ font: '300 20px/1 Jost,sans-serif' }}>{s.driveKm.toFixed(1)}</div>
+                <div style={{ font: '400 10px/1 Jost,sans-serif', color: 'rgba(241,240,238,.4)', marginTop: 6 }}>{L.km}</div>
+              </div>
+              <div>
+                <div style={{ font: '300 20px/1 Jost,sans-serif' }}>{Math.round(s.driveMaxKmh)}</div>
+                <div style={{ font: '400 10px/1 Jost,sans-serif', color: 'rgba(241,240,238,.4)', marginTop: 6 }}>{he ? 'מהירות מרבית' : 'top speed'}</div>
+              </div>
+            </div>
+            <button onClick={s.endDrive} style={{ width: '100%', height: 46, marginTop: 16, borderRadius: 14, border: '1px solid rgba(180,67,47,.4)', background: 'rgba(180,67,47,.12)', color: '#E8917C', font: '400 12.5px/1 Jost,sans-serif', cursor: 'pointer' }}>{he ? 'סיום נסיעה' : 'End drive'}</button>
+          </div>
+        )}
+      </div>
+
       <div style={{ padding: '0 30px 48px' }}>
         <div style={{ display: 'flex', alignItems: 'stretch', padding: '20px 6px', borderRadius: 22, ...card }}>
           {[

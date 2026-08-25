@@ -45,6 +45,8 @@ interface StoreState {
   refuels: Refuel[]; refuelSheet: boolean; refuelForm: { litres: string; cost: string; station: string }; refuelErrs: Record<string, string>;
   documents: { id: string; label: string; status: string; icon: string }[];
   trips: Trip[];
+  driving: boolean; driveStartAt: number; driveKm: number; driveMaxKmh: number; driveTick: number;
+  driveFromLabel: string;
   notifications: NotificationItem[];
 
   L: () => (typeof T)['he'];
@@ -119,6 +121,9 @@ interface StoreState {
 
   setWrapMonth: (n: number | null) => void;
   setTripId: (id: string) => void;
+
+  startDrive: () => void;
+  endDrive: () => void;
 }
 
 const STORE_KEY = 'dg.store.v2';
@@ -209,6 +214,7 @@ export const useStore = create<StoreState>((set, get) => ({
   refuelForm: { litres: '', cost: '', station: '' }, refuelErrs: {},
   documents: initialStore?.documents || [],
   trips: initialStore?.trips || [],
+  driving: false, driveStartAt: 0, driveKm: 0, driveMaxKmh: 0, driveTick: 0, driveFromLabel: '',
   notifications: initialStore?.notifications || [],
 
   L: () => T[get().lang],
@@ -497,7 +503,87 @@ export const useStore = create<StoreState>((set, get) => ({
 
   setWrapMonth: (n) => set({ wrapMonth: n }),
   setTripId: (id) => set({ tripId: id }),
+
+  startDrive: () => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) { get().flash('GPS not available'); return; }
+    const s = get(); s.buzz();
+    driveLastPoint = null;
+    set({ driving: true, driveStartAt: Date.now(), driveKm: 0, driveMaxKmh: 0, driveTick: 0, driveFromLabel: '' });
+    driveTickTimer = setInterval(() => useStore.setState((st) => (st.driving ? { driveTick: st.driveTick + 1 } : st)), 1000);
+    driveWatchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude, longitude, speed, accuracy } = pos.coords;
+        if (accuracy != null && accuracy > 60) return; // ignore very noisy fixes
+        const now = Date.now();
+        if (driveLastPoint) {
+          const dKm = haversineKm(driveLastPoint.lat, driveLastPoint.lng, latitude, longitude);
+          const dtH = (now - driveLastPoint.t) / 3600000;
+          if (dKm < 2 && dtH > 0) {
+            const kmh = speed != null && speed >= 0 ? speed * 3.6 : dKm / dtH;
+            useStore.setState((st) => ({ driveKm: st.driveKm + dKm, driveMaxKmh: Math.max(st.driveMaxKmh, kmh) }));
+          }
+        } else {
+          reverseGeocode(latitude, longitude).then((label) => useStore.setState({ driveFromLabel: label }));
+        }
+        driveLastPoint = { lat: latitude, lng: longitude, t: now };
+      },
+      () => { /* silently keep waiting for a fix */ },
+      { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 },
+    );
+  },
+  endDrive: () => {
+    const s = get(); const L = s.L();
+    if (driveWatchId != null) { navigator.geolocation.clearWatch(driveWatchId); driveWatchId = null; }
+    if (driveTickTimer) { clearInterval(driveTickTimer); driveTickTimer = null; }
+    const km = s.driveKm;
+    const minutes = Math.max(1, Math.round((Date.now() - s.driveStartAt) / 60000));
+    const avg = km > 0 ? Math.round((km / (minutes / 60)) * 10) / 10 : 0;
+    const litres = Math.round(km * 0.075 * 10) / 10;
+    const endPoint = driveLastPoint;
+    const id = uid();
+    const trip: Trip = {
+      id, from: s.driveFromLabel || '—', to: '—', km: Math.round(km * 10) / 10, min: minutes,
+      avg, max: Math.round(s.driveMaxKmh), date: new Date().toLocaleDateString(s.lang === 'he' ? 'he-IL' : 'en-US'), litres,
+    };
+    const trips = [trip, ...s.trips];
+    persist({ trips });
+    set({ trips, driving: false });
+    s.buzz();
+    s.flash(s.lang === 'he' ? '✓ הנסיעה נשמרה' : '✓ Trip saved');
+    if (endPoint) {
+      reverseGeocode(endPoint.lat, endPoint.lng).then((label) => {
+        const next = useStore.getState().trips.map((t) => (t.id === id ? { ...t, to: label } : t));
+        persist({ trips: next });
+        set({ trips: next });
+      });
+    }
+  },
 }));
+
+let driveWatchId: number | null = null;
+let driveTickTimer: ReturnType<typeof setInterval> | null = null;
+let driveLastPoint: { lat: number; lng: number; t: number } | null = null;
+
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=14`, {
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) throw new Error('geocode failed');
+    const data = await res.json();
+    const a = data.address || {};
+    return a.suburb || a.neighbourhood || a.village || a.town || a.city || a.county || `${lat.toFixed(3)}, ${lng.toFixed(3)}`;
+  } catch {
+    return `${lat.toFixed(3)}, ${lng.toFixed(3)}`;
+  }
+}
 
 export function allPeople(_s?: StoreState): Person[] {
   return SEARCH_DIRECTORY;
