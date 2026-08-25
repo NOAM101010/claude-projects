@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>The Garage</title>
+<meta name="theme-color" content="#08090B" />
+<meta name="description" content="המוסך הדיגיטלי שלך — רכבים, נסיעות, טיפולים והוצאות במקום אחד." />
+<link rel="manifest" href="/manifest.json" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="The Garage" />
+<link rel="apple-touch-icon" href="/assets/icon-192.png" />
+<link rel="icon" href="/assets/icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Michroma&family=Jost:wght@200;300;400;500&family=Assistant:wght@200;300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  body{margin:0;background:#08090B;font-family:Jost,Assistant,system-ui,sans-serif}
+  a{color:#E8A33D} a:hover{color:#F5C77E}
+  *{-webkit-font-smoothing:antialiased;box-sizing:border-box}
+  ::-webkit-scrollbar{width:0;height:0}
+  input,select,textarea{outline:none;font-family:inherit}
+  button{font-family:inherit;transition:transform .2s cubic-bezier(.16,.84,.24,1),box-shadow .35s ease,border-color .35s ease}
+  button:active{transform:scale(.972)}
+  input,textarea{caret-color:#F5C77E}
+  ::selection{background:rgba(232,163,61,.28)}
+  @keyframes gRise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+  @keyframes gFade{from{opacity:0}to{opacity:1}}
+  @keyframes gPulse{0%,100%{opacity:.3;transform:scale(1)}50%{opacity:.9;transform:scale(1.35)}}
+  @keyframes gShim{0%{background-position:-320px 0}100%{background-position:320px 0}}
+  @keyframes gSweep{0%{transform:translateX(-60%)}100%{transform:translateX(160%)}}
+  @keyframes gDash{to{stroke-dashoffset:0}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="module" src="/src/main.tsx"></script>
+</body>
+</html>
