@@ -40,6 +40,19 @@ export function Privacy() {
       <ScreenHeader title={L.privacyTitle} />
       <div style={{ padding: '0 30px' }}>
         <div style={{ borderRadius: 20, ...card, overflow: 'hidden' }}>
+          <div style={{ padding: 16, borderBottom: '1px solid rgba(255,255,255,.05)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ flex: 1, font: '400 12px/1.3 Jost,sans-serif', color: 'rgba(241,240,238,.78)' }}>{L.pushPermission}</span>
+              {s.pushPermission === 'denied' ? (
+                <span style={{ font: '400 10.5px/1 Jost,sans-serif', color: 'rgba(241,240,238,.4)' }}>{L.pushBlocked}</span>
+              ) : (
+                <button onClick={s.requestPush} style={{ width: 44, height: 26, borderRadius: 999, border: 'none', cursor: 'pointer', background: s.pushPermission === 'granted' ? 'rgba(232,163,61,.5)' : 'rgba(255,255,255,.12)', position: 'relative', transition: 'background .3s ease' }}>
+                  <span style={{ position: 'absolute', top: 3, insetInlineStart: s.pushPermission === 'granted' ? 21 : 3, width: 20, height: 20, borderRadius: 999, background: '#fff', transition: 'inset-inline-start .3s ease' }} />
+                </button>
+              )}
+            </div>
+            <div style={{ font: '400 10.5px/1.65 Jost,sans-serif', color: 'rgba(241,240,238,.38)', marginTop: 9, maxWidth: 250 }}>{L.pushAsk}</div>
+          </div>
           {PRIVACY_ROWS.map((row, n) => {
             const label = he ? row.he : row.en;
             const isToggle = row.type === 'toggle';
@@ -64,6 +77,9 @@ export function Privacy() {
                     ))}
                   </div>
                 )}
+                {row.key === 'loc' && (
+                  <div style={{ font: '400 10.5px/1.65 Jost,sans-serif', color: 'rgba(241,240,238,.38)', marginTop: 9, maxWidth: 250 }}>{L.locationAsk}</div>
+                )}
               </div>
             );
           })}
@@ -77,7 +93,7 @@ export function Privacy() {
 export function Account() {
   const s = useStore();
   const L = s.L(); const he = s.lang === 'he';
-  const [confirmingReset, setConfirmingReset] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const initials = s.account.name ? s.account.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() : '?';
   return (
     <div style={{ animation: 'gFade .6s ease both' }}>
@@ -104,31 +120,24 @@ export function Account() {
             <span style={{ font: '400 11px/1 Jost,sans-serif', color: 'rgba(241,240,238,.4)' }}>{L.passwordMeta}</span>
             <span style={{ font: '500 14px/1 Jost,sans-serif', color: 'rgba(241,240,238,.28)' }}>{he ? '‹' : '›'}</span>
           </button>
-          <button style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: 16, background: 'none', border: 'none', color: '#E8917C', cursor: 'pointer', textAlign: 'start' }} onClick={() => s.flash(he ? 'נדרש אישור בדוא״ל' : 'Needs email confirmation')}>
-            <span style={{ flex: 1, font: '400 12.5px/1 Jost,sans-serif' }}>{L.deleteAccount}</span>
-            <span style={{ font: '500 14px/1 Jost,sans-serif', opacity: 0.5 }}>{he ? '‹' : '›'}</span>
-          </button>
-        </div>
-        <button onClick={() => s.flash(L.accountSaved)} style={{ width: '100%', height: 50, marginTop: 14, borderRadius: 16, border: '1px solid rgba(232,163,61,.4)', background: 'rgba(232,163,61,.1)', color: gold, font: '400 12.5px/1 Jost,sans-serif', cursor: 'pointer' }}>{he ? 'שמירת פרטי חשבון' : 'Save account details'}</button>
-        <button onClick={() => useStore.setState({ phase: 'auth', screen: 'home', stack: [] })} style={{ width: '100%', height: 50, marginTop: 8, borderRadius: 16, border: '1px solid rgba(255,255,255,.1)', background: 'none', color: 'rgba(241,240,238,.6)', font: '400 12.5px/1 Jost,sans-serif', cursor: 'pointer' }}>{L.signOut}</button>
-
-        <div style={{ marginTop: 30, paddingTop: 22, borderTop: '1px solid rgba(255,255,255,.06)' }}>
-          {!confirmingReset ? (
-            <button onClick={() => setConfirmingReset(true)} style={{ width: '100%', padding: 15, borderRadius: 18, border: '1px solid rgba(180,67,47,.32)', background: 'rgba(180,67,47,.07)', color: '#E8917C', cursor: 'pointer', textAlign: 'start' }}>
-              <span style={{ display: 'block', font: '400 12.5px/1 Jost,sans-serif' }}>{L.resetData}</span>
-              <span style={{ display: 'block', font: '400 11px/1.5 Jost,sans-serif', color: 'rgba(232,145,124,.6)', marginTop: 7 }}>{L.resetSub}</span>
+          {!confirmingDelete ? (
+            <button style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: 16, background: 'none', border: 'none', color: '#E8917C', cursor: 'pointer', textAlign: 'start' }} onClick={() => setConfirmingDelete(true)}>
+              <span style={{ flex: 1, font: '400 12.5px/1 Jost,sans-serif' }}>{L.deleteAccount}</span>
+              <span style={{ font: '500 14px/1 Jost,sans-serif', opacity: 0.5 }}>{he ? '‹' : '›'}</span>
             </button>
           ) : (
-            <div style={{ padding: 20, borderRadius: 20, border: '1px solid rgba(180,67,47,.35)', background: 'rgba(180,67,47,.08)' }}>
-              <div style={{ font: '300 16px/1.3 Jost,sans-serif' }}>{L.resetTitle}</div>
-              <div style={{ font: '400 12px/1.6 Jost,sans-serif', color: 'rgba(241,240,238,.55)', marginTop: 10 }}>{L.resetBody}</div>
-              <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-                <button onClick={() => setConfirmingReset(false)} style={{ flex: 1, height: 44, borderRadius: 14, border: '1px solid rgba(255,255,255,.12)', background: 'none', color: 'rgba(241,240,238,.7)', font: '400 12px/1 Jost,sans-serif', cursor: 'pointer' }}>{L.cancel}</button>
-                <button onClick={s.resetAll} style={{ flex: 1, height: 44, borderRadius: 14, border: '1px solid rgba(180,67,47,.5)', background: 'rgba(180,67,47,.18)', color: '#E8917C', font: '400 12px/1 Jost,sans-serif', cursor: 'pointer' }}>{L.resetCta}</button>
+            <div style={{ padding: 16 }}>
+              <div style={{ font: '300 15px/1.3 Jost,sans-serif' }}>{L.deleteAccountTitle}</div>
+              <div style={{ font: '400 11.5px/1.6 Jost,sans-serif', color: 'rgba(241,240,238,.5)', marginTop: 9 }}>{L.deleteAccountBody}</div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                <button onClick={() => setConfirmingDelete(false)} style={{ flex: 1, height: 40, borderRadius: 13, border: '1px solid rgba(255,255,255,.12)', background: 'none', color: 'rgba(241,240,238,.7)', font: '400 11.5px/1 Jost,sans-serif', cursor: 'pointer' }}>{L.cancel}</button>
+                <button onClick={s.resetAll} style={{ flex: 1, height: 40, borderRadius: 13, border: '1px solid rgba(180,67,47,.5)', background: 'rgba(180,67,47,.18)', color: '#E8917C', font: '400 11.5px/1 Jost,sans-serif', cursor: 'pointer' }}>{L.deleteAccountCta}</button>
               </div>
             </div>
           )}
         </div>
+        <button onClick={() => s.flash(L.accountSaved)} style={{ width: '100%', height: 50, marginTop: 14, borderRadius: 16, border: '1px solid rgba(232,163,61,.4)', background: 'rgba(232,163,61,.1)', color: gold, font: '400 12.5px/1 Jost,sans-serif', cursor: 'pointer' }}>{he ? 'שמירת פרטי חשבון' : 'Save account details'}</button>
+        <button onClick={() => useStore.setState({ phase: 'auth', screen: 'home', stack: [] })} style={{ width: '100%', height: 50, marginTop: 8, borderRadius: 16, border: '1px solid rgba(255,255,255,.1)', background: 'none', color: 'rgba(241,240,238,.6)', font: '400 12.5px/1 Jost,sans-serif', cursor: 'pointer' }}>{L.signOut}</button>
       </div>
     </div>
   );

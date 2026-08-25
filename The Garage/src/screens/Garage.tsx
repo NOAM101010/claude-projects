@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { useStore, activeCar, activeVehicles } from '../store';
-import { FRAME_STOPS, CONTROL_ICONS, VIEW_KEYS, VIEW_CAT, SHOTS } from '../data';
+import { CONTROL_ICONS, VIEW_KEYS, VIEW_CAT, SHOTS } from '../data';
 import { card, gold, ink, labelFont } from '../theme';
 import { EmptyDash, PlateChip } from '../components/UI';
 
@@ -16,6 +16,9 @@ export default function Garage() {
   const catEmpty = catPhotos.length === 0;
   const stagePhoto = catPhotos[0] || '';
   const vIdx = VIEW_KEYS.indexOf(s.view);
+  const exteriorFrames = SHOTS.exterior
+    .map((shot, n) => ({ deg: Number((shot.deg || '0').replace('°', '')), src: (s.photoCats.exterior || [])[n] }))
+    .filter((f) => f.src);
 
   const onDown = (e: React.PointerEvent) => {
     drag.current = { x: e.clientX, y: e.clientY };
@@ -50,19 +53,30 @@ export default function Garage() {
         </div>
       </div>
 
+      <div style={{ padding: '0 30px 20px' }}>
+        <button onClick={() => s.pickPhoto('hero', 0)} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: 12, borderRadius: 16, ...card, cursor: 'pointer', textAlign: 'start', color: 'inherit' }}>
+          <span style={{ width: 44, height: 44, flex: 'none', borderRadius: 12, background: heroShot ? `url(${heroShot}) center/cover` : 'rgba(255,255,255,.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', font: '200 18px/1 Jost,sans-serif', color: 'rgba(241,240,238,.3)' }}>{!heroShot && '+'}</span>
+          <span style={{ flex: 1 }}>
+            <span style={{ display: 'block', font: '400 12.5px/1 Jost,sans-serif' }}>{L.heroPhotoLabel}</span>
+            <span style={{ display: 'block', font: '400 10.5px/1.5 Jost,sans-serif', color: 'rgba(241,240,238,.42)', marginTop: 6 }}>{L.heroPhotoSub}</span>
+          </span>
+          <span style={{ font: '400 10.5px/1 Jost,sans-serif', color: gold, flex: 'none' }}>{L.changePhoto}</span>
+        </button>
+      </div>
+
       <div style={{ padding: '0 30px 14px' }}>
         <div onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onPointerLeave={onUp} style={{
           position: 'relative', width: '100%', height: 408, borderRadius: 30, overflow: 'hidden', border: '1px solid rgba(255,255,255,.07)',
           touchAction: 'none', userSelect: 'none', background: 'radial-gradient(75% 60% at 50% 78%,#1C1F26 0%,#0C0D11 72%)', cursor: s.dragging ? 'grabbing' : 'grab',
         }}>
           <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(58% 34% at 50% 84%,rgba(232,163,61,.13),transparent 72%)', pointerEvents: 'none' }} />
-          {s.view === 'r360' ? FRAME_STOPS.map((f) => {
+          {s.view === 'r360' ? exteriorFrames.map((f) => {
             const d = Math.abs(((f.deg - normAngle + 540) % 360) - 180);
             const near = 180 - d;
             return (
               <div key={f.deg} style={{
                 position: 'absolute', inset: 0, backgroundImage: `url(${f.src})`, backgroundSize: 'cover', backgroundPosition: 'center',
-                transform: `scale(${s.dragging ? 1.06 : 1.02})${f.flip ? ' scaleX(-1)' : ''}`,
+                transform: `scale(${s.dragging ? 1.06 : 1.02})`,
                 transition: 'opacity .16s linear, transform .4s ease', opacity: near >= 157.5 ? 1 : 0,
               } as any} />
             );
@@ -75,6 +89,9 @@ export default function Garage() {
           )}
           {s.view === 'lights' && !catEmpty && (
             <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(40% 30% at 22% 62%,rgba(255,238,196,.4),transparent 70%),radial-gradient(40% 30% at 78% 62%,rgba(255,238,196,.24),transparent 70%)', mixBlendMode: 'screen', pointerEvents: 'none' }} />
+          )}
+          {s.view === 'r360' && exteriorFrames.length === 0 && (
+            <EmptyDash text={L.catEmptyTitle} cta={L.catEmptyCta} onClick={() => s.openFrameSheet('exterior')} />
           )}
           {catEmpty && s.view !== 'r360' && (
             <EmptyDash text={L.catEmptyTitle} cta={L.catEmptyCta} onClick={() => s.openFrameSheet(viewCat)} />

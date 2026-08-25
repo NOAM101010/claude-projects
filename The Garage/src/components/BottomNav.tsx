@@ -14,7 +14,11 @@ export default function BottomNav() {
   const active = (NAV_KEYS as readonly string[]).includes(screen) ? screen : (SCREEN_TO_TAB[screen] || 'home');
 
   return (
-    <div style={{ position: 'absolute', insetInline: 16, bottom: 14, display: 'flex', gap: 2, padding: '9px 8px', borderRadius: 24, background: 'linear-gradient(180deg,rgba(24,26,32,.9),rgba(11,13,17,.92))', backdropFilter: 'blur(26px)', border: '1px solid rgba(255,255,255,.05)', boxShadow: '0 26px 56px -18px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.04)', zIndex: 15 }}>
+    <div style={{
+      flex: 'none', display: 'flex', gap: 2, margin: '0 16px calc(env(safe-area-inset-bottom) + 14px)', padding: '9px 8px', borderRadius: 24,
+      background: 'linear-gradient(180deg,rgba(24,26,32,.9),rgba(11,13,17,.92))', backdropFilter: 'blur(26px)', border: '1px solid rgba(255,255,255,.05)',
+      boxShadow: '0 26px 56px -18px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.04)', zIndex: 15,
+    }}>
       {NAV_KEYS.map((key, n) => {
         const isActive = active === key;
         return (

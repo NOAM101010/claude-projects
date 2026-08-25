@@ -37,6 +37,8 @@ interface StoreState {
   photoCats: Record<PhotoCat, string[]>;
   units: { dist: number; vol: number; cons: number; cur: number; date: number };
   privacy: { loc: number; usage: boolean; visible: number; content: boolean };
+  pushPermission: 'default' | 'granted' | 'denied';
+  locationPermission: 'default' | 'granted' | 'denied';
   account: { name: string; email: string; phone: string };
   serviceSheet: boolean; serviceForm: Record<number, string>; serviceErrs: Record<number, string>;
   serviceHistory: ServiceRecord[];
@@ -111,6 +113,8 @@ interface StoreState {
   setUnits: (key: keyof StoreState['units'], v: number) => void;
   setPrivacyToggle: (key: 'usage' | 'content') => void;
   setPrivacySeg: (key: 'loc' | 'visible', v: number) => void;
+  requestPush: () => void;
+  requestLocation: () => void;
   setAccount: (key: keyof StoreState['account'], v: string) => void;
 
   setWrapMonth: (n: number | null) => void;
@@ -196,6 +200,8 @@ export const useStore = create<StoreState>((set, get) => ({
   photoCats: loadPhotos(),
   units: { dist: 0, vol: 0, cons: 0, cur: 0, date: 0, ...(initialStore?.units || {}) },
   privacy: { loc: 0, usage: false, visible: 0, content: true, ...(initialStore?.privacy || {}) },
+  pushPermission: (typeof Notification !== 'undefined' ? Notification.permission : 'default') as any,
+  locationPermission: 'default',
   account: { name: '', email: '', phone: '', ...(initialStore?.account || {}) },
   serviceSheet: false, serviceForm: {}, serviceErrs: {},
   serviceHistory: initialStore?.serviceHistory || [],
@@ -469,7 +475,24 @@ export const useStore = create<StoreState>((set, get) => ({
 
   setUnits: (key, v) => { const next = { ...get().units, [key]: v }; persist({ units: next }); set({ units: next }); },
   setPrivacyToggle: (key) => { const next = { ...get().privacy, [key]: !get().privacy[key] }; persist({ privacy: next }); set({ privacy: next }); },
-  setPrivacySeg: (key, v) => { const next = { ...get().privacy, [key]: v }; persist({ privacy: next }); set({ privacy: next }); },
+  setPrivacySeg: (key, v) => {
+    const next = { ...get().privacy, [key]: v }; persist({ privacy: next }); set({ privacy: next });
+    if (key === 'loc' && v !== 2) get().requestLocation();
+  },
+  requestPush: () => {
+    if (typeof Notification === 'undefined') return;
+    if (Notification.permission === 'granted') { set({ pushPermission: 'granted' }); return; }
+    if (Notification.permission === 'denied') { set({ pushPermission: 'denied' }); return; }
+    Notification.requestPermission().then((perm) => set({ pushPermission: perm as any }));
+  },
+  requestLocation: () => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      () => set({ locationPermission: 'granted' }),
+      () => set({ locationPermission: 'denied' }),
+      { timeout: 8000 },
+    );
+  },
   setAccount: (key, v) => { const next = { ...get().account, [key]: v }; persist({ account: next }); set({ account: next }); },
 
   setWrapMonth: (n) => set({ wrapMonth: n }),

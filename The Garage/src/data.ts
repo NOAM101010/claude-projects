@@ -51,26 +51,25 @@ export const SHOTS: Record<PhotoCat, { deg?: string; he: string; en: string }[]>
   ],
 };
 
-// Ready-made catalog cars for the "choose from our collection" onboarding path.
-export const CATALOG = [
-  { make: ['אאודי', 'Audi'] as Bi, model: 'A1 1.4 TFSI', year: 2014, engine: '1.4 TFSI', hp: 122, photo: '/assets/a1-side.jpg' },
-  { make: ['אאודי', 'Audi'] as Bi, model: 'A3 Sportback', year: 2019, engine: '1.5 TFSI', hp: 150, photo: '' },
-  { make: ['פולקסווגן', 'Volkswagen'] as Bi, model: 'Golf 8', year: 2021, engine: '1.5 eTSI', hp: 150, photo: '' },
-  { make: ['ב.מ.וו', 'BMW'] as Bi, model: '320i', year: 2018, engine: '2.0 TwinPower', hp: 184, photo: '' },
-  { make: ['מאזדה', 'Mazda'] as Bi, model: '3 Skyactiv-G', year: 2021, engine: '2.0', hp: 122, photo: '' },
-  { make: ['טויוטה', 'Toyota'] as Bi, model: 'Corolla Hybrid', year: 2020, engine: '1.8 HSD', hp: 122, photo: '' },
+
+// Common manufacturers for the onboarding autocomplete — a real make/model/trim
+// database is out of scope, so this stays a helpful typeahead rather than a
+// pretend-authoritative catalog.
+export const MAKES: Bi[] = [
+  ['טויוטה', 'Toyota'], ['אאודי', 'Audi'], ['ב.מ.וו', 'BMW'], ['פולקסווגן', 'Volkswagen'],
+  ['מרצדס', 'Mercedes-Benz'], ['הונדה', 'Honda'], ['מאזדה', 'Mazda'], ['יונדאי', 'Hyundai'],
+  ['קיה', 'Kia'], ['ניסאן', 'Nissan'], ['פורד', 'Ford'], ['שברולט', 'Chevrolet'],
+  ['סקודה', 'Škoda'], ['סיאט', 'SEAT'], ['רנו', 'Renault'], ['פיג׳ו', 'Peugeot'],
+  ['סיטרואן', 'Citroën'], ['וולוו', 'Volvo'], ['סובארו', 'Subaru'], ['מיצובישי', 'Mitsubishi'],
+  ['סוזוקי', 'Suzuki'], ['פיאט', 'Fiat'], ['אלפא רומיאו', 'Alfa Romeo'], ['ג׳יפ', 'Jeep'],
+  ['דודג׳', 'Dodge'], ['קרייזלר', 'Chrysler'], ['לקסוס', 'Lexus'], ['אינפיניטי', 'Infiniti'],
+  ['פורשה', 'Porsche'], ['מיני', 'MINI'], ['לנד רובר', 'Land Rover'], ['ג׳אגואר', 'Jaguar'],
+  ['טסלה', 'Tesla'], ['פרארי', 'Ferrari'], ['למבורגיני', 'Lamborghini'], ['מזראטי', 'Maserati'],
+  ['אסטון מרטין', 'Aston Martin'], ['בנטלי', 'Bentley'], ['רולס רויס', 'Rolls-Royce'],
+  ['קופרה', 'Cupra'], ['דאצ׳יה', 'Dacia'], ['אופל', 'Opel'], ['ביואיק', 'Buick'],
+  ['ג׳י.אם.סי', 'GMC'], ['קדילק', 'Cadillac'], ['ג׳י.או', 'BYD'], ['MG', 'MG'],
 ];
 
-export const FRAME_STOPS = [
-  { deg: 0, src: '/assets/a1-front.jpg', flip: false },
-  { deg: 45, src: '/assets/a1-street.jpg', flip: false },
-  { deg: 90, src: '/assets/a1-side.jpg', flip: false },
-  { deg: 135, src: '/assets/a1-rear34.jpg', flip: false },
-  { deg: 180, src: '/assets/a1-rear.jpg', flip: false },
-  { deg: 225, src: '/assets/a1-rear34.jpg', flip: true },
-  { deg: 270, src: '/assets/a1-side.jpg', flip: true },
-  { deg: 315, src: '/assets/a1-street.jpg', flip: true },
-];
 
 export const NAV_ICONS = [
   'M3 10.6 12 3.4l9 7.2V20a1 1 0 0 1-1 1h-5.2v-6H9.2v6H4a1 1 0 0 1-1-1z',

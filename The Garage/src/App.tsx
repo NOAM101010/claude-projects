@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { useStore, bootstrapTimers, Screen } from './store';
-import PhoneFrame from './components/PhoneFrame';
 import { Splash, Auth, Welcome } from './screens/Intro';
 import Home from './screens/Home';
 import Garage from './screens/Garage';
@@ -32,8 +31,8 @@ function AppShell() {
 
   if (!hasVehicle) {
     return (
-      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ flex: 1, overflow: 'auto', padding: '70px 0 40px' }}>
+      <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: 1, overflow: 'auto', padding: 'calc(env(safe-area-inset-top) + 22px) 0 40px' }}>
           <AddVehicle onboarding />
         </div>
         <Toast />
@@ -43,8 +42,8 @@ function AppShell() {
 
   const ScreenComp = SCREENS[screen] || Home;
   return (
-    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ flex: 1, overflow: 'auto', padding: '70px 0 124px' }}>
+    <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, overflow: 'auto', padding: 'calc(env(safe-area-inset-top) + 22px) 0 calc(env(safe-area-inset-bottom) + 108px)' }}>
         <ScreenComp />
       </div>
       <BottomNav />
@@ -67,17 +66,13 @@ export default function App() {
 
   return (
     <div dir={he ? 'rtl' : 'ltr'} style={{
-      minHeight: '100vh', background: 'radial-gradient(120% 80% at 50% -10%,#191920 0%,#08090B 60%)',
-      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, padding: '38px 24px 52px',
+      position: 'fixed', inset: 0, background: '#08090B', color: '#F1F0EE', overflow: 'hidden',
+      fontFamily: he ? 'Assistant, Jost, sans-serif' : 'Jost, Assistant, sans-serif',
     }}>
-      <PhoneFrame>
-        <div dir={he ? 'rtl' : 'ltr'} style={{ position: 'relative', height: '100%', background: '#08090B', color: '#F1F0EE', overflow: 'hidden', fontFamily: he ? 'Assistant, Jost, sans-serif' : 'Jost, Assistant, sans-serif' }}>
-          {phase === 'splash' && <Splash />}
-          {phase === 'auth' && <Auth />}
-          {phase === 'welcome' && <Welcome />}
-          {phase === 'app' && <AppShell />}
-        </div>
-      </PhoneFrame>
+      {phase === 'splash' && <Splash />}
+      {phase === 'auth' && <Auth />}
+      {phase === 'welcome' && <Welcome />}
+      {phase === 'app' && <AppShell />}
     </div>
   );
 }
