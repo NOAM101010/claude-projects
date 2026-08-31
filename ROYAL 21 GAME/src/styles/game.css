@@ -290,36 +290,97 @@
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr));
 }
 
-/* ---- §01 tables: a measured bento spread, never a catalogue list ---- */
-.hub-bento {
+/* ---- §01: the casino floor — roulette dead centre, six tables around it ----
+   RTL: the first named column is the start edge (visually the right). So
+   poker / sit&go / baccarat sit on the right, blackjack / vs-friends / game
+   night on the left, roulette in the exact middle. */
+.hub-floor {
   display: grid;
   gap: var(--s-3);
-  grid-template-columns: repeat(4, 1fr);
-  grid-auto-rows: minmax(150px, auto);
+  grid-template-columns: 1fr 1.05fr 1fr;
+  align-items: start;
   grid-template-areas:
-    "bj bj duel poker"
-    "bj bj sng  roul"
-    "night night bacc bacc";
+    "poker .    bj"
+    "sng   roul duel"
+    "bacc  .    night";
 }
-.hub-bento > * { height: 100%; }
+.hub-floor > .hub-cell--round { align-self: center; }
 
-@media (max-width: 960px) {
-  .hub-bento {
-    grid-template-columns: repeat(2, 1fr);
-    grid-auto-rows: minmax(140px, auto);
+@media (max-width: 900px) {
+  .hub-floor {
+    grid-template-columns: 1fr 1fr;
     grid-template-areas:
-      "bj bj"
-      "duel poker"
-      "sng roul"
-      "night bacc";
+      "poker bj"
+      "roul  roul"
+      "sng   duel"
+      "bacc  night";
   }
 }
-@media (max-width: 560px) {
-  .hub-bento {
+@media (max-width: 540px) {
+  .hub-floor {
     grid-template-columns: 1fr;
-    grid-auto-rows: auto;
     grid-template-areas: none;
   }
+  .hub-floor > * { grid-area: auto !important; }
+}
+
+/* ---- one card on the floor ---- */
+.hub-cell { padding: 20px 18px 16px; border-radius: var(--r-md); }
+@media (max-width: 860px) { .hub-cell { padding: 16px 14px 14px; } }
+
+/* the round table: ONLY the art is a circle. The label drops below it, into
+   the grid cell (taller than the circle), where border-radius can't clip it. */
+.hub-cell--round {
+  padding: var(--s-2) var(--s-3) var(--s-4);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.hub-cell--round .hub-card-artbox {
+  width: 100%;
+  max-width: 236px;
+  height: auto;
+  aspect-ratio: 1;
+  margin-inline: auto;
+  border-radius: 50%;
+  border: 1px solid var(--gold-line);
+  background: radial-gradient(ellipse at 50% 35%, rgba(227, 178, 60, 0.1), transparent 70%);
+  transition: border-color var(--d-fast);
+}
+.hub-cell--round .hub-card-artbox > * { max-width: 82%; max-height: 82%; }
+.hub-cell--round:hover .hub-card-artbox,
+.hub-cell--round:focus-visible .hub-card-artbox { border-color: var(--gold-hi); }
+
+/* ---- the art window: fixed box, art always fully contained ---- */
+.hub-card-artbox {
+  position: relative;
+  width: 100%;
+  height: var(--art-h, 128px);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+/* every art (bare svg, or a wrapper div holding one) scaled to fit inside —
+   no bleed out of the card, no crop by it. */
+.hub-card-artbox > * { max-width: 100%; max-height: 100%; }
+.hub-card-artbox > svg { width: auto; height: 100%; max-width: 100%; }
+.hub-card-artbox > div {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+.hub-card-artbox > div > svg { width: 100%; height: auto; max-height: 100%; }
+
+/* Blackjack: the dealer stands above the table, so the whole art is nudged
+   down and shrunk a touch to keep him inside the window. */
+.hub-bj-fit { width: 100%; height: 100%; display: grid; place-items: center; overflow: hidden; }
+.hub-bj-fit > div {
+  width: 100%;
+  transform: translateY(11%) scale(0.86);
+  transform-origin: center top;
 }
 
 /* ---- leaderboard ---- */

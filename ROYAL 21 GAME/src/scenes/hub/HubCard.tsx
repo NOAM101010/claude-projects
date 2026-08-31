@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState, type ReactNode, type CSSProperties } from 'react';
 import { motion } from 'framer-motion';
 import { useSound } from '@/hooks/useSound';
 import { useIsCompact } from '@/hooks/useMediaQuery';
@@ -12,28 +12,29 @@ interface Props {
   children: (focused: boolean) => ReactNode;
   hoverSound?: 'card' | 'chip' | 'coin' | 'vault' | 'notify' | 'scratch';
   glow?: string;
-  /** Hero cards take the full width of the grid row (and a taller art box). */
+  /** Full-width hero row (used outside the §01 floor). */
   span?: 1 | 2;
-  /** Named cell in a `grid-template-areas` layout (the §01 bento). Overrides `span`'s column placement. */
+  /** Named cell in a `grid-template-areas` layout (the §01 casino floor). */
   area?: string;
-  /** The centrepiece card: bigger footprint, extra headroom so tall art (the
-   *  Blackjack dealer) sits fully inside, art width capped so it can't balloon. */
-  feature?: boolean;
+  /** The centre of the floor: a round card (roulette). */
+  round?: boolean;
+  /** A slightly taller art window — for art that needs vertical headroom (the
+   *  Blackjack dealer stands above the table). */
+  artTall?: boolean;
   badge?: string;
   disabled?: boolean;
 }
 
 /**
- * One object in the room, in a card that owns its own box.
+ * One object on the casino floor, in a card that fully contains its art.
  *
- * The hub used to place objects with absolute percentage coordinates, which
- * overlapped as soon as the viewport was not the shape they were tuned for.
- * The art is unchanged — it just lives in a grid cell now, so nothing can ever
- * sit on top of anything else.
+ * The art window is a fixed box with `overflow: hidden`; game.css scales every
+ * SVG/really wide art down to fit inside it (`object-fit: contain` in spirit),
+ * so nothing ever bleeds out of the card or gets cropped by it.
  */
 export function HubCard({
   label, action, blurb, onEnter, children, hoverSound = 'card',
-  glow = 'rgba(227,178,60,.28)', span = 1, area, feature, badge, disabled,
+  glow = 'rgba(227,178,60,.28)', span = 1, area, round, artTall, badge, disabled,
 }: Props) {
   const [focused, setFocused] = useState(false);
   const { play } = useSound();
@@ -54,17 +55,15 @@ export function HubCard({
   return (
     <motion.button
       type="button"
-      className="relative flex flex-col items-center text-center glass press overflow-hidden"
+      className={`hub-cell${round ? ' hub-cell--round' : ''} relative flex flex-col items-center text-center glass press overflow-hidden`}
       style={{
         gridColumn: area ? undefined : span === 2 ? 'span 2' : undefined,
         gridArea: area,
-        padding: feature
-          ? (compact ? '44px 16px 14px' : '62px 22px 18px')
-          : (compact ? '16px 14px 14px' : '20px 18px 16px'),
-        borderColor: focused ? 'var(--gold-line)' : 'var(--glass-line)',
+        borderColor: round ? 'transparent' : focused ? 'var(--gold-line)' : 'var(--glass-line)',
         opacity: disabled ? 0.5 : 1,
         cursor: disabled ? 'not-allowed' : 'pointer',
-      }}
+        ['--art-h' as string]: artTall ? (compact ? '134px' : '156px') : (compact ? '112px' : '128px'),
+      } as CSSProperties}
       initial={{ opacity: 0, y: 18 }}
       whileInView={{ opacity: disabled ? 0.5 : 1, y: 0 }}
       viewport={{ once: true, amount: 0.2 }}
@@ -101,17 +100,7 @@ export function HubCard({
         </span>
       )}
 
-      {/* minHeight, never a fixed height — the art box grows to show the whole
-          silhouette instead of cropping it. maxWidth on the feature card keeps
-          the wide Blackjack table (and its dealer) from ballooning. */}
-      <span
-        className="relative grid place-items-center"
-        style={{
-          width: '100%',
-          maxWidth: feature ? 300 : undefined,
-          minHeight: feature ? (compact ? 170 : 212) : (compact ? 104 : 126),
-        }}
-      >
+      <span className="hub-card-artbox">
         {children(focused)}
       </span>
 

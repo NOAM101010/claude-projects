@@ -32,7 +32,7 @@ function Section({
         <h2 className="hub-section-title">{title}</h2>
         {hint && <span className="hub-section-hint">{hint}</span>}
       </div>
-      <div className={bento ? 'hub-bento' : 'hub-grid'}>{children}</div>
+      <div className={bento ? 'hub-floor' : 'hub-grid'}>{children}</div>
     </section>
   );
 }
@@ -115,14 +115,18 @@ export default function HubScene() {
         <Section idx="01" title={t('hub.sectionTables')} hint={t('hub.sectionTablesHint')} bento>
           <HubCard
             area="bj"
-            feature
+            artTall
             label={t('hub.blackjack')}
             action={t('hub.sitDown')}
             blurb={t('hub.blurbBlackjack')}
             hoverSound="card"
             onEnter={() => navigate('/blackjack/solo')}
           >
-            {(focused) => <BlackjackTableArt focused={focused} dealerSkin={profile.equipped.dealerSkin ?? 'dl-house'} />}
+            {(focused) => (
+              <div className="hub-bj-fit">
+                <BlackjackTableArt focused={focused} dealerSkin={profile.equipped.dealerSkin ?? 'dl-house'} />
+              </div>
+            )}
           </HubCard>
 
           <HubCard
@@ -163,6 +167,7 @@ export default function HubScene() {
 
           <HubCard
             area="roul"
+            round
             label={t('roulette.title')}
             action={t('roulette.play')}
             blurb={t('hub.blurbRoulette')}
