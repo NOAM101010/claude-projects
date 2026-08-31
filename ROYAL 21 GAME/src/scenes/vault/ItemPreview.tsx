@@ -6,6 +6,7 @@ import { Dealer } from '@/components/game/Dealer';
 import { VictoryEffect } from '@/components/effects/VictoryEffect';
 import { CoinFace } from '@/components/game/CoinFace';
 import { usePlayer } from '@/stores/usePlayer';
+import { useT } from '@/hooks/useT';
 import { symbolsForTheme } from '@/data/slots';
 import { roomBackgroundOf } from '@/data/roomThemes';
 import type { ShopItem } from '@/types';
@@ -13,6 +14,7 @@ import type { ShopItem } from '@/types';
 /** Every item is previewed as the thing it actually is (§92). */
 export function ItemPreview({ item, compact }: { item: ShopItem; compact?: boolean }) {
   const profile = usePlayer((s) => s.profile);
+  const { t } = useT();
   const size = compact ? 'sm' : 'md';
 
   switch (item.category) {
@@ -52,12 +54,24 @@ export function ItemPreview({ item, compact }: { item: ShopItem; compact?: boole
           <VictoryEffect kind={item.payload.victory ?? null} />
         </div>
       );
-    case 'coins':
+    case 'coins': {
       /* Coin category holds two very different beasts: Coin-Flip skins
          (`coinSkin` payload) and Daily-Rarity currencies (`currencySkin`). Both
          render as a CoinFace — the visual is the same, only the equip slot
          differs. Prefer whichever payload the item actually carries. */
-      return <CoinFace skin={item.payload.coinSkin ?? item.payload.currencySkin ?? 'cn-classic'} face="heads" size={compact ? 44 : 84} />;
+      const coin = (
+        <CoinFace skin={item.payload.coinSkin ?? item.payload.currencySkin ?? 'cn-classic'} face="heads" size={compact ? 44 : 84} />
+      );
+      if (compact) return coin;
+      return (
+        <div className="grid place-items-center gap-2">
+          {coin}
+          <p className="text-[10.5px] text-center max-w-[240px]" style={{ color: 'var(--muted)' }}>
+            {t(item.payload.currencySkin ? 'vault.currencyCoinHint' : 'vault.coinsHint')}
+          </p>
+        </div>
+      );
+    }
     case 'reels': {
       const symbols = symbolsForTheme(item.payload.slotsTheme ?? 'sl-classic');
       return (

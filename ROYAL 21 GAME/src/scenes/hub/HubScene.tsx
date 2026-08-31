@@ -115,7 +115,6 @@ export default function HubScene() {
         <Section idx="01" title={t('hub.sectionTables')} hint={t('hub.sectionTablesHint')} bento>
           <HubCard
             area="bj"
-            artTall
             label={t('hub.blackjack')}
             action={t('hub.sitDown')}
             blurb={t('hub.blurbBlackjack')}

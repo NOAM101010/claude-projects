@@ -290,37 +290,37 @@
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr));
 }
 
-/* ---- §01: the casino floor — roulette dead centre, six tables around it ----
-   RTL: the first named column is the start edge (visually the RIGHT). So
-   blackjack / vs-friends / game night sit on the right, poker / sit&go /
-   baccarat on the left, roulette in the exact middle. Uniform gap on both
-   axes; the centre column is sized to the roulette disc so it keeps the same
-   spacing to its neighbours as the side cards have to each other. */
+/* ---- §01: the casino floor — a big roulette disc anchors the middle, three
+   tables down each side. RTL: the first named column is the start edge; per
+   the approved mockup that's poker / sit&go / baccarat on the right,
+   blackjack / vs-friends / game night on the left. Three equal columns, equal
+   auto rows and a single uniform gap = symmetric spacing everywhere. */
 .hub-floor {
   display: grid;
-  gap: var(--s-5);
-  grid-template-columns: 1fr minmax(190px, 240px) 1fr;
-  align-items: start;
+  gap: var(--s-4);
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: 1fr;
+  align-items: stretch;
   grid-template-areas:
-    "bj    .    poker"
-    "duel  roul sng"
-    "night .    bacc";
+    "poker roul bj"
+    "sng   roul duel"
+    "bacc  roul night";
 }
-.hub-floor > .hub-cell--round { align-self: center; }
 
 @media (max-width: 900px) {
   .hub-floor {
     grid-template-columns: 1fr 1fr;
     grid-template-areas:
-      "bj    poker"
+      "poker bj"
       "roul  roul"
-      "duel  sng"
-      "night bacc";
+      "sng   duel"
+      "bacc  night";
   }
 }
 @media (max-width: 540px) {
   .hub-floor {
     grid-template-columns: 1fr;
+    grid-auto-rows: auto;
     grid-template-areas: none;
   }
   .hub-floor > * { grid-area: auto !important; }
@@ -330,27 +330,22 @@
 .hub-cell { padding: 20px 18px 16px; border-radius: var(--r-md); }
 @media (max-width: 860px) { .hub-cell { padding: 16px 14px 14px; } }
 
-/* the round table: ONLY the art is a circle. The label drops below it, into
-   the grid cell (taller than the circle), where border-radius can't clip it. */
-.hub-cell--round {
-  padding: var(--s-2) var(--s-3) var(--s-4);
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
+/* the roulette cell: the SAME glass card as its neighbours. Inside, the art is
+   a disc that fills the (tall, 3-row) cell, label centred underneath. The disc
+   is what reads as "round"; the card stays a rectangle so the label is never
+   clipped by a border-radius. */
+.hub-cell--round { justify-content: center; }
 .hub-cell--round .hub-card-artbox {
-  width: 100%;
+  width: min(100%, 340px);
   height: auto;
   aspect-ratio: 1;
   margin-inline: auto;
   border-radius: 50%;
   border: 1px solid var(--gold-line);
-  background: radial-gradient(ellipse at 50% 35%, rgba(227, 178, 60, 0.1), transparent 70%);
+  background: radial-gradient(ellipse at 50% 34%, rgba(227, 178, 60, 0.12), transparent 70%);
   transition: border-color var(--d-fast);
 }
-.hub-cell--round .hub-card-artbox > * { max-width: 82%; max-height: 82%; }
+.hub-cell--round .hub-card-artbox > * { max-width: 80%; max-height: 80%; }
 .hub-cell--round:hover .hub-card-artbox,
 .hub-cell--round:focus-visible .hub-card-artbox { border-color: var(--gold-hi); }
 /* keep the label under the disc no wider than a regular card */
@@ -377,13 +372,14 @@
 }
 .hub-card-artbox > div > svg { width: 100%; height: auto; max-height: 100%; }
 
-/* Blackjack: the dealer stands above the table, so the whole art is nudged
-   down and shrunk a touch to keep him inside the window. */
-.hub-bj-fit { width: 100%; height: 100%; display: grid; place-items: center; overflow: hidden; }
+/* Blackjack: the dealer stands above the table (art has `overflow: visible`),
+   so the table is bottom-aligned and sized to 74% of the window — that leaves
+   exactly enough headroom above it for the dealer to sit fully inside. */
+.hub-card-artbox > .hub-bj-fit { place-items: end center; overflow: hidden; }
 .hub-bj-fit > div {
-  width: 100%;
-  transform: translateY(11%) scale(0.86);
-  transform-origin: center top;
+  width: auto;
+  height: 74%;
+  max-width: 100%;
 }
 
 /* ---- leaderboard ---- */
@@ -667,6 +663,31 @@
 .app-backdrop[data-zone='warm'] .app-backdrop-tint { color: rgba(248, 227, 168, 0.20); }
 .app-backdrop[data-zone='teal'] .app-backdrop-tint { color: rgba(74, 168, 200, 0.16); }
 .app-backdrop[data-zone='neutral'] .app-backdrop-tint { color: rgba(150, 150, 170, 0.06); }
+
+/* Four faint suit glyphs. Softness comes from low opacity only — NO blur.
+   Colour tracks the zone (same scheme as the tint) and crossfades on nav. */
+.app-backdrop-suit {
+  position: absolute;
+  font-size: 26vmin;
+  line-height: 1;
+  font-weight: 700;
+  color: rgba(227, 178, 60, 0.08);
+  transition: color 0.9s var(--ease-out);
+  animation: bdSuit 52s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+.app-backdrop[data-zone='warm'] .app-backdrop-suit { color: rgba(248, 227, 168, 0.10); }
+.app-backdrop[data-zone='teal'] .app-backdrop-suit { color: rgba(74, 168, 200, 0.09); }
+.app-backdrop[data-zone='neutral'] .app-backdrop-suit { color: rgba(150, 150, 170, 0.05); }
+.app-backdrop-suit.s0 { top: 4%;  left: 3%;  animation-duration: 55s; animation-delay: 0s; }
+.app-backdrop-suit.s1 { top: 50%; left: 79%; animation-duration: 47s; animation-delay: -13s; }
+.app-backdrop-suit.s2 { top: 68%; left: 8%;  animation-duration: 61s; animation-delay: -27s; }
+.app-backdrop-suit.s3 { top: 10%; left: 64%; animation-duration: 43s; animation-delay: -7s; }
+@keyframes bdSuit {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 0.55; }
+  50%      { transform: translate3d(2.4vw, -3vh, 0) rotate(3deg); opacity: 1; }
+}
+html[data-quality='low'] .app-backdrop-suit { animation: none; }
 
 /* One soft orb. Radial-gradient background (inherently soft — NO filter:blur),
    nudged by a very slow transform. Cheap: one composited layer, no repaint. */

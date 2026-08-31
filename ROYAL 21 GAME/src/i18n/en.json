@@ -294,7 +294,7 @@
   },
   "leaderboard": {
     "title": "Leaderboard",
-    "subtitle": "Who's on top this week",
+    "subtitle": "All-time leaders",
     "scopeWorld": "The world",
     "scopeFriends": "My friends",
     "catChips": "Most chips",
@@ -673,6 +673,9 @@
     "dailyOffers": "Daily Offers",
     "dailyOffersHint": "3 items at {pct}% off, refreshes every 24 hours",
     "limitedToday": "Today only",
+    "coinsHint": "Coin skins for the Coin Flip game — cosmetic only, they don't affect your odds.",
+    "currencyCoinHint": "Game currency — swaps the chip symbol next to every balance, price and pot across the whole game (not in Coin Flip).",
+    "chipsHint": "Chip stack skins — cosmetic only, seen on the table.",
     "categories": {
       "deals": "🔥 Deals",
       "all": "All",

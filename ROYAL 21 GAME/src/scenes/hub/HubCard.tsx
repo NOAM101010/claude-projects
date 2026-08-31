@@ -16,11 +16,8 @@ interface Props {
   span?: 1 | 2;
   /** Named cell in a `grid-template-areas` layout (the §01 casino floor). */
   area?: string;
-  /** The centre of the floor: a round card (roulette). */
+  /** The centre of the floor: the art is a disc (roulette). */
   round?: boolean;
-  /** A slightly taller art window — for art that needs vertical headroom (the
-   *  Blackjack dealer stands above the table). */
-  artTall?: boolean;
   badge?: string;
   disabled?: boolean;
 }
@@ -34,7 +31,7 @@ interface Props {
  */
 export function HubCard({
   label, action, blurb, onEnter, children, hoverSound = 'card',
-  glow = 'rgba(227,178,60,.28)', span = 1, area, round, artTall, badge, disabled,
+  glow = 'rgba(227,178,60,.28)', span = 1, area, round, badge, disabled,
 }: Props) {
   const [focused, setFocused] = useState(false);
   const { play } = useSound();
@@ -59,10 +56,10 @@ export function HubCard({
       style={{
         gridColumn: area ? undefined : span === 2 ? 'span 2' : undefined,
         gridArea: area,
-        borderColor: round ? 'transparent' : focused ? 'var(--gold-line)' : 'var(--glass-line)',
+        borderColor: focused ? 'var(--gold-line)' : 'var(--glass-line)',
         opacity: disabled ? 0.5 : 1,
         cursor: disabled ? 'not-allowed' : 'pointer',
-        ['--art-h' as string]: artTall ? (compact ? '134px' : '156px') : (compact ? '112px' : '128px'),
+        ['--art-h' as string]: compact ? '116px' : '132px',
       } as CSSProperties}
       initial={{ opacity: 0, y: 18 }}
       whileInView={{ opacity: disabled ? 0.5 : 1, y: 0 }}

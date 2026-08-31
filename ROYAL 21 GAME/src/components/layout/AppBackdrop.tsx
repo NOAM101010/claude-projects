@@ -3,26 +3,30 @@ import { useLocation } from 'react-router-dom';
 import { useSettings, resolvedQuality } from '@/stores/useSettings';
 
 /* ============================================================================
-   AppBackdrop — the ambient layer behind every route.
+   AppBackdrop - the ambient layer behind every route.
 
    Rendered once in <App/>: `fixed inset-0`, z-index -10, pointer-events:none.
    Full-bleed game scenes paint their own opaque world on top, so this only
    shows on the lighter screens (hub, lobby, inventory, settings, profile).
 
-   Deliberately almost entirely STATIC. An earlier version had a rotating
-   blurred conic + blurred drifting suits — `filter: blur()` on an animated
-   element repaints the whole layer every frame and made the whole site janky,
-   game scenes included. Everything here now is either static or a cheap
-   `transform` / `opacity` tween with NO blur:
-     · deep room gradient        — static
-     · route-aware tint          — static per zone, CSS crossfades `color`
-     · one slow bokeh orb        — soft radial-gradient, `transform` only
-     · a few dust motes          — `transform` + `opacity` only
-     · breathing vignette        — `opacity` only
+   Deliberately cheap. An earlier version had a rotating blurred conic + blurred
+   drifting suits - `filter: blur()` on an animated element repaints the whole
+   layer every frame and made the whole site janky, game scenes included.
+   Everything here is static or a cheap transform/opacity tween with NO blur:
+     - deep room gradient        static
+     - route-aware tint          static per zone, CSS crossfades `color`
+     - four faint suit glyphs    very slow drift, transform+opacity, no blur
+     - one slow bokeh orb        soft radial-gradient, transform only
+     - a few dust motes          transform + opacity only
+     - breathing vignette        opacity only
 
-   Reduced motion (`html[data-motion='reduced']` / `prefers-reduced-motion`)
-   freezes the three moving pieces; quality 'low' drops the bokeh + dust.
+   The suit glyphs' colour follows the same `[data-zone]` scheme as the tint
+   and crossfades on navigation. Reduced motion (`html[data-motion='reduced']`
+   / `prefers-reduced-motion`) freezes every moving piece; quality 'low' drops
+   the bokeh + dust and freezes the glyphs (they stay visible, just still).
    ========================================================================== */
+
+const SUITS = ['♠', '♥', '♣', '♦'];
 
 function zoneOf(pathname: string): 'gold' | 'warm' | 'teal' | 'neutral' {
   if (/^\/(vault|vip)/.test(pathname)) return 'warm';
@@ -53,6 +57,9 @@ export function AppBackdrop() {
     <div className="app-backdrop" data-zone={zone} aria-hidden="true">
       <div className="app-backdrop-base" />
       <div className="app-backdrop-tint" />
+      {SUITS.map((glyph, i) => (
+        <span key={glyph} className={`app-backdrop-suit s${i}`}>{glyph}</span>
+      ))}
       {quality !== 'low' && <span className="app-backdrop-bokeh" />}
       {dust.map((d) => (
         <span

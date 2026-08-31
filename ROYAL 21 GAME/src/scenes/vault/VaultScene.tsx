@@ -185,6 +185,11 @@ export default function VaultScene() {
             onChange={setCategory}
             tabs={CATEGORIES.map((key) => ({ key, label: t(`vault.categories.${key}`) }))}
           />
+          {(category === 'coins' || category === 'chips') && (
+            <p className="text-[11.5px] mt-2" style={{ color: 'var(--muted)' }}>
+              {t(category === 'coins' ? 'vault.coinsHint' : 'vault.chipsHint')}
+            </p>
+          )}
         </div>
 
         {/* Deals section — shown only when the Deals tab is active. */}
@@ -600,6 +605,9 @@ function RareRotationCard({ item, owned, lang, onOpen, t, exclusive = false, equ
         <b className="block text-[15px] mt-0.5 truncate" style={{ fontFamily: 'var(--font-display)' }}>{item.name[lang]}</b>
         {item.desc && (
           <p className="text-[11px] mt-0.5" style={{ color: 'var(--muted)' }}>{item.desc[lang]}</p>
+        )}
+        {item.payload.currencySkin && (
+          <p className="text-[10.5px] mt-1" style={{ color: 'var(--gold-hi)' }}>{t('vault.currencyCoinHint')}</p>
         )}
         <div className="mt-2 num font-bold" style={{ color: owned ? 'var(--jade-hi)' : 'var(--gold-hi)', fontSize: 15 }}>
           {owned ? t('vault.owned') : `${chipGlyphOf(equippedCoin)} ${item.price.toLocaleString()}`}
