@@ -263,7 +263,18 @@ function CoinFlipRoom({ roomCode }: { roomCode: string }) {
   const roundOutlay = useRef<{ round: number; amount: number }>({ round: -1, amount: 0 });
   const addOutlay = (round: number, delta: number) => {
     if (roundOutlay.current.round !== round) roundOutlay.current = { round, amount: 0 };
-    roundOutlay.current.amount = Math.max(0, roundOutlay.current.amount + delta);
+    roundOutlay.current.amount += delta;
+  };
+
+  /* Stake already handed back optimistically by a clearPick the host hasn't
+     confirmed. Kept apart from roundOutlay so the settle reconcile still sees
+     the full amount deducted (the clear can drop / arrive out of order and the
+     pick stays live and settles as a loss); subtracted from the refund so the
+     same stake is never returned twice. */
+  const clearRefunded = useRef<{ round: number; amount: number }>({ round: -1, amount: 0 });
+  const addClearRefunded = (round: number, delta: number) => {
+    if (clearRefunded.current.round !== round) clearRefunded.current = { round, amount: 0 };
+    clearRefunded.current.amount = Math.max(0, clearRefunded.current.amount + delta);
   };
 
   useEffect(() => {
@@ -342,11 +353,13 @@ function CoinFlipRoom({ roomCode }: { roomCode: string }) {
       // betting→flip boundary). Must run before the no-pick early return below,
       // or a rejected pick silently eats the chips.
       const authStake = seat?.pick ? seat.stake : 0;
+      const clearedBack = clearRefunded.current.round === state.round ? clearRefunded.current.amount : 0;
       if (roundOutlay.current.round === state.round) {
-        const rejected = roundOutlay.current.amount - authStake;
+        const rejected = roundOutlay.current.amount - authStake - clearedBack;
         if (rejected > 0) addChips(rejected, { silent: true });
         roundOutlay.current = { round: -1, amount: 0 };
       }
+      if (clearRefunded.current.round === state.round) clearRefunded.current = { round: -1, amount: 0 };
       if (!seat || !seat.pick) return;
       const payout = seat.net + seat.stake;
       if (payout > 0) {
@@ -402,11 +415,15 @@ function CoinFlipRoom({ roomCode }: { roomCode: string }) {
     // un-synced) seat shows — for a non-host player the pick round-trips through
     // the host, so mySeat.pick can still be null here and the old guard would
     // skip the refund, eating the stake.
-    const outstanding = roundOutlay.current.round === state.round ? roundOutlay.current.amount : 0;
+    const outlayAmt = roundOutlay.current.round === state.round ? roundOutlay.current.amount : 0;
+    const refundedSoFar = clearRefunded.current.round === state.round ? clearRefunded.current.amount : 0;
+    const outstanding = outlayAmt - refundedSoFar;
     const refund = outstanding > 0 ? outstanding : (mySeat?.pick ? mySeat.stake : 0);
     if (refund <= 0) return;
     addChips(refund, { silent: true });
-    addOutlay(state.round, -refund);
+    // Keep the outlay intact (no addOutlay(-refund)) so a clear the host never
+    // applies is still reconciled at settle; addClearRefunded offsets the double-count.
+    addClearRefunded(state.round, refund);
     void send(profile.id, { type: 'clearPick', userId: profile.id });
   };
 

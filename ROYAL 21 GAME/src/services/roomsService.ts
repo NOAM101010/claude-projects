@@ -32,6 +32,46 @@ export async function hashPassword(password: string): Promise<string> {
     .join('');
 }
 
+/**
+ * The server-side reaper (`reassign_room_host`) hands the room to a new host
+ * once `rooms.updated_at` has been still for 20s. An alive host that simply
+ * isn't publishing right now (between hands, or its tab is backgrounded so the
+ * round-advance timers are throttled) must therefore keep nudging that column
+ * or it gets falsely replaced and two hosts start fighting over the state.
+ * 8s stays comfortably under the 20s window even after one missed beat.
+ */
+const HOST_HEARTBEAT_MS = 8000;
+
+/**
+ * Background tabs throttle `setInterval` to ~once per minute — far too slow to
+ * keep the heartbeat alive. A Worker gets its own, much less aggressively
+ * throttled timer, so the host keeps its seat even while the tab is hidden.
+ * Falls back to a plain interval where Workers aren't available (tests/SSR).
+ */
+const TICKER_WORKER_SRC =
+  'let h;onmessage=(e)=>{if(e.data&&e.data.stop){clearInterval(h);return;}' +
+  'clearInterval(h);h=setInterval(()=>postMessage(0),e.data.ms);};';
+
+function startTicker(ms: number, onTick: () => void): () => void {
+  if (typeof Worker !== 'undefined' && typeof Blob !== 'undefined' && typeof URL !== 'undefined') {
+    try {
+      const url = URL.createObjectURL(new Blob([TICKER_WORKER_SRC], { type: 'application/javascript' }));
+      const worker = new Worker(url);
+      worker.onmessage = () => onTick();
+      worker.postMessage({ ms });
+      return () => {
+        worker.postMessage({ stop: true });
+        worker.terminate();
+        URL.revokeObjectURL(url);
+      };
+    } catch {
+      /* fall through to setInterval */
+    }
+  }
+  const id = setInterval(onTick, ms);
+  return () => clearInterval(id);
+}
+
 export const roomsService = {
   /**
    * Device-local players cannot host.
@@ -136,6 +176,63 @@ export const roomsService = {
       void this.claimHostIfStale(roomId, userId).then((claimed) => { if (claimed) onTakeover(); });
     }, 5000);
     return () => clearInterval(interval);
+  },
+
+  /**
+   * Keep this client's hold on the room while it is the host. Every ~8s (and
+   * immediately whenever the tab regains focus) it touches `rooms.updated_at`
+   * so the server-side reaper never mistakes an idle-but-alive host for a dead
+   * one. The write is filtered by `host_id = userId` and additionally gated by
+   * the `rooms_update_host` RLS policy, so it silently affects zero rows the
+   * moment another client has legitimately taken over — that is the signal to
+   * step down (`onLostHost`) rather than keep publishing a second, conflicting
+   * stream of state.
+   */
+  startHostHeartbeat(
+    roomId: string,
+    userId: string,
+    isCurrentlyHost: () => boolean,
+    onLostHost: () => void,
+  ) {
+    const client = db();
+    if (!client || !isRemoteId(userId)) return () => {};
+    let stopped = false;
+    let lost = false;
+
+    const beat = async () => {
+      if (stopped || lost || !isCurrentlyHost()) return;
+      const { data, error } = await client
+        .from('rooms')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', roomId)
+        .eq('host_id', userId)
+        .select('id');
+      if (stopped || lost) return;
+      // A transient network error just means "try again next beat". Zero rows
+      // with no error means we are provably not the host anymore.
+      if (!error && Array.isArray(data) && data.length === 0) {
+        lost = true;
+        onLostHost();
+      }
+    };
+
+    const stopTicker = startTicker(HOST_HEARTBEAT_MS, () => { void beat(); });
+    void beat();
+
+    const onVisibility = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') void beat();
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVisibility);
+    }
+
+    return () => {
+      stopped = true;
+      stopTicker();
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVisibility);
+      }
+    };
   },
 
   async leave(roomId: string, userId: string) {

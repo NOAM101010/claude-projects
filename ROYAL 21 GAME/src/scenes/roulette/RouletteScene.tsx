@@ -68,7 +68,19 @@ export default function RouletteScene({ mode, roomCode }: Props) {
   const roundOutlay = useRef<{ round: number; amount: number }>({ round: -1, amount: 0 });
   const addOutlay = (round: number, delta: number) => {
     if (roundOutlay.current.round !== round) roundOutlay.current = { round, amount: 0 };
-    roundOutlay.current.amount = Math.max(0, roundOutlay.current.amount + delta);
+    roundOutlay.current.amount += delta;
+  };
+
+  /* How much of this round's outlay we've already handed back optimistically via
+     a "clear" the host hasn't confirmed yet. Tracked apart from roundOutlay so
+     the settle-time reconcile still sees the FULL amount this client deducted —
+     a clearBets can be dropped, rate-limited or arrive out of order and the bet
+     stays live on the seat and settles as a loss. This value is then subtracted
+     from the computed refund so the same stake is never returned twice. */
+  const clearRefunded = useRef<{ round: number; amount: number }>({ round: -1, amount: 0 });
+  const addClearRefunded = (round: number, delta: number) => {
+    if (clearRefunded.current.round !== round) clearRefunded.current = { round, amount: 0 };
+    clearRefunded.current.amount = Math.max(0, clearRefunded.current.amount + delta);
   };
 
   const mySeat = state?.seats.find((s) => s.userId === profile.id);
@@ -193,10 +205,12 @@ export default function RouletteScene({ mode, roomCode }: Props) {
     // Refund any stake this client deducted for bets the host never applied
     // (rejected at the betting→spinning boundary). actualStake = payout - net.
     if (roundOutlay.current.round === snap.round) {
-      const rejected = roundOutlay.current.amount - (payout - net);
+      const clearedBack = clearRefunded.current.round === snap.round ? clearRefunded.current.amount : 0;
+      const rejected = roundOutlay.current.amount - (payout - net) - clearedBack;
       if (rejected > 0) addChips(rejected, { silent: true });
       roundOutlay.current = { round: -1, amount: 0 };
     }
+    if (clearRefunded.current.round === snap.round) clearRefunded.current = { round: -1, amount: 0 };
     haptic('land');
     if (payout > 0) {
       addChips(payout);
@@ -222,10 +236,12 @@ export default function RouletteScene({ mode, roomCode }: Props) {
       creditedRound.current = snap.round;
       if (snap.payout > 0) addChips(snap.payout);
       if (roundOutlay.current.round === snap.round) {
-        const rejected = roundOutlay.current.amount - (snap.payout - snap.net);
+        const clearedBack = clearRefunded.current.round === snap.round ? clearRefunded.current.amount : 0;
+        const rejected = roundOutlay.current.amount - (snap.payout - snap.net) - clearedBack;
         if (rejected > 0) addChips(rejected, { silent: true });
         roundOutlay.current = { round: -1, amount: 0 };
       }
+      if (clearRefunded.current.round === snap.round) clearRefunded.current = { round: -1, amount: 0 };
       pendingPayout.current = null;
     }, 6000);
     return () => clearTimeout(timer);
@@ -263,12 +279,17 @@ export default function RouletteScene({ mode, roomCode }: Props) {
     // entirely and quietly ate the stake (repeat-last-bet then clear = lost
     // chips). clearBets is inserted after the placeBets, so the host still
     // processes place→clear in order and the authoritative table ends up empty.
-    const outstanding = roundOutlay.current.round === state.round ? roundOutlay.current.amount : 0;
+    const outlayAmt = roundOutlay.current.round === state.round ? roundOutlay.current.amount : 0;
+    const refundedSoFar = clearRefunded.current.round === state.round ? clearRefunded.current.amount : 0;
+    const outstanding = outlayAmt - refundedSoFar;
     const refund = outstanding > 0 ? outstanding : myStake;
     if (refund <= 0 && !mySeat.bets.length) return;
     if (refund > 0) {
       addChips(refund, { silent: true });
-      addOutlay(state.round, -refund);
+      // Deliberately NOT addOutlay(-refund): keep the outlay intact so the
+      // settle reconcile still knows the true amount deducted if this clear
+      // never reaches the host. addClearRefunded offsets the double-count.
+      addClearRefunded(state.round, refund);
     }
     void send(profile.id, { type: 'clearBets', userId: profile.id });
   };

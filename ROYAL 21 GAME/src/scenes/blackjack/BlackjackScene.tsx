@@ -17,6 +17,7 @@ import { VsHeader } from './VsHeader';
 import { SessionSummary, type SessionLine } from './SessionSummary';
 import { canDouble, canSplit, handValue, isBlackjack } from '@/games/blackjack/engine';
 import { duelWinner, potOf, scoreHand } from '@/games/blackjack/duel';
+import { redactBjState } from '@/games/blackjack/redact';
 import { blackjackService } from '@/services/blackjackService';
 import { roomsService } from '@/services/roomsService';
 import { presenceService, type RoomPresenceMeta } from '@/services/presenceService';
@@ -279,10 +280,13 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
        already have, which used to silently discard the duel scoreboard for
        everyone but the host. */
     if (duel && isHost) {
-      const scored = scoreHand(duel.config, duel.scores, state);
+      // Score off the host's full engine state, not the redacted render copy,
+      // so publish() stashes the real shoe secret rather than zeros.
+      const base = useRoom.getState().fullState ?? state;
+      const scored = scoreHand(duel.config, duel.scores, base);
       const winner = duelWinner(duel.config, scored);
-      const next = { ...state, version: state.version + 1, duel: { ...duel, scores: scored, winner } };
-      useRoom.setState({ state: next });
+      const next = { ...base, version: base.version + 1, duel: { ...duel, scores: scored, winner } };
+      useRoom.setState({ fullState: next, state: redactBjState(next) });
       if (room) void blackjackService.publish(room.id, next);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -330,6 +334,36 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
   const pendingBetTotal = useRef(0);
   const pendingBetRound = useRef(-1);
 
+  /* Walking away from the table mid-hand used to strand the seat (ghost
+     player, frozen turn) and leave the HUD on an optimistic figure — on
+     re-entry the stale table rendered under the next round's bet rail. Clean
+     up on unmount: refund a bet that was only ever *staged* (never dealt),
+     fire leave so no ghost seat is left behind, and pull the authoritative
+     balance so the HUD can't stay stuck on a localOnly number. A hand already
+     in progress is a forfeit — same as leaving a real table — so a live
+     hand's stake is never refunded (that would let players bail losing
+     hands). Kept in a ref + mount-only effect so it fires exactly once, on
+     unmount, and never mid-render when a dep changes. */
+  const leaveCleanup = useRef<() => void>(() => {});
+  leaveCleanup.current = () => {
+    const st = useRoom.getState().state;
+    const seat = st?.seats.find((s) => s.userId === profile.id);
+    if (!duel) {
+      if (solo) {
+        if (st?.phase === 'betting' && seat && seat.bet > 0) addChips(seat.bet, { silent: true });
+      } else if (pendingBetTotal.current > 0) {
+        // pendingBetTotal tracks exactly what addBet debited this round and is
+        // kept in sync by clearBet — refunding it can't double up with a clear.
+        addChips(pendingBetTotal.current, { silent: true, localOnly: true });
+      }
+    }
+    pendingBetTotal.current = 0;
+    pendingBetRound.current = -1;
+    if (!solo && seat) void useRoom.getState().leave(profile.id);
+    if (!solo && isOnline()) void usePlayer.getState().refreshFromServer();
+  };
+  useEffect(() => () => leaveCleanup.current(), []);
+
   /* ------------------------------------------------------------ actions -- */
   const addBet = useCallback((value: number) => {
     const inDuel = Boolean(duel);
@@ -375,7 +409,14 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
 
   const clearBet = () => {
     if (!mySeat?.bet) return;
-    if (!duel) addChips(mySeat.bet, solo ? { silent: true } : { silent: true, localOnly: true });
+    const refunded = mySeat.bet;
+    if (!duel) addChips(refunded, solo ? { silent: true } : { silent: true, localOnly: true });
+    // Offset the settle-time reconcile (above): once the host processes this
+    // clearBet mySeat.bet drops to 0, and pendingBetTotal would still report
+    // the full amount as "missing" → the reconcile would credit it a 2nd time.
+    if (!solo && pendingBetRound.current === state?.round) {
+      pendingBetTotal.current = Math.max(0, pendingBetTotal.current - refunded);
+    }
     void send(profile.id, { type: 'clearBet', userId: profile.id });
   };
 

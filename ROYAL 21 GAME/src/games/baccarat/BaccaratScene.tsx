@@ -447,6 +447,37 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
   const myBet = mySeat?.bet ?? { main: null, sides: {} };
   const totalStaked = betCost(myBet);
 
+  /* The hand a bet placed right now will settle under. `deal` is what bumps
+     state.round (not newRound), so a bet made while phase==='betting' and
+     state.round===N is paid out when state.round===N+1. There is no explicit
+     betting-round id in the engine, so this derived key is what we latch the
+     optimistic-outlay refs to. */
+  const bettingRound = (state?.round ?? 0) + 1;
+
+  /* Chips this client optimistically deducted for bets this round. The host is
+     the authority on which bets landed — a setMainBet/setSideBet inserted just
+     as the betting window closes is rejected by the reducer (phase already
+     'dealing'), and `send` resolving ok only means the row was inserted, not
+     applied. At settle we compare this outlay against the authoritative
+     betCost(mySeat.lastBet) and refund the difference. Additive and side-safe:
+     it can only ever return chips. */
+  const roundOutlay = useRef<{ round: number; amount: number }>({ round: -1, amount: 0 });
+  const addOutlay = (round: number, delta: number) => {
+    if (roundOutlay.current.round !== round) roundOutlay.current = { round, amount: 0 };
+    roundOutlay.current.amount += delta;
+  };
+
+  /* How much of this round's outlay we've already handed back optimistically via
+     a clearBet the host hasn't confirmed yet. Tracked apart from roundOutlay so
+     the settle reconcile still sees the FULL amount deducted (a clearBet can be
+     dropped or arrive out of order and the bet stays live and settles). This is
+     then subtracted from the computed refund so a stake is never returned twice. */
+  const clearRefunded = useRef<{ round: number; amount: number }>({ round: -1, amount: 0 });
+  const addClearRefunded = (round: number, delta: number) => {
+    if (clearRefunded.current.round !== round) clearRefunded.current = { round, amount: 0 };
+    clearRefunded.current.amount = Math.max(0, clearRefunded.current.amount + delta);
+  };
+
   /* --------------------------------------------------------- connect ---- */
   useEffect(() => {
     const boot = async () => {
@@ -506,7 +537,9 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
       void send(profile.id, { type: 'setDeadline', deadline: Date.now() + BETTING_WINDOW_MS });
       return;
     }
-    if (Date.now() > state.deadline) void send(profile.id, { type: 'deal' });
+    // Fresh nonce at deal time — betting is closed, so no client can precompute
+    // the shoe from the published state and bet on it.
+    if (Date.now() > state.deadline) void send(profile.id, { type: 'deal', nonce: newSeed() });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHost, state?.phase, state?.deadline, state?.seats.map((s) => `${s.userId}:${betCost(s.bet)}`).join('|'), now]);
   const secondsLeft = state?.deadline ? Math.max(0, Math.ceil((state.deadline - now) / 1000)) : null;
@@ -519,6 +552,18 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
     const staked = betCost(mySeat.lastBet);
     // Credit staked back + net so profile.chips moves by exactly `net`.
     addChips(staked + mySeat.net, { silent: true });
+    // Reconcile the optimistic outlay: refund whatever this client deducted
+    // for bets the host never accepted (rejected at the betting→dealing
+    // boundary, or a setMainBet/setSideBet that never landed). `staked` is the
+    // authoritative amount; clearedBack is what an unconfirmed clearBet already
+    // returned. Only ever refunds — never takes chips.
+    if (roundOutlay.current.round === state.round) {
+      const clearedBack = clearRefunded.current.round === state.round ? clearRefunded.current.amount : 0;
+      const rejected = roundOutlay.current.amount - staked - clearedBack;
+      if (rejected > 0) addChips(rejected, { silent: true });
+      roundOutlay.current = { round: -1, amount: 0 };
+    }
+    if (clearRefunded.current.round === state.round) clearRefunded.current = { round: -1, amount: 0 };
     recordResult('scratch', mySeat.net > 0 ? 'win' : mySeat.net < 0 ? 'lose' : 'push', mySeat.net);
     addXp(XP_REWARDS.handPlayed + (mySeat.net > 0 ? XP_REWARDS.handWon : 0));
     if (mySeat.net > 0) {
@@ -553,11 +598,16 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
     const bail = () => {
       const st = useBaccaratRoom.getState().state;
       const seat = st?.seats.find((s) => s.userId === profile.id);
-      // Refund any live bet that never got settled.
-      if (seat) {
-        const cost = betCost(seat.bet);
-        if (cost > 0) addChips(cost, { silent: true });
-      }
+      // Refund any live bet that never got settled — take the larger of the
+      // synced seat bet and the optimistic outlay this client deducted but
+      // that may not have reached the host yet. Math.max avoids double-paying
+      // a bet that is both synced and tracked.
+      const syncedCost = seat ? betCost(seat.bet) : 0;
+      const br = (st?.round ?? 0) + 1;
+      const outlayAmt = roundOutlay.current.round === br ? roundOutlay.current.amount : 0;
+      const refundedSoFar = clearRefunded.current.round === br ? clearRefunded.current.amount : 0;
+      const refund = Math.max(syncedCost, outlayAmt - refundedSoFar);
+      if (refund > 0) addChips(refund, { silent: true });
       void send(profile.id, { type: 'leave', userId: profile.id });
     };
     window.addEventListener('pagehide', bail);
@@ -572,14 +622,26 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
       audio.play('error'); toast(t('games.tooPoor', { amount: fmt(stake - profile.chips) }), 'bad', '⚠');
       return;
     }
-    const currentMain = mySeat.bet.main?.side === side ? mySeat.bet.main.amount : 0;
-    // Refund the previous main bet if switching sides.
-    if (mySeat.bet.main && mySeat.bet.main.side !== side) {
-      addChips(mySeat.bet.main.amount, { silent: true });
-    }
+    const prevMain = mySeat.bet.main;
+    const currentMain = prevMain?.side === side ? prevMain.amount : 0;
     addChips(-stake, { silent: true });
-    void send(profile.id, { type: 'setMainBet', side, amount: currentMain + stake });
+    addOutlay(bettingRound, stake);
     audio.play('chip'); haptic('chip');
+    void send(profile.id, { type: 'setMainBet', side, amount: currentMain + stake }).then((ok) => {
+      if (!ok) {
+        addChips(stake, { silent: true });
+        addOutlay(bettingRound, -stake);
+        toast(t('common.retry'), 'bad', '⚠');
+        return;
+      }
+      // Only once the host has accepted the replacement do we refund the old
+      // side's stake — the reducer's setMainBet overwrites seat.bet.main, so
+      // that amount is no longer live.
+      if (prevMain && prevMain.side !== side) {
+        addChips(prevMain.amount, { silent: true });
+        addOutlay(bettingRound, -prevMain.amount);
+      }
+    });
   };
 
   const placeSide = (side: BaccaratSide) => {
@@ -590,13 +652,35 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
     }
     const current = mySeat.bet.sides[side] ?? 0;
     addChips(-stake, { silent: true });
-    void send(profile.id, { type: 'setSideBet', side, amount: current + stake });
+    addOutlay(bettingRound, stake);
     audio.play('chip'); haptic('chip');
+    void send(profile.id, { type: 'setSideBet', side, amount: current + stake }).then((ok) => {
+      if (!ok) {
+        addChips(stake, { silent: true });
+        addOutlay(bettingRound, -stake);
+        toast(t('common.retry'), 'bad', '⚠');
+      }
+    });
   };
 
   const clearBet = () => {
-    if (!mySeat || totalStaked <= 0) return;
-    addChips(totalStaked, { silent: true });
+    if (!mySeat) return;
+    // Refund what THIS client optimistically deducted this round, not what the
+    // synced seat shows — for a non-host player the bets round-trip through the
+    // host, so totalStaked can still be 0 here while chips have already been
+    // taken. Fall back to the synced amount when there's no tracked outlay.
+    const outlayAmt = roundOutlay.current.round === bettingRound ? roundOutlay.current.amount : 0;
+    const refundedSoFar = clearRefunded.current.round === bettingRound ? clearRefunded.current.amount : 0;
+    const outstanding = outlayAmt - refundedSoFar;
+    const refund = outstanding > 0 ? outstanding : totalStaked;
+    if (refund <= 0 && totalStaked <= 0) return;
+    if (refund > 0) {
+      addChips(refund, { silent: true });
+      // NOT addOutlay(-refund): keep the outlay intact so the settle reconcile
+      // still knows the true amount deducted if this clear never reaches the
+      // host. addClearRefunded offsets the double-count instead.
+      addClearRefunded(bettingRound, refund);
+    }
     void send(profile.id, { type: 'clearBet' });
     audio.play('click');
   };
@@ -609,17 +693,26 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
       audio.play('error'); toast(t('games.tooPoor', { amount: fmt(need - profile.chips - totalStaked) }), 'bad', '⚠');
       return;
     }
-    if (totalStaked > 0) addChips(totalStaked, { silent: true });
+    const refundNow = totalStaked;
+    if (refundNow > 0) addChips(refundNow, { silent: true });
     addChips(-need, { silent: true });
-    void send(profile.id, { type: 'repeatLast' });
+    addOutlay(bettingRound, need - refundNow);
     audio.play('chip');
+    void send(profile.id, { type: 'repeatLast' }).then((ok) => {
+      if (!ok) {
+        if (refundNow > 0) addChips(-refundNow, { silent: true });
+        addChips(need, { silent: true });
+        addOutlay(bettingRound, refundNow - need);
+        toast(t('common.retry'), 'bad', '⚠');
+      }
+    });
   };
 
   const dealNow = () => {
     if (!state || state.phase !== 'betting') return;
     const anyBet = state.seats.some((s) => s.bet.main || Object.keys(s.bet.sides).length > 0);
     if (!anyBet) return;
-    void send(profile.id, { type: 'deal' });
+    void send(profile.id, { type: 'deal', nonce: newSeed() });
   };
 
   const back = async () => {

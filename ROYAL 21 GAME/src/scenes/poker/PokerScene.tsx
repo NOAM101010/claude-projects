@@ -30,6 +30,7 @@ import {
   POKER_STAKES, buyInFor, callCost, minRaiseTo, canSeatAct, ACTION_SECONDS,
 } from '@/games/poker/engine';
 import { usePokerReveal } from '@/games/poker/useReveal';
+import { holeVisible } from '@/games/poker/reveal';
 import { MAX_SEATS } from '@/games/poker/types';
 import type { PokerAction, PokerSeat, PokerState, ShowdownEntry } from '@/games/poker/types';
 
@@ -323,11 +324,6 @@ export default function PokerScene() {
     if (amount > profile.chips) { toast(t('poker.notEnoughChips'), 'bad', '⚠'); return; }
     const wasSeated = Boolean(mySeat);
     addChips(-amount, { silent: true });
-    // Snapshot the state version BEFORE dispatching, so we can watch for the
-    // reducer's response. The old 800ms fixed-timer refund was a race: on slow
-    // networks the join landed at 1200ms after the refund had already fired at
-    // 800ms — player pocketed the buy-in AND kept their seat.
-    const startVersion = usePokerRoom.getState().state?.version ?? 0;
     if (wasSeated) {
       await send(profile.id, { type: 'topUp', userId: profile.id, amount });
     } else {
@@ -335,27 +331,23 @@ export default function PokerScene() {
     }
     setBuyInOpen(false);
     audio.play('chip');
-    /* Refund only if the reducer refused the join. Poll state.version until it
-       advances (proof the intent was processed), OR give up after 8 seconds. */
+    /* Refund ONLY if we're still not seated after the full window. A bumped
+       state.version is not proof of rejection — any other player's action
+       advances it too, and refunding then let a player pocket the buy-in while
+       their seat was still travelling through room_actions. Poll until the
+       deadline, then re-confirm after a short grace before refunding. */
     if (!wasSeated) {
       const deadline = Date.now() + 8000;
+      const confirmAndRefund = () => {
+        const s2 = usePokerRoom.getState().state;
+        if (s2?.seats.some((s) => s.userId === profile.id)) return;
+        addChips(amount, { silent: true });
+        toast(t('common.retry'), 'bad', '⚠');
+      };
       const check = () => {
         const latest = usePokerRoom.getState().state;
-        if (!latest) return;
-        const seated = latest.seats.some((s) => s.userId === profile.id);
-        if (seated) return; // success — nothing to do
-        if (latest.version > startVersion) {
-          // The version advanced but we're still not seated → reducer rejected.
-          addChips(amount, { silent: true });
-          toast(t('rooms.notFound'), 'bad', '⚠');
-          return;
-        }
-        if (Date.now() > deadline) {
-          // Never got a response at all — network dropped. Refund conservatively.
-          addChips(amount, { silent: true });
-          toast(t('common.retry'), 'bad', '⚠');
-          return;
-        }
+        if (latest?.seats.some((s) => s.userId === profile.id)) return; // success
+        if (Date.now() > deadline) { setTimeout(confirmAndRefund, 700); return; }
         setTimeout(check, 300);
       };
       setTimeout(check, 300);
@@ -693,9 +685,13 @@ export function SeatCard({ seat, isMe, isTurn, isDealer, street, showdown, runou
   cardFace: string; cardBack: string;
   label: { fold: string; sitOut: string; allin: string };
 }) {
-  const revealed = showdown?.some((s) => s.userId === seat.userId) && !seat.folded;
-  const runoutShow = runoutReveal && !seat.folded && seat.hole.length === 2;
-  const showHole = isMe || revealed || runoutShow;
+  const showHole = holeVisible({
+    isMe,
+    inShowdown: showdown?.some((s) => s.userId === seat.userId) ?? false,
+    folded: seat.folded,
+    runoutReveal: Boolean(runoutReveal),
+    holeLen: seat.hole.length,
+  });
   return (
     <div className="flex flex-col items-center gap-1" style={{ opacity: seat.folded ? 0.45 : seat.sittingOut ? 0.55 : 1 }}>
       <div className="flex gap-0.5">

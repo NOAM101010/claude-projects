@@ -73,7 +73,11 @@ export type BaccaratAction =
   | { type: 'repeatLast'; userId?: string }
   | { type: 'setReady'; userId: string; ready: boolean }
   | { type: 'setDeadline'; deadline: number | null }
-  | { type: 'deal' }
+  /** `nonce` is fresh host randomness minted the instant the deal fires (betting
+   *  already closed). The engine seeds the shoe from it instead of the published
+   *  seed/cursor, so no client can precompute the hand and bet on it. Absent in
+   *  solo/tests → the existing deterministic shoe is used. */
+  | { type: 'deal'; nonce?: number }
   | { type: 'newRound' }
   | { type: 'join'; userId: string; username: string; avatar: import('@/types').AvatarConfig; level: number }
   | { type: 'leave'; userId: string };

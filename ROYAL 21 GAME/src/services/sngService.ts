@@ -1,15 +1,40 @@
 import { db } from './supabase';
 import { createTournamentState, reduce } from '@/games/poker/engine';
-import type { PokerAction, PokerState } from '@/games/poker/types';
+import { redactPokerState, pokerHoleDeals } from '@/games/poker/redact';
+import type { Card, PokerAction, PokerState } from '@/games/poker/types';
 import { checkLimit } from '@/lib/rateLimit';
 
 /**
- * Sit & Go sync — identical transport to the cash poker table (`pokerService`):
- * host runs the pure reducer against `rooms.state`, everyone else's intents go
- * through `room_actions`. The only difference is what seeds the very first
- * state, so this is a thin wrapper rather than a fork.
+ * Sit & Go sync — identical transport and authority model to the cash poker
+ * table (`pokerService`): the host runs the pure reducer against `rooms.state`,
+ * everyone else's intents go through `room_actions`. A Sit & Go is one room with
+ * one table; `handNumber` increments monotonically across the whole tournament
+ * and never resets, so the poker privacy tables (keyed by `room_id`) fit as-is.
+ *
+ * Card privacy: reuses the exact poker mechanism (supabase/poker-privacy.sql).
+ * The host stashes every seat's real hole cards + the RNG secret through
+ * `set_poker_private`, then publishes a REDACTED state (no seed/cursor,
+ * opponents' holes blanked). Each client reads its own hole back from
+ * `poker_hole`. Gated safe-by-default: until the migration is run the RPC 404s,
+ * `holePrivacyAvailable` latches to `false`, and `publish` writes the full
+ * state unchanged exactly like before. Tournament data (chips, blinds,
+ * eliminated) is never touched by the redaction.
  */
+
+/** `undefined` = not probed yet, `true` = migration present, `false` = absent. */
+let holePrivacyAvailable: boolean | undefined;
+
+/** A missing-function error means the migration hasn't been run — flip the gate
+ *  off. Anything else (network, RLS, transient) must NOT disable privacy. */
+function isMissingRpc(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  if (error.code === 'PGRST202' || error.code === '404') return true;
+  return typeof error.message === 'string' && error.message.toLowerCase().includes('function');
+}
+
 export const sngService = {
+  get holePrivacyAvailable() { return holePrivacyAvailable; },
+
   async loadState(roomId: string): Promise<PokerState | null> {
     const client = db();
     if (!client) return null;
@@ -17,10 +42,76 @@ export const sngService = {
     return (data?.state as PokerState) ?? null;
   },
 
+  /**
+   * Host publish. When privacy is available (or not yet ruled out) the host
+   * first stashes the hand's private data, then writes a redacted state.
+   * On any sign the migration is missing, latch the gate off and fall back to
+   * publishing the full state — identical to the pre-privacy behaviour.
+   */
   async publish(roomId: string, state: PokerState) {
     const client = db();
     if (!client) return;
-    await client.from('rooms').update({ state, updated_at: new Date().toISOString() }).eq('id', roomId);
+
+    let stashed = holePrivacyAvailable === true;
+    if (holePrivacyAvailable !== false) {
+      const { error } = await client.rpc('set_poker_private', {
+        p_room: roomId,
+        p_hand: state.handNumber,
+        p_deals: pokerHoleDeals(state),
+        p_seed: state.seed,
+        p_cursor: state.cursor,
+      });
+      if (!error) {
+        holePrivacyAvailable = true;
+        stashed = true;
+      } else if (isMissingRpc(error)) {
+        holePrivacyAvailable = false;
+        stashed = false;
+      } else {
+        // Transient — keep privacy enabled but don't publish a redacted state
+        // this round (that would hide cards the clients can't fetch back yet).
+        console.warn('[sng] set_poker_private failed (transient):', error.message);
+        stashed = false;
+      }
+    }
+
+    const payload = stashed ? redactPokerState(state, null) : state;
+    await client.from('rooms').update({ state: payload, updated_at: new Date().toISOString() }).eq('id', roomId);
+  },
+
+  /** The caller's own hole cards for a hand, read from the privacy table. */
+  async loadHole(roomId: string, userId: string): Promise<{ cards: Card[]; handNumber: number } | null> {
+    const client = db();
+    if (!client || holePrivacyAvailable === false) return null;
+    const { data, error } = await client
+      .from('poker_hole')
+      .select('cards,hand_number')
+      .eq('room_id', roomId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (error || !data) return null;
+    return { cards: data.cards as Card[], handNumber: data.hand_number as number };
+  },
+
+  /** The hand RNG secret — readable only by the current host (RLS). Used by a
+   *  promoted host to reconstruct the full engine state mid-hand. */
+  async loadHandSecret(roomId: string): Promise<{
+    handNumber: number; seed: number; cursor: number; seats: { userId: string; cards: Card[] }[];
+  } | null> {
+    const client = db();
+    if (!client || holePrivacyAvailable === false) return null;
+    const { data, error } = await client
+      .from('poker_hand_secret')
+      .select('hand_number,seed,cursor,seats')
+      .eq('room_id', roomId)
+      .maybeSingle();
+    if (error || !data) return null;
+    return {
+      handNumber: data.hand_number as number,
+      seed: Number(data.seed),
+      cursor: data.cursor as number,
+      seats: (data.seats as { userId: string; cards: Card[] }[]) ?? [],
+    };
   },
 
   async initIfEmpty(roomId: string, buyIn: number) {
@@ -56,7 +147,7 @@ export const sngService = {
   },
 
   /** Host loop: consume incoming intents, run them through the reducer, publish. */
-  runHost(roomId: string, getState: () => PokerState, setState: (state: PokerState) => void) {
+  runHost(roomId: string, getState: () => PokerState, onNext: (next: PokerState) => void) {
     const client = db();
     if (!client) return () => {};
     const channel = client
@@ -68,7 +159,7 @@ export const sngService = {
           const row = payload.new as { user_id: string; action: PokerAction };
           const incoming = { ...row.action, userId: row.user_id } as PokerAction;
           const next = reduce(getState(), incoming);
-          setState(next);
+          onNext(next);
           await sngService.publish(roomId, next);
         },
       )

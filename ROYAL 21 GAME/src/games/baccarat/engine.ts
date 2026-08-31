@@ -295,6 +295,9 @@ export function reduce(prev: BaccaratState, action: BaccaratAction): BaccaratSta
       state.phase = 'dealing';
       state.round += 1;
       state.deadline = null;
+      // Fresh host randomness at deal time defeats the "read seed+cursor, predict
+      // the hand, bet on it" exploit. No nonce (solo/tests) keeps the old shoe.
+      if (action.nonce !== undefined) state.cursor = action.nonce;
       if (isMulti) {
         state.seats.forEach((seat) => {
           seat.lastBet = { main: seat.bet.main ? { ...seat.bet.main } : null, sides: { ...seat.bet.sides } };

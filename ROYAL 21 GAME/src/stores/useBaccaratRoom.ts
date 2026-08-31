@@ -65,24 +65,38 @@ export const useBaccaratRoom = create<BaccaratRoomState>()((set, get) => ({
     set({ state: initial ?? createState(newSeed()) });
 
     const cleanups: (() => void)[] = [];
-    const startHostLoop = () => cleanups.push(
-      baccaratService.runHost(
+    let stopHostLoop: (() => void) | null = null;
+    const stepDownFromHost = () => {
+      // Another client won host via reassign_room_host. Stop publishing so two
+      // hosts don't fight over the room state; the liveness watcher stays up
+      // and re-claims if the new host also falls quiet.
+      stopHostLoop?.();
+      set({ isHost: false });
+    };
+    const startHostLoop = () => {
+      if (stopHostLoop) return;
+      const stopRun = baccaratService.runHost(
         room.id,
         () => get().state ?? createState(newSeed()),
         (next) => set({ state: next }),
-      ),
-    );
+      );
+      const stopBeat = roomsService.startHostHeartbeat(room.id, userId, () => get().isHost, stepDownFromHost);
+      stopHostLoop = () => { stopRun(); stopBeat(); stopHostLoop = null; };
+      cleanups.push(() => stopHostLoop?.());
+    };
 
     cleanups.push(roomsService.subscribeMembers(room.id, (members) => set({ members })));
     cleanups.push(baccaratService.subscribeState(room.id, (next) => {
       const current = get().state;
       if (!current || next.version >= current.version) set({ state: next, status: 'connected' });
     }));
-    if (isHost) startHostLoop();
-    else cleanups.push(roomsService.watchHostLiveness(room.id, userId, () => get().isHost, () => {
+    // Runs on every seated client (no-ops while we're host). Lets a dead host
+    // be replaced, and lets an ex-host that stepped down re-claim later.
+    cleanups.push(roomsService.watchHostLiveness(room.id, userId, () => get().isHost, () => {
       set({ isHost: true });
       startHostLoop();
     }));
+    if (isHost) startHostLoop();
     set({ cleanups, status: 'connected', members: await roomsService.members(room.id) });
   },
 

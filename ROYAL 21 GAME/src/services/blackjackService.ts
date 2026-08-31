@@ -1,8 +1,18 @@
 import { db } from './supabase';
 import { createState, reduce } from '@/games/blackjack/engine';
-import type { BjAction, BjState } from '@/games/blackjack/types';
+import { redactBjState } from '@/games/blackjack/redact';
+import type { BjAction, BjState, Card } from '@/games/blackjack/types';
 import { newSeed } from '@/lib/random';
 import { checkLimit } from '@/lib/rateLimit';
+
+/** `undefined` = not probed, `true` = bj-privacy migration present, `false` = absent. */
+let bjPrivacyAvailable: boolean | undefined;
+
+function isMissingRpc(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  if (error.code === 'PGRST202' || error.code === '404') return true;
+  return typeof error.message === 'string' && error.message.toLowerCase().includes('function');
+}
 
 /**
  * Multiplayer Blackjack sync.
@@ -16,6 +26,8 @@ import { checkLimit } from '@/lib/rateLimit';
  *    payout from the stored hand server-side — a client cannot invent a win.
  */
 export const blackjackService = {
+  get bjPrivacyAvailable() { return bjPrivacyAvailable; },
+
   async loadState(roomId: string): Promise<BjState | null> {
     const client = db();
     if (!client) return null;
@@ -23,10 +35,53 @@ export const blackjackService = {
     return (data?.state as BjState) ?? null;
   },
 
+  /**
+   * Host publish. When privacy is available the host stashes the shoe secret +
+   * dealer hole through `set_bj_private`, then writes a redacted state (no
+   * seed/cursor, dealer hole blanked). Gated safe-by-default: until the
+   * migration is run the RPC 404s, `bjPrivacyAvailable` latches to `false`, and
+   * this writes the full state unchanged exactly like before.
+   */
   async publish(roomId: string, state: BjState) {
     const client = db();
     if (!client) return;
-    await client.from('rooms').update({ state, updated_at: new Date().toISOString() }).eq('id', roomId);
+
+    let stashed = bjPrivacyAvailable === true;
+    if (bjPrivacyAvailable !== false) {
+      const hole = state.dealer.hidden && state.dealer.cards.length >= 2 ? state.dealer.cards[1] : null;
+      const { error } = await client.rpc('set_bj_private', {
+        p_room: roomId,
+        p_round: state.round,
+        p_seed: state.seed,
+        p_cursor: state.cursor,
+        p_hole: hole,
+      });
+      if (!error) { bjPrivacyAvailable = true; stashed = true; }
+      else if (isMissingRpc(error)) { bjPrivacyAvailable = false; stashed = false; }
+      else { console.warn('[bj] set_bj_private failed (transient):', error.message); stashed = false; }
+    }
+
+    const payload = stashed ? redactBjState(state) : state;
+    await client.from('rooms').update({ state: payload, updated_at: new Date().toISOString() }).eq('id', roomId);
+  },
+
+  /** The shoe secret for the current round — readable only by the current host
+   *  (RLS). Lets a promoted host rebuild the full engine state mid-round. */
+  async loadHandSecret(roomId: string): Promise<{ round: number; seed: number; cursor: number; dealerHole: Card | null } | null> {
+    const client = db();
+    if (!client || bjPrivacyAvailable === false) return null;
+    const { data, error } = await client
+      .from('bj_hand_secret')
+      .select('round,seed,cursor,dealer_hole')
+      .eq('room_id', roomId)
+      .maybeSingle();
+    if (error || !data) return null;
+    return {
+      round: data.round as number,
+      seed: Number(data.seed),
+      cursor: data.cursor as number,
+      dealerHole: (data.dealer_hole as Card | null) ?? null,
+    };
   },
 
   async initIfEmpty(roomId: string) {

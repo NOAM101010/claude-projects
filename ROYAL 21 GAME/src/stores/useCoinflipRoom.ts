@@ -77,13 +77,25 @@ export const useCoinflipRoom = create<CfRoomState>()((set, get) => ({
     set({ state: initial ?? createState(newSeed()) });
 
     const cleanups: (() => void)[] = [];
-    const startHostLoop = () => cleanups.push(
-      coinflipService.runHost(
+    let stopHostLoop: (() => void) | null = null;
+    const stepDownFromHost = () => {
+      // Another client won host via reassign_room_host. Stop publishing so two
+      // hosts don't fight over the room state; the liveness watcher stays up
+      // and re-claims if the new host also falls quiet.
+      stopHostLoop?.();
+      set({ isHost: false });
+    };
+    const startHostLoop = () => {
+      if (stopHostLoop) return;
+      const stopRun = coinflipService.runHost(
         room.id,
         () => get().state ?? createState(newSeed()),
         (next) => set({ state: next }),
-      ),
-    );
+      );
+      const stopBeat = roomsService.startHostHeartbeat(room.id, userId, () => get().isHost, stepDownFromHost);
+      stopHostLoop = () => { stopRun(); stopBeat(); stopHostLoop = null; };
+      cleanups.push(() => stopHostLoop?.());
+    };
 
     cleanups.push(roomsService.subscribeMembers(room.id, (members) => set({ members })));
     cleanups.push(coinflipService.subscribeState(room.id, (next) => {
@@ -91,16 +103,13 @@ export const useCoinflipRoom = create<CfRoomState>()((set, get) => ({
       // Drop out-of-order frames, keep the newest authoritative state.
       if (!current || next.version >= current.version) set({ state: next, status: 'connected' });
     }));
-    if (isHost) {
+    // Runs on every seated client (no-ops while we're host). Lets a dead host
+    // be replaced, and lets an ex-host that stepped down re-claim later.
+    cleanups.push(roomsService.watchHostLiveness(room.id, userId, () => get().isHost, () => {
+      set({ isHost: true });
       startHostLoop();
-    } else {
-      // The original host may vanish mid-session — someone still seated has
-      // to be able to take the wheel, or the room freezes for good.
-      cleanups.push(roomsService.watchHostLiveness(room.id, userId, () => get().isHost, () => {
-        set({ isHost: true });
-        startHostLoop();
-      }));
-    }
+    }));
+    if (isHost) startHostLoop();
     set({ cleanups, status: 'connected', members: await roomsService.members(room.id) });
   },
 

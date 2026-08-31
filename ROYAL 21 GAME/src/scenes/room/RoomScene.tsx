@@ -18,6 +18,7 @@ import { isOnline } from '@/services/supabase';
 import { notificationService } from '@/services/notificationService';
 import { presenceService } from '@/services/presenceService';
 import { blackjackService } from '@/services/blackjackService';
+import { redactBjState } from '@/games/blackjack/redact';
 import { emptyScores, type DuelConfig, type DuelFormat } from '@/games/blackjack/duel';
 import { DUEL_BEST_OF, DUEL_BUYINS, DUEL_TARGETS } from '@/data/economy';
 import { fmt } from '@/lib/format';
@@ -99,9 +100,11 @@ export default function RoomScene() {
     if (isDuel) {
       const config: DuelConfig = { format, target, buyIn };
       const seatIds = members.map((member) => member.userId);
-      const base = state ?? (await blackjackService.initIfEmpty(room.id));
+      // Prefer the host's full engine state; fall back to a fresh init. publish()
+      // stashes the real shoe secret so the room scene can hydrate it on mount.
+      const base = useRoom.getState().fullState ?? state ?? (await blackjackService.initIfEmpty(room.id));
       const next = { ...base, duel: { config, scores: emptyScores(seatIds.length ? seatIds : [profile.id]), winner: null } };
-      useRoom.setState({ state: next });
+      useRoom.setState({ fullState: next, state: redactBjState(next) });
       await blackjackService.publish(room.id, next);
     }
     navigate(`/blackjack/room/${room.code}`);

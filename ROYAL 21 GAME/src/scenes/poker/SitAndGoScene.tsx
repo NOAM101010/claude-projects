@@ -203,27 +203,23 @@ export default function SitAndGoScene() {
     const buyIn = tournament.buyIn;
     addChips(-buyIn, { silent: true });
     audio.play('chip');
-    const startVersion = useSngRoom.getState().state?.version ?? 0;
     await send(profile.id, { type: 'join', userId: profile.id, username: profile.username, avatar: profile.avatar, level: profile.level, buyIn: 0 });
-    /* Refund only after the reducer has actually responded — polling
-       state.version, not a fixed 800ms timer. The old fixed-time refund
-       raced slow networks and handed out free tournament entries. */
+    /* Refund ONLY if we're still not seated once the full window has elapsed.
+       A bumped state.version is not proof our join was rejected — any other
+       player's action advances it too, and firing the refund then handed out
+       free entries while our seat was still in flight. Poll until the deadline,
+       then re-confirm after a short grace before returning the buy-in. */
     const deadline = Date.now() + 8000;
+    const confirmAndRefund = () => {
+      const s2 = useSngRoom.getState().state;
+      if (s2?.seats.some((s) => s.userId === profile.id)) return;
+      addChips(buyIn, { silent: true });
+      toast(t('sng.registrationFailed'), 'bad', '⚠');
+    };
     const check = () => {
       const latest = useSngRoom.getState().state;
-      if (!latest) return;
-      const seated = latest.seats.some((s) => s.userId === profile.id);
-      if (seated) return;
-      if (latest.version > startVersion) {
-        addChips(buyIn, { silent: true });
-        toast(t('sng.registrationFailed'), 'bad', '⚠');
-        return;
-      }
-      if (Date.now() > deadline) {
-        addChips(buyIn, { silent: true });
-        toast(t('common.retry'), 'bad', '⚠');
-        return;
-      }
+      if (latest?.seats.some((s) => s.userId === profile.id)) return;
+      if (Date.now() > deadline) { setTimeout(confirmAndRefund, 700); return; }
       setTimeout(check, 300);
     };
     setTimeout(check, 300);

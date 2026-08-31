@@ -1,5 +1,6 @@
 import { db } from './supabase';
 import { createState, reduce } from '@/games/baccarat/engine';
+import { redactBaccaratState } from '@/games/baccarat/redact';
 import type { BaccaratAction, BaccaratState } from '@/games/baccarat/types';
 import { newSeed } from '@/lib/random';
 import { checkLimit } from '@/lib/rateLimit';
@@ -19,7 +20,11 @@ export const baccaratService = {
   async publish(roomId: string, state: BaccaratState) {
     const client = db();
     if (!client) return;
-    await client.from('rooms').update({ state, updated_at: new Date().toISOString() }).eq('id', roomId);
+    // Blank seed/cursor before publishing — defence in depth behind the
+    // deal-time nonce. Non-host clients never re-run the engine, so they don't
+    // need them.
+    const payload = redactBaccaratState(state);
+    await client.from('rooms').update({ state: payload, updated_at: new Date().toISOString() }).eq('id', roomId);
   },
 
   async initIfEmpty(roomId: string) {

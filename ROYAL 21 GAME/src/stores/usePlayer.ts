@@ -106,7 +106,15 @@ function reconcileChips(profile: Profile): void {
   reconcileChain[id] = prev.then(() => runReconcile(id)).catch(() => {});
 }
 
-async function runReconcile(id: string): Promise<void> {
+/* A single reconcile can only move ±100,000 (the adjust_chips clamp). A bigger
+   true movement — a >100k bet, a VIP high-stakes payout, a large refund — is
+   pushed in 100k slices, each slice chained behind the last on reconcileChain.
+   This caps how many follow-up slices one movement may schedule: a safety valve
+   against an ill-behaved server that never converges, never hit in normal play
+   (a 20M swing would need every slice). */
+const MAX_RECONCILE_SLICES = 200;
+
+async function runReconcile(id: string, slice = 0): Promise<void> {
   // Read the CURRENT profile, never a snapshot taken when persist() ran — by
   // the time this dequeues, the balance may have moved again.
   const state = usePlayer.getState();
@@ -125,7 +133,8 @@ async function runReconcile(id: string): Promise<void> {
   }
   // Clamp per adjust_chips' ±100,000 limit; a bigger true delta rides along on
   // the next queued reconcile, which reads the fresh remainder.
-  const delta = Math.max(-100000, Math.min(100000, profile.chips - known));
+  const rawDelta = profile.chips - known;
+  const delta = Math.max(-100000, Math.min(100000, rawDelta));
   const balance = await profileService.adjustChips(delta);
   if (typeof balance !== 'number') return;
   lastSyncedChips[id] = balance;
@@ -140,6 +149,27 @@ async function runReconcile(id: string): Promise<void> {
     if (cur.profile.id === id) {
       usePlayer.setState({ profile: { ...cur.profile, chips: Math.max(0, Math.round(cur.profile.chips + surprise)) } });
     }
+  }
+
+  // The ±100,000 clamp only pushed a slice of a larger movement (a >100k bet, a
+  // VIP-stakes payout, a big refund). Without this, the remainder sat unsynced
+  // until some *unrelated* chip activity happened to trigger another reconcile —
+  // and if the HUD meanwhile settled back so that profile.chips === known again,
+  // runReconcile's early return dropped the remainder for good. Chain a
+  // follow-up run on the SAME per-profile promise (never a parallel reconcile —
+  // Round 10) so the balance converges in 100k steps in either direction.
+  if (delta !== rawDelta) {
+    const cur = usePlayer.getState();
+    if (cur.profile.id !== id) return;
+    const remaining = cur.profile.chips - lastSyncedChips[id];
+    // Stop conditions: gap closed, gap no longer shrinking (server not keeping
+    // up — let the next persist() retry instead of spinning), or slice cap hit.
+    if (remaining === 0) return;
+    if (Math.abs(remaining) >= Math.abs(rawDelta)) return;
+    if (slice + 1 >= MAX_RECONCILE_SLICES) return;
+    reconcileChain[id] = (reconcileChain[id] ?? Promise.resolve())
+      .then(() => runReconcile(id, slice + 1))
+      .catch(() => {});
   }
 }
 
@@ -626,25 +656,24 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
         .claimDailyBonus(STREAK_REWARD(day), comeback ? COMEBACK_BONUS : 0, COMEBACK_THRESHOLD_DAYS)
         .then((res) => {
           if (!res) return;
-          if (!res.granted) {
-            // Server already saw a claim today (another device, or a stale
-            // hydrate). Roll the local grant back — mirror + in-memory.
-            const current = get();
-            set({
-              daily: { lastClaim: today, day: res.day || current.daily.day },
-              profile: { ...current.profile, chips: res.new_balance },
-            });
-            lastSyncedChips[current.profile.id] = res.new_balance;
-            get().persist();
-            return;
-          }
-          // Server-granted — adopt the balance (RPC is authoritative) so
-          // reconcileChips doesn't push our local optimistic delta again.
-          lastSyncedChips[s.profile.id] = res.new_balance;
           const current = get();
+          if (current.profile.id !== s.profile.id) return; // switched account mid-flight
+          // Correct the optimistic grant against the authoritative balance as a
+          // DELTA — never an overwrite. `lastSyncedChips` here still holds the
+          // optimistic baseline stamped below; the difference is exactly what
+          // needs to change (a rollback when !granted, drift from another device
+          // otherwise). An overwrite to res.new_balance would stomp any
+          // bet/payout addChips() that landed while this RPC was in flight.
+          const correction = res.new_balance - (lastSyncedChips[current.profile.id] ?? res.new_balance);
+          lastSyncedChips[current.profile.id] = res.new_balance;
           set({
-            daily: { lastClaim: today, day: res.day },
-            profile: { ...current.profile, chips: res.new_balance },
+            daily: {
+              lastClaim: today,
+              day: res.granted ? res.day : (res.day || current.daily.day),
+            },
+            profile: correction !== 0
+              ? { ...current.profile, chips: Math.max(0, Math.round(current.profile.chips + correction)) }
+              : current.profile,
           });
           get().persist();
         });
@@ -743,13 +772,19 @@ export function checkAchievements(get: Getter, set: Setter, friendCount = 0) {
       }
       return;
     }
-    // First-time grant. Server already added the reward — stamp the baseline
-    // and adopt the balance locally so reconcileChips doesn't push it again.
-    lastSyncedChips[state.profile.id] = balance;
+    // First-time grant. claim_achievement adds exactly `achievement.reward`
+    // server-side. Apply that as a DELTA to the live balance and bump the
+    // synced baseline by the same amount — plus any drift between the server
+    // total and what we thought it was (another device). An overwrite to
+    // `balance` would stomp a bet/payout addChips() still queued in
+    // reconcileChain, silently losing those chips off the HUD.
     const s = get();
+    const known = lastSyncedChips[s.profile.id];
+    const drift = known === undefined ? 0 : balance - (known + achievement.reward);
+    lastSyncedChips[s.profile.id] = balance;
     set({
       achievements: s.achievements.includes(achievement.id) ? s.achievements : [...s.achievements, achievement.id],
-      profile: { ...s.profile, chips: balance },
+      profile: { ...s.profile, chips: Math.max(0, Math.round(s.profile.chips + achievement.reward + drift)) },
     });
     useUI.getState().toast(`${achievement.name[lang]} · +${achievement.reward}`, 'good', '🎖️');
     audio.play('win');
