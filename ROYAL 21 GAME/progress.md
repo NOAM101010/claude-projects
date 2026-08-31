@@ -2,6 +2,16 @@
 
 ## סטטוס — כל הבאגים סגורים בקוד + בדיקת בודק. ממתין לאימות חי סופי + commit/push.
 
+---
+## Hub redesign + לוח מנהיגים גלובלי — הושלם, אושר ע"י המשתמש (2026-09-01), נדחף ל-main
+- **Hub §01 חדש — "רצפת קזינו":** 3 עמודות שוות, gap אחיד, רולטה = כרטיס עגול גדול שפורש את עמודת המרכז (3 שורות); 6 שולחנות סביבה (פוקר/SnG/באקרה ימין · Blackjack/נגד-חברים/ערב-חברה שמאל). כל ה-art מוכל. בלי תגי "חדש".
+- **`src/components/layout/AppBackdrop.tsx`** (חדש, render פעם אחת ב-App.tsx מאחורי כל route): גרדיאנט סטטי + tint לפי `data-zone` (gold/warm/teal/neutral, crossfade 0.9s) + 4 סמלי ♠♥♦♣ (opacity נמוך, בלי blur, drift CSS איטי, גוון לפי zone) + bokeh + אבק + וינייטה נושמת. הכל `@keyframes` CSS (framer לא רץ). reduced-motion / quality=low מקפיאים. `HubBackdrop.tsx` נמחק.
+- **לוח מנהיגים אמיתי גלובלי+חברים:** `src/scenes/hub/Leaderboard.tsx` — `LeaderboardWidget` (Top 3 + אתה + לינק "הלוח המלא") ב-Hub, `LeaderboardFull` ב-Modal עם `<Tabs>` (חצי ‹ ›) ל-5 קטגוריות. נתונים מ-`profileService.leaderboard()` (נוסף `biggest_win`); friends = סינון ל-ids של חברים; mock = fallback ל-guest/offline. הכיתוב "המובילים בכל הזמנים" (היה "השבוע" בטעות). הטאב הישן בפאנל החברים נמחק; claim פרס שבועי עבר ל-on-open.
+- **חנות:** hints מתחת לטאבי מטבעות/צ'יפים + על preview מטבע-מטבע — מבהירים סקין הטלת-מטבע מול מטבע שמחליף את סמל הצ'יפים.
+- קומיטים: `13ccd54`..`21a56d6`. tsc+build+test:all ירוקים, i18n parity 871/871.
+
+---
+
 ### באג 1 — ציפים — תוקן (2 שכבות), בודק אישר
 שכבה A (סבב מוקדם): handleClear/clearPick/clearAnte איפסו roundOutlay אופטימית -> clearRefunded ref ב-roulette/coinflip/highcard. settle: rejected = outlay - authStake - clearedBack.
 שכבה B — usePlayer.runReconcile: ה-clamp +-100K חתך תנועות addChips גדולות (>100K) והשארית לא זומנה מחדש -> למשתמש מחובר השרת פיגר. תוקן: runReconcile(id, slice) מזמן ריצה נוספת על אותה שרשרת כשה-clamp חתך, עד התכנסות (תנאי עצירה: remaining=0 / לא מצטמצם / MAX 200). סימולציה scripts/reconcile-sim.mjs מוכיחה diff=0. clamp עצמו לא נגע (anti-cheat).
