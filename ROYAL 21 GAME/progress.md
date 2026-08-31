@@ -23,9 +23,15 @@ BlackjackScene לא היה לו unmount cleanup (בניגוד ל-PokerScene). ע
 ## מצב סקירה (2026-08-31)
 ✅ נבדק חי ותקין: כלכלת ציפים ב-5 המשחקים בסולו (BJ/coinflip/highcard/baccarat/roulette — הימור/נקה/חלוקה/הסדרה מדויקים), כספת, מלאי, הגדרות, לובי, VIP — נטענים ועובדים. i18n he/en parity מושלם (854 מפתחות). 0 TODO. הנחת -30% בכספת = פיצ'ר (DAILY_DISCOUNT, מבצעי היום מתחלפים).
 
+### copy — תוקן (commit c229a2f, נדחף). המשתמש ביקש לא לגעת ב-copy מעבר לזה.
+כרטיס VIP בבית אמר "נפתח ברמה 15 עם 50K" — הסף האמיתי רמה 5 + 150K (VIP_MIN_LEVEL/VIP_MIN_CHIPS). blurbLocked עכשיו interpolate מהקבועים. lockedSubtitle "עוד קצת ואתה שם" → "השולחנות הבלעדיים ממתינים".
+
+### SQL — **המשתמש הריץ את שניהם על הפרודקשן** (2026-08-31):
+- `supabase/reset-users.sql` (commit c229a2f) — כל הלא-אדמין אופסו למצב התחלתי; חדרים/היסטוריה/התראות/דוחות/אנליטיקס נמחקו. אדמין לא נגע.
+- `supabase/achievements-daily.sql` — 4 הפונקציות + העמודות. שגיאות ה-404 של fetch_achievements/fetch_daily_state אמורות להיעלם. הישגים + בונוס יומי עכשיו server-authoritative.
+- (בעבר גם `supabase/poker-privacy.sql` הורץ — gate של קלפי hole פעיל.)
+
 ## נשאר (המשתמש)
-1. **להריץ על הפרודקשן: `supabase/achievements-daily.sql`** — RPCs fetch_achievements/fetch_daily_state מחזירים 404 (מעולם לא הורץ). לא שובר (fallback מקומי), אבל הישגים+בונוס יומי לא נשמרים בשרת.
-2. **אימות מולטיפלייר 2 דפדפנים** — `MP_VERIFICATION_GUIDE.md`. באגים 2/3/4 + host handoff + קלפי hole ב-devtools. סצנות שלא נבדקו סולו (פוקר/SnG/ערב חברה) — כאן.
-3. שאלת copy מינורית: מסך VIP מציג "רמה מינימלית 1 / 5" — לוודא שהניסוח ברור (הלאונג' דורש רמה 5, נפרד מ-VIP tier 1 שהוא רמה 1+).
+- **אימות מולטיפלייר 2 דפדפנים** — `MP_VERIFICATION_GUIDE.md`. באגים 2/3/4 + host handoff + קלפי hole ב-devtools. סצנות שלא נבדקו סולו (פוקר/SnG/ערב חברה) — כאן. זה הפריט האחרון הפתוח.
 
 dev server: `PORT=5199 npm run dev` (5173 תפוס ע"י TYCOON NEO). הפורט משתנה — אם כן, החזר URL למשתמש.
