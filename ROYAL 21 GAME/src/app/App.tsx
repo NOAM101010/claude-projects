@@ -6,6 +6,7 @@ import { Toasts } from '@/components/ui/Toasts';
 import { Loading } from '@/components/ui/Loading';
 import { MomentLayer } from '@/components/effects/MomentLayer';
 import { AmbientBackground } from '@/components/effects/AmbientBackground';
+import { AppBackdrop } from '@/components/layout/AppBackdrop';
 import { FriendsPanel } from '@/components/social/FriendsPanel';
 import { NotificationsPanel } from '@/components/social/NotificationsPanel';
 import { InviteOverlay } from '@/components/social/InviteOverlay';
@@ -157,6 +158,7 @@ export function App() {
      regardless. MotionConfig is what actually makes framer honour it. */
   return (
     <MotionConfig reducedMotion={reducedMotion ? 'always' : 'never'}>
+      <AppBackdrop />
       <AmbientBackground />
       <AnimatePresence mode="wait">
         <AppRoutes key={location.pathname.split('/').slice(0, 3).join('/')} />

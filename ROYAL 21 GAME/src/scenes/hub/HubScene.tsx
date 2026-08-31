@@ -8,7 +8,6 @@ import {
   BlackjackTableArt, CoinStandArt, DuelTableArt, GameNightArt, GiftArt, HighCardArt,
   LoungeArt, MyRoomDoorArt, PokerTableArt, RouletteTableArt, ScratchCounterArt, SlotMachineArt, VaultDoorArt,
 } from './hubObjects';
-import { HubBackdrop } from './HubBackdrop';
 import { GameButton } from '@/components/ui/GameButton';
 import { Modal } from '@/components/ui/Modal';
 import { Onboarding } from '@/components/ui/Onboarding';
@@ -24,8 +23,8 @@ import { isVipEligible, VIP_MIN_LEVEL, VIP_MIN_CHIPS } from '@/data/vip';
 import { SNG_BUYINS } from '@/games/poker/engine';
 
 function Section({
-  idx, title, hint, hero, children,
-}: { idx: string; title: string; hint?: string; hero?: ReactNode; children: ReactNode }) {
+  idx, title, hint, bento, children,
+}: { idx: string; title: string; hint?: string; bento?: boolean; children: ReactNode }) {
   return (
     <section className="hub-section">
       <div className="hub-section-head">
@@ -33,8 +32,7 @@ function Section({
         <h2 className="hub-section-title">{title}</h2>
         {hint && <span className="hub-section-hint">{hint}</span>}
       </div>
-      {hero && <div className="hub-hero-grid">{hero}</div>}
-      <div className="hub-grid">{children}</div>
+      <div className={bento ? 'hub-bento' : 'hub-grid'}>{children}</div>
     </section>
   );
 }
@@ -92,9 +90,7 @@ export default function HubScene() {
 
   return (
     <SceneShell>
-      {/* ---------- background: luxe casino-at-night ambience ---------- */}
-      <HubBackdrop />
-
+      {/* the ambient casino backdrop is global now — see <AppBackdrop /> in App.tsx */}
       <div className="mx-auto px-4 pt-4" style={{ maxWidth: 1180 }}>
         <div className="hub-masthead">
           <div>
@@ -116,24 +112,21 @@ export default function HubScene() {
         </div>
 
         {/* ---------------------------- the tables --------------------------- */}
-        <Section
-          idx="01"
-          title={t('hub.sectionTables')}
-          hint={t('hub.sectionTablesHint')}
-          hero={(
-            <HubCard
-              span={2}
-              label={t('hub.blackjack')}
-              action={t('hub.sitDown')}
-              blurb={t('hub.blurbBlackjack')}
-              hoverSound="card"
-              onEnter={() => navigate('/blackjack/solo')}
-            >
-              {(focused) => <BlackjackTableArt focused={focused} dealerSkin={profile.equipped.dealerSkin ?? 'dl-house'} />}
-            </HubCard>
-          )}
-        >
+        <Section idx="01" title={t('hub.sectionTables')} hint={t('hub.sectionTablesHint')} bento>
           <HubCard
+            area="bj"
+            span={2}
+            label={t('hub.blackjack')}
+            action={t('hub.sitDown')}
+            blurb={t('hub.blurbBlackjack')}
+            hoverSound="card"
+            onEnter={() => navigate('/blackjack/solo')}
+          >
+            {(focused) => <BlackjackTableArt focused={focused} dealerSkin={profile.equipped.dealerSkin ?? 'dl-house'} />}
+          </HubCard>
+
+          <HubCard
+            area="duel"
             label={t('duel.title')}
             action={t('hub.challenge')}
             blurb={t('hub.blurbDuel')}
@@ -145,6 +138,7 @@ export default function HubScene() {
           </HubCard>
 
           <HubCard
+            area="poker"
             label={t('poker.title')}
             action={t('poker.sitDown')}
             blurb={t('poker.subtitle')}
@@ -157,6 +151,7 @@ export default function HubScene() {
           </HubCard>
 
           <HubCard
+            area="sng"
             label={t('sng.title')}
             action={t('sng.register')}
             blurb={t('sng.blurb')}
@@ -169,6 +164,7 @@ export default function HubScene() {
           </HubCard>
 
           <HubCard
+            area="roul"
             label={t('roulette.title')}
             action={t('roulette.play')}
             blurb={t('hub.blurbRoulette')}
@@ -181,6 +177,7 @@ export default function HubScene() {
           </HubCard>
 
           <HubCard
+            area="night"
             label={t('hub.gameNight')}
             action={t('hub.hostNight')}
             blurb={t('hub.blurbNight')}
@@ -196,6 +193,7 @@ export default function HubScene() {
               a Punto Banco table with shared cards + per-seat bets. Room
               mode by default so friends land at the same table. */}
           <HubCard
+            area="bacc"
             label={t('games.baccarat')}
             action={t('baccarat.deal')}
             blurb={t('games.baccaratHint')}

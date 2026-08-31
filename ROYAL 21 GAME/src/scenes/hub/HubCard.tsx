@@ -12,8 +12,10 @@ interface Props {
   children: (focused: boolean) => ReactNode;
   hoverSound?: 'card' | 'chip' | 'coin' | 'vault' | 'notify' | 'scratch';
   glow?: string;
-  /** Hero cards take the full width of the grid row. */
+  /** Hero cards take the full width of the grid row (and a taller art box). */
   span?: 1 | 2;
+  /** Named cell in a `grid-template-areas` layout (the §01 bento). Overrides `span`'s column placement. */
+  area?: string;
   badge?: string;
   disabled?: boolean;
 }
@@ -28,7 +30,7 @@ interface Props {
  */
 export function HubCard({
   label, action, blurb, onEnter, children, hoverSound = 'card',
-  glow = 'rgba(227,178,60,.28)', span = 1, badge, disabled,
+  glow = 'rgba(227,178,60,.28)', span = 1, area, badge, disabled,
 }: Props) {
   const [focused, setFocused] = useState(false);
   const { play } = useSound();
@@ -51,7 +53,8 @@ export function HubCard({
       type="button"
       className="relative flex flex-col items-center text-center glass press overflow-hidden"
       style={{
-        gridColumn: span === 2 ? 'span 2' : undefined,
+        gridColumn: area ? undefined : span === 2 ? 'span 2' : undefined,
+        gridArea: area,
         padding: compact ? '16px 14px 14px' : '20px 18px 16px',
         borderColor: focused ? 'var(--gold-line)' : 'var(--glass-line)',
         opacity: disabled ? 0.5 : 1,
@@ -94,8 +97,8 @@ export function HubCard({
       )}
 
       <span
-        className="relative w-full grid place-items-center"
-        style={{ minHeight: span === 2 ? (compact ? 150 : 190) : (compact ? 104 : 124) }}
+        className="relative w-full grid place-items-center overflow-hidden"
+        style={{ height: span === 2 ? (compact ? 150 : 190) : (compact ? 118 : 138) }}
       >
         {children(focused)}
       </span>

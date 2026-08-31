@@ -290,6 +290,38 @@
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr));
 }
 
+/* ---- §01 tables: a measured bento spread, never a catalogue list ---- */
+.hub-bento {
+  display: grid;
+  gap: var(--s-3);
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: minmax(150px, auto);
+  grid-template-areas:
+    "bj bj duel poker"
+    "bj bj sng  roul"
+    "night night bacc bacc";
+}
+.hub-bento > * { height: 100%; }
+
+@media (max-width: 960px) {
+  .hub-bento {
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: minmax(140px, auto);
+    grid-template-areas:
+      "bj bj"
+      "duel poker"
+      "sng roul"
+      "night bacc";
+  }
+}
+@media (max-width: 560px) {
+  .hub-bento {
+    grid-template-columns: 1fr;
+    grid-auto-rows: auto;
+    grid-template-areas: none;
+  }
+}
+
 /* ---- leaderboard ---- */
 .lb-panel {
   position: relative;
@@ -472,13 +504,6 @@
   font-size: 13px;
 }
 
-/* ---- hub section 01: full-width hero above the uniform grid ---- */
-.hub-hero-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  margin-bottom: var(--s-3);
-}
-
 /* ---- leaderboard: compact widget on the hub ---- */
 .lb-panel--widget { padding: var(--s-4); }
 .lb-widget-head {
@@ -550,60 +575,151 @@
 .lb-more:hover { background: rgba(227, 178, 60, 0.13); color: var(--gold-hi); }
 
 /* ============================================================================
-   HUB backdrop
+   AppBackdrop — global ambient layer behind every route
    ========================================================================== */
-.hub-backdrop {
+.app-backdrop {
   position: fixed;
   inset: 0;
   z-index: -10;
   overflow: hidden;
   pointer-events: none;
 }
-.hub-backdrop-base {
+.app-backdrop-base {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at 50% -10%, #16211c, #0b0f0d 45%, #08090b 80%);
+  /* translucent so the site-wide <AmbientBackground/> at -z-20 still reads through */
+  background:
+    radial-gradient(ellipse at 50% -12%, rgba(26, 42, 34, 0.62), transparent 58%),
+    linear-gradient(180deg, rgba(8, 9, 11, 0.2), rgba(8, 9, 11, 0.55));
 }
-.hub-backdrop-conic {
+.app-backdrop-tint {
   position: absolute;
-  inset: -45%;
+  inset: 0;
+  color: rgba(227, 178, 60, 0.15);
+  background: radial-gradient(ellipse at 50% -5%, currentColor, transparent 62%);
+  transition: color 0.9s var(--ease-out);
+}
+.app-backdrop[data-zone='warm'] .app-backdrop-tint { color: rgba(248, 227, 168, 0.20); }
+.app-backdrop[data-zone='teal'] .app-backdrop-tint { color: rgba(74, 168, 200, 0.16); }
+.app-backdrop[data-zone='neutral'] .app-backdrop-tint { color: rgba(150, 150, 170, 0.06); }
+
+.app-backdrop-conic {
+  position: absolute;
+  inset: -50%;
   background: conic-gradient(
     from 0deg,
-    rgba(227, 178, 60, 0.1), transparent 22%,
-    rgba(74, 168, 200, 0.06) 42%, transparent 60%,
-    rgba(227, 178, 60, 0.09) 78%, transparent 100%
+    rgba(227, 178, 60, 0.22), transparent 20%,
+    rgba(74, 168, 200, 0.13) 40%, transparent 58%,
+    rgba(248, 227, 168, 0.2) 76%, transparent 100%
   );
-  filter: blur(60px);
+  filter: blur(55px);
+  transform-origin: 50% 50%;
+  animation: bdConic 26s linear infinite;
   will-change: transform;
 }
-.hub-backdrop-suit {
+@keyframes bdConic { to { transform: rotate(360deg); } }
+
+.app-backdrop-sweep {
   position: absolute;
-  transform: translate(-50%, -50%);
-  color: rgba(227, 178, 60, 0.07);
+  top: -20%;
+  bottom: -20%;
+  left: 0;
+  width: 42%;
+  background: linear-gradient(
+    100deg,
+    transparent,
+    rgba(248, 227, 168, 0.12) 38%,
+    rgba(255, 245, 214, 0.22) 50%,
+    rgba(248, 227, 168, 0.12) 62%,
+    transparent
+  );
+  filter: blur(26px);
+  animation: bdSweep 13s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+@keyframes bdSweep {
+  0%   { transform: translateX(-70vw) skewX(-14deg); opacity: 0; }
+  12%  { opacity: 0.9; }
+  88%  { opacity: 0.9; }
+  100% { transform: translateX(170vw) skewX(-14deg); opacity: 0; }
+}
+
+.app-backdrop-suit {
+  position: absolute;
+  color: rgba(227, 178, 60, 0.14);
   line-height: 1;
-  filter: blur(3px);
+  filter: blur(2px);
+  animation: bdBob 10s ease-in-out infinite;
   will-change: transform, opacity;
 }
-.hub-backdrop-bokeh {
+@keyframes bdBob {
+  0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.1; }
+  50%      { transform: translateY(-34px) rotate(4deg); opacity: 0.18; }
+}
+.app-backdrop-suit.is-spade   { left: 12%; top: 22%; font-size: 400px; animation-duration: 11s; }
+.app-backdrop-suit.is-heart   { left: 84%; top: 62%; font-size: 340px; animation-duration: 9s;  animation-delay: -3s; }
+.app-backdrop-suit.is-club    { left: 70%; top: 10%; font-size: 280px; animation-duration: 13s; animation-delay: -6s; }
+.app-backdrop-suit.is-diamond { left: 24%; top: 82%; font-size: 320px; animation-duration: 10s; animation-delay: -2s; }
+
+.app-backdrop-bokeh {
   position: absolute;
-  transform: translate(-50%, -50%);
   border-radius: 50%;
-  filter: blur(42px);
+  filter: blur(48px);
   will-change: transform;
 }
-.hub-backdrop-dust {
+.app-backdrop-bokeh.is-gold {
+  left: 8%;  top: 12%; width: 520px; height: 520px;
+  background: radial-gradient(circle, rgba(227, 178, 60, 0.30), transparent 70%);
+  animation: bdDriftA 24s ease-in-out infinite;
+}
+.app-backdrop-bokeh.is-teal {
+  left: 72%; top: 50%; width: 440px; height: 440px;
+  background: radial-gradient(circle, rgba(74, 168, 200, 0.22), transparent 70%);
+  animation: bdDriftB 30s ease-in-out infinite;
+}
+@keyframes bdDriftA {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(80px, -52px) scale(1.18); }
+}
+@keyframes bdDriftB {
+  0%, 100% { transform: translate(0, 0) scale(1.12); }
+  50%      { transform: translate(-64px, 46px) scale(1); }
+}
+
+.app-backdrop-dust {
   position: absolute;
-  bottom: 0;
+  bottom: -6vh;
   border-radius: 50%;
-  background: rgba(227, 178, 60, 0.55);
-  box-shadow: 0 0 6px rgba(227, 178, 60, 0.4);
+  background: rgba(248, 227, 168, 0.78);
+  box-shadow: 0 0 8px rgba(227, 178, 60, 0.55);
+  animation-name: bdDust;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
   will-change: transform, opacity;
 }
-.hub-backdrop-vignette {
+@keyframes bdDust {
+  0%   { transform: translateY(0) translateX(0); opacity: 0; }
+  10%  { opacity: 0.9; }
+  90%  { opacity: 0.9; }
+  100% { transform: translateY(-118vh) translateX(var(--drift, 0px)); opacity: 0; }
+}
+
+.app-backdrop-vignette {
   position: absolute;
   inset: 0;
   background:
     linear-gradient(0deg, #0e1815, transparent 46%),
-    radial-gradient(ellipse at 50% 38%, transparent 40%, rgba(0, 0, 0, 0.55));
+    radial-gradient(ellipse at 50% 38%, transparent 38%, rgba(0, 0, 0, 0.58));
+  animation: bdBreathe 10s ease-in-out infinite;
+  will-change: opacity;
 }
-html[data-quality='low'] .hub-backdrop-conic { display: none; }
+@keyframes bdBreathe { 0%, 100% { opacity: 0.85; } 50% { opacity: 1; } }
+
+html[data-quality='low'] .app-backdrop-conic,
+html[data-quality='low'] .app-backdrop-sweep { display: none; }
+
+html[data-motion='reduced'] .app-backdrop,
+html[data-motion='reduced'] .app-backdrop * { animation: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .app-backdrop, .app-backdrop * { animation: none !important; }
+}
