@@ -598,7 +598,13 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
             <DuelBoard seats={state.seats} config={duel.config} scores={duel.scores} potPlayers={state.seats.length} />
           )}
 
-          <AnimatePresence mode="wait">
+          {/* No mode="wait" here: it would hold the exiting control (e.g. the
+              settled "new round" button, or the ActionBar after a solo re-entry
+              reset) on screen if its exit animation didn't register — which is
+              exactly what made "new round" need two clicks and left a stuck
+              action bar over an empty table. Overlapping the ~0.3s in/out is
+              the safe trade. */}
+          <AnimatePresence>
             {state.phase === 'betting' && mySeat && (
               <BetRail
                 key="bet"

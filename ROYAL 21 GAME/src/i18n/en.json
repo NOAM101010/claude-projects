@@ -622,6 +622,7 @@
   "vault": {
     "title": "The vault",
     "subtitle": "Everything you can wear, put on the table or deal a hand with",
+    "tapToEnter": "Tap to enter",
     "myChips": "My chips",
     "buy": "Buy",
     "owned": "Owned",

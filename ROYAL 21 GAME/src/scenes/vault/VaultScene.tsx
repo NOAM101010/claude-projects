@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { SceneShell } from '@/components/layout/SceneShell';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GameButton } from '@/components/ui/GameButton';
@@ -38,6 +38,15 @@ export default function VaultScene() {
   const [packPreview, setPackPreview] = useState<Pack | null>(null);
   const [entered, setEntered] = useState(false);
   const [countdown, setCountdown] = useState(() => timeUntilNextRotation());
+
+  /* Guaranteed way out of the entry overlay. The animation's onAnimationComplete
+     was the only automatic trigger and it was seen never firing in the wild
+     (prod: the rotate transform never even applied), leaving the overlay stuck
+     over the whole shop forever. This timeout always clears it. */
+  useEffect(() => {
+    const id = setTimeout(() => setEntered(true), 2500);
+    return () => clearTimeout(id);
+  }, []);
 
   // Live countdown to next rotation, updates every second.
   useEffect(() => {
@@ -119,14 +128,15 @@ export default function VaultScene() {
         <LightPool x="50%" y="14%" size={720} color="rgba(227,178,60,.18)" />
       </div>
 
-      {/* the door swings open once, then you are inside */}
-      <AnimatePresence>
-        {!entered && (
+      {/* the door swings open once, then you are inside. No AnimatePresence /
+          exit animation here: the fade-out was seen getting stuck in prod,
+          pinning the overlay at opacity:1 forever. Unmounting on `entered`
+          is instant and can't hang. */}
+      {!entered && (
           <motion.button
             className="fixed inset-0 z-[300] grid place-items-center"
             style={{ background: 'rgba(8,9,11,.96)' }}
             initial={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
             onAnimationStart={() => audio.play('vault')}
             onClick={() => setEntered(true)}
           >
@@ -137,6 +147,7 @@ export default function VaultScene() {
               transition={{ duration: 0.5 }}
             >
               <motion.svg viewBox="0 0 150 150" width={190} height={190}
+                style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
                 initial={{ rotate: 0 }} animate={{ rotate: 360 }} transition={{ duration: 2.2, ease: [0.3, 0, 0.2, 1] }}
                 onAnimationComplete={() => setTimeout(() => setEntered(true), 250)}>
                 <circle cx="75" cy="75" r="62" fill="#14161b" stroke="rgba(227,178,60,.5)" strokeWidth="3" />
@@ -147,10 +158,10 @@ export default function VaultScene() {
                 <circle cx="75" cy="75" r="12" fill="#8a6a1f" />
               </motion.svg>
               <div className="eyebrow mt-3">{t('loading.vault')}</div>
+              <div className="text-[11px] mt-1.5" style={{ color: 'var(--muted)' }}>{t('vault.tapToEnter')}</div>
             </motion.div>
           </motion.button>
-        )}
-      </AnimatePresence>
+      )}
 
       <div className="mx-auto px-4 py-3" style={{ maxWidth: 1140 }}>
         <div className="flex items-end justify-between flex-wrap gap-3 mb-4">
