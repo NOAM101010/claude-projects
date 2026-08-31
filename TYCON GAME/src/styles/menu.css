@@ -1,0 +1,105 @@
+/* CITY EMPIRE — start screen (MASTER §40/§41: cinematic, dark, premium). */
+
+.app-root {
+  position: fixed;
+  inset: 0;
+}
+
+.menu {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.menu-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(1200px 600px at 70% -10%, rgba(245, 196, 81, 0.16), transparent 60%),
+    radial-gradient(900px 700px at 10% 110%, rgba(66, 120, 200, 0.22), transparent 60%),
+    linear-gradient(160deg, #0a0c10 0%, #10151c 50%, #0a0c10 100%);
+}
+.menu-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(circle at 50% 40%, black, transparent 75%);
+}
+
+.menu-content {
+  position: relative;
+  text-align: center;
+  padding: 40px;
+}
+
+.menu-title {
+  margin: 0;
+  font-size: clamp(48px, 9vw, 104px);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  background: linear-gradient(180deg, #ffffff 0%, #cdd6e0 60%, #8b97a4 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 10px 60px rgba(245, 196, 81, 0.15);
+}
+
+.menu-tagline {
+  margin: 8px 0 40px;
+  color: #9aa4b0;
+  letter-spacing: 0.16em;
+  font-size: clamp(11px, 1.6vw, 14px);
+  text-transform: uppercase;
+}
+
+.menu-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(320px, 80vw);
+  margin: 0 auto;
+}
+
+.menu-btn {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #eef2f6;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.04em;
+  padding: 14px 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.2s ease, border-color 0.2s ease;
+}
+.menu-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.09);
+  transform: translateY(-1px);
+}
+.menu-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.menu-btn--primary {
+  background: linear-gradient(180deg, #f7cf63, #e0a93b);
+  border-color: transparent;
+  color: #1a1406;
+  box-shadow: 0 10px 30px rgba(224, 169, 59, 0.3);
+}
+.menu-btn--primary:hover:not(:disabled) {
+  box-shadow: 0 14px 40px rgba(224, 169, 59, 0.42);
+}
+
+.menu-foot {
+  margin-top: 34px;
+  color: #5f6a76;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}

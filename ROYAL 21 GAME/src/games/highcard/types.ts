@@ -45,4 +45,6 @@ export type HcAction =
   | { type: 'ante'; userId: string; amount: number }
   | { type: 'clearAnte'; userId: string }
   | { type: 'openBetting'; deadline?: number | null }
-  | { type: 'draw' };
+  /** `nonce` is fresh host randomness minted at draw time; it reseeds the shoe
+   *  so upcoming cards can't be read off the published `seed`+`cursor`. */
+  | { type: 'draw'; nonce?: number };

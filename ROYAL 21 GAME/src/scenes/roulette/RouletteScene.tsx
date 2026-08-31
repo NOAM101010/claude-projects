@@ -21,6 +21,7 @@ import { roomsService } from '@/services/roomsService';
 import { presenceService } from '@/services/presenceService';
 import { STAKES, XP_REWARDS } from '@/data/economy';
 import { fmt } from '@/lib/format';
+import { newSeed } from '@/lib/random';
 import { audio } from '@/audio/AudioManager';
 import { haptic } from '@/lib/haptics';
 
@@ -56,6 +57,19 @@ export default function RouletteScene({ mode, roomCode }: Props) {
   const [wheelSpinning, setWheelSpinning] = useState(false);
   const spunRound = useRef(-1);
   const creditedRound = useRef(-1);
+
+  /* Chips a guest optimistically deducted for bets this round. The host is the
+     authority on which bets actually landed — a bet inserted just as the
+     betting window closes can still be rejected by the reducer (phase already
+     'spinning'), and `send` returning ok only means the row was inserted, not
+     applied. On settle we compare this outlay against the authoritative seat
+     stake and refund the difference, so a rejected bet never quietly eats the
+     player's chips. Additive and side-safe: it can only ever return chips. */
+  const roundOutlay = useRef<{ round: number; amount: number }>({ round: -1, amount: 0 });
+  const addOutlay = (round: number, delta: number) => {
+    if (roundOutlay.current.round !== round) roundOutlay.current = { round, amount: 0 };
+    roundOutlay.current.amount = Math.max(0, roundOutlay.current.amount + delta);
+  };
 
   const mySeat = state?.seats.find((s) => s.userId === profile.id);
   const myStake = mySeat ? seatStake(mySeat) : 0;
@@ -137,7 +151,7 @@ export default function RouletteScene({ mode, roomCode }: Props) {
     if (autoSpunRound.current === state.round) return;
     if (Date.now() >= state.deadline) {
       autoSpunRound.current = state.round;
-      void send(profile.id, { type: 'spin' });
+      void send(profile.id, { type: 'spin', nonce: newSeed() });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHost, state?.phase, state?.deadline, state?.round, now]);
@@ -176,6 +190,13 @@ export default function RouletteScene({ mode, roomCode }: Props) {
     creditedRound.current = snap.round;
     const { payout, net } = snap;
     pendingPayout.current = null;
+    // Refund any stake this client deducted for bets the host never applied
+    // (rejected at the betting→spinning boundary). actualStake = payout - net.
+    if (roundOutlay.current.round === snap.round) {
+      const rejected = roundOutlay.current.amount - (payout - net);
+      if (rejected > 0) addChips(rejected, { silent: true });
+      roundOutlay.current = { round: -1, amount: 0 };
+    }
     haptic('land');
     if (payout > 0) {
       addChips(payout);
@@ -200,6 +221,11 @@ export default function RouletteScene({ mode, roomCode }: Props) {
       if (pendingPayout.current?.round !== snap.round) return;
       creditedRound.current = snap.round;
       if (snap.payout > 0) addChips(snap.payout);
+      if (roundOutlay.current.round === snap.round) {
+        const rejected = roundOutlay.current.amount - (snap.payout - snap.net);
+        if (rejected > 0) addChips(rejected, { silent: true });
+        roundOutlay.current = { round: -1, amount: 0 };
+      }
       pendingPayout.current = null;
     }, 6000);
     return () => clearTimeout(timer);
@@ -216,19 +242,34 @@ export default function RouletteScene({ mode, roomCode }: Props) {
     audio.play('chip');
     haptic('chip');
     addChips(-stake, { silent: true });
+    addOutlay(state.round, stake);
     void send(profile.id, { type: 'placeBet', userId: profile.id, kind, numbers, amount: stake }).then((ok) => {
       // Rate-limit / network drop: refund the stake so it doesn't vanish
       // silently when the bet never landed on the wheel.
       if (!ok) {
         addChips(stake, { silent: true });
+        addOutlay(state.round, -stake);
         toast(t('common.retry'), 'bad', '⚠');
       }
     });
   };
 
   const handleClear = () => {
-    if (!mySeat || !mySeat.bets.length) return;
-    addChips(myStake, { silent: true });
+    if (!state || !mySeat) return;
+    // Refund exactly what THIS client optimistically deducted this round, not
+    // what the authoritative seat shows. For a non-host player the placed bets
+    // round-trip through the host, so mySeat.bets (and myStake) can still be
+    // empty here — the old `!mySeat.bets.length` guard then skipped the refund
+    // entirely and quietly ate the stake (repeat-last-bet then clear = lost
+    // chips). clearBets is inserted after the placeBets, so the host still
+    // processes place→clear in order and the authoritative table ends up empty.
+    const outstanding = roundOutlay.current.round === state.round ? roundOutlay.current.amount : 0;
+    const refund = outstanding > 0 ? outstanding : myStake;
+    if (refund <= 0 && !mySeat.bets.length) return;
+    if (refund > 0) {
+      addChips(refund, { silent: true });
+      addOutlay(state.round, -refund);
+    }
     void send(profile.id, { type: 'clearBets', userId: profile.id });
   };
 
@@ -248,13 +289,14 @@ export default function RouletteScene({ mode, roomCode }: Props) {
     haptic('chip');
     // Deduct up front so the HUD updates once instead of per-bet flicker.
     addChips(-total, { silent: true });
+    addOutlay(state.round, total);
     let failed = 0;
     prev.forEach((bet) => {
       void send(profile.id, {
         type: 'placeBet', userId: profile.id,
         kind: bet.kind, numbers: bet.numbers, amount: bet.amount,
       }).then((ok) => {
-        if (!ok) { addChips(bet.amount, { silent: true }); failed += 1; }
+        if (!ok) { addChips(bet.amount, { silent: true }); addOutlay(state.round, -bet.amount); failed += 1; }
       });
     });
     if (failed > 0) toast(t('common.retry'), 'bad', '⚠');
@@ -262,7 +304,9 @@ export default function RouletteScene({ mode, roomCode }: Props) {
 
   const handleSpin = () => {
     audio.play('door');
-    void send(profile.id, { type: 'spin' });
+    // Fresh randomness minted now, after betting is closed — see the spin
+    // action's `nonce` doc. Prevents any client precomputing the result.
+    void send(profile.id, { type: 'spin', nonce: newSeed() });
   };
 
   const handleNewRound = () => {

@@ -82,42 +82,83 @@ const withAdminFloor = (profile: Profile): Profile =>
  */
 const lastSyncedChips: Record<string, number> = {};
 
-async function reconcileChips(profile: Profile) {
+/*
+ * Chip reconciliation MUST be serialised per profile.
+ *
+ * persist() fires reconcileChips() without awaiting it, and a single hand can
+ * fire several addChips() in quick succession (place a bet, get paid, place
+ * three bets on the felt…). If two reconciles run concurrently they both read
+ * the same stale `known`, each computes a delta against it, and adjust_chips —
+ * which ADDS a delta server-side — applies both. The two sides then drift: the
+ * server total no longer matches the local one, and the "correct the HUD to the
+ * server balance" step makes the on-screen number lurch down then up and lose
+ * chips. That is the "money randomly goes up/down / vanishes in every game"
+ * bug. Chaining every reconcile behind the previous one for that profile makes
+ * each run read the *current* balance and the *current* `known`, so redundant
+ * runs collapse to a no-op instead of double-pushing.
+ */
+const reconcileChain: Record<string, Promise<void>> = {};
+
+function reconcileChips(profile: Profile): void {
   if (!isRemoteId(profile.id)) return;
-  const known = lastSyncedChips[profile.id];
+  const id = profile.id;
+  const prev = reconcileChain[id] ?? Promise.resolve();
+  reconcileChain[id] = prev.then(() => runReconcile(id)).catch(() => {});
+}
+
+async function runReconcile(id: string): Promise<void> {
+  // Read the CURRENT profile, never a snapshot taken when persist() ran — by
+  // the time this dequeues, the balance may have moved again.
+  const state = usePlayer.getState();
+  if (state.profile.id !== id) return; // signed out or switched account
+  const profile = state.profile;
+  const known = lastSyncedChips[id];
   if (known === undefined) {
-    // First tick this session: trust whatever we hydrated with as the
-    // baseline rather than pushing a delta against a number we never saw
-    // the server confirm.
-    lastSyncedChips[profile.id] = profile.chips;
+    lastSyncedChips[id] = profile.chips;
     return;
   }
   if (profile.chips === known) return;
   if (profile.isAdmin) {
     const balance = await adminService.setChips(profile.chips);
-    if (typeof balance === 'number') lastSyncedChips[profile.id] = balance;
+    if (typeof balance === 'number') lastSyncedChips[id] = balance;
     return;
   }
-  // Clamp per adjust_chips' ±100,000 limit; if the true delta is bigger, only
-  // that much moves this call and the next persist() catches up with the
-  // remainder. Use the RPC's returned balance (authoritative) as the baseline,
-  // not `known + delta` — the server may floor at 0 or clamp differently and
-  // trusting our own math there is how the two sides drift apart.
+  // Clamp per adjust_chips' ±100,000 limit; a bigger true delta rides along on
+  // the next queued reconcile, which reads the fresh remainder.
   const delta = Math.max(-100000, Math.min(100000, profile.chips - known));
   const balance = await profileService.adjustChips(delta);
-  if (typeof balance === 'number') {
-    lastSyncedChips[profile.id] = balance;
-    // If the server ended up somewhere we did not expect (offline race with
-    // another device, RPC floor at 0), correct the local profile too so the
-    // HUD stops showing a ghost balance. The `set` runs outside a React tick,
-    // so it's fine to call here.
-    if (balance !== profile.chips) {
-      const s = usePlayer.getState();
-      if (s.profile.id === profile.id) {
-        usePlayer.setState({ profile: { ...s.profile, chips: balance } });
-      }
+  if (typeof balance !== 'number') return;
+  lastSyncedChips[id] = balance;
+  // Only the *surprise* (server floor at 0, a change from another device) needs
+  // to reach the HUD, and it's applied as a DELTA against the current balance —
+  // never an overwrite. An overwrite would stomp any addChips() that landed
+  // while this RPC was in flight; adding just the surprise preserves it, and
+  // the queued follow-up reconcile pushes whatever remains.
+  const surprise = balance - (known + delta);
+  if (surprise !== 0) {
+    const cur = usePlayer.getState();
+    if (cur.profile.id === id) {
+      usePlayer.setState({ profile: { ...cur.profile, chips: Math.max(0, Math.round(cur.profile.chips + surprise)) } });
     }
   }
+}
+
+/**
+ * Migrate ownership of any premium coin the player bought while it was a
+ * client-only item (before it became a real server row). Such a coin sits in
+ * the local save but is missing from user_items, so a sign-out — which clears
+ * localStorage — used to lose it and the chips spent on it. On hydrate we push
+ * each locally-owned-but-server-missing coin back up, best-effort. Fire and
+ * forget: it must never block or fail the hydrate.
+ */
+function healClientOnlyItems(userId: string, localOwned: string[], ownedRemote: string[] | null) {
+  if (!isRemoteId(userId)) return;
+  const remote = new Set(ownedRemote ?? []);
+  const orphans = localOwned.filter((id) => {
+    if (remote.has(id)) return false;
+    return itemById(id)?.dailyRarityOnly === true;
+  });
+  for (const id of orphans) void shopService.grantOwned(userId, id);
 }
 
 /** Nobody, signed in nowhere. An empty id is what the router reads as "logged out". */
@@ -195,6 +236,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
         profileService.fetchAchievements(),
         profileService.fetchDailyState(),
       ]);
+      healClientOnlyItems(restored.id, get().owned, ownedRemote);
       const patch: Partial<PlayerState> = {};
       if (ownedRemote?.length) patch.owned = Array.from(new Set([...get().owned, ...ownedRemote]));
       if (achRemote) patch.achievements = Array.from(new Set([...get().achievements, ...achRemote]));
@@ -223,6 +265,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
         profileService.fetchAchievements(),
         profileService.fetchDailyState(),
       ]);
+      healClientOnlyItems(restored.id, get().owned, ownedRemote);
       const patch: Partial<PlayerState> = {};
       if (ownedRemote?.length) patch.owned = Array.from(new Set([...get().owned, ...ownedRemote]));
       if (achRemote?.length) patch.achievements = Array.from(new Set([...get().achievements, ...achRemote]));

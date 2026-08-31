@@ -80,6 +80,10 @@ export default function PokerScene() {
      races two `create()` calls into two real rooms and two realtime
      subscriptions on the same channel name. */
   const booting = useRef(false);
+  /* Set the moment any exit path (cash out, pagehide, unmount) has credited
+     the table stack back and dispatched leave. Shared across all three so the
+     stack is never credited twice — a double-credit here mints free chips. */
+  const cashedOut = useRef(false);
 
   const bbParam = Number(params.get('bb') ?? 50);
   const stake = POKER_STAKES.find((s) => s.bb === bbParam) ?? POKER_STAKES[1];
@@ -264,6 +268,11 @@ export default function PokerScene() {
   useEffect(() => {
     if (!room || !mySeat) return;
     const bail = () => {
+      // Share the cashedOut guard with cashOut + the unmount net so a browser
+      // that fires pagehide *and* then runs the unmount cleanup can't credit
+      // the stack twice.
+      if (cashedOut.current) return;
+      cashedOut.current = true;
       const st = usePokerRoom.getState().state;
       const seat = st?.seats.find((s) => s.userId === profile.id);
       if (seat && seat.stack > 0) addChips(seat.stack, { silent: true });
@@ -353,10 +362,8 @@ export default function PokerScene() {
     }
   };
 
-  /* True once cashOut has run, so the unmount-time safety net below doesn't
-     credit the stack a second time. */
-  const cashedOut = useRef(false);
   const cashOut = async () => {
+    if (cashedOut.current) { await leave(profile.id); navigate('/hub'); return; }
     cashedOut.current = true;
     if (mySeat && mySeat.stack > 0) addChips(mySeat.stack, { silent: true });
     if (mySeat) await send(profile.id, { type: 'leave', userId: profile.id });

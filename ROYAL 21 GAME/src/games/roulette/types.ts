@@ -53,4 +53,9 @@ export type RouletteAction =
   | { type: 'clearBets'; userId: string }
   | { type: 'ready'; userId: string }
   | { type: 'openBetting'; deadline?: number | null }
-  | { type: 'spin' };
+  /** `nonce` is fresh host randomness generated at spin time. Without it the
+   *  outcome derives only from `seed`+`cursor`, both of which are published in
+   *  the shared state — so any client could precompute the next winning number
+   *  and bet on it before the wheel turns. The host mints a nonce the instant it
+   *  spins (betting already closed), so nobody can predict the result. */
+  | { type: 'spin'; nonce?: number };

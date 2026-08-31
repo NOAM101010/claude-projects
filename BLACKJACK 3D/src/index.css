@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  /* Luxury palette */
+  --gold: #d4af37;
+  --gold-bright: #ffdf7e;
+  --gold-deep: #a9862c;
+  --wine: #3a1420;
+  --ink: #0a0608;
+}
+
+canvas { touch-action: none; }
+
+body {
+  background: var(--ink);
+}
+
+/* ---- Reusable luxury surfaces ---- */
+@layer components {
+  /* Frosted dark glass panel with a thin gold hairline. */
+  .lux-glass {
+    background: linear-gradient(160deg, rgba(30, 22, 14, 0.72), rgba(10, 8, 10, 0.7));
+    border: 1px solid rgba(212, 175, 55, 0.28);
+    box-shadow: 0 10px 40px -12px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(14px);
+  }
+
+  /* Brushed-gold fill for primary actions. */
+  .lux-gold {
+    background: linear-gradient(180deg, #f6e3a0 0%, var(--gold) 45%, var(--gold-deep) 100%);
+    color: #1a1206;
+    box-shadow: 0 6px 20px -6px rgba(212, 175, 55, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+  .lux-gold:hover { filter: brightness(1.06); }
+
+  /* Gold gradient text. */
+  .lux-gold-text {
+    background: linear-gradient(180deg, #fff2c4, var(--gold) 55%, var(--gold-deep));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+/* ---- Animations ---- */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes floatUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+@keyframes coinFall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(540deg); opacity: 0.9; }
+}
+
+/* A sweeping specular highlight for the wordmark. */
+.lux-shimmer {
+  background: linear-gradient(
+    100deg,
+    var(--gold-deep) 0%,
+    var(--gold) 30%,
+    #fff6da 48%,
+    var(--gold) 60%,
+    var(--gold-deep) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 5.5s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .lux-shimmer { animation: none; }
+}
+
+/* Slim custom scrollbar for the panels. */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: rgba(212, 175, 55, 0.35); border-radius: 8px; }
+::-webkit-scrollbar-track { background: transparent; }

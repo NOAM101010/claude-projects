@@ -84,6 +84,11 @@ export function reduce(prev: HcState, action: HcAction): HcState {
       return state;
     }
     case 'draw': {
+      // Reseed the shoe with the host's fresh nonce so nobody can read the
+      // upcoming cards off the published seed+cursor before the draw. Only the
+      // host mints a nonce (at draw time, antes closed); solo/tests keep the
+      // deterministic shoe.
+      if (action.nonce !== undefined) { state.seed = action.nonce >>> 0; state.cursor = 0; }
       if (state.phase === 'betting') {
         const ready = state.seats.filter((s) => s.stake > 0);
         if (ready.length < 2) return prev;

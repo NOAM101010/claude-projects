@@ -126,6 +126,11 @@ ok('both players were dealt in', m.seats.every((seat) => seat.hands.length === 1
 const mid = reduce(m, { type: 'join', userId: 'c', username: 'C', avatar, level: 1 });
 ok('late joiner becomes a spectator', mid.seats[2].spectator === true);
 ok('spectator gets no cards', mid.seats[2].hands.length === 0);
+// openBetting only opens a fresh round from a *settled* state — the engine
+// deliberately drops it mid-hand so a stray "new round" can't wipe live bets
+// (and the chips staked on them). Settle the round first, the way real play
+// reaches the next-round button.
+mid.phase = 'settled';
 const reopened = reduce(mid, { type: 'openBetting' });
 ok('next round clears spectator status', reopened.seats[2].spectator === false);
 ok('next round clears bets', reopened.seats.every((seat) => seat.bet === 0));

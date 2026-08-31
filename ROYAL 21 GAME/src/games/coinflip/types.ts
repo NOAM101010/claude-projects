@@ -36,4 +36,6 @@ export type CfAction =
   | { type: 'pick'; userId: string; side: CfSide; amount: number }
   | { type: 'clearPick'; userId: string }
   | { type: 'openBetting'; deadline?: number | null }
-  | { type: 'flip' };
+  /** `nonce` is fresh host randomness minted at flip time, so the heads/tails
+   *  result can't be precomputed from the published `seed`+`cursor`. */
+  | { type: 'flip'; nonce?: number };

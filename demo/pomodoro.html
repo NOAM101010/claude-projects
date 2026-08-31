@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>פומודורו</title>
+<style>
+  :root{
+    --bg:#12100e; --surface:#1c1916; --ink:#f4efe9;
+    --muted:#9a8f83; --accent:#e0653f; --accent-soft:#7a3d2b;
+    --ring:#2a2521; --focus:#e0653f; --break:#4f9d8b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    min-height:100vh;display:grid;place-items:center;
+    background:radial-gradient(120% 120% at 50% 0%,#221d19 0%,var(--bg) 60%);
+    color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    padding:24px;
+  }
+  .card{
+    width:min(420px,100%);background:var(--surface);
+    border:1px solid var(--ring);border-radius:20px;
+    padding:40px 34px 32px;text-align:center;
+    box-shadow:0 30px 80px -30px #000;
+  }
+  .modes{display:flex;gap:6px;justify-content:center;margin-bottom:34px}
+  .modes button{
+    font:inherit;font-size:.82rem;letter-spacing:.04em;
+    background:transparent;color:var(--muted);
+    border:1px solid transparent;border-radius:999px;
+    padding:7px 16px;cursor:pointer;transition:.2s;
+  }
+  .modes button[aria-pressed="true"]{color:var(--ink);border-color:var(--ring);background:#231f1b}
+  .dial{position:relative;width:236px;height:236px;margin:0 auto 30px}
+  .dial svg{transform:rotate(-90deg);display:block}
+  .dial circle{fill:none;stroke-width:8;stroke-linecap:round}
+  .track{stroke:var(--ring)}
+  .prog{stroke:var(--accent);transition:stroke-dashoffset .3s linear,stroke .3s}
+  body.break .prog{stroke:var(--break)}
+  body.break .modes button[data-mode="break"][aria-pressed="true"]{color:var(--break)}
+  .time{
+    position:absolute;inset:0;display:grid;place-content:center;
+    font-size:3.4rem;font-variant-numeric:tabular-nums;letter-spacing:.02em;
+  }
+  .round{font-size:.8rem;color:var(--muted);letter-spacing:.12em;margin-top:6px}
+  .controls{display:flex;gap:12px;justify-content:center;margin-top:6px}
+  .controls button{
+    font:inherit;cursor:pointer;border-radius:12px;padding:12px 22px;transition:.18s;
+  }
+  .primary{
+    background:var(--accent);color:#160d0a;border:1px solid var(--accent);
+    font-size:1rem;min-width:132px;
+  }
+  .primary:hover{filter:brightness(1.08)}
+  .primary:active{transform:translateY(1px)}
+  .ghost{background:transparent;color:var(--muted);border:1px solid var(--ring)}
+  .ghost:hover{color:var(--ink);border-color:var(--muted)}
+  :focus-visible{outline:2px solid var(--focus);outline-offset:3px}
+</style>
+</head>
+<body>
+  <main class="card">
+    <div class="modes" role="group" aria-label="בחירת מצב">
+      <button data-mode="focus" data-min="25" aria-pressed="true">מיקוד · 25</button>
+      <button data-mode="break" data-min="5" aria-pressed="false">הפסקה · 5</button>
+    </div>
+
+    <div class="dial">
+      <svg width="236" height="236" viewBox="0 0 236 236" aria-hidden="true">
+        <circle class="track" cx="118" cy="118" r="110"></circle>
+        <circle class="prog"  cx="118" cy="118" r="110"></circle>
+      </svg>
+      <div class="time" id="time" role="timer" aria-live="polite">25:00</div>
+    </div>
+
+    <div class="round" id="round">מחזור 1</div>
+
+    <div class="controls">
+      <button class="primary" id="toggle">התחל</button>
+      <button class="ghost" id="reset">איפוס</button>
+    </div>
+  </main>
+
+<script>
+(() => {
+  const R = 110, C = 2 * Math.PI * R;
+  const prog = document.querySelector('.prog');
+  prog.style.strokeDasharray = C;
+
+  const timeEl   = document.getElementById('time');
+  const roundEl  = document.getElementById('round');
+  const toggleBtn= document.getElementById('toggle');
+  const resetBtn = document.getElementById('reset');
+  const modeBtns = [...document.querySelectorAll('.modes button')];
+
+  let mode = 'focus';
+  let total = 25 * 60;
+  let left = total;
+  let ticking = false;
+  let round = 1;
+  let timerId = null;
+
+  const fmt = s => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+
+  function render(){
+    timeEl.textContent = fmt(left);
+    prog.style.strokeDashoffset = C * (1 - left / total);
+    roundEl.textContent = `מחזור ${round}`;
+    document.title = (ticking ? '▶ ' : '') + fmt(left) + ' · פומודורו';
+    toggleBtn.textContent = ticking ? 'השהה' : (left === total ? 'התחל' : 'המשך');
+  }
+
+  function setMode(next, resetRound){
+    mode = next;
+    document.body.classList.toggle('break', mode === 'break');
+    const btn = modeBtns.find(b => b.dataset.mode === mode);
+    modeBtns.forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+    total = left = parseInt(btn.dataset.min, 10) * 60;
+    if (resetRound) round = 1;
+    render();
+  }
+
+  function stop(){ ticking = false; clearInterval(timerId); timerId = null; render(); }
+
+  function start(){
+    if (ticking) return;
+    ticking = true;
+    timerId = setInterval(() => {
+      left--;
+      if (left <= 0){
+        clearInterval(timerId); timerId = null; ticking = false;
+        try{ new AudioContext(); }catch{}
+        beep();
+        if (mode === 'focus'){ round++; setMode('break'); }
+        else { setMode('focus'); }
+        return;
+      }
+      render();
+    }, 1000);
+    render();
+  }
+
+  function beep(){
+    try{
+      const ac = new (window.AudioContext || window.webkitAudioContext)();
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'sine'; o.frequency.value = 660;
+      o.connect(g); g.connect(ac.destination);
+      g.gain.setValueAtTime(.001, ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(.3, ac.currentTime + .02);
+      g.gain.exponentialRampToValueAtTime(.001, ac.currentTime + .9);
+      o.start(); o.stop(ac.currentTime + .9);
+    }catch{}
+  }
+
+  toggleBtn.addEventListener('click', () => ticking ? stop() : start());
+  resetBtn.addEventListener('click', () => { stop(); setMode(mode); });
+  modeBtns.forEach(b => b.addEventListener('click', () => { stop(); setMode(b.dataset.mode, true); }));
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space'){ e.preventDefault(); ticking ? stop() : start(); }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

@@ -16,9 +16,15 @@ function makeSeat(userId: string, username: string, avatar: AvatarConfig, level:
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
-/** Deterministic flip, derived from seed + cursor so every client can verify it. */
-function flipCoin(state: CfState): CfSide {
-  const rng = mulberry32((state.seed + state.cursor * 7919) >>> 0);
+/**
+ * Flips the coin. The host passes a fresh `nonce` minted at flip time so the
+ * result can't be derived from the published `seed`+`cursor` (which every
+ * client reads) — otherwise a player could precompute heads/tails and pick the
+ * winning side. No nonce (solo, tests) falls back to the deterministic draw.
+ */
+function flipCoin(state: CfState, nonce?: number): CfSide {
+  const basis = nonce !== undefined ? nonce : state.seed + state.cursor * 7919;
+  const rng = mulberry32(basis >>> 0);
   state.cursor += 1;
   return rng() < 0.5 ? 'heads' : 'tails';
 }
@@ -74,7 +80,7 @@ export function reduce(prev: CfState, action: CfAction): CfState {
       const picked = state.seats.filter((s) => s.pick);
       if (picked.length < 2) return prev;
 
-      const result = flipCoin(state);
+      const result = flipCoin(state, action.nonce);
       state.result = result;
       state.history = [result, ...state.history].slice(0, 24);
 

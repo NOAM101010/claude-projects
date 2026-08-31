@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Timer — Visual Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  /* ============================================================
+     DESIGN TOKENS
+     ------------------------------------------------------------
+     Palette: "Midnight Amber" — deep slate-navy canvas with a
+     warm amber accent (focus / go) and a soft mint for "count up".
+     Intentionally NOT default framework blue.
+     ============================================================ */
+  :root {
+    /* -- color: surfaces -- */
+    --bg-0:        #0e1119;   /* app background (deepest) */
+    --bg-1:        #161b27;   /* card surface */
+    --bg-2:        #1e2533;   /* raised elements / inputs */
+    --bg-3:        #2a3242;   /* hover surface */
+
+    /* -- color: text -- */
+    --ink-hi:      #f4f6fb;   /* primary text / time display */
+    --ink-mid:     #aab3c5;   /* labels */
+    --ink-lo:      #6b7488;   /* hints, ticks */
+
+    /* -- color: accent -- */
+    --amber:       #ffb43d;   /* primary action, countdown ring */
+    --amber-soft:  #ffcd7a;
+    --amber-glow:  rgba(255, 180, 61, .28);
+    --mint:        #57e3b6;   /* count-up mode accent */
+    --mint-glow:   rgba(87, 227, 182, .22);
+
+    /* -- borders / lines -- */
+    --line:        rgba(255, 255, 255, .07);
+    --line-strong: rgba(255, 255, 255, .14);
+
+    /* -- radii -- */
+    --r-sm:  10px;
+    --r-md:  16px;
+    --r-lg:  24px;
+    --r-pill: 999px;
+
+    /* -- spacing scale (4pt base) -- */
+    --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+    --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 64px;
+
+    /* -- elevation -- */
+    --shadow-card: 0 24px 60px -20px rgba(0,0,0,.6);
+    --shadow-btn:  0 8px 20px -6px var(--amber-glow);
+
+    /* -- motion -- */
+    --ease: cubic-bezier(.32, .72, 0, 1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100dvh;
+    display: grid;
+    place-items: center;
+    padding: var(--s-5);
+    font-family: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--ink-hi);
+    background:
+      radial-gradient(900px 500px at 82% -10%, rgba(255,180,61,.10), transparent 60%),
+      radial-gradient(700px 500px at 0% 110%, rgba(87,227,182,.08), transparent 55%),
+      var(--bg-0);
+  }
+
+  /* ============================================================
+     CARD
+     ============================================================ */
+  .timer {
+    position: relative;
+    width: min(420px, 100%);
+    padding: var(--s-7) var(--s-6) var(--s-6);
+    background: linear-gradient(180deg, var(--bg-1), #131824);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+  }
+  /* subtle top hairline glow — breaks flat-card monotony */
+  .timer::before {
+    content: "";
+    position: absolute; inset: 0 0 auto 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--line-strong) 30%, transparent 70%);
+  }
+
+  .timer__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--s-6);
+  }
+  .timer__title {
+    font-family: "Sora", sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--ink-mid);
+  }
+  .timer__dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--amber);
+    box-shadow: 0 0 0 4px var(--amber-glow);
+  }
+
+  /* ============================================================
+     MODE SWITCH  (segmented, not a checkbox)
+     ============================================================ */
+  .mode {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--s-1);
+    padding: var(--s-1);
+    margin: 0 auto var(--s-7);
+    width: fit-content;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+  }
+  .mode__btn {
+    appearance: none;
+    border: 0;
+    cursor: pointer;
+    padding: var(--s-2) var(--s-5);
+    border-radius: var(--r-pill);
+    font: 500 13px/1 "Space Grotesk", sans-serif;
+    letter-spacing: .04em;
+    color: var(--ink-mid);
+    background: transparent;
+    transition: color .2s var(--ease), background .2s var(--ease);
+  }
+  .mode__btn:hover { color: var(--ink-hi); }
+  .mode__btn[aria-pressed="true"] {
+    color: var(--bg-0);
+    background: var(--amber);
+    font-weight: 600;
+  }
+
+  /* ============================================================
+     TIME DIAL + PROGRESS RING
+     ============================================================ */
+  .dial {
+    position: relative;
+    width: 260px; height: 260px;
+    margin: 0 auto var(--s-7);
+    display: grid;
+    place-items: center;
+  }
+  .dial svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+  .dial__track { fill: none; stroke: var(--bg-3); stroke-width: 10; }
+  .dial__fill {
+    fill: none;
+    stroke: url(#grad);
+    stroke-width: 10;
+    stroke-linecap: round;
+    /* r=120 -> C = 753.98 ; mockup shows ~68% remaining */
+    stroke-dasharray: 754;
+    stroke-dashoffset: 241;
+    filter: drop-shadow(0 0 6px var(--amber-glow));
+  }
+
+  .dial__time {
+    font-family: "Sora", sans-serif;
+    font-weight: 700;
+    font-size: 60px;
+    letter-spacing: .02em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .dial__time .sep { color: var(--ink-lo); margin: 0 2px; }
+  .dial__caption {
+    margin-top: var(--s-3);
+    font-size: 12px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--ink-lo);
+  }
+
+  /* ============================================================
+     INPUT FIELDS  (minutes / seconds)
+     ============================================================ */
+  .fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--s-3);
+    margin-bottom: var(--s-6);
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+  }
+  .field label {
+    font-size: 11px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--ink-lo);
+    padding-inline-start: var(--s-1);
+  }
+  .field input {
+    width: 100%;
+    padding: var(--s-3) var(--s-4);
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    color: var(--ink-hi);
+    font: 600 22px/1 "Sora", sans-serif;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    transition: border-color .18s var(--ease), background .18s var(--ease), box-shadow .18s var(--ease);
+  }
+  .field input::placeholder { color: var(--ink-lo); }
+  .field input:hover { background: var(--bg-3); }
+  .field input:focus {
+    outline: none;
+    border-color: var(--amber);
+    background: var(--bg-2);
+    box-shadow: 0 0 0 4px var(--amber-glow);
+  }
+
+  /* ============================================================
+     ACTION BUTTONS
+     ============================================================ */
+  .actions {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr 1fr;
+    gap: var(--s-3);
+  }
+  .btn {
+    appearance: none;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-radius: var(--r-md);
+    padding: var(--s-4) var(--s-3);
+    font: 600 14px/1 "Space Grotesk", sans-serif;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    transition: transform .12s var(--ease), background .18s var(--ease),
+                border-color .18s var(--ease), box-shadow .18s var(--ease);
+  }
+  .btn:active { transform: translateY(1px) scale(.99); }
+
+  /* primary — Start */
+  .btn--start {
+    color: #241800;
+    background: linear-gradient(180deg, var(--amber-soft), var(--amber));
+    box-shadow: var(--shadow-btn);
+  }
+  .btn--start:hover {
+    background: linear-gradient(180deg, #ffd899, var(--amber-soft));
+    box-shadow: 0 12px 28px -8px var(--amber-glow);
+  }
+
+  /* secondary — Pause / Reset */
+  .btn--ghost {
+    color: var(--ink-mid);
+    background: var(--bg-2);
+    border-color: var(--line-strong);
+  }
+  .btn--ghost:hover {
+    color: var(--ink-hi);
+    background: var(--bg-3);
+    border-color: var(--ink-lo);
+  }
+
+  /* ============================================================
+     RESPONSIVE
+     ============================================================ */
+  @media (max-width: 420px) {
+    .timer { padding: var(--s-6) var(--s-5) var(--s-5); }
+    .dial { width: 220px; height: 220px; }
+    .dial__time { font-size: 50px; }
+    .actions { grid-template-columns: 1fr; }
+    .btn { padding: var(--s-4); }
+  }
+</style>
+</head>
+<body>
+  <main class="timer">
+    <header class="timer__head">
+      <span class="timer__title">Focus Timer</span>
+      <span class="timer__dot" aria-hidden="true"></span>
+    </header>
+
+    <div class="mode" role="group" aria-label="Timer mode">
+      <button class="mode__btn" aria-pressed="true">Count&nbsp;Down</button>
+      <button class="mode__btn" aria-pressed="false">Count&nbsp;Up</button>
+    </div>
+
+    <div class="dial">
+      <svg viewBox="0 0 260 260" aria-hidden="true">
+        <defs>
+          <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#ffcd7a" />
+            <stop offset="1" stop-color="#ffb43d" />
+          </linearGradient>
+        </defs>
+        <circle class="dial__track" cx="130" cy="130" r="120" />
+        <circle class="dial__fill"  cx="130" cy="130" r="120" />
+      </svg>
+      <div>
+        <div class="dial__time">
+          <span>17</span><span class="sep">:</span><span>04</span>
+        </div>
+        <div class="dial__caption">Remaining</div>
+      </div>
+    </div>
+
+    <div class="fields">
+      <div class="field">
+        <label for="min">Minutes</label>
+        <input id="min" type="text" inputmode="numeric" value="25" aria-label="Minutes" />
+      </div>
+      <div class="field">
+        <label for="sec">Seconds</label>
+        <input id="sec" type="text" inputmode="numeric" value="00" aria-label="Seconds" />
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn--start">Start</button>
+      <button class="btn btn--ghost">Pause</button>
+      <button class="btn btn--ghost">Reset</button>
+    </div>
+  </main>
+</body>
+</html>

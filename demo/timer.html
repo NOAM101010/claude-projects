@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Timer — Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg-0:        #0e1119;
+    --bg-1:        #161b27;
+    --bg-2:        #1e2533;
+    --bg-3:        #2a3242;
+    --ink-hi:      #f4f6fb;
+    --ink-mid:     #aab3c5;
+    --ink-lo:      #6b7488;
+    --amber:       #ffb43d;
+    --amber-soft:  #ffcd7a;
+    --amber-glow:  rgba(255, 180, 61, .28);
+    --mint:        #57e3b6;
+    --mint-glow:   rgba(87, 227, 182, .22);
+    --line:        rgba(255, 255, 255, .07);
+    --line-strong: rgba(255, 255, 255, .14);
+    --r-sm:  10px;
+    --r-md:  16px;
+    --r-lg:  24px;
+    --r-pill: 999px;
+    --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+    --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 64px;
+    --shadow-card: 0 24px 60px -20px rgba(0,0,0,.6);
+    --shadow-btn:  0 8px 20px -6px var(--amber-glow);
+    --ease: cubic-bezier(.32, .72, 0, 1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100dvh;
+    display: grid;
+    place-items: center;
+    padding: var(--s-5);
+    font-family: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--ink-hi);
+    background:
+      radial-gradient(900px 500px at 82% -10%, rgba(255,180,61,.10), transparent 60%),
+      radial-gradient(700px 500px at 0% 110%, rgba(87,227,182,.08), transparent 55%),
+      var(--bg-0);
+  }
+
+  .timer {
+    position: relative;
+    width: min(420px, 100%);
+    padding: var(--s-7) var(--s-6) var(--s-6);
+    background: linear-gradient(180deg, var(--bg-1), #131824);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+  }
+  .timer::before {
+    content: "";
+    position: absolute; inset: 0 0 auto 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--line-strong) 30%, transparent 70%);
+  }
+
+  .timer__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--s-6);
+  }
+  .timer__title {
+    font-family: "Sora", sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--ink-mid);
+  }
+  .timer__dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--amber);
+    box-shadow: 0 0 0 4px var(--amber-glow);
+    transition: background .2s var(--ease), box-shadow .2s var(--ease);
+  }
+  .timer.is-running .timer__dot { animation: pulse 1s var(--ease) infinite; }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px var(--amber-glow); }
+    50%      { box-shadow: 0 0 0 8px transparent; }
+  }
+
+  .mode {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--s-1);
+    padding: var(--s-1);
+    margin: 0 auto var(--s-7);
+    width: fit-content;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+  }
+  .mode__btn {
+    appearance: none;
+    border: 0;
+    cursor: pointer;
+    padding: var(--s-2) var(--s-5);
+    border-radius: var(--r-pill);
+    font: 500 13px/1 "Space Grotesk", sans-serif;
+    letter-spacing: .04em;
+    color: var(--ink-mid);
+    background: transparent;
+    transition: color .2s var(--ease), background .2s var(--ease);
+  }
+  .mode__btn:hover { color: var(--ink-hi); }
+  .mode__btn[aria-pressed="true"] {
+    color: var(--bg-0);
+    background: var(--amber);
+    font-weight: 600;
+  }
+
+  .dial {
+    position: relative;
+    width: 260px; height: 260px;
+    margin: 0 auto var(--s-7);
+    display: grid;
+    place-items: center;
+  }
+  .dial svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+  .dial__track { fill: none; stroke: var(--bg-3); stroke-width: 10; }
+  .dial__fill {
+    fill: none;
+    stroke: url(#grad);
+    stroke-width: 10;
+    stroke-linecap: round;
+    stroke-dasharray: 754;
+    stroke-dashoffset: 754;
+    filter: drop-shadow(0 0 6px var(--amber-glow));
+    transition: stroke-dashoffset .35s linear;
+  }
+  .dial.is-done .dial__fill { animation: ringFlash .5s ease-in-out 6; }
+  @keyframes ringFlash {
+    0%, 100% { stroke: url(#grad); filter: drop-shadow(0 0 6px var(--amber-glow)); }
+    50%      { stroke: #ff5d5d; filter: drop-shadow(0 0 14px rgba(255,93,93,.6)); }
+  }
+
+  .dial__time {
+    font-family: "Sora", sans-serif;
+    font-weight: 700;
+    font-size: 60px;
+    letter-spacing: .02em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    text-align: center;
+  }
+  .dial__time .sep { color: var(--ink-lo); margin: 0 2px; }
+  .dial__caption {
+    margin-top: var(--s-3);
+    font-size: 12px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--ink-lo);
+    text-align: center;
+  }
+
+  .fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--s-3);
+    margin-bottom: var(--s-6);
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+  }
+  .field label {
+    font-size: 11px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--ink-lo);
+    padding-inline-start: var(--s-1);
+  }
+  .field input {
+    width: 100%;
+    padding: var(--s-3) var(--s-4);
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    color: var(--ink-hi);
+    font: 600 22px/1 "Sora", sans-serif;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    transition: border-color .18s var(--ease), background .18s var(--ease), box-shadow .18s var(--ease);
+  }
+  .field input::placeholder { color: var(--ink-lo); }
+  .field input:hover { background: var(--bg-3); }
+  .field input:focus {
+    outline: none;
+    border-color: var(--amber);
+    background: var(--bg-2);
+    box-shadow: 0 0 0 4px var(--amber-glow);
+  }
+  .field input:disabled { opacity: .5; cursor: not-allowed; }
+  .mode__btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  .actions {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr 1fr;
+    gap: var(--s-3);
+  }
+  .btn {
+    appearance: none;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-radius: var(--r-md);
+    padding: var(--s-4) var(--s-3);
+    font: 600 14px/1 "Space Grotesk", sans-serif;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    transition: transform .12s var(--ease), background .18s var(--ease),
+                border-color .18s var(--ease), box-shadow .18s var(--ease);
+  }
+  .btn:active { transform: translateY(1px) scale(.99); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn:disabled:active { transform: none; }
+
+  .btn--start {
+    color: #241800;
+    background: linear-gradient(180deg, var(--amber-soft), var(--amber));
+    box-shadow: var(--shadow-btn);
+  }
+  .btn--start:hover:not(:disabled) {
+    background: linear-gradient(180deg, #ffd899, var(--amber-soft));
+    box-shadow: 0 12px 28px -8px var(--amber-glow);
+  }
+
+  .btn--ghost {
+    color: var(--ink-mid);
+    background: var(--bg-2);
+    border-color: var(--line-strong);
+  }
+  .btn--ghost:hover:not(:disabled) {
+    color: var(--ink-hi);
+    background: var(--bg-3);
+    border-color: var(--ink-lo);
+  }
+
+  @media (max-width: 420px) {
+    .timer { padding: var(--s-6) var(--s-5) var(--s-5); }
+    .dial { width: 220px; height: 220px; }
+    .dial__time { font-size: 50px; }
+    .actions { grid-template-columns: 1fr; }
+    .btn { padding: var(--s-4); }
+  }
+</style>
+</head>
+<body>
+  <main class="timer" id="timer">
+    <header class="timer__head">
+      <span class="timer__title">Focus Timer</span>
+      <span class="timer__dot" aria-hidden="true"></span>
+    </header>
+
+    <div class="mode" role="group" aria-label="Timer mode">
+      <button class="mode__btn" id="modeDown" aria-pressed="true">Count&nbsp;Down</button>
+      <button class="mode__btn" id="modeUp" aria-pressed="false">Count&nbsp;Up</button>
+    </div>
+
+    <div class="dial" id="dial">
+      <svg viewBox="0 0 260 260" aria-hidden="true">
+        <defs>
+          <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#ffcd7a" />
+            <stop offset="1" stop-color="#ffb43d" />
+          </linearGradient>
+        </defs>
+        <circle class="dial__track" cx="130" cy="130" r="120" />
+        <circle class="dial__fill" id="ring" cx="130" cy="130" r="120" />
+      </svg>
+      <div>
+        <div class="dial__time" aria-live="polite">
+          <span id="dMin">25</span><span class="sep">:</span><span id="dSec">00</span>
+        </div>
+        <div class="dial__caption" id="caption">Remaining</div>
+      </div>
+    </div>
+
+    <div class="fields">
+      <div class="field">
+        <label for="min">Minutes</label>
+        <input id="min" type="text" inputmode="numeric" value="25" aria-label="Minutes" />
+      </div>
+      <div class="field">
+        <label for="sec">Seconds</label>
+        <input id="sec" type="text" inputmode="numeric" value="00" aria-label="Seconds" />
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn--start" id="startBtn">Start</button>
+      <button class="btn btn--ghost" id="pauseBtn">Pause</button>
+      <button class="btn btn--ghost" id="resetBtn">Reset</button>
+    </div>
+  </main>
+
+<script>
+(function () {
+  "use strict";
+
+  var RING_CIRC = 754; // 2 * PI * r(120), matches stroke-dasharray
+
+  var el = {
+    timer:   document.getElementById("timer"),
+    dial:    document.getElementById("dial"),
+    ring:    document.getElementById("ring"),
+    dMin:    document.getElementById("dMin"),
+    dSec:    document.getElementById("dSec"),
+    caption: document.getElementById("caption"),
+    min:     document.getElementById("min"),
+    sec:     document.getElementById("sec"),
+    modeDown:document.getElementById("modeDown"),
+    modeUp:  document.getElementById("modeUp"),
+    startBtn:document.getElementById("startBtn"),
+    pauseBtn:document.getElementById("pauseBtn"),
+    resetBtn:document.getElementById("resetBtn")
+  };
+
+  var mode = "down";            // "down" | "up"
+  var status = "idle";          // "idle" | "running" | "paused" | "done"
+  var tickHandle = null;
+
+  // absolute-time anchors (drift-free)
+  var endTime = 0;             // down: ms timestamp when it should hit zero
+  var startedAt = 0;          // up: ms timestamp of (virtual) start
+  var carriedMs = 0;         // remaining (down) or elapsed (up) captured on pause
+
+  var initialMs = 0;          // configured duration, used for down-ring + reset
+
+  function pad2(n) {
+    n = Math.abs(Math.floor(n));
+    return n < 10 ? "0" + n : String(n);
+  }
+
+  function clampInt(raw, lo, hi) {
+    var n = parseInt(String(raw).replace(/[^\d]/g, ""), 10);
+    if (isNaN(n)) n = 0;
+    if (n < lo) n = lo;
+    if (n > hi) n = hi;
+    return n;
+  }
+
+  function readFields() {
+    var m = clampInt(el.min.value, 0, 999);
+    var s = clampInt(el.sec.value, 0, 59);
+    return m * 60000 + s * 1000;
+  }
+
+  function normalizeFieldsDisplay() {
+    el.min.value = pad2(clampInt(el.min.value, 0, 999));
+    el.sec.value = pad2(clampInt(el.sec.value, 0, 59));
+  }
+
+  function setTimeDisplay(totalMs) {
+    var totalSec;
+    if (mode === "down") {
+      totalSec = Math.max(0, Math.ceil(totalMs / 1000));
+    } else {
+      totalSec = Math.max(0, Math.floor(totalMs / 1000));
+    }
+    var m = Math.floor(totalSec / 60);
+    var s = totalSec % 60;
+    el.dMin.textContent = pad2(m);
+    el.dSec.textContent = pad2(s);
+  }
+
+  function setRing(fraction) {
+    // fraction = portion of ring that should be visible (0..1)
+    if (fraction < 0) fraction = 0;
+    if (fraction > 1) fraction = 1;
+    el.ring.style.strokeDashoffset = String(RING_CIRC * (1 - fraction));
+  }
+
+  function currentValueMs() {
+    var now = Date.now();
+    if (mode === "down") {
+      if (status === "running") return Math.max(0, endTime - now);
+      return carriedMs;
+    } else {
+      if (status === "running") return now - startedAt;
+      return carriedMs;
+    }
+  }
+
+  function render() {
+    var v = currentValueMs();
+    setTimeDisplay(v);
+
+    if (mode === "down") {
+      var frac = initialMs > 0 ? v / initialMs : 0;
+      setRing(frac);
+    } else {
+      // count-up with no target: fill by progress through the current minute
+      var elapsedSec = Math.floor(v / 1000);
+      setRing((elapsedSec % 60) / 60);
+    }
+  }
+
+  function beep() {
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      var ctx = new Ctx();
+      var now = ctx.currentTime;
+      for (var i = 0; i < 3; i++) {
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = 880;
+        var t0 = now + i * 0.28;
+        gain.gain.setValueAtTime(0.0001, t0);
+        gain.gain.exponentialRampToValueAtTime(0.35, t0 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.22);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t0);
+        osc.stop(t0 + 0.24);
+      }
+      setTimeout(function () { ctx.close(); }, 1200);
+    } catch (e) { /* audio not available — silent */ }
+  }
+
+  function stopTicking() {
+    if (tickHandle !== null) {
+      clearInterval(tickHandle);
+      tickHandle = null;
+    }
+  }
+
+  function onTick() {
+    if (mode === "down") {
+      var remaining = endTime - Date.now();
+      if (remaining <= 0) {
+        finishCountdown();
+        return;
+      }
+    }
+    render();
+  }
+
+  function startTicking() {
+    stopTicking();
+    render();
+    tickHandle = setInterval(onTick, 200);
+  }
+
+  function finishCountdown() {
+    stopTicking();
+    status = "done";
+    carriedMs = 0;
+    setTimeDisplay(0);
+    setRing(0);
+    el.dial.classList.add("is-done");
+    el.timer.classList.remove("is-running");
+    beep();
+    setTimeout(function () { el.dial.classList.remove("is-done"); }, 3200);
+    syncControls();
+  }
+
+  function doStart() {
+    if (status === "running") return;
+
+    if (status === "idle" || status === "done") {
+      initialMs = readFields();
+      if (mode === "down") {
+        if (initialMs <= 0) { return; } // nothing to count down
+        carriedMs = initialMs;
+      } else {
+        carriedMs = 0;
+      }
+    }
+
+    var now = Date.now();
+    if (mode === "down") {
+      endTime = now + carriedMs;
+    } else {
+      startedAt = now - carriedMs;
+    }
+
+    status = "running";
+    el.dial.classList.remove("is-done");
+    el.timer.classList.add("is-running");
+    startTicking();
+    syncControls();
+  }
+
+  function doPause() {
+    if (status !== "running") return;
+    carriedMs = currentValueMs();
+    status = "paused";
+    stopTicking();
+    el.timer.classList.remove("is-running");
+    render();
+    syncControls();
+  }
+
+  function doReset() {
+    stopTicking();
+    status = "idle";
+    el.timer.classList.remove("is-running");
+    el.dial.classList.remove("is-done");
+    normalizeFieldsDisplay();
+    initialMs = readFields();
+    carriedMs = mode === "down" ? initialMs : 0;
+    render();
+    syncControls();
+  }
+
+  function setMode(next) {
+    if (next === mode) return;
+    if (status === "running") return; // switch locked while running
+    mode = next;
+    el.modeDown.setAttribute("aria-pressed", String(mode === "down"));
+    el.modeUp.setAttribute("aria-pressed", String(mode === "up"));
+    el.caption.textContent = mode === "down" ? "Remaining" : "Elapsed";
+    doReset();
+  }
+
+  function syncControls() {
+    var running = status === "running";
+
+    el.min.disabled = running;
+    el.sec.disabled = running;
+    el.modeDown.disabled = running;
+    el.modeUp.disabled = running;
+
+    el.startBtn.disabled = running;
+    el.startBtn.textContent = status === "paused" ? "Resume" : "Start";
+
+    el.pauseBtn.disabled = !running;
+  }
+
+  // --- input wiring ---
+  function handleFieldInput(input, lo, hi) {
+    // keep digits only while typing
+    var digits = input.value.replace(/[^\d]/g, "").slice(0, hi === 59 ? 2 : 3);
+    input.value = digits;
+  }
+
+  el.min.addEventListener("input", function () {
+    handleFieldInput(el.min, 0, 999);
+  });
+  el.sec.addEventListener("input", function () {
+    handleFieldInput(el.sec, 0, 59);
+  });
+
+  function commitFields() {
+    normalizeFieldsDisplay();
+    if (status === "idle" || status === "done") {
+      status = "idle";
+      initialMs = readFields();
+      carriedMs = mode === "down" ? initialMs : 0;
+      render();
+    }
+  }
+  el.min.addEventListener("blur", commitFields);
+  el.sec.addEventListener("blur", commitFields);
+  el.min.addEventListener("keydown", function (e) { if (e.key === "Enter") el.min.blur(); });
+  el.sec.addEventListener("keydown", function (e) { if (e.key === "Enter") el.sec.blur(); });
+
+  el.startBtn.addEventListener("click", doStart);
+  el.pauseBtn.addEventListener("click", doPause);
+  el.resetBtn.addEventListener("click", doReset);
+  el.modeDown.addEventListener("click", function () { setMode("down"); });
+  el.modeUp.addEventListener("click", function () { setMode("up"); });
+
+  // keep display correct if tab was backgrounded
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden && status === "running") onTick();
+  });
+
+  // --- init ---
+  normalizeFieldsDisplay();
+  initialMs = readFields();
+  carriedMs = initialMs;
+  render();
+  syncControls();
+})();
+</script>
+</body>
+</html>

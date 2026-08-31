@@ -30,10 +30,11 @@ export const shopService = {
    * the catalogue, checks the balance and grants the item — so a client cannot
    * hand itself a Mythic for free.
    *
-   * Daily-Rarity-only items live purely in the client catalogue (they rotate
-   * per date, so the seed SQL doesn't ship them). For those we settle locally
-   * and let usePlayer.buy adjust the balance on its own — no `buy_item` RPC
-   * call, since the server would just answer "unknown item".
+   * `dailyRarityOnly` is a *display* flag (keeps an item in the daily
+   * rare-rotation slot and out of the normal grid) — it is NOT a persistence
+   * flag. Every purchasable item, including these, is a real row in
+   * public.items and persists through buy_item into user_items. Short-circuiting
+   * the RPC here is what used to lose the 30k–75k coins on the next sign-out.
    */
   async buy(userId: string, itemId: string): Promise<BuyResult> {
     const item = itemById(itemId);
@@ -41,8 +42,6 @@ export const shopService = {
     const client = db();
     // Device-local players own their catalogue locally; nothing to charge server-side.
     if (!client || !isRemoteId(userId)) return { ok: true };
-    // Client-only exclusive: server doesn't know about it, so don't ask.
-    if (item.dailyRarityOnly) return { ok: true };
 
     const { data, error } = await client.rpc('buy_item', { p_item_id: itemId });
     if (error) {
@@ -65,5 +64,20 @@ export const shopService = {
     const client = db();
     if (!client || !isRemoteId(userId)) return;
     await client.from('user_items').update({ favorite }).eq('user_id', userId).eq('item_id', itemId);
+  },
+
+  /**
+   * Migrate ownership of a premium coin the player bought before it was a real
+   * server item. The RPC never charges and is hard-limited server-side to the
+   * six coin ids, so it can't be abused to grant arbitrary items. Best-effort:
+   * if the migration SQL hasn't been run yet the RPC is missing and this is a
+   * no-op — the local copy still shows until then.
+   */
+  async grantOwned(userId: string, itemId: string): Promise<boolean> {
+    const client = db();
+    if (!client || !isRemoteId(userId)) return false;
+    const { data, error } = await client.rpc('grant_owned_item', { p_item_id: itemId });
+    if (error) return false;
+    return data === true;
   },
 };

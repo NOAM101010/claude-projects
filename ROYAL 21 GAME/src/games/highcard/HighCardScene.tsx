@@ -275,6 +275,18 @@ function HighCardRoom({ roomCode }: { roomCode: string }) {
   const settledRound = useRef(-1);
   const booting = useRef(false);
 
+  /* Chips optimistically anted this round. `send` returning ok only means the
+     intent row was inserted — the host can still reject the ante (phase already
+     drawn) and then seat.stake comes back 0, so the settle handler's
+     `seat.stake <= 0` early-return would skip the refund and the ante would
+     vanish. On settle we refund whatever we deducted beyond the stake the host
+     actually recorded. Additive: it can only return chips. */
+  const roundOutlay = useRef<{ round: number; amount: number }>({ round: -1, amount: 0 });
+  const addOutlay = (round: number, delta: number) => {
+    if (roundOutlay.current.round !== round) roundOutlay.current = { round, amount: 0 };
+    roundOutlay.current.amount = Math.max(0, roundOutlay.current.amount + delta);
+  };
+
   useEffect(() => {
     const boot = async () => {
       if (!isOnline()) return;
@@ -340,6 +352,14 @@ function HighCardRoom({ roomCode }: { roomCode: string }) {
     if (settledRound.current === state.round) return;
     settledRound.current = state.round;
     const seat = state.seats.find((s) => s.userId === profile.id);
+    // Refund any ante the host never recorded (rejected at the betting→draw
+    // boundary). Must run before the no-stake early return below, or a rejected
+    // ante silently eats the chips.
+    if (roundOutlay.current.round === state.round) {
+      const rejected = roundOutlay.current.amount - (seat?.stake ?? 0);
+      if (rejected > 0) addChips(rejected, { silent: true });
+      roundOutlay.current = { round: -1, amount: 0 };
+    }
     if (!seat || seat.stake <= 0) return;
     const payout = seat.net + seat.stake;
     if (payout > 0) {
@@ -373,22 +393,32 @@ function HighCardRoom({ roomCode }: { roomCode: string }) {
     audio.play('chip');
     haptic('chip');
     addChips(-stake, { silent: true });
+    addOutlay(state.round, stake);
     void send(profile.id, { type: 'ante', userId: profile.id, amount: stake }).then((ok) => {
       // Rate-limit / network drop: refund locally so the ante doesn't vanish.
       if (!ok) {
         addChips(stake, { silent: true });
+        addOutlay(state.round, -stake);
         toast(t('common.retry'), 'bad', '⚠');
       }
     });
   };
 
   const clearAnte = () => {
-    if (!mySeat?.stake) return;
-    addChips(mySeat.stake, { silent: true });
+    if (!state) return;
+    // Refund what this client optimistically anted, not what the (possibly
+    // un-synced) seat shows — for a non-host player the ante round-trips through
+    // the host, so mySeat.stake can still be 0 here and the old guard would skip
+    // the refund, eating the ante.
+    const outstanding = roundOutlay.current.round === state.round ? roundOutlay.current.amount : 0;
+    const refund = outstanding > 0 ? outstanding : (mySeat?.stake ?? 0);
+    if (refund <= 0) return;
+    addChips(refund, { silent: true });
+    addOutlay(state.round, -refund);
     void send(profile.id, { type: 'clearAnte', userId: profile.id });
   };
 
-  const handleDraw = () => { audio.play('cardFlip'); haptic('card'); void send(profile.id, { type: 'draw' }); };
+  const handleDraw = () => { audio.play('cardFlip'); haptic('card'); void send(profile.id, { type: 'draw', nonce: newSeed() }); };
   const handleNewRound = () => void send(profile.id, { type: 'openBetting' });
 
   if (!isOnline() || !roomsService.canHost(profile.id)) {

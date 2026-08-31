@@ -1,0 +1,199 @@
+/* CITY EMPIRE — global + HUD styles (MASTER §40/§42: premium, dark, minimal). */
+
+:root {
+  --ce-bg: #0b0d10;
+  --ce-panel: rgba(18, 21, 26, 0.72);
+  --ce-border: rgba(255, 255, 255, 0.08);
+  --ce-text: #eef2f6;
+  --ce-muted: #9aa4b0;
+  --ce-gold: #f5c451;
+  --ce-green: #7ee081;
+  --ce-red: #ff6b6b;
+  --ce-font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: var(--ce-bg);
+  color: var(--ce-text);
+  font-family: var(--ce-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+canvas {
+  display: block;
+  outline: none;
+  cursor: crosshair;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* --- HUD --- */
+.hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  user-select: none;
+}
+
+.hud-brand {
+  position: absolute;
+  top: 18px;
+  left: 20px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.hud-brand-name {
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  font-size: 18px;
+  color: #fff;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+}
+.hud-brand-ver {
+  font-size: 11px;
+  color: var(--ce-muted);
+  letter-spacing: 0.08em;
+}
+.hud-fps {
+  font-size: 11px;
+  color: var(--ce-green);
+  font-variant-numeric: tabular-nums;
+  margin-left: 4px;
+}
+.hud-fps--low {
+  color: var(--ce-red);
+}
+
+.hud-cash {
+  position: absolute;
+  top: 14px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 8px 16px;
+  background: var(--ce-panel);
+  border: 1px solid var(--ce-border);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+}
+.hud-cash-label {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--ce-muted);
+}
+.hud-cash-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ce-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-notices {
+  position: absolute;
+  top: 76px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+.hud-notice {
+  padding: 10px 18px;
+  background: var(--ce-panel);
+  border: 1px solid var(--ce-border);
+  border-left-width: 3px;
+  border-radius: 10px;
+  font-size: 14px;
+  backdrop-filter: blur(10px);
+  animation: ce-slide-in 0.22s ease;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+.hud-notice--info {
+  border-left-color: #6ab0ff;
+}
+.hud-notice--success {
+  border-left-color: var(--ce-green);
+}
+.hud-notice--error {
+  border-left-color: var(--ce-red);
+}
+
+.hud-prompt {
+  position: absolute;
+  bottom: 96px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px 10px 12px;
+  background: var(--ce-panel);
+  border: 1px solid var(--ce-border);
+  border-radius: 999px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.45);
+  animation: ce-pop 0.16s ease;
+}
+.hud-prompt kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  background: #fff;
+  color: #0b0d10;
+  border-radius: 7px;
+  font-weight: 800;
+  font-size: 14px;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+}
+.hud-prompt-verb {
+  font-weight: 700;
+  color: #fff;
+}
+.hud-prompt-label {
+  color: var(--ce-muted);
+}
+
+.hud-hint {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: var(--ce-muted);
+  background: rgba(10, 12, 15, 0.4);
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--ce-border);
+}
+.hud-hint b {
+  color: var(--ce-text);
+}
+
+@keyframes ce-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@keyframes ce-pop {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.94);
+  }
+}

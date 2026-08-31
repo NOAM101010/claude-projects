@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== Trade analyses ====================
+
+model TradeAnalysis {
+  id         String   @id @default(cuid())
+  imagePath  String
+  symbol     String?
+  grade      String?
+  score      Int?
+  setup      String?
+  reasoning  String?
+  criteria   String?
+  entry      Float?
+  stop       Float?
+  target     Float?
+  rr         Float?
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([grade])
+}
+
+// ==================== Scanner ====================
+
+model ScannerProfile {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  config      String
+  universe    String?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ScannerRun {
+  id           String   @id @default(cuid())
+  scanType     String
+  profileName  String?
+  startedAt    DateTime @default(now())
+  finishedAt   DateTime?
+  totalScanned Int      @default(0)
+  totalMatches Int      @default(0)
+  status       String   @default("running")
+  errorMessage String?
+}
+
+model ScannerResult {
+  id           String   @id @default(cuid())
+  runId        String
+  runAt        DateTime @default(now())
+  scanType     String
+  profileName  String?
+  symbol       String
+  price        Float?
+  changePercent Float?
+  volume       Float?
+  avgVolume    Float?
+  volumeRatio  Float?
+  marketCap    Float?
+  atr          Float?
+  rsi          Float?
+  distanceFromHigh Float?
+  distanceFromMa150 Float?
+  matchedSetups String?
+  score        Float?
+  grade        String?
+  notes        String?
+
+  price5d      Float?
+  price10d     Float?
+  price20d     Float?
+  return5d     Float?
+  return10d    Float?
+  return20d    Float?
+  maxReturn20d Float?
+  minReturn20d Float?
+  backtestedAt DateTime?
+
+  @@index([runId])
+  @@index([symbol])
+  @@index([runAt])
+}
+
+// ==================== Watchlist ====================
+
+model WatchlistFolder {
+  id        String      @id @default(cuid())
+  name      String      @unique
+  color     String?
+  createdAt DateTime    @default(now())
+  items     Watchlist[]
+}
+
+model Watchlist {
+  id        String           @id @default(cuid())
+  symbol    String
+  folderId  String?
+  folder    WatchlistFolder? @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  notes     String?
+  addedAt   DateTime         @default(now())
+
+  @@unique([symbol, folderId])
+  @@index([folderId])
+}
+
+// ==================== Trade Journal ====================
+
+model Trade {
+  id         String    @id @default(cuid())
+  ticker     String
+  quantity   Float
+  buyPrice   Float
+  buyAmount  Float
+  buyDate    DateTime
+  sellPrice  Float?
+  sellAmount Float?
+  sellDate   DateTime?
+  commission Float     @default(0)
+  usdIlsRate Float?
+  stopPrice  Float?
+  setup      String?
+  notes      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([ticker])
+  @@index([buyDate])
+  @@index([sellDate])
+}
+
+// ==================== Push + settings ====================
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  label     String?
+  createdAt DateTime @default(now())
+}
+
+model Setting {
+  key   String @id
+  value String
+}

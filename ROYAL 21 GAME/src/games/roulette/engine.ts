@@ -49,9 +49,16 @@ export function makeSeat(userId: string, username: string, avatar: AvatarConfig,
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
-/** Deterministic pocket draw, derived from seed + cursor so every client can verify the spin. */
-function spinWheel(state: RouletteState): number {
-  const rng = mulberry32((state.seed + state.cursor * 7919) >>> 0);
+/**
+ * Draws a pocket. In a real multiplayer room the host passes a fresh `nonce`
+ * minted at spin time, so the outcome cannot be derived from the published
+ * `seed`+`cursor` (which every client can read) — closing the "compute the next
+ * number and bet on it" exploit. With no nonce (solo play, tests) it falls back
+ * to the seed+cursor draw so the sequence stays deterministic and verifiable.
+ */
+function spinWheel(state: RouletteState, nonce?: number): number {
+  const basis = nonce !== undefined ? nonce : state.seed + state.cursor * 7919;
+  const rng = mulberry32(basis >>> 0);
   state.cursor += 1;
   return WHEEL_ORDER[Math.floor(rng() * WHEEL_ORDER.length)];
 }
@@ -179,7 +186,7 @@ export function reduce(prev: RouletteState, action: RouletteAction): RouletteSta
       if (state.phase !== 'betting') return prev;
       if (!state.seats.some((s) => s.bets.length > 0)) return prev;
       state.phase = 'spinning';
-      state.winningNumber = spinWheel(state);
+      state.winningNumber = spinWheel(state, action.nonce);
       settle(state);
       return state;
     }

@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "swing-trader",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["next", "dev"],
+      "cwd": "swing-trader",
+      "port": 3000
+    }
+  ]
+}

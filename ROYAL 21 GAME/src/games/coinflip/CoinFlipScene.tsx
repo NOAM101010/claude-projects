@@ -26,6 +26,7 @@ import { STAKES, XP_REWARDS } from '@/data/economy';
 import { VIP_COINFLIP_STAKES, isVipEligible } from '@/data/vip';
 import type { CfSide } from '@/games/coinflip/types';
 import { fmt } from '@/lib/format';
+import { newSeed } from '@/lib/random';
 import { audio } from '@/audio/AudioManager';
 import { haptic } from '@/lib/haptics';
 
@@ -253,6 +254,18 @@ function CoinFlipRoom({ roomCode }: { roomCode: string }) {
   const creditedRound = useRef(-1);
   const booting = useRef(false);
 
+  /* Chips optimistically deducted for a pick this round. `send` returning ok
+     only means the intent row was inserted — the host can still reject the pick
+     (phase already flipped) and then seat.pick comes back null, so the settle
+     handler's `!seat.pick` early-return would skip the refund and the stake
+     would vanish. On settle we refund whatever we deducted beyond the stake the
+     host actually recorded. Additive: it can only return chips. */
+  const roundOutlay = useRef<{ round: number; amount: number }>({ round: -1, amount: 0 });
+  const addOutlay = (round: number, delta: number) => {
+    if (roundOutlay.current.round !== round) roundOutlay.current = { round, amount: 0 };
+    roundOutlay.current.amount = Math.max(0, roundOutlay.current.amount + delta);
+  };
+
   useEffect(() => {
     const boot = async () => {
       if (!isOnline()) return;
@@ -325,6 +338,15 @@ function CoinFlipRoom({ roomCode }: { roomCode: string }) {
       if (creditedRound.current === state.round) return;
       creditedRound.current = state.round;
       const seat = state.seats.find((s) => s.userId === profile.id);
+      // Refund any stake the host never recorded (pick rejected at the
+      // betting→flip boundary). Must run before the no-pick early return below,
+      // or a rejected pick silently eats the chips.
+      const authStake = seat?.pick ? seat.stake : 0;
+      if (roundOutlay.current.round === state.round) {
+        const rejected = roundOutlay.current.amount - authStake;
+        if (rejected > 0) addChips(rejected, { silent: true });
+        roundOutlay.current = { round: -1, amount: 0 };
+      }
       if (!seat || !seat.pick) return;
       const payout = seat.net + seat.stake;
       if (payout > 0) {
@@ -362,23 +384,33 @@ function CoinFlipRoom({ roomCode }: { roomCode: string }) {
     audio.play('chip');
     haptic('chip');
     addChips(-stake, { silent: true });
+    addOutlay(state.round, stake);
     void send(profile.id, { type: 'pick', userId: profile.id, side, amount: stake }).then((ok) => {
       // Rate-limit / network drop: refund locally so the stake doesn't
       // silently disappear when the pick never made it to the table.
       if (!ok) {
         addChips(stake, { silent: true });
+        addOutlay(state.round, -stake);
         toast(t('common.retry'), 'bad', '⚠');
       }
     });
   };
 
   const clearPick = () => {
-    if (!mySeat?.pick) return;
-    addChips(mySeat.stake, { silent: true });
+    if (!state) return;
+    // Refund what this client optimistically staked, not what the (possibly
+    // un-synced) seat shows — for a non-host player the pick round-trips through
+    // the host, so mySeat.pick can still be null here and the old guard would
+    // skip the refund, eating the stake.
+    const outstanding = roundOutlay.current.round === state.round ? roundOutlay.current.amount : 0;
+    const refund = outstanding > 0 ? outstanding : (mySeat?.pick ? mySeat.stake : 0);
+    if (refund <= 0) return;
+    addChips(refund, { silent: true });
+    addOutlay(state.round, -refund);
     void send(profile.id, { type: 'clearPick', userId: profile.id });
   };
 
-  const handleFlip = () => { audio.play('door'); void send(profile.id, { type: 'flip' }); };
+  const handleFlip = () => { audio.play('door'); void send(profile.id, { type: 'flip', nonce: newSeed() }); };
   const handleNewRound = () => void send(profile.id, { type: 'openBetting' });
 
   if (!isOnline() || !roomsService.canHost(profile.id)) {
