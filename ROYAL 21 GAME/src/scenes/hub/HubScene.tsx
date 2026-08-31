@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { SceneShell } from '@/components/layout/SceneShell';
 import { HubCard } from './HubCard';
+import { Leaderboard } from './Leaderboard';
 import {
   BlackjackTableArt, CoinStandArt, DuelTableArt, GameNightArt, GiftArt, HighCardArt,
   LoungeArt, MyRoomDoorArt, PokerTableArt, RouletteTableArt, ScratchCounterArt, SlotMachineArt, VaultDoorArt,
 } from './hubObjects';
-import { LightPool } from '@/components/effects/LightPool';
+import { HubBackdrop } from './HubBackdrop';
 import { GameButton } from '@/components/ui/GameButton';
 import { Modal } from '@/components/ui/Modal';
 import { Onboarding } from '@/components/ui/Onboarding';
@@ -22,19 +23,18 @@ import { STREAK_REWARD, STREAK_MILESTONES, isStreakMilestone, nextStreakDay } fr
 import { isVipEligible, VIP_MIN_LEVEL, VIP_MIN_CHIPS } from '@/data/vip';
 import { SNG_BUYINS } from '@/games/poker/engine';
 
-function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
+function Section({
+  idx, title, hint, hero, children,
+}: { idx: string; title: string; hint?: string; hero?: ReactNode; children: ReactNode }) {
   return (
-    <section className="mt-7 first:mt-2">
-      <div className="flex items-baseline gap-3 mb-3">
-        <h2 className="text-[17px]" style={{ fontFamily: 'var(--font-display)' }}>{title}</h2>
-        {hint && <span className="text-[11.5px]" style={{ color: 'var(--dim)' }}>{hint}</span>}
+    <section className="hub-section">
+      <div className="hub-section-head">
+        <span className="hub-section-idx">{idx}</span>
+        <h2 className="hub-section-title">{title}</h2>
+        {hint && <span className="hub-section-hint">{hint}</span>}
       </div>
-      <div
-        className="grid gap-3"
-        style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 210px), 1fr))' }}
-      >
-        {children}
-      </div>
+      {hero && <div className="hub-hero-grid">{hero}</div>}
+      <div className="hub-grid">{children}</div>
     </section>
   );
 }
@@ -92,24 +92,16 @@ export default function HubScene() {
 
   return (
     <SceneShell>
-      {/* ---------- background: floor, back wall, light rigging ---------- */}
-      <div className="fixed inset-0 -z-10">
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% -10%, #16211c, #0b0f0d 45%, #08090b 80%)' }} />
-        <div className="absolute inset-x-0 bottom-0 h-[46%]" style={{ background: 'linear-gradient(0deg, #0e1815, transparent)' }} />
-        <motion.div animate={{ opacity: [0.75, 1, 0.75] }} transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut' }}>
-          <LightPool x="50%" y="24%" size={760} color="rgba(227,178,60,.15)" />
-          <LightPool x="14%" y="52%" size={420} color="rgba(227,178,60,.10)" />
-          <LightPool x="86%" y="62%" size={420} color="rgba(74,168,200,.09)" />
-        </motion.div>
-      </div>
+      {/* ---------- background: luxe casino-at-night ambience ---------- */}
+      <HubBackdrop />
 
-      <div className="mx-auto px-4 pt-1" style={{ maxWidth: 1180 }}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="mx-auto px-4 pt-4" style={{ maxWidth: 1180 }}>
+        <div className="hub-masthead">
           <div>
             <span className="eyebrow">{t('hub.eyebrow')}</span>
-            <h1 className="mt-1 text-[clamp(24px,4vw,38px)]">{t('hub.welcome', { name: profile.username })}</h1>
+            <h1 className="hub-title mt-1">{t('hub.welcome', { name: profile.username })}</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="hub-actions">
             <GameButton tone="metal" size="sm" onClick={() => navigate('/lobby')}>
               🎰 {t('lobby.openTables')}
             </GameButton>
@@ -124,18 +116,23 @@ export default function HubScene() {
         </div>
 
         {/* ---------------------------- the tables --------------------------- */}
-        <Section title={t('hub.sectionTables')} hint={t('hub.sectionTablesHint')}>
-          <HubCard
-            span={2}
-            label={t('hub.blackjack')}
-            action={t('hub.sitDown')}
-            blurb={t('hub.blurbBlackjack')}
-            hoverSound="card"
-            onEnter={() => navigate('/blackjack/solo')}
-          >
-            {(focused) => <BlackjackTableArt focused={focused} dealerSkin={profile.equipped.dealerSkin ?? 'dl-house'} />}
-          </HubCard>
-
+        <Section
+          idx="01"
+          title={t('hub.sectionTables')}
+          hint={t('hub.sectionTablesHint')}
+          hero={(
+            <HubCard
+              span={2}
+              label={t('hub.blackjack')}
+              action={t('hub.sitDown')}
+              blurb={t('hub.blurbBlackjack')}
+              hoverSound="card"
+              onEnter={() => navigate('/blackjack/solo')}
+            >
+              {(focused) => <BlackjackTableArt focused={focused} dealerSkin={profile.equipped.dealerSkin ?? 'dl-house'} />}
+            </HubCard>
+          )}
+        >
           <HubCard
             label={t('duel.title')}
             action={t('hub.challenge')}
@@ -148,7 +145,6 @@ export default function HubScene() {
           </HubCard>
 
           <HubCard
-            span={2}
             label={t('poker.title')}
             action={t('poker.sitDown')}
             blurb={t('poker.subtitle')}
@@ -212,8 +208,11 @@ export default function HubScene() {
           </HubCard>
         </Section>
 
-        {/* --------------------------- quick games --------------------------- */}
-        <Section title={t('hub.sectionQuick')} hint={t('hub.sectionQuickHint')}>
+        {/* ---------------------------- leaderboard ------------------------- */}
+        <div className="hub-section"><Leaderboard /></div>
+
+        {/* --------------------------- quick games -------------------------- */}
+        <Section idx="02" title={t('hub.sectionQuick')} hint={t('hub.sectionQuickHint')}>
           <HubCard
             label={t('hub.slots')}
             action={t('hub.spin')}
@@ -257,7 +256,7 @@ export default function HubScene() {
         </Section>
 
         {/* ---------------------------- your place --------------------------- */}
-        <Section title={t('hub.sectionYours')} hint={t('hub.sectionYoursHint')}>
+        <Section idx="03" title={t('hub.sectionYours')} hint={t('hub.sectionYoursHint')}>
           <HubCard
             label={t('hub.lounge')}
             action={t('friends.title')}

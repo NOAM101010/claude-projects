@@ -292,6 +292,25 @@
     "blurbMyRoom": "הישגים, סטטיסטיקות ומדף הגביעים",
     "blurbGift": "כניסה יומית ברצף — מפספסים יום וחוזרים להתחלה"
   },
+  "leaderboard": {
+    "title": "לוח המנהיגים",
+    "subtitle": "מי בפסגה השבוע",
+    "scopeWorld": "העולם",
+    "scopeFriends": "החברים שלי",
+    "catChips": "הכי הרבה צ'יפים",
+    "catBjWins": "ניצחונות Blackjack",
+    "catBigWin": "הזכייה הגדולה",
+    "catStreak": "רצף הכי ארוך",
+    "catLevel": "רמה",
+    "you": "אתה",
+    "outOf": "מתוך {count}",
+    "viewFull": "הלוח המלא",
+    "empty": "אף אחד עדיין לא על הלוח",
+    "friendsEmpty": "הוסף חברים כדי לראות אותם מדורגים כאן",
+    "valueBjWins": "{count} ניצחונות",
+    "valueStreak": "{count} ברצף",
+    "valueLevel": "רמה {count}"
+  },
   "friends": {
     "title": "חברים",
     "online": "מחוברים",
@@ -337,9 +356,6 @@
     "giftInsufficient": "אין לך מספיק צ'יפים",
     "giftOffline": "צריך להיות מחובר כדי לשלוח מתנות",
     "giftFailed": "השליחה נכשלה, נסה שוב",
-    "leaderboard": "לוח מנהיגים",
-    "leaderboardHint": "מדורג לפי יתרת צ'יפים כוללת. השחקן המוביל מקבל פרס שבועי.",
-    "leaderboardEmpty": "צריך לפחות חבר אחד כדי להשתתף בלוח המנהיגים.",
     "weeklyPrizeWon": "זכית בפרס השבועי! +{amount} צ'יפים"
   },
   "notifications": {

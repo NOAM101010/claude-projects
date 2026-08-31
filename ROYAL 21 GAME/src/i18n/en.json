@@ -292,6 +292,25 @@
     "blurbMyRoom": "Trophies, stats and your shelf",
     "blurbGift": "Daily login streak — miss a day and it resets"
   },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "subtitle": "Who's on top this week",
+    "scopeWorld": "The world",
+    "scopeFriends": "My friends",
+    "catChips": "Most chips",
+    "catBjWins": "Blackjack wins",
+    "catBigWin": "Biggest win",
+    "catStreak": "Longest streak",
+    "catLevel": "Level",
+    "you": "You",
+    "outOf": "of {count}",
+    "viewFull": "Full leaderboard",
+    "empty": "Nobody's on the board yet",
+    "friendsEmpty": "Add friends to see them ranked here",
+    "valueBjWins": "{count} wins",
+    "valueStreak": "{count} in a row",
+    "valueLevel": "Level {count}"
+  },
   "friends": {
     "title": "Friends",
     "online": "Online",
@@ -337,9 +356,6 @@
     "giftInsufficient": "Not enough chips",
     "giftOffline": "Sign in to send gifts",
     "giftFailed": "Send failed, try again",
-    "leaderboard": "Leaderboard",
-    "leaderboardHint": "Ranked by total chip balance. The top player wins a weekly prize.",
-    "leaderboardEmpty": "You need at least one friend to join the leaderboard.",
     "weeklyPrizeWon": "You won the weekly prize! +{amount} chips"
   },
   "notifications": {

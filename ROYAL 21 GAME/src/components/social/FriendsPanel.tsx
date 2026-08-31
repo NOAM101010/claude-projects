@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { GlassPanel } from '@/components/ui/GlassPanel';
@@ -16,11 +16,10 @@ import { notificationService } from '@/services/notificationService';
 import { friendsService } from '@/services/friendsService';
 import { referralService } from '@/services/referralService';
 import { useRoom } from '@/stores/useRoom';
-import { chipGlyphOf } from '@/components/game/CoinFace';
 import { fmt } from '@/lib/format';
 import type { Friend } from '@/types';
 
-type Tab = 'online' | 'all' | 'requests' | 'add' | 'leaderboard';
+type Tab = 'online' | 'all' | 'requests' | 'add';
 
 /** Slides in over the world — never a separate page (§33). */
 export function FriendsPanel() {
@@ -69,26 +68,19 @@ export function FriendsPanel() {
   }, [open, profile.id, refresh]);
 
   useEffect(() => {
-    if (tab !== 'leaderboard' || !isRemoteId(profile.id)) return;
+    if (!open || !isRemoteId(profile.id)) return;
     void friendsService.claimWeeklyPrize(profile.id).then((result) => {
       if (result.claimed && result.chips) {
         addChips(result.chips, { silent: true });
         toast(t('friends.weeklyPrizeWon', { amount: fmt(result.chips) }), 'good', '🏆');
       }
     });
-    // Only fires when the tab is opened, not on every friends/profile refresh.
+    // Fires once when the panel opens, not on every friends/profile refresh.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, profile.id]);
+  }, [open, profile.id]);
 
   const online = friends.filter((f) => f.presence !== 'offline');
   const list = tab === 'online' ? online : friends;
-  const leaderboard = useMemo(
-    () => [
-      ...friends,
-      { id: profile.id, username: profile.username, tag: profile.tag, avatar: profile.avatar, level: profile.level, chips: profile.chips, presence: profile.presence, currentGame: profile.currentGame } as Friend,
-    ].sort((a, b) => b.chips - a.chips),
-    [friends, profile],
-  );
 
   const invite = async (friend: Friend) => {
     if (!isOnline()) {
@@ -137,7 +129,6 @@ export function FriendsPanel() {
                   { key: 'all', label: t('friends.allFriends') },
                   { key: 'requests', label: t('friends.requests'), badge: requests.length || undefined },
                   { key: 'add', label: t('friends.add') },
-                  { key: 'leaderboard', label: t('friends.leaderboard') },
                 ]}
               />
 
@@ -211,36 +202,6 @@ export function FriendsPanel() {
                       }
                     />
                   ))}
-                </div>
-              ) : tab === 'leaderboard' ? (
-                <div className="flex flex-col gap-2.5">
-                  {!isRemoteId(profile.id) ? (
-                    <p className="text-[13px] text-center py-8" style={{ color: 'var(--muted)' }}>{t('rooms.needsBackend')}</p>
-                  ) : friends.length === 0 ? (
-                    <div className="text-center py-10 px-4">
-                      <div className="text-[40px] mb-2 ambient-float">🏆</div>
-                      <p style={{ color: 'var(--muted)' }}>{t('friends.leaderboardEmpty')}</p>
-                      <GameButton tone="gold" className="mt-4" onClick={() => setTab('add')}>{t('friends.add')}</GameButton>
-                    </div>
-                  ) : (
-                    <>
-                      <p className="text-[11.5px] text-center" style={{ color: 'var(--dim)' }}>{t('friends.leaderboardHint')}</p>
-                      {leaderboard.map((entry, index) => (
-                        <div
-                          key={entry.id}
-                          className="flex items-center gap-3 px-3 py-2 rounded-[var(--r-xs)]"
-                          style={{ background: entry.id === profile.id ? 'rgba(227,178,60,.1)' : 'rgba(255,255,255,.03)' }}
-                        >
-                          <b className="num text-[13px] w-5 text-center" style={{ color: index === 0 ? 'var(--gold-hi)' : 'var(--muted)' }}>
-                            {index === 0 ? '👑' : index + 1}
-                          </b>
-                          <Avatar config={entry.avatar} size={34} level={entry.level} id={`lb-${entry.id}`} />
-                          <b className="flex-1 truncate text-[13px]">{entry.username}</b>
-                          <b className="num text-[13px]" style={{ color: 'var(--gold-hi)' }}>{chipGlyphOf(profile.equipped.currencySkin)} {fmt(entry.chips)}</b>
-                        </div>
-                      ))}
-                    </>
-                  )}
                 </div>
               ) : tab === 'requests' ? (
                 <div className="flex flex-col gap-2.5">

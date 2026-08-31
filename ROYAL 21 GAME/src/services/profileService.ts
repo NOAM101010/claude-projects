@@ -161,7 +161,7 @@ export const profileService = {
     return data ? fromStatRow(data) : null;
   },
 
-  async leaderboard(kind: 'chips' | 'level' | 'bj_wins' | 'best_streak', limit = 20) {
+  async leaderboard(kind: 'chips' | 'level' | 'bj_wins' | 'best_streak' | 'biggest_win', limit = 20) {
     const client = db();
     if (!client) return [];
     if (kind === 'chips' || kind === 'level') {
