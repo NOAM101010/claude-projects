@@ -291,18 +291,20 @@
 }
 
 /* ---- §01: the casino floor — roulette dead centre, six tables around it ----
-   RTL: the first named column is the start edge (visually the right). So
-   poker / sit&go / baccarat sit on the right, blackjack / vs-friends / game
-   night on the left, roulette in the exact middle. */
+   RTL: the first named column is the start edge (visually the RIGHT). So
+   blackjack / vs-friends / game night sit on the right, poker / sit&go /
+   baccarat on the left, roulette in the exact middle. Uniform gap on both
+   axes; the centre column is sized to the roulette disc so it keeps the same
+   spacing to its neighbours as the side cards have to each other. */
 .hub-floor {
   display: grid;
-  gap: var(--s-3);
-  grid-template-columns: 1fr 1.05fr 1fr;
+  gap: var(--s-5);
+  grid-template-columns: 1fr minmax(190px, 240px) 1fr;
   align-items: start;
   grid-template-areas:
-    "poker .    bj"
-    "sng   roul duel"
-    "bacc  .    night";
+    "bj    .    poker"
+    "duel  roul sng"
+    "night .    bacc";
 }
 .hub-floor > .hub-cell--round { align-self: center; }
 
@@ -310,10 +312,10 @@
   .hub-floor {
     grid-template-columns: 1fr 1fr;
     grid-template-areas:
-      "poker bj"
+      "bj    poker"
       "roul  roul"
-      "sng   duel"
-      "bacc  night";
+      "duel  sng"
+      "night bacc";
   }
 }
 @media (max-width: 540px) {
@@ -340,7 +342,6 @@
 }
 .hub-cell--round .hub-card-artbox {
   width: 100%;
-  max-width: 236px;
   height: auto;
   aspect-ratio: 1;
   margin-inline: auto;
@@ -352,6 +353,8 @@
 .hub-cell--round .hub-card-artbox > * { max-width: 82%; max-height: 82%; }
 .hub-cell--round:hover .hub-card-artbox,
 .hub-cell--round:focus-visible .hub-card-artbox { border-color: var(--gold-hi); }
+/* keep the label under the disc no wider than a regular card */
+.hub-cell--round > span:last-child { max-width: 210px; margin-inline: auto; }
 
 /* ---- the art window: fixed box, art always fully contained ---- */
 .hub-card-artbox {
