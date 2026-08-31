@@ -16,9 +16,16 @@ BlackjackScene לא היה לו unmount cleanup (בניגוד ל-PokerScene). ע
 תיקון (BlackjackScene.tsx): leaveCleanup ב-ref + useEffect mount-only. betting: מחזיר את ההימור שהונח (solo: seat.bet; MP: pendingBetTotal.current — race-safe מול clearBet). playing/dealer: forfeit (לא מחזיר — anti-exploit). MP: useRoom.leave() + refreshFromServer(). tsc נקי, 131 טסטים ירוקים.
 אומת חי (guest, סולו): leave מ-betting אחרי stage 2K -> chips 3000->1000->3000 (הוחזר). leave מ-playing -> 2500 נשאר (forfeit). bug 1 לא נסוג: 3 מחזורי stage 2K -> clear -> chips+HUD חוזרים ל-2500 בדיוק.
 
-## נשאר לאימות חי (המשתמש כשחקן שני — ראה MP_VERIFICATION_GUIDE.md)
-- באג 2/3/4: אימות 2 דפדפנים חדר-חדר — ציפים, סנכרון, הסתרת קלפים ב-devtools, host handoff.
-- מינורי לבדיקה סופית: (א) אחרי סיום יד BJ "עוד יד" דורש 2 לחיצות. (ב) סולו BJ: עזיבה מ-playing וחזרה -> שולחן ריק + action bar תקוע (startSolo לא מרהידרט את היד; pre-existing).
+### באגים 6-8 — סקירה חיה מקיפה (Claude ישירות, commit 225580e, נדחף) — תוקנו ואומתו חי
+- **באג 6 — הכספת נתקעת ב-overlay "פותח את הכספת..."** (`VaultScene.tsx`). ה-overlay היה בתוך AnimatePresence עם exit animation שנתקע (framer-motion לא החיל את ה-rotate transform בפרוד, onAnimationComplete לא ירה, אין fallback). שוחזר חי ב-localhost + פרודקשן. תיקון: הוצאת ה-overlay מ-AnimatePresence (unmount מיידי, בלי exit), + setTimeout(2500) fallback + transformBox/Origin ל-svg + רמז "הקש להיכנס" (i18n vault.tapToEnter). אומת: נכנס תוך ~1ש.
+- **באג 7 — BJ "עוד יד" דורש 2 לחיצות** + **באג 8 — סולו BJ עזיבה-וחזרה משאירה שולחן ריק / action bar תקוע**. מקור משותף: `AnimatePresence mode="wait"` סביב פקדי ה-phase ב-BlackjackScene — החזיק את הפקד היוצא עד שאנימציית exit נרשמה כגמורה, מה שלא קרה במעברים מהירים. תיקון: הסרת mode="wait". אומת חי: לחיצה אחת מספיקה, חזרה לסולו = מסך הימורים נקי.
 
-## אחרי אימות: branch מ-main -> commit (Co-Authored-By: Claude Sonnet 5) -> push
-dev server: הפורט משתנה (5173 בברירת מחדל / 5199 אם מוגדר).
+## מצב סקירה (2026-08-31)
+✅ נבדק חי ותקין: כלכלת ציפים ב-5 המשחקים בסולו (BJ/coinflip/highcard/baccarat/roulette — הימור/נקה/חלוקה/הסדרה מדויקים), כספת, מלאי, הגדרות, לובי, VIP — נטענים ועובדים. i18n he/en parity מושלם (854 מפתחות). 0 TODO. הנחת -30% בכספת = פיצ'ר (DAILY_DISCOUNT, מבצעי היום מתחלפים).
+
+## נשאר (המשתמש)
+1. **להריץ על הפרודקשן: `supabase/achievements-daily.sql`** — RPCs fetch_achievements/fetch_daily_state מחזירים 404 (מעולם לא הורץ). לא שובר (fallback מקומי), אבל הישגים+בונוס יומי לא נשמרים בשרת.
+2. **אימות מולטיפלייר 2 דפדפנים** — `MP_VERIFICATION_GUIDE.md`. באגים 2/3/4 + host handoff + קלפי hole ב-devtools. סצנות שלא נבדקו סולו (פוקר/SnG/ערב חברה) — כאן.
+3. שאלת copy מינורית: מסך VIP מציג "רמה מינימלית 1 / 5" — לוודא שהניסוח ברור (הלאונג' דורש רמה 5, נפרד מ-VIP tier 1 שהוא רמה 1+).
+
+dev server: `PORT=5199 npm run dev` (5173 תפוס ע"י TYCOON NEO). הפורט משתנה — אם כן, החזר URL למשתמש.
