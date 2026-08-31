@@ -178,7 +178,7 @@
     "enter": "Enter",
     "locked": "Locked",
     "lockedTitle": "VIP area locked",
-    "lockedSubtitle": "You're almost there",
+    "lockedSubtitle": "The exclusive tables are waiting",
     "lockedHint": "Keep playing and leveling up to unlock the exclusive tables",
     "tableLocked": "This table is VIP only",
     "viewProgress": "View progress",
@@ -199,7 +199,7 @@
     "highHighcardSubtitle": "Bet up to 100K on the draw",
     "pickBuyIn": "Pick your buy-in",
     "blurbUnlocked": "Big blinds, exclusive tournaments and bonuses",
-    "blurbLocked": "Unlock at level 15 with 50K chips"
+    "blurbLocked": "Unlocks at level {level} with {chips} chips"
   },
   "privateTable": {
     "title": "Create Private Table",

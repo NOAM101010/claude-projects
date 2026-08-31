@@ -178,7 +178,7 @@
     "enter": "היכנס",
     "locked": "נעול",
     "lockedTitle": "אזור VIP נעול",
-    "lockedSubtitle": "עוד קצת ואתה שם",
+    "lockedSubtitle": "השולחנות הבלעדיים ממתינים",
     "lockedHint": "המשך לשחק ולהעלות רמה כדי לפתוח את השולחנות הבלעדיים",
     "tableLocked": "השולחן הזה בלעדי למשתמשי VIP",
     "viewProgress": "ראה התקדמות",
@@ -199,7 +199,7 @@
     "highHighcardSubtitle": "הימורים עד 100K על הקלף",
     "pickBuyIn": "בחר Buy-in",
     "blurbUnlocked": "בליינדים גדולים, טורנירים בלעדיים ובונוסים",
-    "blurbLocked": "פותח ברמה 15 עם 50K צ'יפים"
+    "blurbLocked": "נפתח ברמה {level} עם {chips} צ'יפים"
   },
   "privateTable": {
     "title": "צור שולחן פרטי",

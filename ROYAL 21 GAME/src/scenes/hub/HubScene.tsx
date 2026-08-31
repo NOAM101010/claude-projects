@@ -19,7 +19,7 @@ import { useT } from '@/hooks/useT';
 import { todayKey, fmt } from '@/lib/format';
 import { audio } from '@/audio/AudioManager';
 import { STREAK_REWARD, STREAK_MILESTONES, isStreakMilestone, nextStreakDay } from '@/data/economy';
-import { isVipEligible } from '@/data/vip';
+import { isVipEligible, VIP_MIN_LEVEL, VIP_MIN_CHIPS } from '@/data/vip';
 import { SNG_BUYINS } from '@/games/poker/engine';
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
@@ -282,7 +282,7 @@ export default function HubScene() {
           <HubCard
             label={t('vip.title')}
             action={vipEligible ? t('vip.enter') : t('vip.locked')}
-            blurb={vipEligible ? t('vip.blurbUnlocked') : t('vip.blurbLocked')}
+            blurb={vipEligible ? t('vip.blurbUnlocked') : t('vip.blurbLocked', { level: VIP_MIN_LEVEL, chips: fmt(VIP_MIN_CHIPS) })}
             hoverSound="vault"
             badge={vipEligible ? '👑' : undefined}
             glow="rgba(227,178,60,.28)"
