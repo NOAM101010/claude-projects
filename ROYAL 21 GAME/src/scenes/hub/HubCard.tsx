@@ -16,6 +16,9 @@ interface Props {
   span?: 1 | 2;
   /** Named cell in a `grid-template-areas` layout (the §01 bento). Overrides `span`'s column placement. */
   area?: string;
+  /** The centrepiece card: bigger footprint, extra headroom so tall art (the
+   *  Blackjack dealer) sits fully inside, art width capped so it can't balloon. */
+  feature?: boolean;
   badge?: string;
   disabled?: boolean;
 }
@@ -30,7 +33,7 @@ interface Props {
  */
 export function HubCard({
   label, action, blurb, onEnter, children, hoverSound = 'card',
-  glow = 'rgba(227,178,60,.28)', span = 1, area, badge, disabled,
+  glow = 'rgba(227,178,60,.28)', span = 1, area, feature, badge, disabled,
 }: Props) {
   const [focused, setFocused] = useState(false);
   const { play } = useSound();
@@ -55,7 +58,9 @@ export function HubCard({
       style={{
         gridColumn: area ? undefined : span === 2 ? 'span 2' : undefined,
         gridArea: area,
-        padding: compact ? '16px 14px 14px' : '20px 18px 16px',
+        padding: feature
+          ? (compact ? '44px 16px 14px' : '62px 22px 18px')
+          : (compact ? '16px 14px 14px' : '20px 18px 16px'),
         borderColor: focused ? 'var(--gold-line)' : 'var(--glass-line)',
         opacity: disabled ? 0.5 : 1,
         cursor: disabled ? 'not-allowed' : 'pointer',
@@ -96,9 +101,16 @@ export function HubCard({
         </span>
       )}
 
+      {/* minHeight, never a fixed height — the art box grows to show the whole
+          silhouette instead of cropping it. maxWidth on the feature card keeps
+          the wide Blackjack table (and its dealer) from ballooning. */}
       <span
-        className="relative w-full grid place-items-center overflow-hidden"
-        style={{ height: span === 2 ? (compact ? 150 : 190) : (compact ? 118 : 138) }}
+        className="relative grid place-items-center"
+        style={{
+          width: '100%',
+          maxWidth: feature ? 300 : undefined,
+          minHeight: feature ? (compact ? 170 : 212) : (compact ? 104 : 126),
+        }}
       >
         {children(focused)}
       </span>

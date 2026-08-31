@@ -115,7 +115,7 @@ export default function HubScene() {
         <Section idx="01" title={t('hub.sectionTables')} hint={t('hub.sectionTablesHint')} bento>
           <HubCard
             area="bj"
-            span={2}
+            feature
             label={t('hub.blackjack')}
             action={t('hub.sitDown')}
             blurb={t('hub.blurbBlackjack')}
@@ -142,7 +142,6 @@ export default function HubScene() {
             label={t('poker.title')}
             action={t('poker.sitDown')}
             blurb={t('poker.subtitle')}
-            badge={t('hub.badgeNew')}
             hoverSound="chip"
             glow="rgba(46,158,107,.28)"
             onEnter={() => setPokerOpen(true)}
@@ -155,7 +154,6 @@ export default function HubScene() {
             label={t('sng.title')}
             action={t('sng.register')}
             blurb={t('sng.blurb')}
-            badge={t('hub.badgeNew')}
             hoverSound="chip"
             glow="rgba(227,178,60,.3)"
             onEnter={() => setSngOpen(true)}
@@ -168,7 +166,6 @@ export default function HubScene() {
             label={t('roulette.title')}
             action={t('roulette.play')}
             blurb={t('hub.blurbRoulette')}
-            badge={t('hub.badgeNew')}
             hoverSound="chip"
             glow="rgba(168,65,62,.26)"
             onEnter={() => setRouletteOpen(true)}
@@ -181,7 +178,6 @@ export default function HubScene() {
             label={t('hub.gameNight')}
             action={t('hub.hostNight')}
             blurb={t('hub.blurbNight')}
-            badge={t('hub.badgeNew')}
             hoverSound="notify"
             glow="rgba(123,91,214,.26)"
             onEnter={() => navigate('/night/new')}
@@ -197,7 +193,6 @@ export default function HubScene() {
             label={t('games.baccarat')}
             action={t('baccarat.deal')}
             blurb={t('games.baccaratHint')}
-            badge={t('hub.badgeNew')}
             hoverSound="card"
             glow="rgba(180,120,240,.26)"
             onEnter={() => navigate('/game/baccarat/room/new')}
@@ -215,7 +210,6 @@ export default function HubScene() {
             label={t('hub.slots')}
             action={t('hub.spin')}
             blurb={t('hub.blurbSlots')}
-            badge={t('hub.badgeNew')}
             hoverSound="chip"
             onEnter={() => navigate('/game/slots')}
           >

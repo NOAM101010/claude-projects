@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Avatar } from '@/components/social/Avatar';
 import { chipGlyphOf } from '@/components/game/CoinFace';
 import { Modal } from '@/components/ui/Modal';
+import { Tabs } from '@/components/ui/Tabs';
 import { usePlayer } from '@/stores/usePlayer';
 import { useSocial } from '@/stores/useSocial';
 import { profileService } from '@/services/profileService';
@@ -359,7 +360,14 @@ function LeaderboardFull({
       <div className="lb-head">
         <ScopeToggle {...controls} />
       </div>
-      <CategoryBar {...controls} />
+      {/* Tabs = the gold ‹ › arrows that tell the player there are more categories */}
+      <div className="lb-fulltabs">
+        <Tabs
+          tabs={CATEGORIES.map((c) => ({ key: c, label: catLabel(c, t) }))}
+          value={category}
+          onChange={controls.setCategory}
+        />
+      </div>
 
       {rows.length <= 1 ? (
         <p className="lb-empty">
