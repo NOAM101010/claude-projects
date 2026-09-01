@@ -411,6 +411,9 @@ function CoinFlipRoom({ roomCode }: { roomCode: string }) {
 
   const clearPick = () => {
     if (!state) return;
+    // Betting closed: clear is a no-op — settle reconciles any optimistic outlay.
+    // Refunding here would double-credit against the settle payout/refund (over-credit bug).
+    if (state.phase !== 'betting') return;
     // Refund what this client optimistically staked, not what the (possibly
     // un-synced) seat shows — for a non-host player the pick round-trips through
     // the host, so mySeat.pick can still be null here and the old guard would
@@ -556,7 +559,7 @@ function CoinFlipRoom({ roomCode }: { roomCode: string }) {
               </div>
               <BetSelector stakes={STAKES} value={stake} onChange={setStake} chipSkin={profile.equipped.chipSkin} disabled={!canPick} chips={profile.chips} />
               <div className="flex gap-2">
-                <GameButton tone="ghost" block disabled={!mySeat?.pick} onClick={clearPick}>{t('blackjack.clear')}</GameButton>
+                <GameButton tone="ghost" block disabled={phase !== 'betting' || !mySeat?.pick} onClick={clearPick}>{t('blackjack.clear')}</GameButton>
                 <GameButton tone="gold" block disabled={!isHost || picked.length < 2} onClick={handleFlip}>{t('games.flip')}</GameButton>
               </div>
               {!isHost && <p className="text-center mt-2 text-[12px]" style={{ color: 'var(--muted)' }}>{t('duel.waitingHost')}</p>}

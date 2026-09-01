@@ -419,6 +419,9 @@ function HighCardRoom({ roomCode }: { roomCode: string }) {
 
   const clearAnte = () => {
     if (!state) return;
+    // Betting closed: clear is a no-op — settle reconciles any optimistic outlay.
+    // Refunding here would double-credit against the settle payout/refund (over-credit bug).
+    if (state.phase !== 'betting') return;
     // Refund what this client optimistically anted, not what the (possibly
     // un-synced) seat shows — for a non-host player the ante round-trips through
     // the host, so mySeat.stake can still be 0 here and the old guard would skip
@@ -545,7 +548,7 @@ function HighCardRoom({ roomCode }: { roomCode: string }) {
             <>
               <BetSelector stakes={STAKES} value={stake} onChange={setStake} chipSkin={profile.equipped.chipSkin} disabled={!canAnte} chips={profile.chips} />
               <div className="flex gap-2">
-                <GameButton tone="ghost" block disabled={!mySeat?.stake} onClick={clearAnte}>{t('blackjack.clear')}</GameButton>
+                <GameButton tone="ghost" block disabled={phase !== 'betting' || !mySeat?.stake} onClick={clearAnte}>{t('blackjack.clear')}</GameButton>
                 <GameButton tone="gold" block disabled={!canAnte} onClick={ante}>{t('games.draw')} · {fmt(stake)}</GameButton>
               </div>
               {isHost ? (

@@ -310,6 +310,9 @@ export default function RouletteScene({ mode, roomCode }: Props) {
 
   const handleClear = () => {
     if (!state || !mySeat) return;
+    // Betting closed: clear is a no-op — settle reconciles any optimistic outlay.
+    // Refunding here would double-credit against the settle payout/refund (over-credit bug).
+    if (state.phase !== 'betting') return;
     // Refund exactly what THIS client optimistically deducted this round, not
     // what the authoritative seat shows. For a non-host player the placed bets
     // round-trip through the host, so mySeat.bets (and myStake) can still be
