@@ -5,6 +5,8 @@ import { useT } from '@/hooks/useT';
 interface Props {
   yourTurn: boolean;
   turnName?: string;
+  /** Duel has no per-hand stake, so Double/Split make no sense — hide them. */
+  duel?: boolean;
   canDouble: boolean;
   canSplit: boolean;
   onHit: () => void;
@@ -14,7 +16,7 @@ interface Props {
 }
 
 /** Table controls: brushed metal set into the rail, lit only on your turn. */
-export function ActionBar({ yourTurn, turnName, canDouble, canSplit, onHit, onStand, onDouble, onSplit }: Props) {
+export function ActionBar({ yourTurn, turnName, duel, canDouble, canSplit, onHit, onStand, onDouble, onSplit }: Props) {
   const { t } = useT();
   return (
     <motion.div
@@ -28,11 +30,15 @@ export function ActionBar({ yourTurn, turnName, canDouble, canSplit, onHit, onSt
       <p className="text-center mb-2.5 text-[12.5px] font-bold" style={{ color: yourTurn ? 'var(--gold-hi)' : 'var(--muted)' }}>
         {yourTurn ? t('blackjack.yourTurn') : t('blackjack.turnOf', { name: turnName ?? '…' })}
       </p>
-      <div className="grid grid-cols-4 gap-2">
+      <div className={`grid gap-2 ${duel ? 'grid-cols-2' : 'grid-cols-4'}`}>
         <GameButton tone="gold" size="lg" disabled={!yourTurn} onClick={onHit}>{t('blackjack.hit')}</GameButton>
         <GameButton tone="metal" size="lg" disabled={!yourTurn} onClick={onStand}>{t('blackjack.stand')}</GameButton>
-        <GameButton tone="metal" size="lg" disabled={!yourTurn || !canDouble} onClick={onDouble}>{t('blackjack.double')}</GameButton>
-        <GameButton tone="metal" size="lg" disabled={!yourTurn || !canSplit} onClick={onSplit}>{t('blackjack.split')}</GameButton>
+        {!duel && (
+          <>
+            <GameButton tone="metal" size="lg" disabled={!yourTurn || !canDouble} onClick={onDouble}>{t('blackjack.double')}</GameButton>
+            <GameButton tone="metal" size="lg" disabled={!yourTurn || !canSplit} onClick={onSplit}>{t('blackjack.split')}</GameButton>
+          </>
+        )}
       </div>
     </motion.div>
   );

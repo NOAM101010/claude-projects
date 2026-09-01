@@ -48,8 +48,10 @@ export interface BjState {
   lastBet: number;
   /** Epoch ms when the betting window closes (multiplayer only). */
   deadline: number | null;
-  /** Present only in "Blackjack vs friends": the match config and scoreboard. */
-  duel?: { config: DuelConfig; scores: DuelScores; winner?: string | null } | null;
+  /** Present only in "Blackjack vs friends": the match config and scoreboard.
+   *  `pot` is frozen at match start (buy-in × players who bought in) so a
+   *  mid-match leaver can't shrink what the winner is paid. */
+  duel?: { config: DuelConfig; scores: DuelScores; winner?: string | null; pot?: number } | null;
   /** `game` tags which table produced the entry — absent means an older Blackjack
    *  entry recorded before other games could report into the same night. */
   history: { round: number; userId: string; username?: string; game?: string; outcome: Outcome; net: number }[];

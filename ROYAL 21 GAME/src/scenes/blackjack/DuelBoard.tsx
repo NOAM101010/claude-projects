@@ -9,8 +9,8 @@ import { usePlayer } from '@/stores/usePlayer';
 import { fmt } from '@/lib/format';
 
 /** The scoreboard is the game in duel mode, so it stays on screen. */
-export function DuelBoard({ seats, config, scores, potPlayers }: {
-  seats: BjSeat[]; config: DuelConfig; scores: DuelScores; potPlayers: number;
+export function DuelBoard({ seats, config, scores, pot }: {
+  seats: BjSeat[]; config: DuelConfig; scores: DuelScores; pot: number;
 }) {
   const { t } = useT();
   const currencySkin = usePlayer((s) => s.profile.equipped.currencySkin);
@@ -56,7 +56,7 @@ export function DuelBoard({ seats, config, scores, potPlayers }: {
       </div>
 
       <p className="mt-2.5 text-[11px] text-center" style={{ color: 'var(--dim)' }}>
-        {chipGlyphOf(currencySkin)} {t('games.pot')} {fmt(config.buyIn * potPlayers)}
+        {chipGlyphOf(currencySkin)} {t('games.pot')} {fmt(pot)}
       </p>
     </div>
   );

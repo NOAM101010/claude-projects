@@ -18,8 +18,6 @@ export function BlackjackTableArt({ focused, dealerSkin }: { focused: boolean; d
         <path d="M18 74h284a142 92 0 0 1-284 0z" fill="url(#bjFelt)" stroke="rgba(227,178,60,.4)" strokeWidth="2" />
         <path d="M18 74h284" stroke="rgba(227,178,60,.55)" strokeWidth="3" />
         <path d="M40 96h240a120 66 0 0 1-240 0z" fill="none" stroke="rgba(227,178,60,.2)" strokeWidth="1.4" />
-        <text x="160" y="122" textAnchor="middle" fill="rgba(227,178,60,.42)" fontSize="10" letterSpacing="4"
-          fontFamily="var(--font-display)" fontWeight="700">BLACKJACK PAYS 3 TO 2</text>
         {/* three seat marks */}
         {[92, 160, 228].map((cx) => (
           <ellipse key={cx} cx={cx} cy={148} rx="22" ry="9" fill="none" stroke="rgba(255,255,255,.13)" />

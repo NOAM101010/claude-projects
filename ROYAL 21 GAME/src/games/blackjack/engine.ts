@@ -187,6 +187,17 @@ export function reduce(prev: BjState, action: BjAction): BjState {
     }
     case 'leave': {
       state.seats = state.seats.filter((s) => s.userId !== action.userId);
+      // Duel with a player gone before the match is decided: the last one
+      // standing wins the pot by forfeit (a 2-player duel minus 1 = "not
+      // enough players → the remaining player wins"). duelWinner() returns
+      // null on a tie / incomplete score, so without this a walkout would
+      // leave the match unresolved forever.
+      if (state.duel && !state.duel.winner) {
+        const left = state.seats.filter((s) => !s.spectator);
+        if (left.length < 2) {
+          state.duel = { ...state.duel, winner: left[0]?.userId ?? state.seats[0]?.userId ?? null };
+        }
+      }
       if (state.phase === 'playing') {
         advance(state);
         // If advance() ran off the last player and transitioned to the dealer
@@ -214,7 +225,8 @@ export function reduce(prev: BjState, action: BjAction): BjState {
     }
     case 'ready': {
       const seat = seatOf(action.userId);
-      if (!seat || state.phase !== 'betting' || seat.bet <= 0) return prev;
+      // Duel has no per-hand bet — readiness alone seats you.
+      if (!seat || state.phase !== 'betting' || (!state.duel && seat.bet <= 0)) return prev;
       seat.ready = true;
       return state;
     }
@@ -240,7 +252,9 @@ export function reduce(prev: BjState, action: BjAction): BjState {
       state.deadline = null;
       for (const seat of state.seats) {
         seat.bet = 0;
-        seat.ready = false;
+        // Duel: the buy-in already bought into the whole match, so every hand
+        // auto-arms — no re-ready between hands (it's a race to points).
+        seat.ready = Boolean(state.duel);
         seat.hands = [];
         seat.spectator = false;
         seat.net = 0;
@@ -256,13 +270,24 @@ export function reduce(prev: BjState, action: BjAction): BjState {
     }
     case 'deal': {
       if (state.phase !== 'betting') return prev;
-      const players = activePlayers(state);
-      if (!players.length) return prev;
-      for (const seat of state.seats) {
-        seat.spectator = seat.bet <= 0;
-        seat.hands = seat.bet > 0 ? [newHand(seat.bet)] : [];
+      if (state.duel) {
+        // Duel: no per-hand bet — every ready seat is dealt in with a zero
+        // bet (chips never move per hand; only the pot at match end does).
+        const inHand = state.seats.filter((s) => !s.spectator && s.ready);
+        if (!inHand.length) return prev;
+        for (const seat of state.seats) {
+          seat.spectator = !seat.ready;
+          seat.hands = seat.ready ? [newHand(0)] : [];
+        }
+      } else {
+        const players = activePlayers(state);
+        if (!players.length) return prev;
+        for (const seat of state.seats) {
+          seat.spectator = seat.bet <= 0;
+          seat.hands = seat.bet > 0 ? [newHand(seat.bet)] : [];
+        }
+        state.lastBet = players[0]?.bet ?? state.lastBet;
       }
-      state.lastBet = players[0]?.bet ?? state.lastBet;
       state.dealer.cards = [];
       state.dealer.hidden = true;
       // Two passes, players first — the way a real shoe is dealt.

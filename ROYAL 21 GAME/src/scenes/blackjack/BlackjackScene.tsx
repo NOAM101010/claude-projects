@@ -64,11 +64,21 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
   const [emotes, setEmotes] = useState<Record<string, { emote?: string; message?: string }>>({});
   const settledRound = useRef(-1);
   const autoOpenedRound = useRef(-1);
+  /* Latches true the first time this client sees `state.duel`. From then on the
+     per-hand chip settlement below is NEVER run — even if a later frame briefly
+     lacks `duel` (peers drop frames whose version isn't strictly greater, so a
+     duel-stamped state can momentarily be replaced by an older one). This is
+     what stops a duel hand from leaking real chips. */
+  const duelConfirmed = useRef(false);
+  /* Set once the pot has been credited to the winner this session, so the
+     unmount cleanup's refreshFromServer() can't overwrite the fresh balance. */
+  const duelPaidOut = useRef(false);
   const netRef = useRef<Record<string, number>>({});
   const [spectators, setSpectators] = useState<string[]>([]);
 
   const mySeat = state?.seats.find((seat) => seat.userId === profile.id);
   const duel = state?.duel ?? null;
+  if (duel) duelConfirmed.current = true;
 
   /* Anyone dealt out of the current hand — joined mid-round and waiting for
      the next one — shows up to the table as watching, not just idle. Full
@@ -167,6 +177,7 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
     const gate = inDuel
       ? state.seats.filter((seat) => !seat.spectator)
       : state.seats.filter((seat) => seat.bet > 0);
+    if (inDuel && state.duel?.winner) return;
     if (gate.length < (inDuel ? 2 : 1) || !gate.every((seat) => seat.ready)) return;
     void send(profile.id, { type: 'deal' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -178,17 +189,19 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
      round" click. Mirrors the Sit & Go auto-continue. */
   useEffect(() => {
     if (!state || solo || !isHost || state.phase !== 'settled') return;
+    if (state.duel?.winner) return; // match's over — no next hand
     if (autoOpenedRound.current === state.round) return;
     autoOpenedRound.current = state.round;
     const timer = setTimeout(() => {
-      if (useRoom.getState().state?.phase === 'settled') {
+      const st = useRoom.getState().state;
+      if (st?.phase === 'settled' && !st.duel?.winner) {
         settledRound.current = -1;
         void send(profile.id, { type: 'openBetting' });
       }
     }, 3200);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state?.phase, state?.round, solo, isHost]);
+  }, [state?.phase, state?.round, solo, isHost, state?.duel?.winner]);
 
   /* ------------------------------------------------------ dealer moods --- */
   useEffect(() => {
@@ -218,7 +231,7 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
        the scoreboard (that block runs below). This kills the "sometimes I
        get more chips than I should" bug where a duel hand would settle
        chips AND then the pot payout would also credit at match end. */
-    const inDuel = Boolean(duel);
+    const inDuel = Boolean(duel) || Boolean(useRoom.getState().state?.duel) || duelConfirmed.current;
     const roomMode = Boolean(room && isOnline());
     if (!inDuel) {
       if (payout > 0) addChips(payout, roomMode ? { localOnly: true } : undefined);
@@ -323,9 +336,12 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
      buy-in + the loser's). Loser gets nothing — same as any friendly bet. */
   useEffect(() => {
     if (!duel?.winner) return;
-    const pot = potOf(duel.config, state?.seats.length ?? 1);
+    // Pot frozen at match start — a mid-match leaver can't shrink it (falls
+    // back to the live count only for a legacy state with no stored pot).
+    const pot = duel.pot ?? potOf(duel.config, state?.seats.length ?? 1);
     if (duel.winner === profile.id) {
       addChips(pot);
+      duelPaidOut.current = true;
       addXp(XP_REWARDS.duelWon);
       bumpStat({ duelWins: stats.duelWins + 1 });
       audio.duck(1800);
@@ -371,7 +387,10 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
     pendingBetTotal.current = 0;
     pendingBetRound.current = -1;
     if (!solo && seat) void useRoom.getState().leave(profile.id);
-    if (!solo && isOnline()) void usePlayer.getState().refreshFromServer();
+    // Don't refresh from the server right after a duel pot was credited this
+    // session — the persist may still be in flight and the stale server row
+    // would clobber the winnings.
+    if (!solo && isOnline() && !duelPaidOut.current) void usePlayer.getState().refreshFromServer();
   };
   useEffect(() => () => leaveCleanup.current(), []);
 
@@ -439,9 +458,10 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
   };
 
   const readyUp = () => {
-    if (!mySeat?.bet) return;
+    // Duel has no bet — readiness alone seats you.
+    if (!duel && !mySeat?.bet) return;
     audio.play('chipStack');
-    if (solo) void send(profile.id, { type: 'deal' });
+    if (solo && !duel) void send(profile.id, { type: 'deal' });
     else void send(profile.id, { type: 'ready', userId: profile.id });
   };
 
@@ -515,16 +535,6 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
           style={{ borderRadius: 'clamp(20px,4vw,44px)', padding: compact ? '14px 10px' : '20px 24px', minHeight: compact ? 420 : 460 }}
         >
           <AnimatePresence>{victory && <VictoryEffect kind={profile.equipped.victory} />}</AnimatePresence>
-
-          <div
-            className="absolute top-3 start-1/2 -translate-x-1/2 text-center pointer-events-none"
-            style={{ color: 'rgba(227,178,60,.32)', fontFamily: 'var(--font-display)', letterSpacing: '.4em', fontSize: 'clamp(9px,1.4vw,12px)', fontWeight: 900 }}
-          >
-            BLACKJACK PAYS 3 TO 2
-            <div style={{ fontSize: 8.5, letterSpacing: '.2em', color: 'rgba(255,255,255,.18)', fontWeight: 400 }}>
-              {t('blackjack.rules')}
-            </div>
-          </div>
 
           {/* dealer */}
           <div className="flex flex-col items-center pt-8">
@@ -606,7 +616,8 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
         {/* ---------------- controls ---------------- */}
         <div className="mt-3 flex flex-col gap-2.5">
           {duel && (
-            <DuelBoard seats={state.seats} config={duel.config} scores={duel.scores} potPlayers={state.seats.length} />
+            <DuelBoard seats={state.seats} config={duel.config} scores={duel.scores}
+              pot={duel.pot ?? potOf(duel.config, state.seats.length)} />
           )}
 
           {/* No mode="wait" here: it would hold the exiting control (e.g. the
@@ -616,7 +627,16 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
               action bar over an empty table. Overlapping the ~0.3s in/out is
               the safe trade. */}
           <AnimatePresence>
-            {state.phase === 'betting' && mySeat && (
+            {state.phase === 'betting' && mySeat && duel && (
+              <motion.div key="duel-ready" className="flex justify-center"
+                initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ opacity: 0 }}>
+                <GameButton tone="gold" size="lg" disabled={mySeat.ready} onClick={readyUp} className="min-w-[180px]">
+                  {mySeat.ready ? `✅ ${t('blackjack.isReady')}` : t('blackjack.ready')}
+                </GameButton>
+              </motion.div>
+            )}
+
+            {state.phase === 'betting' && mySeat && !duel && (
               <BetRail
                 key="bet"
                 bet={mySeat.bet}
@@ -639,8 +659,9 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
                 key="act"
                 yourTurn={!!yourTurn}
                 turnName={activeSeat?.username}
-                canDouble={!!activeHand && canDouble(activeHand, profile.chips)}
-                canSplit={!!activeHand && !!mySeat && canSplit(activeHand, mySeat, profile.chips)}
+                duel={!!duel}
+                canDouble={!duel && !!activeHand && canDouble(activeHand, profile.chips)}
+                canSplit={!duel && !!activeHand && !!mySeat && canSplit(activeHand, mySeat, profile.chips)}
                 onHit={() => act('hit')}
                 onStand={() => act('stand')}
                 onDouble={() => act('double')}
@@ -687,7 +708,7 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
         open={summaryOpen}
         lines={summaryLines}
         winnerId={duel?.winner}
-        pot={duel ? potOf(duel.config, state.seats.length) : undefined}
+        pot={duel ? (duel.pot ?? potOf(duel.config, state.seats.length)) : undefined}
         onAnother={nextHand}
         onClose={() => setSummaryOpen(false)}
       />

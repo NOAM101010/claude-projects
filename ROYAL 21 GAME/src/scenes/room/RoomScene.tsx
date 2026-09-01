@@ -103,7 +103,8 @@ export default function RoomScene() {
       // Prefer the host's full engine state; fall back to a fresh init. publish()
       // stashes the real shoe secret so the room scene can hydrate it on mount.
       const base = useRoom.getState().fullState ?? state ?? (await blackjackService.initIfEmpty(room.id));
-      const next = { ...base, duel: { config, scores: emptyScores(seatIds.length ? seatIds : [profile.id]), winner: null } };
+      const potPlayers = seatIds.length || 1;
+      const next = { ...base, duel: { config, scores: emptyScores(seatIds.length ? seatIds : [profile.id]), winner: null, pot: config.buyIn * potPlayers } };
       useRoom.setState({ fullState: next, state: redactBjState(next) });
       await blackjackService.publish(room.id, next);
     }

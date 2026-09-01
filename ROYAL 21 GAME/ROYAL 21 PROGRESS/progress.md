@@ -55,6 +55,14 @@
 - **auto-continue** (נדחה מ-Stage 1): host שולח `openBetting({deadline:null})` 7.5ש אחרי settle (אחרי סיום גלגל+reveal+credit של כל הלקוחות); ה-gate של "כולם הימרו" מזיין את החלון. `handleNewRound` גם עבר ל-`deadline:null`. כפתור "סיבוב חדש" נשאר כ-short-circuit.
 - אימות: tsc נקי · vite build נקי · test:all ירוק (roulette + minigames + engine 65) · i18n 869/869 · רגרסיית סולו רולטה: כל האפקטים החדשים `mode==='room'`/host-gated, מסלול הסולו לא נגע.
 
+### Stage 3 (Duel + הסרת "3 TO 2" + Double/Split) — מומש, **לא נבדק חי, לא נדחף**
+- **3a** — ה-betting UI נעקר מ-duel: ב-duel מרונדר כפתור "מוכן" יחיד (`readyUp` בלי bet), לא `BetRail`. `ready` reducer מקבל בדואל בלי `bet>0`. `deal` reducer — ענף duel: מושב לכל `ready` (לא-spectator), `newHand(0)`, ה-cash נשאר כשהיה.
+- **3b** — זרימת ז'יטונים חסינה: `duelConfirmed` ref (נדלק ברגע שרואים `state.duel`, לעולם לא מריץ per-hand `addChips`/`claimPayout` אחרי) + בדיקת `useRoom.getState().state?.duel` מה-store (לא closure). שדה `duel.pot` חדש (`types.ts`) שנקבע ב-`RoomScene.startGame` (`buyIn × מספר יושבים בזמן ה-start`) — `potOf` החי כ-fallback בלבד. `duelPaidOut` ref חוסם `refreshFromServer` ב-unmount אחרי תשלום pot. engine `leave` — force-resolve: `state.duel && !winner && <2 non-spectator` → הנותר מנצח ולוקח את הקופה.
+- **3c** — auto-deal יד הבאה בלי re-ready: `openBetting` בדואל מדליק `seat.ready=true` לכל היושבים → אפקט ה-auto-deal (Stage 1) חולק מיד. אפקט ה-auto-openBetting (Stage 1) מדלג כש-`state.duel.winner`. על `duelWinner` → pot + `SessionSummary`.
+- **3d** — הוסר "BLACKJACK PAYS 3 TO 2" + שורת הכללים מ-`BlackjackScene` (כל המצבים) ומ-`hub/hubObjects.tsx`. מפתח `blackjack.rules` נמחק (he+en). **מתמטיקת התשלום `bet + floor(bet*1.5)` ב-`engine.ts` לא נגעה** (engine.test 65/65).
+- **3e** — `ActionBar` קיבל prop `duel` → בדואל רק Hit/Stand (grid 2 עמודות). `canDouble`/`canSplit` מקבלים `!duel &&` בקריאה (לא קורסים).
+- אימות: tsc נקי · vite build נקי · test:all ירוק (engine 65, poker 44, minigames, roulette) · i18n he/en 868/868 · רגרסיית סולו+cash: `duel` undefined → כל המסלולים הישנים (BetRail, ActionBar 4-col, per-hand settle, activePlayers) לא נגעו.
+
 **מגבלה ידועה (1d, לא בסקופ):** קיפאון עם מוות-host עדיין ~5-25ש (`reassign_room_host` חלון 20ש stale). שיפור עתידי: לקצר `HOST_HEARTBEAT_MS` או ש-host מקודם יעשה abort+restart לסיבוב.
 
 ### הבא בתור: רה-ארכיטקטורה של המולטיפלייר — **תוכנית מלאה ומאושרת:**
