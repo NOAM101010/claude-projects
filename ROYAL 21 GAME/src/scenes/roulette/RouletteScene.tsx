@@ -29,6 +29,10 @@ interface Props { mode: 'solo' | 'room'; roomCode?: string }
 
 /** How long a new betting window stays open before the host's client auto-spins. */
 const BETTING_WINDOW_MS = 10_000;
+/* Head-start the host gives the published spin state to reach remote clients, so
+   every table starts its wheel at roughly the same wall-clock instant and the
+   number surfaces together (no host-first reveal). Solo play skips it. */
+const REVEAL_SYNC_MS = 500;
 
 const PAYTABLE_ROWS: { kind: RouletteBetKind; labelKey: string }[] = [
   { kind: 'straight', labelKey: 'roulette.betStraight' },
@@ -138,8 +142,18 @@ export default function RouletteScene({ mode, roomCode }: Props) {
     if (!state || state.phase !== 'settled' || state.winningNumber === null) return;
     if (spunRound.current === state.round) return;
     spunRound.current = state.round;
-    setWheelSpinning(true);
-    audio.play('coin');
+    // Align the wheel start to `state.spinAt` (set by the host when it applied
+    // the spin). The host sees `settled` first and waits out REVEAL_SYNC_MS; a
+    // remote client that got the frame late waits the remainder — so both wheels
+    // start, and land, at the same wall-clock moment. Solo runs the reducer
+    // locally with zero propagation, so it starts immediately as before.
+    const spinAt = state.spinAt ?? Date.now();
+    const startDelay = mode === 'solo' ? 0 : Math.max(0, REVEAL_SYNC_MS - (Date.now() - spinAt));
+    const timer = setTimeout(() => {
+      setWheelSpinning(true);
+      audio.play('coin');
+    }, startDelay);
+    return () => clearTimeout(timer);
   }, [state]);
 
   /* Betting window countdown. A fresh round in a multi-seat room gets a fixed

@@ -42,6 +42,10 @@ export interface RouletteState {
   lastBets: Record<string, RouletteBet[]>;
   /** Epoch ms when the betting window closes (multiplayer only). */
   deadline: number | null;
+  /** Epoch ms when the host applied the spin. Every client aligns its wheel
+   *  animation + reveal to this instant so the outcome surfaces at the same
+   *  wall-clock time for the host and remote players (no host-first leak). */
+  spinAt: number | null;
   /** Recent winning numbers, most recent first. */
   history: number[];
 }

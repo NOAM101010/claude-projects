@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { WHEEL_ORDER, isRed } from '@/games/roulette/engine';
 
@@ -29,6 +29,16 @@ interface Props {
 export function RouletteWheel({ spinning, winningNumber, onSettled, size = 300 }: Props) {
   const [rotation, setRotation] = useState(0);
   const [ballSpins, setBallSpins] = useState(0);
+  /* Fire onSettled once per spin — whichever comes first, the framer animation
+     finishing or the fallback timeout. The timeout alone drifted from the real
+     animation (reduced-motion / a stalled frame → wheel landed but reveal still
+     waited the full 4.2s, or vice versa). */
+  const settledRef = useRef(false);
+  const fireSettled = useCallback(() => {
+    if (settledRef.current) return;
+    settledRef.current = true;
+    onSettled?.();
+  }, [onSettled]);
   const cx = size / 2;
   const cy = size / 2;
   const rOuter = size / 2 - 6;
@@ -50,12 +60,14 @@ export function RouletteWheel({ spinning, winningNumber, onSettled, size = 300 }
 
   useEffect(() => {
     if (!spinning || winningNumber === null) return;
+    settledRef.current = false;
     const index = WHEEL_ORDER.indexOf(winningNumber);
     const settleAngle = -(index * STEP + STEP / 2);
     const extraTurns = 5 + Math.floor(Math.random() * 2);
     setRotation((prev) => prev - (prev % 360) + settleAngle - extraTurns * 360);
     setBallSpins((prev) => prev + (extraTurns + 3) * 360 * -1);
-    const timer = setTimeout(() => onSettled?.(), 4200);
+    // Fallback in case the framer completion event never lands (unmounted mid-spin, etc.).
+    const timer = setTimeout(fireSettled, 4500);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spinning, winningNumber]);
@@ -73,6 +85,7 @@ export function RouletteWheel({ spinning, winningNumber, onSettled, size = 300 }
         height={size}
         animate={{ rotate: rotation }}
         transition={{ duration: spinning ? 4 : 0, ease: [0.15, 0.65, 0.2, 1] }}
+        onAnimationComplete={() => { if (spinning) fireSettled(); }}
         style={{ display: 'block', filter: 'drop-shadow(var(--shadow-deep))' }}
       >
         <circle cx={cx} cy={cy} r={rOuter + 4} fill="#0e1014" stroke="rgba(227,178,60,.4)" strokeWidth="2" />

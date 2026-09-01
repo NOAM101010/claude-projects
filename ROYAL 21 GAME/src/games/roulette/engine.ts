@@ -39,7 +39,7 @@ export const PLAYER_COLORS = [
 export function createState(seed: number): RouletteState {
   return {
     version: 0, seed, cursor: 0, round: 0, phase: 'betting',
-    seats: [], winningNumber: null, lastBets: {}, deadline: null, history: [],
+    seats: [], winningNumber: null, lastBets: {}, deadline: null, spinAt: null, history: [],
   };
 }
 
@@ -173,6 +173,7 @@ export function reduce(prev: RouletteState, action: RouletteAction): RouletteSta
       state.round += 1;
       state.winningNumber = null;
       state.deadline = action.deadline ?? null;
+      state.spinAt = null;
       for (const seat of state.seats) {
         if (seat.bets.length) state.lastBets[seat.userId] = seat.bets;
         seat.bets = [];
@@ -208,6 +209,7 @@ export function reduce(prev: RouletteState, action: RouletteAction): RouletteSta
       if (!canSpin) return prev;
       if (!state.seats.some((s) => s.bets.length > 0)) return prev;
       state.phase = 'spinning';
+      state.spinAt = Date.now();
       state.winningNumber = spinWheel(state, action.nonce);
       settle(state);
       return state;
