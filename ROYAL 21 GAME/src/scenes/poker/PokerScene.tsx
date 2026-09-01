@@ -226,9 +226,13 @@ export default function PokerScene() {
     void jackpotService.addContribution('poker', state.bigBlind);
   }, [state?.handNumber, state?.street, state?.bigBlind, isHost]);
 
-  /* Once per finished hand: settle stats + rivalry from the shared result. */
+  /* Once per finished hand: settle stats + rivalry + the win/jackpot sting.
+     Gated on `!revealing` so none of it — least of all the `bigWin` sound or a
+     royal-flush jackpot claim — fires before this client's own board reveal has
+     run the river out. */
   useEffect(() => {
     if (!state || state.street !== 'waiting' || !state.lastResult || state.handNumber === 0) return;
+    if (revealing) return;
     if (state.handNumber === processedHand.current) return;
     processedHand.current = state.handNumber;
     const mine = state.lastResult.find((r) => r.userId === profile.id);
@@ -259,7 +263,7 @@ export default function PokerScene() {
     }
     else if (mine.net < 0) audio.play('lose');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state?.street, state?.handNumber]);
+  }, [state?.street, state?.handNumber, revealing]);
 
   /* Best-effort leave when the tab closes / navigates away. Same shape as
      cashOut so the seat's stack is credited back to profile.chips before

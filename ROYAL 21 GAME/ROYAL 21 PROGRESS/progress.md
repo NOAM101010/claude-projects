@@ -63,6 +63,13 @@
 - **3e** — `ActionBar` קיבל prop `duel` → בדואל רק Hit/Stand (grid 2 עמודות). `canDouble`/`canSplit` מקבלים `!duel &&` בקריאה (לא קורסים).
 - אימות: tsc נקי · vite build נקי · test:all ירוק (engine 65, poker 44, minigames, roulette) · i18n he/en 868/868 · רגרסיית סולו+cash: `duel` undefined → כל המסלולים הישנים (BetRail, ActionBar 4-col, per-hand settle, activePlayers) לא נגעו.
 
+### Stage 4 (Game Night + SnG all-in reveal) — מומש, **לא נבדק חי, לא נדחף** — השלב האחרון של ה-rework
+- **4a** — Game Night host-only pick: ה-picker גדור ל-`isHost` (non-host רואה "ממתינים למארח" + לוח). `activeMiniGame` הורחב לכל המשחקים (`{game, code, by}`), `setActiveMiniGame` reducer מקבל `userId` + `game:''` מנקה ל-null. `pickGame` (host): coinflip/highcard יוצר sub-room, השאר על קוד ה-night. אפקט auto-navigate בכל לקוח מושך את כולם פנימה (guard `sessionStorage['night-active']` per-tab נגד bounce-back בחזרה ללובי). ניקוי: host שחזר ללובי (marker תואם) → 2.5ש → clear; היוצר נעלם מ-members → clear מיידי.
+- **4b** — `useGhostSeatCleanup` ב-NightScene (כבר מ-Stage 1). `scoreboard()` — עוזב שומר נקודות/history, מסומן `left:true` (שם מעומעם + תג "עזב"). host עוזב → `reassign_room_host` מקדם, ה-host החדש מקבל picker (`isHost`). ניקוי `activeMiniGame` כשהיוצר עזב.
+- **4c** — SnG: אפקט ה-tournament-settle (+ צליל היד) גודר על `!revealing` (`if (... || revealing) return` + dep) — "ניצחת בטורניר" + `bigWin` כבר לא מקדימים את חשיפת הבורד ב-4-8ש. cash poker: אפקט ה-settle (stats + rivalry + `win`/`bigWin` + jackpot claim של royal flush) גודר על `!revealing` באותו דפוס.
+- אימות: tsc נקי · vite build נקי · test:all ירוק (65/44/minigames/roulette) · i18n he/en 870/870 · רגרסיית single-flow poker/SnG/night: `revealing` clears תמיד (הקוד הקיים של `usePokerReveal` + אפקטי ה-auto-start כבר תלויים בזה); solo night host — pick→auto-nav→play→return→clear עובד.
+- **מגבלה ידועה (Stage 4):** `activeMiniGame` stale מסשן שקרס — נוקה ע"י ה-host כשחוזר/כשהיוצר נעלם, אבל לקוח שנכנס טרי ל-`/night/CODE` עם pointer ישן+היוצר עדיין member עלול להישאב פנימה לרגע.
+
 **מגבלה ידועה (1d, לא בסקופ):** קיפאון עם מוות-host עדיין ~5-25ש (`reassign_room_host` חלון 20ש stale). שיפור עתידי: לקצר `HOST_HEARTBEAT_MS` או ש-host מקודם יעשה abort+restart לסיבוב.
 
 ### הבא בתור: רה-ארכיטקטורה של המולטיפלייר — **תוכנית מלאה ומאושרת:**

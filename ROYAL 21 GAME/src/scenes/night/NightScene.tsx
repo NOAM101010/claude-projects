@@ -66,28 +66,74 @@ export default function NightScene() {
   const [openingGame, setOpeningGame] = useState<string | null>(null);
   const friends = useSocial((s) => s.friends);
 
-  /* Coin flip / high card don't fit inside this room's own state (a different
-     game shape entirely) so they live in their own `rooms` row — but "up to 5
-     people, however many are here" only means anything if everyone lands on
-     the SAME row. Whoever clicks the tile first creates it and publishes the
-     code into this room's shared state; everyone after just joins that code. */
-  const openMultiplayerGame = async (game: 'coinflip' | 'highcard') => {
-    if (openingGame) return;
-    setOpeningGame(game);
+  /* Only the room host picks the next game, and the pick pulls EVERY player in
+     the room into it. The host publishes `activeMiniGame` (game + which room);
+     every client — host included — watches that field and auto-navigates in.
+     Coin flip / high card need their own `rooms` row (a different game shape);
+     everything else rides the night room's own code. */
+  const gameUrl = (amg: { game: string; code: string }): string | null => {
+    if (amg.game === 'coinflip' || amg.game === 'highcard') {
+      return `/game/${amg.game}/room/${amg.code}?night=${roomCode}`;
+    }
+    const def = GAMES.find((g) => g.key === amg.game);
+    return def ? def.to(roomCode) : null;
+  };
+
+  const pickGame = async (game: NightGame) => {
+    if (!isHost || openingGame) return;
+    audio.play('click');
+    setOpeningGame(game.key);
     try {
-      const existing = state?.activeMiniGame;
-      if (existing?.game === game) {
-        navigate(`/game/${game}/room/${existing.code}?night=${roomCode}`);
-        return;
+      let code = roomCode;
+      if (game.multiplayer) {
+        const existing = state?.activeMiniGame;
+        if (existing?.game === game.key && existing.code) {
+          code = existing.code;
+        } else {
+          const created = await (game.key === 'coinflip' ? createCoinflip(profile.id) : createHighcard(profile.id));
+          if (!created) { toast(t('errors.generic'), 'bad', '⚠'); return; }
+          code = created.code;
+        }
       }
-      const created = await (game === 'coinflip' ? createCoinflip(profile.id) : createHighcard(profile.id));
-      if (!created) { toast(t('errors.generic'), 'bad', '⚠'); return; }
-      await send(profile.id, { type: 'setActiveMiniGame', game, code: created.code });
-      navigate(`/game/${game}/room/${created.code}?night=${roomCode}`);
+      await send(profile.id, { type: 'setActiveMiniGame', userId: profile.id, game: game.key, code });
     } finally {
       setOpeningGame(null);
     }
   };
+
+  /* Auto-navigate every client into the game the host picked. `sessionStorage`
+     (per-tab) remembers the pointer we already acted on, so a player who
+     returns to the lobby while the pointer is still live isn't bounced back in. */
+  const handledMiniGame = useRef<string | null>(null);
+  useEffect(() => {
+    const amg = state?.activeMiniGame;
+    if (!amg?.game) return;
+    const key = `${amg.game}:${amg.code}`;
+    if (handledMiniGame.current === key || sessionStorage.getItem('night-active') === key) return;
+    handledMiniGame.current = key;
+    sessionStorage.setItem('night-active', key);
+    const url = gameUrl(amg);
+    if (url) { audio.play('door'); navigate(url); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state?.activeMiniGame?.game, state?.activeMiniGame?.code]);
+
+  /* Host clears a stale pointer: the picker has been through this game and is
+     back in the lobby (sessionStorage marker matches), or the player who picked
+     has dropped out of the room. */
+  useEffect(() => {
+    if (!isHost) return;
+    const amg = state?.activeMiniGame;
+    if (!amg?.game) return;
+    const key = `${amg.game}:${amg.code}`;
+    const creatorGone = amg.by ? !members.some((m) => m.userId === amg.by) : false;
+    if (!creatorGone && sessionStorage.getItem('night-active') !== key) return;
+    const timer = setTimeout(() => {
+      void send(profile.id, { type: 'setActiveMiniGame', userId: profile.id, game: '', code: '' });
+      sessionStorage.removeItem('night-active');
+    }, creatorGone ? 0 : 2500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHost, state?.activeMiniGame?.game, state?.activeMiniGame?.code, members.map((m) => m.userId).join('|')]);
 
   /* create or join, depending on how you arrived */
   /* StrictMode fires this effect twice on mount before either async call
@@ -269,8 +315,9 @@ export default function NightScene() {
                         id={`night-${row.userId}`}
                       />
                       <div className="flex-1 min-w-0">
-                        <b className="block text-[13px] truncate" style={{ fontFamily: 'var(--font-display)' }}>
+                        <b className="block text-[13px] truncate" style={{ fontFamily: 'var(--font-display)', opacity: row.left ? 0.55 : 1 }}>
                           {row.userId === profile.id ? t('night.you') : row.username}
+                          {row.left && <span className="text-[10px] font-normal" style={{ color: 'var(--dim)' }}> · {t('night.leftTag')}</span>}
                         </b>
                         <span className="block text-[10.5px]" style={{ color: 'var(--dim)' }}>
                           {t('night.line', { hands: row.hands, wins: row.wins })}
@@ -298,30 +345,34 @@ export default function NightScene() {
               <div className="flex flex-col gap-3">
                 <GlassPanel className="p-4">
                   <div className="eyebrow mb-3">{t('night.pickGame')}</div>
-                  <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(120px,1fr))' }}>
-                    {GAMES.map((game) => (
-                      <button
-                        key={game.key}
-                        className="flex flex-col items-center gap-1 px-2 py-3 rounded-[var(--r-xs)] press"
-                        style={{ background: 'var(--glass)', border: '1px solid var(--glass-line)' }}
-                        disabled={openingGame === game.key}
-                        onClick={() => {
-                          audio.play('click');
-                          if (game.multiplayer) void openMultiplayerGame(game.key as 'coinflip' | 'highcard');
-                          else navigate(game.to(roomCode));
-                        }}
-                      >
-                        <span className="text-[22px]">{game.icon}</span>
-                        <b className="text-[12px]">{t(game.labelKey)}</b>
-                        <span className="text-[9.5px]" style={{ color: game.scored ? 'var(--gold)' : 'var(--dim)' }}>
-                          {game.multiplayer ? t('night.upToFive') : game.scored ? t('night.scored') : t('night.justFun')}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                  <p className="mt-3 text-[11.5px] leading-snug" style={{ color: 'var(--dim)' }}>
-                    {t('night.scoredNote')}
-                  </p>
+                  {isHost ? (
+                    <>
+                      <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(120px,1fr))' }}>
+                        {GAMES.map((game) => (
+                          <button
+                            key={game.key}
+                            className="flex flex-col items-center gap-1 px-2 py-3 rounded-[var(--r-xs)] press"
+                            style={{ background: 'var(--glass)', border: '1px solid var(--glass-line)' }}
+                            disabled={openingGame === game.key}
+                            onClick={() => void pickGame(game)}
+                          >
+                            <span className="text-[22px]">{game.icon}</span>
+                            <b className="text-[12px]">{t(game.labelKey)}</b>
+                            <span className="text-[9.5px]" style={{ color: game.scored ? 'var(--gold)' : 'var(--dim)' }}>
+                              {game.multiplayer ? t('night.upToFive') : game.scored ? t('night.scored') : t('night.justFun')}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                      <p className="mt-3 text-[11.5px] leading-snug" style={{ color: 'var(--dim)' }}>
+                        {t('night.scoredNote')}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-[12.5px] py-4 text-center" style={{ color: 'var(--muted)' }}>
+                      {t('night.hostPicks')}
+                    </p>
+                  )}
                 </GlassPanel>
 
                 <GlassPanel gold className="p-4">

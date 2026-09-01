@@ -863,6 +863,8 @@
     "tonight": "King of the night",
     "scoreboard": "Scoreboard",
     "pickGame": "Pick the next game",
+    "hostPicks": "Waiting for the host to pick the next game…",
+    "leftTag": "left",
     "scored": "Scored",
     "justFun": "Just for fun",
     "upToFive": "Scored · up to 5 players",

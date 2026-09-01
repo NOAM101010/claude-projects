@@ -60,7 +60,7 @@ export interface BjState {
    *  and can't reuse this room's own code. Whoever clicks the tile first
    *  creates it and publishes the pointer here; everyone after joins the same
    *  table instead of each spinning up their own. */
-  activeMiniGame?: { game: string; code: string } | null;
+  activeMiniGame?: { game: string; code: string; by?: string } | null;
 }
 
 export type BjAction =
@@ -83,6 +83,9 @@ export type BjAction =
   /** A different table (slots, coin flip, high card, scratch) reporting a round's
    *  result into this night's shared scoreboard — no seat required. */
   | { type: 'reportResult'; userId: string; username: string; game: string; outcome: Outcome; net: number }
-  /** Publishes which room a night's mini-game currently lives in, so the next
-   *  person to click the tile joins the same table instead of creating a new one. */
-  | { type: 'setActiveMiniGame'; game: string; code: string };
+  /** Game Night: the host publishes which game (and which room) the group is
+   *  playing right now, so every client auto-navigates in. An empty `game`
+   *  clears the pointer (everyone's back in the lobby). `userId` is stamped by
+   *  the send() wrapper — it's who picked, so a stale pointer can be cleared
+   *  when they drop out of the room. */
+  | { type: 'setActiveMiniGame'; userId: string; game: string; code: string };

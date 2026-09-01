@@ -379,7 +379,9 @@ export function reduce(prev: BjState, action: BjAction): BjState {
       return state;
     }
     case 'setActiveMiniGame': {
-      state.activeMiniGame = { game: action.game, code: action.code };
+      state.activeMiniGame = action.game
+        ? { game: action.game, code: action.code, by: action.userId }
+        : null;
       return state;
     }
     default:

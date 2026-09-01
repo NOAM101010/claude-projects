@@ -155,16 +155,21 @@ export default function SitAndGoScene() {
      here since a Sit & Go's meaningful result is the tournament outcome, not the hand. */
   useEffect(() => {
     if (!state || state.street !== 'waiting' || !state.lastResult || state.handNumber === 0) return;
+    if (revealing) return; // wait for this client's own board reveal to finish
     if (state.handNumber === processedHand.current) return;
     processedHand.current = state.handNumber;
     const mine = state.lastResult.find((r) => r.userId === profile.id);
     if (mine?.net) audio.play(mine.net > 0 ? 'win' : 'lose');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state?.street, state?.handNumber]);
+  }, [state?.street, state?.handNumber, revealing]);
 
-  /* Settle the tournament itself, once. */
+  /* Settle the tournament itself, once — and only after this client's own
+     all-in board reveal has finished. `tournament.finished` arrives on the same
+     settled frame the reveal has only just begun, so without the `revealing`
+     gate the "you won the tournament" moment + bigWin sting landed 4-8s before
+     the last card hit the felt. */
   useEffect(() => {
-    if (!tournament?.finished || settledTournament.current) return;
+    if (!tournament?.finished || settledTournament.current || revealing) return;
     settledTournament.current = true;
     const iWon = tournament.winnerId === profile.id;
     const wasIn = tournament.eliminated.includes(profile.id) || iWon;
@@ -184,7 +189,7 @@ export default function SitAndGoScene() {
       recordResult('sng', 'lose', -tournament.buyIn, {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tournament?.finished]);
+  }, [tournament?.finished, revealing]);
 
   const link = useMemo(() => (room ? `${window.location.origin}/poker/sng/${room.code}` : ''), [room]);
   const copy = async (text: string) => {
