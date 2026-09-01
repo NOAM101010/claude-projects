@@ -15,6 +15,7 @@ import { useSocial } from '@/stores/useSocial';
 import { notificationService } from '@/services/notificationService';
 import { useUI } from '@/stores/useUI';
 import { useT } from '@/hooks/useT';
+import { useGhostSeatCleanup } from '@/hooks/useGhostSeatCleanup';
 import { isOnline } from '@/services/supabase';
 import { roomsService } from '@/services/roomsService';
 import { scoreboard, nightStarted, POINTS } from '@/games/night/night';
@@ -117,6 +118,11 @@ export default function NightScene() {
     void boot();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomCode]);
+
+  /* Host reconciles the shared blackjack table's seats against room membership
+     so a player who drops from the night doesn't strand a seat at the sub-table. */
+  useGhostSeatCleanup(isHost, state?.seats, members,
+    (userId) => void send(profile.id, { type: 'leave', userId }));
 
   const rows = useMemo(() => scoreboard(state, members), [state, members]);
 

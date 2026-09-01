@@ -18,6 +18,7 @@ import { useCoinflipRoom } from '@/stores/useCoinflipRoom';
 import { notificationService } from '@/services/notificationService';
 import { presenceService, type RoomPresenceMeta } from '@/services/presenceService';
 import { useT } from '@/hooks/useT';
+import { useGhostSeatCleanup } from '@/hooks/useGhostSeatCleanup';
 import { useNightReturn } from '@/hooks/useNightReturn';
 import { useNightScoring } from '@/hooks/useNightScoring';
 import { isOnline } from '@/services/supabase';
@@ -304,6 +305,67 @@ function CoinFlipRoom({ roomCode }: { roomCode: string }) {
   const mySeat = state?.seats.find((s) => s.userId === profile.id);
   const joinRetryRef = useRef<NodeJS.Timeout | null>(null);
 
+  /* Host removes any seat whose player dropped out of room membership. */
+  useGhostSeatCleanup(isHost, state?.seats, members ?? [],
+    (userId) => void send(profile.id, { type: 'leave', userId }));
+
+  /* Auto-run the flip once every seated player has picked a side + staked
+     (stake > 0 is the implicit "ready"). Host-only, guarded per round, delayed
+     so a late pick sync doesn't trigger a premature flip. */
+  const autoFlippedRound = useRef(-1);
+  useEffect(() => {
+    if (!isHost || !state || state.phase !== 'betting') return;
+    if (state.seats.length < 2 || !state.seats.every((s) => s.stake > 0)) return;
+    if (autoFlippedRound.current === state.round) return;
+    const timer = setTimeout(() => {
+      autoFlippedRound.current = state.round;
+      void send(profile.id, { type: 'flip', nonce: newSeed() });
+    }, 2500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHost, state?.phase, state?.round, state?.seats.map((s) => `${s.userId}:${s.stake}`).join('|')]);
+
+  /* Auto-open the next betting window a beat after a round settles, clearing
+     every pick. Host-only, guarded per round. */
+  const autoOpenedRound = useRef(-1);
+  useEffect(() => {
+    if (!isHost || !state || state.phase !== 'settled') return;
+    if (autoOpenedRound.current === state.round) return;
+    autoOpenedRound.current = state.round;
+    const timer = setTimeout(() => {
+      if (useCoinflipRoom.getState().state?.phase === 'settled') void send(profile.id, { type: 'openBetting' });
+    }, 3200);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHost, state?.phase, state?.round]);
+
+  /* Best-effort leave on tab close + refund a staked pick on any exit before
+     the round settles. Mirrors the Blackjack table's leaveCleanup pattern. */
+  useEffect(() => {
+    if (!room || !mySeat) return;
+    const bail = () => { void send(profile.id, { type: 'leave', userId: profile.id }); };
+    window.addEventListener('pagehide', bail);
+    return () => window.removeEventListener('pagehide', bail);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room?.id, Boolean(mySeat), profile.id]);
+
+  const leaveCleanup = useRef<() => void>(() => {});
+  leaveCleanup.current = () => {
+    const st = useCoinflipRoom.getState().state;
+    if (st && st.phase !== 'settled') {
+      const r = st.round;
+      const out = roundOutlay.current.round === r ? roundOutlay.current.amount : 0;
+      const back = clearRefunded.current.round === r ? clearRefunded.current.amount : 0;
+      const refund = out - back;
+      if (refund > 0) addChips(refund, { silent: true });
+    }
+    roundOutlay.current = { round: -1, amount: 0 };
+    clearRefunded.current = { round: -1, amount: 0 };
+    void leave(profile.id);
+    if (isOnline()) void usePlayer.getState().refreshFromServer();
+  };
+  useEffect(() => () => leaveCleanup.current(), []);
+
   /* Take a seat once the table exists, with retry for race condition */
   useEffect(() => {
     if (!state || mySeat) {
@@ -565,6 +627,8 @@ function CoinFlipRoom({ roomCode }: { roomCode: string }) {
               {!isHost && <p className="text-center mt-2 text-[12px]" style={{ color: 'var(--muted)' }}>{t('duel.waitingHost')}</p>}
               {isHost && picked.length < 2 && <p className="text-center mt-2 text-[12px]" style={{ color: 'var(--dim)' }}>{t('roulette.needPlayers')}</p>}
             </>
+          ) : phase === 'waiting' ? (
+            <p className="text-center text-[13px]" style={{ color: 'var(--muted)' }}>{t('rooms.waitingForPlayers')}</p>
           ) : (
             <GameButton tone="gold" block disabled={flipping || !isHost} onClick={handleNewRound}>{t('roulette.newRound')}</GameButton>
           )}
@@ -572,7 +636,7 @@ function CoinFlipRoom({ roomCode }: { roomCode: string }) {
 
         <div className="flex gap-2">
           <GameButton tone="ghost" size="sm" onClick={() => setPayTableOpen(true)}>{t('games.paytable')}</GameButton>
-          <GameButton tone="ghost" size="sm" onClick={async () => { await leave(profile.id); navigate(nightReturn ?? '/hub'); }}>
+          <GameButton tone="ghost" size="sm" onClick={() => navigate(nightReturn ?? '/hub')}>
             {nightReturn ? t('night.backToNight') : t('common.back')}
           </GameButton>
         </div>

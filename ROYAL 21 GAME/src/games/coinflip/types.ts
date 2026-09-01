@@ -3,7 +3,9 @@ import type { AvatarConfig } from '@/types';
 export const MAX_SEATS = 5;
 
 export type CfSide = 'heads' | 'tails';
-export type CfPhase = 'betting' | 'settled';
+/** `waiting` — fewer than 2 seated players; the table parks here until another
+ *  joins. Solo never uses it. */
+export type CfPhase = 'waiting' | 'betting' | 'settled';
 
 export interface CfSeat {
   userId: string;

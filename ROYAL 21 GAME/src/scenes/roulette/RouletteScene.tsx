@@ -16,6 +16,7 @@ import { useRouletteRoom } from '@/stores/useRouletteRoom';
 import { usePlayer } from '@/stores/usePlayer';
 import { useUI } from '@/stores/useUI';
 import { useT } from '@/hooks/useT';
+import { useGhostSeatCleanup } from '@/hooks/useGhostSeatCleanup';
 import { isOnline } from '@/services/supabase';
 import { roomsService } from '@/services/roomsService';
 import { presenceService } from '@/services/presenceService';
@@ -137,6 +138,41 @@ export default function RouletteScene({ mode, roomCode }: Props) {
     return conn.unsubscribe;
   }, [mode, room?.id, profile.id, profile.username, mySeat?.spectator]);
 
+  /* Host removes any seat whose player dropped out of room membership. */
+  useGhostSeatCleanup(mode === 'room' && isHost, state?.seats, members ?? [],
+    (userId) => void send(profile.id, { type: 'leave', userId }));
+
+  /* Best-effort leave on tab close + refund on any exit mid-round. Mirrors the
+     Blackjack table's leaveCleanup pattern: a bet only ever *staged* this round
+     (outlay minus whatever a clear already handed back) is refunded when the
+     player walks away before the wheel settles; a settled round is left alone
+     (the settle handler already reconciled it). */
+  useEffect(() => {
+    if (mode !== 'room' || !room || !mySeat) return;
+    const bail = () => { void send(profile.id, { type: 'leave', userId: profile.id }); };
+    window.addEventListener('pagehide', bail);
+    return () => window.removeEventListener('pagehide', bail);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room?.id, Boolean(mySeat), mode, profile.id]);
+
+  const leaveCleanup = useRef<() => void>(() => {});
+  leaveCleanup.current = () => {
+    if (mode !== 'room') return;
+    const st = useRouletteRoom.getState().state;
+    if (st && st.phase !== 'settled') {
+      const r = st.round;
+      const out = roundOutlay.current.round === r ? roundOutlay.current.amount : 0;
+      const back = clearRefunded.current.round === r ? clearRefunded.current.amount : 0;
+      const refund = out - back;
+      if (refund > 0) addChips(refund, { silent: true });
+    }
+    roundOutlay.current = { round: -1, amount: 0 };
+    clearRefunded.current = { round: -1, amount: 0 };
+    void leave(profile.id);
+    if (isOnline()) void usePlayer.getState().refreshFromServer();
+  };
+  useEffect(() => () => leaveCleanup.current(), []);
+
   /* A settled round: spin the wheel locally to the number the engine already picked. */
   useEffect(() => {
     if (!state || state.phase !== 'settled' || state.winningNumber === null) return;
@@ -198,8 +234,12 @@ export default function RouletteScene({ mode, roomCode }: Props) {
     if (mode !== 'room' || !isHost || !state) return;
     if (state.phase !== 'betting' || realPlayerCount <= 1) return;
     const hasBets = state.seats.some((s) => s.bets.length > 0);
+    // "All ready" gate: the last-chance betting window only arms once every
+    // seated (non-spectator) player has at least one bet down. Until then the
+    // round waits — the host can still short-circuit with "spin now".
+    const allBetIn = state.seats.filter((s) => !s.spectator).every((s) => s.bets.length > 0);
     if (!state.deadline) {
-      if (armedRound.current === state.round) return;
+      if (!allBetIn || armedRound.current === state.round) return;
       armedRound.current = state.round;
       void send(profile.id, { type: 'armWindow', deadline: Date.now() + BETTING_WINDOW_MS });
       return;
@@ -513,6 +553,12 @@ export default function RouletteScene({ mode, roomCode }: Props) {
           </AnimatePresence>
         </motion.div>
 
+        {phase === 'waiting' && (
+          <GlassPanel className="p-4 w-full text-center">
+            <p className="text-[13px]" style={{ color: 'var(--muted)' }}>{t('rooms.waitingForPlayers')}</p>
+          </GlassPanel>
+        )}
+
         {/* controls */}
         <GlassPanel className="p-3 w-full">
           <div className="flex items-center justify-between mb-2">
@@ -542,7 +588,7 @@ export default function RouletteScene({ mode, roomCode }: Props) {
                 block
                 disabled={
                   mode === 'room'
-                    ? (realPlayerCount > 1 || phase === 'locked' || bettingWindowOpen || !anyBets)
+                    ? (!isHost || phase === 'locked' || !anyBets)
                     : !anyBets
                 }
                 onClick={handleSpin}
@@ -599,7 +645,7 @@ export default function RouletteScene({ mode, roomCode }: Props) {
 
         <div className="flex gap-2">
           <GameButton tone="ghost" size="sm" onClick={() => setPayTableOpen(true)}>{t('games.paytable')}</GameButton>
-          <GameButton tone="ghost" size="sm" onClick={async () => { if (mode === 'room') await leave(profile.id); navigate('/hub'); }}>
+          <GameButton tone="ghost" size="sm" onClick={() => navigate('/hub')}>
             {t('common.back')}
           </GameButton>
         </div>

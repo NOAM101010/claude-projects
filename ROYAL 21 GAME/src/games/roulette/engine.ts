@@ -3,6 +3,18 @@ import type { AvatarConfig } from '@/types';
 import type { RouletteAction, RouletteBet, RouletteBetKind, RouletteSeat, RouletteState } from './types';
 
 export const MAX_SEATS = 5;
+/** A room round needs at least this many seated players. */
+export const MIN_PLAYERS = 2;
+
+/** Wipe every seat's round state — used when a round is aborted or reopened. */
+function resetSeatsForNewRound(state: RouletteState) {
+  for (const seat of state.seats) {
+    seat.bets = [];
+    seat.ready = false;
+    seat.spectator = false;
+    seat.net = 0;
+  }
+}
 
 /** European single-zero wheel, in physical pocket order (not numeric order). */
 export const WHEEL_ORDER = [
@@ -129,12 +141,43 @@ export function reduce(prev: RouletteState, action: RouletteAction): RouletteSta
       const used = new Set(state.seats.map((s) => s.color));
       const color = (PLAYER_COLORS.find((c) => !used.has(c.hex)) ?? PLAYER_COLORS[0]).hex;
       const seat = makeSeat(action.userId, action.username, action.avatar, action.level, color);
-      seat.spectator = state.phase !== 'betting';
+      seat.spectator = state.phase !== 'betting' && state.phase !== 'waiting';
       state.seats.push(seat);
+      // A join that brings a parked table back up to strength opens a fresh
+      // betting round for everyone.
+      if (state.phase === 'waiting' && state.seats.length >= MIN_PLAYERS) {
+        state.phase = 'betting';
+        state.round += 1;
+        state.deadline = null;
+        state.spinAt = null;
+        state.winningNumber = null;
+        resetSeatsForNewRound(state);
+      }
       return state;
     }
     case 'leave': {
+      const wasMidRound = state.phase !== 'betting' && state.phase !== 'waiting';
       state.seats = state.seats.filter((s) => s.userId !== action.userId);
+      if (state.seats.length < MIN_PLAYERS) {
+        // Not enough players left to run a round — park the table; the scene
+        // shows a "waiting for players" panel until someone else joins.
+        state.phase = 'waiting';
+        state.deadline = null;
+        state.spinAt = null;
+        state.winningNumber = null;
+        resetSeatsForNewRound(state);
+        return state;
+      }
+      if (wasMidRound) {
+        // Enough players remain — abort the round the leaver walked out of and
+        // deal a clean one rather than settling around the empty seat.
+        state.phase = 'betting';
+        state.round += 1;
+        state.deadline = null;
+        state.spinAt = null;
+        state.winningNumber = null;
+        resetSeatsForNewRound(state);
+      }
       return state;
     }
     case 'placeBet': {
@@ -168,7 +211,7 @@ export function reduce(prev: RouletteState, action: RouletteAction): RouletteSta
       // seat's placed bets — chips deducted client-side, no winnings,
       // no refund. Silently dropping the intent leaves the bettors' round
       // intact.
-      if (state.phase !== 'settled' && state.phase !== 'locked') return prev;
+      if (state.phase !== 'settled' && state.phase !== 'locked' && state.phase !== 'waiting') return prev;
       state.phase = 'betting';
       state.round += 1;
       state.winningNumber = null;

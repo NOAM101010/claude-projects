@@ -13,7 +13,9 @@ export interface RouletteBet {
   amount: number;
 }
 
-export type RoulettePhase = 'betting' | 'locked' | 'spinning' | 'settled';
+/** `waiting` — fewer than the 2 players a room round needs; the table parks
+ *  here until someone joins, then flips to `betting`. Solo never uses it. */
+export type RoulettePhase = 'waiting' | 'betting' | 'locked' | 'spinning' | 'settled';
 
 export interface RouletteSeat {
   userId: string;

@@ -7,6 +7,18 @@ import { MAX_SEATS } from './types';
 
 export { MAX_SEATS };
 
+/** A room round needs at least this many seated players. */
+export const MIN_PLAYERS = 2;
+
+function resetSeatsForNewRound(state: HcState) {
+  for (const seat of state.seats) {
+    seat.stake = 0;
+    seat.card = null;
+    seat.contending = false;
+    seat.net = 0;
+  }
+}
+
 export function createState(seed: number): HcState {
   return { version: 0, seed, cursor: 0, round: 0, phase: 'betting', seats: [], pot: 0, warRound: 0, winners: [], deadline: null };
 }
@@ -50,10 +62,35 @@ export function reduce(prev: HcState, action: HcAction): HcState {
       const used = new Set(state.seats.map((s) => s.color));
       const color = (PLAYER_COLORS.find((c) => !used.has(c.hex)) ?? PLAYER_COLORS[0]).hex;
       state.seats.push(makeSeat(action.userId, action.username, action.avatar, action.level, color));
+      if (state.phase === 'waiting' && state.seats.length >= MIN_PLAYERS) {
+        state.phase = 'betting';
+        state.round += 1;
+        state.pot = 0;
+        state.warRound = 0;
+        state.winners = [];
+        resetSeatsForNewRound(state);
+      }
       return state;
     }
     case 'leave': {
+      const wasMidRound = state.phase !== 'betting' && state.phase !== 'waiting';
       state.seats = state.seats.filter((s) => s.userId !== action.userId);
+      if (state.seats.length < MIN_PLAYERS) {
+        state.phase = 'waiting';
+        state.pot = 0;
+        state.warRound = 0;
+        state.winners = [];
+        resetSeatsForNewRound(state);
+        return state;
+      }
+      if (wasMidRound) {
+        state.phase = 'betting';
+        state.round += 1;
+        state.pot = 0;
+        state.warRound = 0;
+        state.winners = [];
+        resetSeatsForNewRound(state);
+      }
       return state;
     }
     case 'ante': {
@@ -69,6 +106,7 @@ export function reduce(prev: HcState, action: HcAction): HcState {
       return state;
     }
     case 'openBetting': {
+      if (state.phase !== 'settled' && state.phase !== 'waiting') return prev;
       state.phase = 'betting';
       state.round += 1;
       state.pot = 0;

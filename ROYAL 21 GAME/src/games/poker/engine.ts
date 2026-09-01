@@ -123,7 +123,6 @@ function makeSeat(userId: string, username: string, avatar: AvatarConfig, level:
     hole: [], folded: false, allIn: false, sittingOut: false,
     committed: 0, totalCommitted: 0, hasActed: false, lastAction: null, disconnected: false,
     timeBanksLeft: TIME_BANKS_PER_PLAYER,
-    ready: false,
   };
 }
 
@@ -365,7 +364,6 @@ function startHand(state: PokerState) {
     seat.totalCommitted = 0;
     seat.hasActed = false;
     seat.lastAction = null;
-    seat.ready = false;
   }
   for (const seat of eligible) seat.folded = false;
 
@@ -530,16 +528,6 @@ export function reduce(prev: PokerState, action: PokerAction): PokerState {
       const seat = seatOf(state, action.userId);
       if (!seat || seat.stack <= 0) return prev;
       seat.sittingOut = false;
-      return state;
-    }
-    case 'setReady': {
-      const seat = seatOf(state, action.userId);
-      if (!seat) return prev;
-      // Ready flag only means anything between hands. Ignoring the toggle mid-hand
-      // stops a stray click during play from silently arming an auto-start behind
-      // the scenes for the next round.
-      if (state.street !== 'waiting') return prev;
-      seat.ready = action.ready;
       return state;
     }
     case 'startHand': {

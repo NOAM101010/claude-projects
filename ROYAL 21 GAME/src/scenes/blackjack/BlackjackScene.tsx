@@ -27,6 +27,7 @@ import { useUI } from '@/stores/useUI';
 import { useT } from '@/hooks/useT';
 import { useIsCompact } from '@/hooks/useMediaQuery';
 import { useNightReturn } from '@/hooks/useNightReturn';
+import { useGhostSeatCleanup } from '@/hooks/useGhostSeatCleanup';
 import { audio } from '@/audio/AudioManager';
 import { haptic } from '@/lib/haptics';
 import { fmt } from '@/lib/format';
@@ -61,8 +62,8 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
   const [victory, setVictory] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [emotes, setEmotes] = useState<Record<string, { emote?: string; message?: string }>>({});
-  const [countdown, setCountdown] = useState<number | null>(null);
   const settledRound = useRef(-1);
+  const autoOpenedRound = useRef(-1);
   const netRef = useRef<Record<string, number>>({});
   const [spectators, setSpectators] = useState<string[]>([]);
 
@@ -143,41 +144,51 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room?.id, Boolean(mySeat), solo, profile.id]);
 
-  /* Ghost cleanup: when a player closes their tab without cashing out, they're
-     removed from room_members but their seat stays in game state. If it was
-     their turn to act, the table freezes forever. Host reconciles by
-     dispatching a leave for anyone missing from members. Same pattern the
-     poker table uses. */
-  useEffect(() => {
-    if (!isHost || solo || !state || members.length === 0) return;
-    const present = new Set(members.map((m) => m.userId));
-    const ghosts = state.seats.filter((s) => !present.has(s.userId));
-    for (const ghost of ghosts) {
-      void send(profile.id, { type: 'leave', userId: ghost.userId });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isHost, solo, members.map((m) => m.userId).sort().join('|'), state?.seats.map((s) => s.userId).sort().join('|')]);
+  /* Ghost cleanup: host removes any seat whose player dropped out of room
+     membership so a stranded seat can't freeze the table. Shared hook. */
+  useGhostSeatCleanup(isHost && !solo, state?.seats, members,
+    (userId) => void send(profile.id, { type: 'leave', userId }));
 
   /* Best-effort leave on tab close is already registered via pagehide above —
      don't also register beforeunload, or every desktop close dispatches leave
      twice, wasting the client's last rate-limit token. */
 
-  /* Multiplayer betting window: the host starts the clock once anyone is ready.
-     Was firing openBetting to stamp the deadline, which the reducer treats as
-     "reset the whole round" — wiping every seat's bet + ready. setDeadline is
-     the cheap variant that only writes state.deadline. */
+  /* Multiplayer hand start: the host deals the instant every seat with a bet
+     down has readied (and at least one has). There is no countdown any more —
+     the "all ready" gate IS the wait. A seat with no bet is dealt out as a
+     spectator by the deal reducer, exactly as before. */
   useEffect(() => {
-    if (!state || solo || state.phase !== 'betting') { setCountdown(null); return; }
-    if (!state.seats.some((seat) => seat.ready)) { setCountdown(null); return; }
-    const deadline = state.deadline ?? Date.now() + 15000;
-    if (isHost && !state.deadline) void send(profile.id, { type: 'setDeadline', deadline } as never);
-    const timer = setInterval(() => {
-      const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
-      setCountdown(left);
-      if (left === 0 && isHost && state.phase === 'betting') void send(profile.id, { type: 'deal' });
-    }, 250);
-    return () => clearInterval(timer);
-  }, [state, solo, isHost, send, profile.id]);
+    if (!state || solo || !isHost || state.phase !== 'betting') return;
+    // Duel: every non-spectator seat must be ready (a duel seat can't ready
+    // without a bet anyway, so this waits for BOTH players). Cash: just the
+    // seats that actually put a bet down — a lurker who never bets is dealt
+    // out as a spectator, same as before.
+    const inDuel = Boolean(state.duel);
+    const gate = inDuel
+      ? state.seats.filter((seat) => !seat.spectator)
+      : state.seats.filter((seat) => seat.bet > 0);
+    if (gate.length < (inDuel ? 2 : 1) || !gate.every((seat) => seat.ready)) return;
+    void send(profile.id, { type: 'deal' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state?.phase, solo, isHost, Boolean(state?.duel),
+      state?.seats.map((s) => `${s.userId}:${s.bet}:${s.ready}:${s.spectator}`).join('|')]);
+
+  /* After a hand settles the host auto-opens the next betting window (which
+     clears every ready flag), so players just ready up again — no manual "new
+     round" click. Mirrors the Sit & Go auto-continue. */
+  useEffect(() => {
+    if (!state || solo || !isHost || state.phase !== 'settled') return;
+    if (autoOpenedRound.current === state.round) return;
+    autoOpenedRound.current = state.round;
+    const timer = setTimeout(() => {
+      if (useRoom.getState().state?.phase === 'settled') {
+        settledRound.current = -1;
+        void send(profile.id, { type: 'openBetting' });
+      }
+    }, 3200);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state?.phase, state?.round, solo, isHost]);
 
   /* ------------------------------------------------------ dealer moods --- */
   useEffect(() => {
@@ -614,7 +625,6 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
                 ready={mySeat.ready}
                 multiplayer={!solo}
                 chipSkin={profile.equipped.chipSkin}
-                countdown={countdown}
                 vip={isVipEligible(profile)}
                 onAdd={addBet}
                 onClear={clearBet}

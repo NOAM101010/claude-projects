@@ -13,6 +13,7 @@ import { useUI } from '@/stores/useUI';
 import { notificationService } from '@/services/notificationService';
 import { presenceService, type RoomPresenceMeta } from '@/services/presenceService';
 import { useT } from '@/hooks/useT';
+import { useGhostSeatCleanup } from '@/hooks/useGhostSeatCleanup';
 import { isOnline } from '@/services/supabase';
 import { roomsService } from '@/services/roomsService';
 import { audio } from '@/audio/AudioManager';
@@ -130,18 +131,10 @@ export default function SitAndGoScene() {
 
   const { displayCommunity, displayShowdown, liveEquity, revealing } = usePokerReveal(state);
 
-  /* Ghost cleanup: a player who closes their tab without cashing out leaves
-     their seat behind in game state, freezing the table if it was their turn.
-     Host reconciles by dispatching leave for any seat missing from members. */
-  useEffect(() => {
-    if (!isHost || !state || members.length === 0) return;
-    const present = new Set(members.map((m) => m.userId));
-    const ghosts = state.seats.filter((s) => !present.has(s.userId));
-    for (const ghost of ghosts) {
-      void send(profile.id, { type: 'leave', userId: ghost.userId });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isHost, members.map((m) => m.userId).sort().join('|'), state?.seats.map((s) => s.userId).sort().join('|')]);
+  /* Ghost cleanup: host removes any seat whose player dropped out of room
+     membership so a stranded seat can't freeze the table. Shared hook. */
+  useGhostSeatCleanup(isHost, state?.seats, members,
+    (userId) => void send(profile.id, { type: 'leave', userId }));
 
   /* The host keeps the tournament moving on its own — a turbo Sit & Go doesn't wait
      for anyone to click "next hand". `state.street` flips to 'waiting' the instant

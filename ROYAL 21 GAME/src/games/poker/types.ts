@@ -31,10 +31,6 @@ export interface PokerSeat {
   disconnected: boolean;
   /** Extra 60s extensions left on the decision clock. Two per player, never replenished. */
   timeBanksLeft: number;
-  /** Cash-game: the seat has pressed "Ready" for the next hand. When every
-   *  non-sitting-out seat is ready, the host auto-fires startHand so the table
-   *  doesn't wait on a single click. Reset to false at the top of every hand. */
-  ready: boolean;
 }
 
 export interface PotShare {
@@ -110,7 +106,6 @@ export type PokerAction =
   | { type: 'topUp'; userId: string; amount: number }
   | { type: 'sitOut'; userId: string }
   | { type: 'sitIn'; userId: string }
-  | { type: 'setReady'; userId: string; ready: boolean }
   | { type: 'startHand' }
   | { type: 'fold'; userId: string }
   | { type: 'check'; userId: string }

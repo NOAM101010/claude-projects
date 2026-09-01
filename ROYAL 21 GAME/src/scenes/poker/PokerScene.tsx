@@ -16,6 +16,7 @@ import { useUI } from '@/stores/useUI';
 import { notificationService } from '@/services/notificationService';
 import { presenceService, type RoomPresenceMeta } from '@/services/presenceService';
 import { useT } from '@/hooks/useT';
+import { useGhostSeatCleanup } from '@/hooks/useGhostSeatCleanup';
 import { isOnline } from '@/services/supabase';
 import { roomsService } from '@/services/roomsService';
 import { audio } from '@/audio/AudioManager';
@@ -293,27 +294,23 @@ export default function PokerScene() {
      reducer already handles (removes the seat, finishes uncontested if
      everyone else has folded, etc). Only the host runs this so two clients
      don't race the same cleanup. */
-  useEffect(() => {
-    if (!isHost || !state || members.length === 0) return;
-    const present = new Set(members.map((m) => m.userId));
-    const ghosts = state.seats.filter((s) => !present.has(s.userId));
-    for (const ghost of ghosts) {
-      void send(profile.id, { type: 'leave', userId: ghost.userId });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isHost, members.map((m) => m.userId).sort().join('|'), state?.seats.map((s) => s.userId).sort().join('|')]);
+  useGhostSeatCleanup(isHost, state?.seats, members,
+    (userId) => void send(profile.id, { type: 'leave', userId }));
 
-  /* Auto-start the next hand the instant every seated player has hit "Ready" —
-     no host click, no wait. Guarded by isHost so only one client actually
-     dispatches, and by street==='waiting' so it can't fire in the middle of
-     a hand from a stale ready flag. */
+  /* Auto-start the next hand like a real poker room: ≥2 players with chips at
+     the table → the host deals the next hand on its own a couple of seconds
+     after the previous one wraps. No "ready", no click. Gated on !revealing so
+     it never wipes the board mid all-in runout (same as the Sit & Go). The
+     manual host "start hand" button stays as a fallback. */
   useEffect(() => {
-    if (!isHost || !state || state.street !== 'waiting') return;
-    const seated = state.seats.filter((s) => !s.sittingOut);
-    if (seated.length < 2 || !seated.every((s) => s.ready)) return;
-    void send(profile.id, { type: 'startHand' });
+    if (!isHost || !state || state.street !== 'waiting' || revealing) return;
+    const eligible = state.seats.filter((s) => !s.sittingOut && s.stack > 0);
+    if (eligible.length < 2) return;
+    const timer = setTimeout(() => void send(profile.id, { type: 'startHand' }), 2500);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isHost, state?.street, state?.seats.map((s) => `${s.userId}:${s.ready}:${s.sittingOut}`).join('|')]);
+  }, [isHost, state?.street, state?.handNumber, revealing,
+      state?.seats.map((s) => `${s.userId}:${s.sittingOut}:${s.stack > 0}`).join('|')]);
 
   const link = useMemo(() => (room ? `${window.location.origin}/poker/${room.code}` : ''), [room]);
   const copy = async (text: string) => {
@@ -441,8 +438,7 @@ export default function PokerScene() {
 
   const seatedPlayers = state.seats.filter((s) => !s.sittingOut);
   const seatedCount = seatedPlayers.length;
-  const canStart = state.street === 'waiting' && seatedCount >= 2;
-  const allReady = canStart && seatedPlayers.every((s) => s.ready);
+  const canStart = state.street === 'waiting' && seatedPlayers.filter((s) => s.stack > 0).length >= 2;
   const recommendedBuyIn = buyInFor(state.bigBlind);
 
   return (
@@ -603,20 +599,9 @@ export default function PokerScene() {
         {state.street === 'waiting' ? (
           <GlassPanel className="p-3.5 flex items-center justify-between gap-3 flex-wrap">
             <span className="text-[13px]" style={{ color: 'var(--muted)' }}>
-              {allReady ? t('poker.everyoneReady')
-                : canStart ? t('poker.waitingReady', { count: seatedPlayers.filter((s) => s.ready).length, total: seatedCount })
-                : t('poker.needPlayers')} · {seatedCount}/{MAX_SEATS}
+              {canStart ? t('poker.everyoneReady') : t('poker.needPlayers')} · {seatedCount}/{MAX_SEATS}
             </span>
             <div className="flex gap-2 flex-wrap">
-              {mySeat && !mySeat.sittingOut && (
-                <GameButton
-                  size="sm"
-                  tone={mySeat.ready ? 'jade' : 'metal'}
-                  onClick={() => void send(profile.id, { type: 'setReady', userId: profile.id, ready: !mySeat.ready })}
-                >
-                  {mySeat.ready ? `✓ ${t('poker.ready')}` : t('poker.pressReady')}
-                </GameButton>
-              )}
               {isHost && (
                 <GameButton tone="gold" disabled={!canStart} onClick={() => void send(profile.id, { type: 'startHand' })}>
                   {t('poker.startHand')}

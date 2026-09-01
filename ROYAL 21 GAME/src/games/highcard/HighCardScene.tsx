@@ -20,6 +20,7 @@ import { useHighcardRoom } from '@/stores/useHighcardRoom';
 import { notificationService } from '@/services/notificationService';
 import { presenceService, type RoomPresenceMeta } from '@/services/presenceService';
 import { useT } from '@/hooks/useT';
+import { useGhostSeatCleanup } from '@/hooks/useGhostSeatCleanup';
 import { useNightReturn } from '@/hooks/useNightReturn';
 import { useNightScoring } from '@/hooks/useNightScoring';
 import { isOnline } from '@/services/supabase';
@@ -325,6 +326,81 @@ function HighCardRoom({ roomCode }: { roomCode: string }) {
   const mySeat = state?.seats.find((s) => s.userId === profile.id);
   const joinRetryRef = useRef<NodeJS.Timeout | null>(null);
 
+  /* Host removes any seat whose player dropped out of room membership. */
+  useGhostSeatCleanup(isHost, state?.seats, members ?? [],
+    (userId) => void send(profile.id, { type: 'leave', userId }));
+
+  /* Auto-run the draw once every seated player has anted (stake > 0 is the
+     implicit "ready"). Host-only, guarded per round, short delay so a late
+     ante sync doesn't trigger a premature draw. */
+  const autoDrewRound = useRef(-1);
+  useEffect(() => {
+    if (!isHost || !state || state.phase !== 'betting') return;
+    if (state.seats.length < 2 || !state.seats.every((s) => s.stake > 0)) return;
+    if (autoDrewRound.current === state.round) return;
+    const timer = setTimeout(() => {
+      autoDrewRound.current = state.round;
+      void send(profile.id, { type: 'draw', nonce: newSeed() });
+    }, 2500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHost, state?.phase, state?.round, state?.seats.map((s) => `${s.userId}:${s.stake}`).join('|')]);
+
+  /* A tie sends the field to war — the host auto-continues the re-draw so the
+     round keeps narrowing without anyone clicking. Guarded per war round. */
+  const autoWarRound = useRef('');
+  useEffect(() => {
+    if (!isHost || !state || state.phase !== 'war') return;
+    const key = `${state.round}:${state.warRound}`;
+    if (autoWarRound.current === key) return;
+    const timer = setTimeout(() => {
+      autoWarRound.current = key;
+      void send(profile.id, { type: 'draw', nonce: newSeed() });
+    }, 1600);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHost, state?.phase, state?.round, state?.warRound]);
+
+  /* Auto-open the next betting window a beat after a round settles. Host-only. */
+  const autoOpenedRound = useRef(-1);
+  useEffect(() => {
+    if (!isHost || !state || state.phase !== 'settled') return;
+    if (autoOpenedRound.current === state.round) return;
+    autoOpenedRound.current = state.round;
+    const timer = setTimeout(() => {
+      if (useHighcardRoom.getState().state?.phase === 'settled') void send(profile.id, { type: 'openBetting' });
+    }, 3200);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHost, state?.phase, state?.round]);
+
+  /* Best-effort leave on tab close + refund a staked ante on any exit before
+     the round settles. Mirrors the Blackjack table's leaveCleanup pattern. */
+  useEffect(() => {
+    if (!room || !mySeat) return;
+    const bail = () => { void send(profile.id, { type: 'leave', userId: profile.id }); };
+    window.addEventListener('pagehide', bail);
+    return () => window.removeEventListener('pagehide', bail);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room?.id, Boolean(mySeat), profile.id]);
+
+  const leaveCleanup = useRef<() => void>(() => {});
+  leaveCleanup.current = () => {
+    const st = useHighcardRoom.getState().state;
+    if (st && st.phase !== 'settled') {
+      const r = st.round;
+      const out = roundOutlay.current.round === r ? roundOutlay.current.amount : 0;
+      const back = clearRefunded.current.round === r ? clearRefunded.current.amount : 0;
+      const refund = out - back;
+      if (refund > 0) addChips(refund, { silent: true });
+    }
+    roundOutlay.current = { round: -1, amount: 0 };
+    clearRefunded.current = { round: -1, amount: 0 };
+    void leave(profile.id);
+    if (isOnline()) void usePlayer.getState().refreshFromServer();
+  };
+  useEffect(() => () => leaveCleanup.current(), []);
+
   useEffect(() => {
     if (!state || mySeat) {
       if (joinRetryRef.current) clearTimeout(joinRetryRef.current);
@@ -564,6 +640,8 @@ function HighCardRoom({ roomCode }: { roomCode: string }) {
             ) : (
               <p className="text-center text-[13px]" style={{ color: 'var(--muted)' }}>{t('duel.waitingHost')}</p>
             )
+          ) : phase === 'waiting' ? (
+            <p className="text-center text-[13px]" style={{ color: 'var(--muted)' }}>{t('rooms.waitingForPlayers')}</p>
           ) : (
             <GameButton tone="gold" block disabled={!isHost} onClick={handleNewRound}>{t('roulette.newRound')}</GameButton>
           )}
@@ -571,7 +649,7 @@ function HighCardRoom({ roomCode }: { roomCode: string }) {
 
         <div className="flex gap-2">
           <GameButton tone="ghost" size="sm" onClick={() => setPayTableOpen(true)}>{t('games.paytable')}</GameButton>
-          <GameButton tone="ghost" size="sm" onClick={async () => { await leave(profile.id); navigate(nightReturn ?? '/hub'); }}>
+          <GameButton tone="ghost" size="sm" onClick={() => navigate(nightReturn ?? '/hub')}>
             {nightReturn ? t('night.backToNight') : t('common.back')}
           </GameButton>
         </div>

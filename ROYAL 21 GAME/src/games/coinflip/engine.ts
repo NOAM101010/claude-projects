@@ -6,6 +6,13 @@ import { MAX_SEATS } from './types';
 
 export { MAX_SEATS };
 
+/** A room round needs at least this many seated players. */
+export const MIN_PLAYERS = 2;
+
+function resetSeatsForNewRound(state: CfState) {
+  for (const seat of state.seats) { seat.pick = null; seat.stake = 0; seat.net = 0; }
+}
+
 export function createState(seed: number): CfState {
   return { version: 0, seed, cursor: 0, round: 0, phase: 'betting', seats: [], result: null, deadline: null, history: [] };
 }
@@ -47,10 +54,32 @@ export function reduce(prev: CfState, action: CfAction): CfState {
       const used = new Set(state.seats.map((s) => s.color));
       const color = (PLAYER_COLORS.find((c) => !used.has(c.hex)) ?? PLAYER_COLORS[0]).hex;
       state.seats.push(makeSeat(action.userId, action.username, action.avatar, action.level, color));
+      if (state.phase === 'waiting' && state.seats.length >= MIN_PLAYERS) {
+        state.phase = 'betting';
+        state.round += 1;
+        state.result = null;
+        state.deadline = null;
+        resetSeatsForNewRound(state);
+      }
       return state;
     }
     case 'leave': {
+      const wasMidRound = state.phase !== 'betting' && state.phase !== 'waiting';
       state.seats = state.seats.filter((s) => s.userId !== action.userId);
+      if (state.seats.length < MIN_PLAYERS) {
+        state.phase = 'waiting';
+        state.result = null;
+        state.deadline = null;
+        resetSeatsForNewRound(state);
+        return state;
+      }
+      if (wasMidRound) {
+        state.phase = 'betting';
+        state.round += 1;
+        state.result = null;
+        state.deadline = null;
+        resetSeatsForNewRound(state);
+      }
       return state;
     }
     case 'pick': {
@@ -68,6 +97,7 @@ export function reduce(prev: CfState, action: CfAction): CfState {
       return state;
     }
     case 'openBetting': {
+      if (state.phase !== 'settled' && state.phase !== 'waiting') return prev;
       state.phase = 'betting';
       state.round += 1;
       state.result = null;

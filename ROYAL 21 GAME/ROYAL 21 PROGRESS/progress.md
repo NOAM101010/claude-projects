@@ -37,6 +37,18 @@
 
 ## What's left / next steps
 
+### Stage 1 (תשתית MP משותפת) — מומש, **לא נבדק חי, לא נדחף**
+- `src/hooks/useGhostSeatCleanup.ts` חדש — חילוץ ה-host ghost-cleanup, מחווט ב-7 סצנות (bj/poker/sng/roulette/coinflip/highcard/night).
+- **Blackjack:** gate "כל היושבים-עם-הימור מוכנים → חלוקה מיידית" (בדואל: כל היושבים). בוטל טיימר ה-15ש. אחרי settle — ה-host פותח אוטומטית סיבוב הבא (`openBetting` מנקה `ready`).
+- **פוקר cash:** auto-start כמו SnG (host שולח `startHand` 2.5ש אחרי `waiting` כש-≥2 עם צ'יפים, `!revealing`). נעקר `setReady`/`seat.ready`/UI ה-Ready מ-engine+scene+i18n (poker). כפתור host "התחל יד" נשאר כ-fallback.
+- **roulette/coinflip/highcard engines:** נוסף phase `'waiting'` (פחות מ-2 יושבים). `leave` reducer: ≥2 נשארו ובאמצע סיבוב → abort + סיבוב נקי; <2 → `'waiting'`. join מ-`'waiting'` ל-2 → חוזר ל-`'betting'`.
+- **coinflip/highcard scenes:** auto-flip/auto-draw כשכל היושבים נתנו ante (stake>0 = implicit-ready), auto-war-continue, auto-openBetting אחרי settle. פאנל "ממתין לשחקנים" ב-phase waiting.
+- **refund on leave:** roulette/coinflip/highcard קיבלו `leaveCleanup` ref + `pagehide` (חיקוי blackjack) — refund של `roundOutlay - clearRefunded` אם `phase !== 'settled'`. כפתורי "חזרה" עברו ל-navigate בלבד (הניקוי ב-unmount).
+- **roulette:** window נפתח רק כשכל היושבים הימרו; כפתור "סובב" של ה-host אופשר כ-fallback (הוסר `realPlayerCount > 1`). auto-continue אחרי settle **נדחה ל-Stage 2** (שרשרת ה-wheel/reveal/credit של רולטה שברירית — "סיבוב חדש" נשאר ידני).
+- אימות: tsc נקי · vite build נקי · test:all ירוק (65+44+minigames+...) · i18n he/en 869/869.
+
+**מגבלה ידועה (1d, לא בסקופ):** קיפאון עם מוות-host עדיין ~5-25ש (`reassign_room_host` חלון 20ש stale). שיפור עתידי: לקצר `HOST_HEARTBEAT_MS` או ש-host מקודם יעשה abort+restart לסיבוב.
+
 ### הבא בתור: רה-ארכיטקטורה של המולטיפלייר — **תוכנית מלאה ומאושרת:**
 ### 📋 `C:\Users\noam7\.claude\plans\snug-moseying-allen.md`
 

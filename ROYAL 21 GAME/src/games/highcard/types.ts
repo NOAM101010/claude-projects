@@ -5,7 +5,9 @@ export type { Card };
 
 export const MAX_SEATS = 5;
 
-export type HcPhase = 'betting' | 'war' | 'settled';
+/** `waiting` — fewer than 2 seated players; parks here until another joins.
+ *  Solo never uses it. */
+export type HcPhase = 'waiting' | 'betting' | 'war' | 'settled';
 
 export interface HcSeat {
   userId: string;

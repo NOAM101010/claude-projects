@@ -14,7 +14,6 @@ interface Props {
   ready: boolean;
   multiplayer: boolean;
   chipSkin: string;
-  countdown: number | null;
   /** When true, the VIP high-stakes chip row is added underneath the base rail. */
   vip?: boolean;
   onAdd: (value: number) => void;
@@ -26,7 +25,7 @@ interface Props {
 
 /** Betting is done with physical chips on a rail, never with square buttons. */
 export function BetRail({
-  bet, chips, lastBet, ready, multiplayer, chipSkin, countdown, vip,
+  bet, chips, lastBet, ready, multiplayer, chipSkin, vip,
   onAdd, onClear, onRepeat, onAll, onReady,
 }: Props) {
   const { t } = useT();
@@ -89,9 +88,9 @@ export function BetRail({
         </GameButton>
       </div>
 
-      {countdown !== null && countdown > 0 && (
+      {ready && multiplayer && (
         <p className="text-center mt-2.5 num font-black" style={{ color: 'var(--gold-hi)', fontFamily: 'var(--font-display)' }}>
-          ⏱ {t('blackjack.roundStartsIn', { sec: countdown })}
+          ⏱ {t('rooms.waitingForPlayers')}
         </p>
       )}
     </motion.div>
