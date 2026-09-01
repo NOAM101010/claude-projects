@@ -79,7 +79,7 @@ function BaccaratSolo() {
     // net is a NET delta (already accounts for staked). Credit staked back +
     // net so the running balance moves by exactly `net`.
     addChips(staked + state.net, { silent: true });
-    recordResult('scratch', state.net > 0 ? 'win' : state.net < 0 ? 'lose' : 'push', state.net);
+    recordResult('baccarat', state.net > 0 ? 'win' : state.net < 0 ? 'lose' : 'push', state.net);
     addXp(XP_REWARDS.handPlayed + (state.net > 0 ? XP_REWARDS.handWon : 0));
     if (state.net > 0) {
       audio.duck(1400);
@@ -564,7 +564,7 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
       roundOutlay.current = { round: -1, amount: 0 };
     }
     if (clearRefunded.current.round === state.round) clearRefunded.current = { round: -1, amount: 0 };
-    recordResult('scratch', mySeat.net > 0 ? 'win' : mySeat.net < 0 ? 'lose' : 'push', mySeat.net);
+    recordResult('baccarat', mySeat.net > 0 ? 'win' : mySeat.net < 0 ? 'lose' : 'push', mySeat.net);
     addXp(XP_REWARDS.handPlayed + (mySeat.net > 0 ? XP_REWARDS.handWon : 0));
     if (mySeat.net > 0) {
       audio.duck(1400);

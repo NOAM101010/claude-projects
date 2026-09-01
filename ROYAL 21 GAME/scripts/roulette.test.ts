@@ -127,5 +127,46 @@ console.log('\nRound lifecycle');
   check('openBetting returns to betting phase', reopened.phase === 'betting');
 }
 
+console.log('\nBetting-window lock (multiplayer)');
+{
+  const seatedRoom = (): RouletteState => {
+    let s = reduce(createState(7), { type: 'join', userId: 'a', username: 'A', avatar, level: 1 });
+    s = reduce(s, { type: 'join', userId: 'b', username: 'B', avatar, level: 1 });
+    return s;
+  };
+
+  let s = seatedRoom();
+  s = reduce(s, { type: 'armWindow', deadline: 5_000 });
+  check('armWindow arms the betting deadline when none is set', s.deadline === 5_000);
+
+  s = reduce(s, { type: 'placeBet', userId: 'a', kind: 'red', numbers: [], amount: 50 });
+  const rearm = reduce(s, { type: 'armWindow', deadline: 9_999 });
+  check('armWindow is ignored once bets are down', rearm.deadline === 5_000);
+
+  const early = reduce(s, { type: 'spin', nonce: 1 });
+  check('spin is rejected from betting while the window is armed', early.phase === 'betting');
+
+  const locked = reduce(s, { type: 'lockBets' });
+  check('lockBets moves an armed table with bets to locked', locked.phase === 'locked');
+
+  const stuckBet = reduce(locked, { type: 'placeBet', userId: 'b', kind: 'red', numbers: [], amount: 10 });
+  check('placeBet is rejected once locked', stuckBet.seats[1].bets.length === 0);
+
+  const spun = reduce(locked, { type: 'spin', nonce: 1 });
+  check('spin is accepted from locked', spun.phase === 'settled' && spun.winningNumber !== null);
+
+  const reopened = reduce(locked, { type: 'openBetting' });
+  check('openBetting can rescue a stuck locked table', reopened.phase === 'betting');
+
+  let empty = seatedRoom();
+  empty = reduce(empty, { type: 'armWindow', deadline: 5_000 });
+  const noLock = reduce(empty, { type: 'lockBets' });
+  check('lockBets is rejected with no bets on the table', noLock.phase === 'betting');
+
+  let solo = reduce(createState(3), { type: 'join', userId: 'p', username: 'P', avatar, level: 1 });
+  solo = reduce(solo, { type: 'placeBet', userId: 'p', kind: 'red', numbers: [], amount: 25 });
+  check('solo spin from betting works when no deadline is armed', reduce(solo, { type: 'spin' }).phase === 'settled');
+}
+
 console.log(failures ? `\n${failures} failing check(s)\n` : '\nall roulette checks passed\n');
 process.exit(failures ? 1 : 0);

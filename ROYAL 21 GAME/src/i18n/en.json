@@ -537,6 +537,7 @@
     "spin": "Spin",
     "spinIn": "Spinning in {s}",
     "placeBetsWindow": "Place your bets within {s}s",
+    "betsLocked": "Bets locked",
     "newRound": "New round",
     "onTable": "On the table",
     "needPlayers": "Need more players to start",

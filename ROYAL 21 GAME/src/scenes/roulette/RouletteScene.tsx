@@ -93,7 +93,7 @@ export default function RouletteScene({ mode, roomCode }: Props) {
    * the way `wheelSpinning` does — that lag is exactly what let the number leak for
    * one frame before the fix.
    */
-  const pendingReveal = !!state && state.phase !== 'betting' && creditedRound.current !== state.round;
+  const pendingReveal = !!state && (state.phase === 'spinning' || state.phase === 'settled') && creditedRound.current !== state.round;
   const visibleHistory = pendingReveal ? (state?.history ?? []).slice(1) : (state?.history ?? []);
 
   /* ---------------------------------------------------------- connect ---- */
@@ -157,13 +157,13 @@ export default function RouletteScene({ mode, roomCode }: Props) {
      state.deadline in the past) doesn't fire again on every 400ms tick — that
      used to spam a spin intent per tick, wasting rate-limit budget and
      realtime traffic. */
-  const autoSpunRound = useRef<number>(-1);
+  const lockedRound = useRef<number>(-1);
   useEffect(() => {
     if (!isHost || !state || state.phase !== 'betting' || !state.deadline) return;
-    if (autoSpunRound.current === state.round) return;
+    if (lockedRound.current === state.round) return;
     if (Date.now() >= state.deadline) {
-      autoSpunRound.current = state.round;
-      void send(profile.id, { type: 'spin', nonce: newSeed() });
+      lockedRound.current = state.round;
+      void send(profile.id, { type: 'lockBets' });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHost, state?.phase, state?.deadline, state?.round, now]);
@@ -172,6 +172,44 @@ export default function RouletteScene({ mode, roomCode }: Props) {
     : null;
   const realPlayerCount = state?.seats.filter((s) => !s.spectator).length ?? 0;
   const bettingWindowOpen = bettingSecondsLeft !== null && bettingSecondsLeft > 0 && realPlayerCount > 1;
+
+  /* Host arms the betting window on any multi-seat round that opened without one
+     (the very first spin, or a second player joining mid-single-player). Also
+     re-arms a window that expired with nobody betting, so the table can't stall
+     in `betting` past a dead deadline. Guarded so it fires at most once per
+     round while empty, and no more than every ~1.5s while refreshing. */
+  const armedRound = useRef<number>(-1);
+  const lastRearm = useRef<number>(0);
+  useEffect(() => {
+    if (mode !== 'room' || !isHost || !state) return;
+    if (state.phase !== 'betting' || realPlayerCount <= 1) return;
+    const hasBets = state.seats.some((s) => s.bets.length > 0);
+    if (!state.deadline) {
+      if (armedRound.current === state.round) return;
+      armedRound.current = state.round;
+      void send(profile.id, { type: 'armWindow', deadline: Date.now() + BETTING_WINDOW_MS });
+      return;
+    }
+    if (!hasBets && Date.now() >= state.deadline && Date.now() - lastRearm.current > 1500) {
+      lastRearm.current = Date.now();
+      void send(profile.id, { type: 'armWindow', deadline: Date.now() + BETTING_WINDOW_MS });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, isHost, state?.phase, state?.deadline, state?.round, realPlayerCount, now]);
+
+  /* Once the window is locked, the host spins after a short beat so the
+     "bets locked" flash is visible. Guarded per round. */
+  const autoSpunRound = useRef<number>(-1);
+  useEffect(() => {
+    if (!isHost || !state || state.phase !== 'locked') return;
+    if (autoSpunRound.current === state.round) return;
+    autoSpunRound.current = state.round;
+    const timer = setTimeout(() => {
+      void send(profile.id, { type: 'spin', nonce: newSeed() });
+    }, 700);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHost, state?.phase, state?.round]);
 
   /* Snapshot my payout the instant the round settles server-side, so a
      race — another player rushing to open a new round while my wheel is
@@ -481,9 +519,22 @@ export default function RouletteScene({ mode, roomCode }: Props) {
             >
               🔁 {t('blackjack.lastBet')}
             </GameButton>
-            {phase === 'betting' ? (
-              <GameButton tone="gold" block disabled={!(mode === 'solo' || isHost) || !anyBets || bettingWindowOpen} onClick={handleSpin}>
-                {bettingWindowOpen ? t('roulette.spinIn', { s: bettingSecondsLeft }) : t('roulette.spin')}
+            {(phase === 'betting' || phase === 'locked') ? (
+              <GameButton
+                tone="gold"
+                block
+                disabled={
+                  mode === 'room'
+                    ? (realPlayerCount > 1 || phase === 'locked' || bettingWindowOpen || !anyBets)
+                    : !anyBets
+                }
+                onClick={handleSpin}
+              >
+                {phase === 'locked'
+                  ? t('roulette.betsLocked')
+                  : bettingWindowOpen
+                    ? t('roulette.spinIn', { s: bettingSecondsLeft })
+                    : t('roulette.spin')}
               </GameButton>
             ) : (
               <GameButton tone="gold" block disabled={wheelSpinning || !(mode === 'solo' || isHost)} onClick={handleNewRound}>
@@ -496,7 +547,12 @@ export default function RouletteScene({ mode, roomCode }: Props) {
               {t('roulette.placeBetsWindow', { s: bettingSecondsLeft })}
             </p>
           )}
-          {phase !== 'betting' && mode === 'room' && !isHost && (
+          {phase === 'locked' && (
+            <p className="text-center mt-2 text-[12px] num" style={{ color: 'var(--crimson-hi)' }}>
+              {t('roulette.betsLocked')}
+            </p>
+          )}
+          {phase !== 'betting' && phase !== 'locked' && mode === 'room' && !isHost && (
             <p className="text-center mt-2 text-[12px]" style={{ color: 'var(--muted)' }}>{t('duel.waitingHost')}</p>
           )}
         </GlassPanel>

@@ -13,7 +13,7 @@ export interface RouletteBet {
   amount: number;
 }
 
-export type RoulettePhase = 'betting' | 'spinning' | 'settled';
+export type RoulettePhase = 'betting' | 'locked' | 'spinning' | 'settled';
 
 export interface RouletteSeat {
   userId: string;
@@ -53,6 +53,15 @@ export type RouletteAction =
   | { type: 'clearBets'; userId: string }
   | { type: 'ready'; userId: string }
   | { type: 'openBetting'; deadline?: number | null }
+  /** Multiplayer only: the host arms the 10s betting window on a round that
+   *  opened without one (first spin, or a second player joining). Applied only
+   *  while the pot is still empty, so it can also refresh an expired window that
+   *  nobody bet into — but never overrides a live window once bets are down. */
+  | { type: 'armWindow'; deadline: number }
+  /** Multiplayer only: the host closes the betting window at the deadline.
+   *  betting → locked. Rejected on an empty table so a round nobody bet into
+   *  is never stranded in `locked`. */
+  | { type: 'lockBets' }
   /** `nonce` is fresh host randomness generated at spin time. Without it the
    *  outcome derives only from `seed`+`cursor`, both of which are published in
    *  the shared state — so any client could precompute the next winning number

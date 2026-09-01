@@ -111,12 +111,18 @@ function useLeaderboardData(scope: LbScope, category: LbCategory) {
   const stats = usePlayer((s) => s.stats);
   const friends = useSocial((s) => s.friends);
 
-  /* Real feed — null until it lands, and stays null on any failure so the
-     mock branch below keeps the board populated. */
+  /* A signed-in player always sees real data only — never the mock roster,
+     even if the feed is empty (a brand-new server with one player). The mock
+     branch is for guests / offline. */
+  const hasRemoteSession = isOnline() && isRemoteId(profile.id);
+
+  /* Real feed — null until it lands. For a guest/offline it stays null so the
+     mock branch keeps the board populated; for a signed-in player it holds an
+     array (possibly empty) so we never fall back to mock. */
   const [remote, setRemote] = useState<LbRow[] | null>(null);
 
   useEffect(() => {
-    if (!isOnline() || !isRemoteId(profile.id)) {
+    if (!hasRemoteSession) {
       setRemote(null);
       return;
     }
@@ -139,21 +145,23 @@ function useLeaderboardData(scope: LbScope, category: LbCategory) {
             level: r.level ?? 0,
             value: valueOfRaw(category, r),
           }));
-        setRemote(mapped.length ? mapped : null);
+        setRemote(mapped);
       } catch {
         if (!cancelled) setRemote(null);
       }
     })();
 
     return () => { cancelled = true; };
-  }, [scope, category, profile.id, friends]);
+  }, [scope, category, profile.id, friends, hasRemoteSession]);
 
   return useMemo(() => {
     const rnd = mulberry32(CATEGORY_SEED[category] + (scope === 'friends' ? 900 : 0));
     let rows: LbRow[];
 
-    if (remote) {
-      rows = remote.map((r) => ({ ...r }));
+    if (hasRemoteSession) {
+      // Signed in: real data only. An empty array just means "no other players
+      // yet" — the empty-state copy handles that. Never fall through to mock.
+      rows = (remote ?? []).map((r) => ({ ...r }));
     } else if (scope === 'friends' && friends.length) {
       rows = friends.slice(0, 19).map((f, i) => ({
         id: f.id,
@@ -208,7 +216,7 @@ function useLeaderboardData(scope: LbScope, category: LbCategory) {
     const rank = rows.findIndex((r) => r.isYou) + 1;
 
     return { rows: rows.slice(0, 20), you: { row: you, rank, total } };
-  }, [scope, category, profile, stats, friends, remote]);
+  }, [scope, category, profile, stats, friends, remote, hasRemoteSession]);
 }
 
 function formatValue(cat: LbCategory, value: number, glyph: string, t: TFn): string {

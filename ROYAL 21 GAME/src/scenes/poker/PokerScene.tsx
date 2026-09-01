@@ -31,6 +31,7 @@ import {
 } from '@/games/poker/engine';
 import { usePokerReveal } from '@/games/poker/useReveal';
 import { holeVisible } from '@/games/poker/reveal';
+import { XP_REWARDS } from '@/data/economy';
 import { MAX_SEATS } from '@/games/poker/types';
 import type { PokerAction, PokerSeat, PokerState, ShowdownEntry } from '@/games/poker/types';
 
@@ -235,8 +236,8 @@ export default function PokerScene() {
     recordResult('poker', outcome, mine.net, {});
     const opponents = state.lastResult.filter((r) => r.userId !== profile.id);
     if (opponents.length) recordRivalry('poker', mine.net, opponents);
+    addXp(XP_REWARDS.handPlayed + (mine.net > 0 ? XP_REWARDS.gameWon : 0));
     if (mine.net > 0) {
-      addXp(15);
       audio.play(mine.net >= state.bigBlind * 20 ? 'bigWin' : 'win');
       const s = usePlayer.getState().stats;
       const patch: Partial<typeof s> = { pokerChipsWon: s.pokerChipsWon + mine.net };

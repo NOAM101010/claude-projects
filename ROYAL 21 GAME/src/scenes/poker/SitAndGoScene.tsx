@@ -19,6 +19,7 @@ import { audio } from '@/audio/AudioManager';
 import { chipGlyphOf } from '@/components/game/CoinFace';
 import { fmt } from '@/lib/format';
 import { SNG_BUYINS, ACTION_SECONDS, levelIndexFor } from '@/games/poker/engine';
+import { XP_REWARDS } from '@/data/economy';
 import { usePokerReveal } from '@/games/poker/useReveal';
 import { MAX_SEATS } from '@/games/poker/types';
 import { SeatCard, ActionBar } from './PokerScene';
@@ -176,9 +177,9 @@ export default function SitAndGoScene() {
     const wasIn = tournament.eliminated.includes(profile.id) || iWon;
     if (!wasIn) return;
     const pool = tournament.buyIn * (tournament.eliminated.length + 1);
+    addXp(XP_REWARDS.handPlayed + (iWon ? XP_REWARDS.gameWon : 0));
     if (iWon) {
       addChips(pool);
-      addXp(80);
       const s = usePlayer.getState().stats;
       bumpStat({ sngWinStreak: s.sngWinStreak + 1 });
       recordResult('sng', 'win', pool - tournament.buyIn, {});

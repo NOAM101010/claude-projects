@@ -168,7 +168,7 @@ export function reduce(prev: RouletteState, action: RouletteAction): RouletteSta
       // seat's placed bets — chips deducted client-side, no winnings,
       // no refund. Silently dropping the intent leaves the bettors' round
       // intact.
-      if (state.phase !== 'settled') return prev;
+      if (state.phase !== 'settled' && state.phase !== 'locked') return prev;
       state.phase = 'betting';
       state.round += 1;
       state.winningNumber = null;
@@ -182,8 +182,30 @@ export function reduce(prev: RouletteState, action: RouletteAction): RouletteSta
       }
       return state;
     }
-    case 'spin': {
+    case 'armWindow': {
+      // Only arm while the pot is still empty. That covers the normal case
+      // (deadline == null on a fresh round) and lets the host refresh a window
+      // that expired with nobody betting — but never move the goalposts once
+      // a bet is down.
       if (state.phase !== 'betting') return prev;
+      if (state.deadline != null && state.seats.some((s) => s.bets.length > 0)) return prev;
+      state.deadline = action.deadline;
+      return state;
+    }
+    case 'lockBets': {
+      // Don't lock an empty table — a round nobody bet into must stay open so
+      // it can't get stranded in `locked` with no way to reach `spin`.
+      if (state.phase !== 'betting') return prev;
+      if (!state.seats.some((s) => s.bets.length > 0)) return prev;
+      state.phase = 'locked';
+      return state;
+    }
+    case 'spin': {
+      // In a multiplayer room the window is always armed, so the host can't
+      // spin straight from `betting` — it must go through `lockBets` at the
+      // deadline. Solo play leaves `deadline` null and spins directly.
+      const canSpin = state.phase === 'locked' || (state.phase === 'betting' && state.deadline == null);
+      if (!canSpin) return prev;
       if (!state.seats.some((s) => s.bets.length > 0)) return prev;
       state.phase = 'spinning';
       state.winningNumber = spinWheel(state, action.nonce);
