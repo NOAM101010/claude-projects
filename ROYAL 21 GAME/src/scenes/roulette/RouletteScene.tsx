@@ -61,7 +61,10 @@ export default function RouletteScene({ mode, roomCode }: Props) {
   const [payTableOpen, setPayTableOpen] = useState(false);
   const [wheelSpinning, setWheelSpinning] = useState(false);
   const spunRound = useRef(-1);
+  const spinScheduledFor = useRef(-1);
+  const spinTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const creditedRound = useRef(-1);
+  const autoOpenedRound = useRef(-1);
 
   /* Chips a guest optimistically deducted for bets this round. The host is the
      authority on which bets actually landed — a bet inserted just as the
@@ -173,24 +176,42 @@ export default function RouletteScene({ mode, roomCode }: Props) {
   };
   useEffect(() => () => leaveCleanup.current(), []);
 
-  /* A settled round: spin the wheel locally to the number the engine already picked. */
+  /* A settled round: spin the wheel locally to the number the engine already
+     picked. The guard is decoupled from the schedule — `spunRound` is only
+     bumped INSIDE the timeout callback, and the pending timer is NEVER cleared
+     on a re-render (only on unmount). Previously the effect ran on every `state`
+     frame and its cleanup killed the pending timer, so any inbound frame during
+     the short start-delay (host re-publish, another player's presence write, a
+     late realtime frame) cancelled the spin and it was never re-armed — the
+     non-host's wheel just never turned. */
   useEffect(() => {
     if (!state || state.phase !== 'settled' || state.winningNumber === null) return;
-    if (spunRound.current === state.round) return;
-    spunRound.current = state.round;
-    // Align the wheel start to `state.spinAt` (set by the host when it applied
-    // the spin). The host sees `settled` first and waits out REVEAL_SYNC_MS; a
-    // remote client that got the frame late waits the remainder — so both wheels
-    // start, and land, at the same wall-clock moment. Solo runs the reducer
-    // locally with zero propagation, so it starts immediately as before.
+    if (spunRound.current === state.round || spinScheduledFor.current === state.round) return;
+    spinScheduledFor.current = state.round;
+    const round = state.round;
+    // Align the wheel start to `state.spinAt` (host wall clock). Cross-client
+    // clock skew can make `Date.now() - spinAt` negative or huge, so clamp the
+    // delay to [0, REVEAL_SYNC_MS] — the reveal sync only needs to be roughly
+    // simultaneous, never exact.
     const spinAt = state.spinAt ?? Date.now();
-    const startDelay = mode === 'solo' ? 0 : Math.max(0, REVEAL_SYNC_MS - (Date.now() - spinAt));
-    const timer = setTimeout(() => {
+    const startDelay = mode === 'solo'
+      ? 0
+      : Math.min(REVEAL_SYNC_MS, Math.max(0, REVEAL_SYNC_MS - (Date.now() - spinAt)));
+    spinTimer.current = setTimeout(() => {
+      spinTimer.current = null;
+      if (spunRound.current === round) return;
+      spunRound.current = round;
       setWheelSpinning(true);
       audio.play('coin');
     }, startDelay);
-    return () => clearTimeout(timer);
   }, [state]);
+
+  /* Clear the pending spin timer only when the scene actually unmounts — and
+     reset the "scheduled" latch so a StrictMode remount re-schedules. */
+  useEffect(() => () => {
+    if (spinTimer.current) { clearTimeout(spinTimer.current); spinTimer.current = null; }
+    spinScheduledFor.current = -1;
+  }, []);
 
   /* Betting window countdown. A fresh round in a multi-seat room gets a fixed
      10s window before the host's client spins automatically — without this,
@@ -220,8 +241,12 @@ export default function RouletteScene({ mode, roomCode }: Props) {
   const bettingSecondsLeft = state?.phase === 'betting' && state?.deadline
     ? Math.max(0, Math.ceil((state.deadline - now) / 1000))
     : null;
-  const realPlayerCount = state?.seats.filter((s) => !s.spectator).length ?? 0;
+  const seatedPlayers = state?.seats.filter((s) => !s.spectator) ?? [];
+  const realPlayerCount = seatedPlayers.length;
   const bettingWindowOpen = bettingSecondsLeft !== null && bettingSecondsLeft > 0 && realPlayerCount > 1;
+  /* Every seated (non-spectator) player has at least one bet down — the roulette
+     equivalent of "everyone's ready". Lets the host short-circuit the countdown. */
+  const allSeatedBetIn = realPlayerCount >= 2 && seatedPlayers.every((s) => s.bets.length > 0);
 
   /* Host arms the betting window on any multi-seat round that opened without one
      (the very first spin, or a second player joining mid-single-player). Also
@@ -264,6 +289,26 @@ export default function RouletteScene({ mode, roomCode }: Props) {
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHost, state?.phase, state?.round]);
+
+  /* Auto-continue: a few seconds after a round settles — long enough for every
+     client's wheel + reveal + payout to finish — the host opens the next
+     betting window with NO deadline, so the "all players bet in" gate governs
+     when it arms (and openBetting clears every `ready` flag). The manual "new
+     round" button stays as a host short-circuit. */
+  useEffect(() => {
+    if (mode !== 'room' || !isHost || !state || state.phase !== 'settled') return;
+    if (autoOpenedRound.current === state.round) return;
+    autoOpenedRound.current = state.round;
+    const round = state.round;
+    const timer = setTimeout(() => {
+      const st = useRouletteRoom.getState().state;
+      if (st?.phase === 'settled' && st.round === round) {
+        void send(profile.id, { type: 'openBetting', deadline: null });
+      }
+    }, 7500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, isHost, state?.phase, state?.round]);
 
   /* Snapshot my payout the instant the round settles server-side, so a
      race — another player rushing to open a new round while my wheel is
@@ -426,8 +471,8 @@ export default function RouletteScene({ mode, roomCode }: Props) {
   };
 
   const handleNewRound = () => {
-    const deadline = mode === 'room' ? Date.now() + BETTING_WINDOW_MS : null;
-    void send(profile.id, { type: 'openBetting', deadline });
+    // Open with no deadline: the "all players bet in" gate arms the window.
+    void send(profile.id, { type: 'openBetting', deadline: null });
   };
 
   /* No credentials, or a device-local player with no uuid to host with. */
@@ -588,7 +633,7 @@ export default function RouletteScene({ mode, roomCode }: Props) {
                 block
                 disabled={
                   mode === 'room'
-                    ? (!isHost || phase === 'locked' || !anyBets)
+                    ? (!isHost || phase === 'locked' || !anyBets || !(allSeatedBetIn || bettingWindowOpen))
                     : !anyBets
                 }
                 onClick={handleSpin}

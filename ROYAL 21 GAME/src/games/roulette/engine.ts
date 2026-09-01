@@ -141,7 +141,12 @@ export function reduce(prev: RouletteState, action: RouletteAction): RouletteSta
       const used = new Set(state.seats.map((s) => s.color));
       const color = (PLAYER_COLORS.find((c) => !used.has(c.hex)) ?? PLAYER_COLORS[0]).hex;
       const seat = makeSeat(action.userId, action.username, action.avatar, action.level, color);
-      seat.spectator = state.phase !== 'betting' && state.phase !== 'waiting';
+      // Land as a full player only if this round hasn't got going yet — a fresh
+      // `betting` phase with no window armed (everyone's still placing bets), or
+      // a parked `waiting` table. Joining once the window is ticking, or mid
+      // spin/settle, watches this round out; the next `openBetting` clears
+      // `spectator` and promotes them.
+      seat.spectator = !(state.phase === 'waiting' || (state.phase === 'betting' && state.deadline === null));
       state.seats.push(seat);
       // A join that brings a parked table back up to strength opens a fresh
       // betting round for everyone.

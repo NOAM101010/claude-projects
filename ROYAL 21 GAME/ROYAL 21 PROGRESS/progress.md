@@ -47,6 +47,14 @@
 - **roulette:** window נפתח רק כשכל היושבים הימרו; כפתור "סובב" של ה-host אופשר כ-fallback (הוסר `realPlayerCount > 1`). auto-continue אחרי settle **נדחה ל-Stage 2** (שרשרת ה-wheel/reveal/credit של רולטה שברירית — "סיבוב חדש" נשאר ידני).
 - אימות: tsc נקי · vite build נקי · test:all ירוק (65+44+minigames+...) · i18n he/en 869/869.
 
+### Stage 2 (רולטה MP) — מומש, **לא נבדק חי, לא נדחף**
+- **2a** — הגלגל לא הסתובב אצל לא-host: ה-guard נותק מהתזמון. `spunRound` מתעדכן רק בתוך callback ה-`setTimeout`; `spinScheduledFor` ref מונע תזמון-כפול; ה-timer נמחק **רק ב-unmount** (cleanup effect נפרד `[]`), לא על כל frame. `startDelay` clamped ל-`[0, REVEAL_SYNC_MS]` נגד clock skew.
+- **2b** — כפתור "סובב": הוסר disable של `realPlayerCount>1`; ה-host יכול "סובב עכשיו" כש-`allSeatedBetIn` (כל היושבים הימרו) או שהחלון פתוח — short-circuit לספירה.
+- **2c** — joiner: `engine.ts` join — נוחת כשחקן מלא רק אם `phase==='waiting'` או `betting` בלי deadline (סיבוב טרי, כולם עוד מהמרים); הצטרפות אחרי שהחלון רץ / באמצע spin/settle → spectator לסיבוב הזה, `openBetting` הבא מקדם אותו. ה-gate (`allSeatedBetIn` / armWindow) סופר את הנכנס כ"נוכח, חייב להמר".
+- **2d** — refund בעזיבה: כבר מ-Stage 1 (`leaveCleanup` + pagehide), עובד עם השינויים כאן.
+- **auto-continue** (נדחה מ-Stage 1): host שולח `openBetting({deadline:null})` 7.5ש אחרי settle (אחרי סיום גלגל+reveal+credit של כל הלקוחות); ה-gate של "כולם הימרו" מזיין את החלון. `handleNewRound` גם עבר ל-`deadline:null`. כפתור "סיבוב חדש" נשאר כ-short-circuit.
+- אימות: tsc נקי · vite build נקי · test:all ירוק (roulette + minigames + engine 65) · i18n 869/869 · רגרסיית סולו רולטה: כל האפקטים החדשים `mode==='room'`/host-gated, מסלול הסולו לא נגע.
+
 **מגבלה ידועה (1d, לא בסקופ):** קיפאון עם מוות-host עדיין ~5-25ש (`reassign_room_host` חלון 20ש stale). שיפור עתידי: לקצר `HOST_HEARTBEAT_MS` או ש-host מקודם יעשה abort+restart לסיבוב.
 
 ### הבא בתור: רה-ארכיטקטורה של המולטיפלייר — **תוכנית מלאה ומאושרת:**
