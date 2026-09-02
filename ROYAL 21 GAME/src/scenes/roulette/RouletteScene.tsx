@@ -612,12 +612,24 @@ export default function RouletteScene({ mode, roomCode }: Props) {
             <span className="num text-[12px]" style={{ color: 'var(--gold)' }}>{t('roulette.onTable')} · {fmt(myStake)}</span>
           </div>
           <div className="flex flex-wrap gap-2 justify-center mb-3">
-            {(isVipEligible(profile) ? [...STAKES, ...VIP_CHIP_EXTRA] : STAKES).map((s) => (
+            {STAKES.map((s) => (
               <button key={s} onClick={() => { audio.play('click'); setStake(s); }} style={{ opacity: stake === s ? 1 : 0.4, transform: stake === s ? 'translateY(-4px)' : 'none', transition: '.2s' }}>
                 <Chip value={s} size={38} skin={profile.equipped.chipSkin} interactive />
               </button>
             ))}
           </div>
+          {isVipEligible(profile) && (
+            <div className="flex flex-wrap gap-2 justify-center mb-3 pt-2" style={{ borderTop: '1px dashed var(--gold-line)' }}>
+              <span className="w-full text-center text-[10.5px] font-black tracking-widest" style={{ color: 'var(--gold-hi)', letterSpacing: '0.15em' }}>
+                💎 VIP HIGH STAKES
+              </span>
+              {VIP_CHIP_EXTRA.map((s) => (
+                <button key={s} onClick={() => { audio.play('click'); setStake(s); }} style={{ opacity: stake === s ? 1 : 0.4, transform: stake === s ? 'translateY(-4px)' : 'none', transition: '.2s' }}>
+                  <Chip value={s} size={38} skin={profile.equipped.chipSkin} interactive />
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex gap-2 flex-wrap">
             <GameButton size="sm" tone="ghost" disabled={!canBet || !mySeat?.bets.length} onClick={handleClear}>{t('blackjack.clear')}</GameButton>
             <GameButton

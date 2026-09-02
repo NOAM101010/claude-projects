@@ -370,13 +370,26 @@ function BaccaratSolo() {
             </span>
           </div>
           <div className="flex flex-wrap gap-1.5 justify-center mb-3 max-w-[420px] mx-auto">
-            {(isVipEligible(profile) ? [...BACCARAT_BETS, ...VIP_CHIP_EXTRA] : BACCARAT_BETS).map((s) => (
+            {BACCARAT_BETS.map((s) => (
               <button key={s} onClick={() => { audio.play('click'); setStake(s); }}
                 style={{ opacity: stake === s ? 1 : 0.4, transform: stake === s ? 'translateY(-4px)' : 'none', transition: '.2s' }}>
                 <Chip value={s} size={34} skin={chipSkin} interactive />
               </button>
             ))}
           </div>
+          {isVipEligible(profile) && (
+            <div className="flex flex-wrap gap-1.5 justify-center mb-3 pt-2 max-w-[420px] mx-auto" style={{ borderTop: '1px dashed var(--gold-line)' }}>
+              <span className="w-full text-center text-[10.5px] font-black tracking-widest" style={{ color: 'var(--gold-hi)', letterSpacing: '0.15em' }}>
+                💎 VIP HIGH STAKES
+              </span>
+              {VIP_CHIP_EXTRA.map((s) => (
+                <button key={s} onClick={() => { audio.play('click'); setStake(s); }}
+                  style={{ opacity: stake === s ? 1 : 0.4, transform: stake === s ? 'translateY(-4px)' : 'none', transition: '.2s' }}>
+                  <Chip value={s} size={34} skin={chipSkin} interactive />
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex flex-wrap gap-2 justify-center">
             <GameButton size="sm" tone="ghost" disabled={totalStaked === 0 || state.phase !== 'betting'} onClick={clearBet}>
               {t('blackjack.clear')}
@@ -989,13 +1002,26 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
             </span>
           </div>
           <div className="flex flex-wrap gap-1.5 justify-center mb-3 max-w-[420px] mx-auto">
-            {(isVipEligible(profile) ? [...BACCARAT_BETS, ...VIP_CHIP_EXTRA] : BACCARAT_BETS).map((s) => (
+            {BACCARAT_BETS.map((s) => (
               <button key={s} onClick={() => { audio.play('click'); setStake(s); }}
                 style={{ opacity: stake === s ? 1 : 0.4, transform: stake === s ? 'translateY(-4px)' : 'none', transition: '.2s' }}>
                 <Chip value={s} size={34} skin={chipSkin} interactive />
               </button>
             ))}
           </div>
+          {isVipEligible(profile) && (
+            <div className="flex flex-wrap gap-1.5 justify-center mb-3 pt-2 max-w-[420px] mx-auto" style={{ borderTop: '1px dashed var(--gold-line)' }}>
+              <span className="w-full text-center text-[10.5px] font-black tracking-widest" style={{ color: 'var(--gold-hi)', letterSpacing: '0.15em' }}>
+                💎 VIP HIGH STAKES
+              </span>
+              {VIP_CHIP_EXTRA.map((s) => (
+                <button key={s} onClick={() => { audio.play('click'); setStake(s); }}
+                  style={{ opacity: stake === s ? 1 : 0.4, transform: stake === s ? 'translateY(-4px)' : 'none', transition: '.2s' }}>
+                  <Chip value={s} size={34} skin={chipSkin} interactive />
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex flex-wrap gap-2 justify-center">
             <GameButton size="sm" tone="ghost" disabled={totalStaked === 0 || state.phase !== 'betting'} onClick={clearBet}>
               {t('blackjack.clear')}

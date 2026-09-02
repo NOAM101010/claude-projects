@@ -51,7 +51,6 @@ function HighCardSolo() {
   const recordResult = usePlayer((s) => s.recordResult);
   const toast = useUI((s) => s.toast);
 
-  const stakeTable = isVipEligible(profile) ? [...STAKES, ...VIP_CHIP_EXTRA] : STAKES;
   const [stake, setStake] = useState<number>(100);
   const [pot, setPot] = useState(0);
   const [phase, setPhase] = useState<'bet' | 'countdown' | 'reveal' | 'result'>('bet');
@@ -203,7 +202,8 @@ function HighCardSolo() {
         ) : (
           <GlassPanel gold className="p-4 w-full">
             <BetSelector
-              stakes={stakeTable}
+              stakes={STAKES}
+              vipStakes={isVipEligible(profile) ? VIP_CHIP_EXTRA : undefined}
               value={stake}
               onChange={setStake}
               chipSkin={profile.equipped.chipSkin}
@@ -620,7 +620,7 @@ function HighCardRoom({ roomCode }: { roomCode: string }) {
         <GlassPanel gold className="p-4 w-full">
           {phase === 'betting' ? (
             <>
-              <BetSelector stakes={isVipEligible(profile) ? [...STAKES, ...VIP_CHIP_EXTRA] : STAKES} value={stake} onChange={setStake} chipSkin={profile.equipped.chipSkin} disabled={!canAnte} chips={profile.chips} />
+              <BetSelector stakes={STAKES} vipStakes={isVipEligible(profile) ? VIP_CHIP_EXTRA : undefined} value={stake} onChange={setStake} chipSkin={profile.equipped.chipSkin} disabled={!canAnte} chips={profile.chips} />
               <div className="flex gap-2">
                 <GameButton tone="ghost" block disabled={phase !== 'betting' || !mySeat?.stake} onClick={clearAnte}>{t('blackjack.clear')}</GameButton>
                 <GameButton tone="gold" block disabled={!canAnte} onClick={ante}>{t('games.draw')} · {fmt(stake)}</GameButton>

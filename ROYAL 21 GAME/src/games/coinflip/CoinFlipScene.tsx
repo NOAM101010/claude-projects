@@ -51,7 +51,6 @@ function CoinFlipSolo() {
   const toast = useUI((s) => s.toast);
   const showMoment = useUI((s) => s.showMoment);
 
-  const stakeTable = isVipEligible(profile) ? [...STAKES, ...VIP_CHIP_EXTRA] : STAKES;
   const [stake, setStake] = useState<number>(100);
   const [side, setSide] = useState<CfSide>('heads');
   const [phase, setPhase] = useState<'bet' | 'flying' | 'result'>('bet');
@@ -179,7 +178,8 @@ function CoinFlipSolo() {
             </div>
 
             <BetSelector
-              stakes={stakeTable}
+              stakes={STAKES}
+              vipStakes={isVipEligible(profile) ? VIP_CHIP_EXTRA : undefined}
               value={stake}
               onChange={setStake}
               chipSkin={profile.equipped.chipSkin}
@@ -617,7 +617,7 @@ function CoinFlipRoom({ roomCode }: { roomCode: string }) {
                   </GameButton>
                 ))}
               </div>
-              <BetSelector stakes={isVipEligible(profile) ? [...STAKES, ...VIP_CHIP_EXTRA] : STAKES} value={stake} onChange={setStake} chipSkin={profile.equipped.chipSkin} disabled={!canPick} chips={profile.chips} />
+              <BetSelector stakes={STAKES} vipStakes={isVipEligible(profile) ? VIP_CHIP_EXTRA : undefined} value={stake} onChange={setStake} chipSkin={profile.equipped.chipSkin} disabled={!canPick} chips={profile.chips} />
               <div className="flex gap-2">
                 <GameButton tone="ghost" block disabled={phase !== 'betting' || !mySeat?.pick} onClick={clearPick}>{t('blackjack.clear')}</GameButton>
                 <GameButton tone="gold" block disabled={!isHost || picked.length < 2} onClick={handleFlip}>{t('games.flip')}</GameButton>
