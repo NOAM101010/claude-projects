@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--prefix", "The Garage"],
       "port": 5183
+    },
+    {
+      "name": "royal21",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "ROYAL 21 GAME", "--", "--port", "5199", "--strictPort"],
+      "port": 5199
     }
   ]
 }

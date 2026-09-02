@@ -4,8 +4,8 @@ import { motion } from 'framer-motion';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GameButton } from '@/components/ui/GameButton';
 import { Avatar } from '@/components/social/Avatar';
-import { LightPool } from '@/components/effects/LightPool';
 import { Particles } from '@/components/effects/Particles';
+import { CasinoCity } from '@/scenes/intro/CasinoCity';
 import { usePlayer } from '@/stores/usePlayer';
 import { useUI } from '@/stores/useUI';
 import { useT } from '@/hooks/useT';
@@ -126,25 +126,22 @@ export default function AuthScene() {
     }
   };
 
-  const field = 'w-full px-3.5 py-3 rounded-[var(--r-xs)] border border-white/10 bg-white/[0.05] outline-none focus:border-[color:var(--gold-line)]';
+  const field = 'auth-field w-full px-3.5 py-3 rounded-[var(--r-xs)] border border-white/10 bg-white/[0.05] outline-none transition-shadow focus:border-[color:var(--gold-line)] focus:shadow-[0_0_0_3px_rgba(227,178,60,0.12)]';
 
   return (
     <motion.div
       className="relative min-h-[100dvh] grid place-items-center px-5 vignette overflow-hidden"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
     >
-      <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 110%, #143024, #0b1410 48%, #08090b 78%)' }} />
-      <motion.div
-        className="absolute inset-0"
-        animate={{ opacity: [0.55, 0.8, 0.55] }}
-        transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
-      >
-        <LightPool x="24%" y="18%" size={520} color="rgba(227,178,60,.14)" />
-        <LightPool x="78%" y="70%" size={460} color="rgba(46,158,107,.12)" />
-      </motion.div>
-      <Particles count={14} />
+      <CasinoCity flight="instant" className="cc--bg" />
+      <div className="absolute inset-0 bg-black/62" />
+      <Particles count={10} />
+      <div className="auth-glow" aria-hidden="true" />
 
-      <GlassPanel gold className="relative z-10 w-full max-w-[420px] p-6">
+      <div className="auth-frame relative z-10 w-full max-w-[420px]">
+        <span className="auth-deco-card d0" aria-hidden="true">A♠</span>
+        <span className="auth-deco-card d1" aria-hidden="true">K♥</span>
+        <GlassPanel gold className="p-6">
         <div className="text-center mb-5">
           <div className="eyebrow">ROYAL 21</div>
           <h2 className="mt-1">{t('auth.title')}</h2>
@@ -219,7 +216,7 @@ export default function AuthScene() {
           </div>
         )}
 
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-2.5 auth-swap" key={mode}>
           {mode === 'reset' ? (
             <input className={field} type="email" placeholder={t('auth.email')} value={email}
               onChange={(event) => setEmail(event.target.value)} />
@@ -353,7 +350,8 @@ export default function AuthScene() {
             {t('common.back')}
           </button>
         )}
-      </GlassPanel>
+        </GlassPanel>
+      </div>
     </motion.div>
   );
 }
