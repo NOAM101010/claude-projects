@@ -7,13 +7,11 @@ import { GameButton } from '@/components/ui/GameButton';
 import { Meter } from '@/components/ui/Meter';
 import { Avatar } from '@/components/social/Avatar';
 import { LightPool } from '@/components/effects/LightPool';
-import { ItemPreview } from '@/scenes/vault/ItemPreview';
 import { useCountUp } from '@/hooks/useCountUp';
 import { usePlayer } from '@/stores/usePlayer';
 import { useSocial } from '@/stores/useSocial';
 import { useT } from '@/hooks/useT';
-import { ACHIEVEMENTS, TIER_STYLE, byTierDesc } from '@/data/achievements';
-import { ITEMS, itemById } from '@/data/items';
+import { ACHIEVEMENTS, TIER_STYLE } from '@/data/achievements';
 import { MILESTONE_EVERY } from '@/data/economy';
 import { VIP_MIN_LEVEL, VIP_MIN_CHIPS, isVipEligible, vipProgress } from '@/data/vip';
 import { roomBackgroundOf } from '@/data/roomThemes';
@@ -39,6 +37,9 @@ function StatTile({ label, value, tone = 'gold', delay = 0 }: { label: string; v
   );
 }
 
+/** Bronze → platinum, so the trophy case reads as a progression. */
+const TIER_RANK: Record<string, number> = { bronze: 0, silver: 1, gold: 2, platinum: 3 };
+
 /** My Room: a place with a trophy shelf, not a dashboard. */
 export default function MyRoomScene() {
   const { userId } = useParams();
@@ -47,7 +48,6 @@ export default function MyRoomScene() {
   const me = usePlayer((s) => s.profile);
   const stats = usePlayer((s) => s.stats);
   const owned = usePlayer((s) => s.owned);
-  const favorites = usePlayer((s) => s.favorites);
   const achievements = usePlayer((s) => s.achievements);
   const activity = usePlayer((s) => s.activity);
   const rivalries = usePlayer((s) => s.rivalries);
@@ -56,6 +56,7 @@ export default function MyRoomScene() {
   const isMe = !userId || userId === me.id;
   const friend = friends.find((entry) => entry.id === userId);
   const [remote, setRemote] = useState<{ profile: Profile | null; stats: Partial<Stats> | null }>({ profile: null, stats: null });
+  const [allAchOpen, setAllAchOpen] = useState(false);
 
   useEffect(() => {
     if (isMe || !userId) return;
@@ -75,11 +76,14 @@ export default function MyRoomScene() {
       : me));
   const view = isMe ? stats : ({ ...stats, ...(remote.stats ?? {}) } as Stats);
 
-  /* Trophies already standing on the shelf, best plating first. */
+  /* Trophies on the shelf, graded bronze → platinum. The last id in
+     `achievements` is the freshest unlock. */
   const earnedTrophies = useMemo(
-    () => ACHIEVEMENTS.filter((entry) => achievements.includes(entry.id)).sort(byTierDesc),
+    () => ACHIEVEMENTS.filter((entry) => achievements.includes(entry.id))
+      .sort((a, b) => (TIER_RANK[a.tier] - TIER_RANK[b.tier]) || 0),
     [achievements],
   );
+  const newestTrophyId = achievements[achievements.length - 1] ?? null;
 
   /* The closest one still missing, as a nudge under the shelf. */
   const nextTrophy = useMemo(() => {
@@ -97,15 +101,27 @@ export default function MyRoomScene() {
     return locked.sort((a, b) => progress(b) - progress(a))[0] ?? null;
   }, [achievements, me.level, owned.length, friends.length, stats]);
 
-  const shelf = useMemo(() => {
-    const favored = favorites.map(itemById).filter(Boolean);
-    const rare = ITEMS.filter((item) => owned.includes(item.id) && ['legendary', 'mythic', 'epic'].includes(item.rarity));
-    return [...new Set([...favored, ...rare])].slice(0, 6);
-  }, [favorites, owned]);
-
   const roomBg = roomBackgroundOf(profile.equipped?.roomBackground ?? null);
 
   const winRate = pct(view.wins, Math.max(1, view.games));
+
+  /* Per-game win rates — only the games that keep a wins/plays pair. The rest
+     (poker winnings, royal flushes, night wins…) are single counters, shown
+     below as pride stats. */
+  const perGame = ([
+    { key: 'blackjack', plays: view.bjHands, wins: view.bjWins },
+    { key: 'coinflip', plays: view.cfGames, wins: view.cfWins },
+    { key: 'slots', plays: view.slSpins, wins: view.slWins },
+  ] as const).filter((row) => row.plays > 0);
+
+  const prideStats = ([
+    { label: t('games.duel'), value: view.duelWins },
+    { label: t('profile.nightWins'), value: view.nightWins },
+    { label: t('profile.royalFlushes'), value: view.royalFlushes },
+    { label: t('profile.pokerWon'), value: view.pokerChipsWon },
+    { label: t('profile.sngStreak'), value: view.sngWinStreak },
+    { label: t('games.scratch'), value: view.scCards },
+  ] as const).filter((row) => row.value > 0);
   const rank = rankOf(profile.level);
   const vip = isVipEligible(me);
   const vipProg = vipProgress(me);
@@ -283,44 +299,57 @@ export default function MyRoomScene() {
           </GlassPanel>
         )}
 
-        {/* the trophies you earned — the shelf proper */}
-        <GlassPanel className="p-4">
-          <div className="flex items-baseline justify-between mb-3">
-            <div className="eyebrow">{t('profile.trophies')}</div>
-            <span className="text-[11.5px] num" style={{ color: 'var(--muted)' }}>
-              {earnedTrophies.length} / {ACHIEVEMENTS.length}
-            </span>
+        {/* THE trophy case — the centrepiece of the room */}
+        <GlassPanel gold className="p-5">
+          <div className="flex items-end justify-between mb-4 flex-wrap gap-2">
+            <div>
+              <div className="eyebrow">{t('profile.trophies')}</div>
+              <div className="mt-1 flex items-baseline gap-1.5">
+                <b className="num" style={{ fontFamily: 'var(--font-display)', fontSize: 30, color: 'var(--gold-hi)' }}>
+                  {earnedTrophies.length}
+                </b>
+                <span className="num text-[13px]" style={{ color: 'var(--dim)' }}>/ {ACHIEVEMENTS.length}</span>
+              </div>
+            </div>
+            <div className="flex-1 min-w-[140px] max-w-[260px]">
+              <Meter value={earnedTrophies.length} max={ACHIEVEMENTS.length} />
+            </div>
           </div>
+
           {earnedTrophies.length ? (
-            <div className="flex gap-3 overflow-x-auto pb-2">
+            <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1">
               {earnedTrophies.map((entry, index) => {
                 const style = TIER_STYLE[entry.tier];
+                const fresh = entry.id === newestTrophyId;
                 return (
                   <motion.div
                     key={entry.id}
                     className="shrink-0 text-center"
-                    style={{ width: 88 }}
-                    initial={{ opacity: 0, y: 14 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    style={{ width: 100 }}
+                    initial={{ opacity: 0, y: 16, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ delay: index * 0.04, type: 'spring', stiffness: 240, damping: 22 }}
-                    whileHover={{ y: -5 }}
+                    whileHover={{ y: -6 }}
                     title={`${entry.name[lang]} — ${entry.desc[lang]}`}
                   >
-                    <div
+                    <motion.div
                       className="grid place-items-center mx-auto"
                       style={{
-                        width: 62, height: 62, borderRadius: '50%', fontSize: 28,
-                        background: `radial-gradient(circle at 38% 30%, ${style.glow}, rgba(0,0,0,.35) 72%)`,
+                        width: 72, height: 72, borderRadius: '50%', fontSize: 32,
+                        background: `radial-gradient(circle at 38% 30%, ${style.glow}, rgba(0,0,0,.38) 72%)`,
                         border: `2px solid ${style.ring}`,
-                        boxShadow: `0 6px 18px ${style.glow}`,
                       }}
+                      animate={fresh
+                        ? { boxShadow: [`0 6px 18px ${style.glow}`, `0 6px 30px ${style.ring}`, `0 6px 18px ${style.glow}`] }
+                        : { boxShadow: `0 6px 18px ${style.glow}` }}
+                      transition={fresh ? { duration: 2.4, repeat: Infinity, ease: 'easeInOut' } : undefined}
                     >
                       {entry.trophy}
-                    </div>
-                    <div className="text-[10.5px] font-bold mt-1.5 leading-tight" style={{ color: 'var(--text)' }}>
+                    </motion.div>
+                    <div className="text-[11px] font-bold mt-2 leading-tight" style={{ color: 'var(--text)' }}>
                       {entry.name[lang]}
                     </div>
-                    <div className="text-[9px] uppercase tracking-[.14em]" style={{ color: style.ring }}>
+                    <div className="text-[9px] uppercase tracking-[.14em] mt-0.5" style={{ color: style.ring }}>
                       {style.label[lang]}
                     </div>
                   </motion.div>
@@ -328,11 +357,12 @@ export default function MyRoomScene() {
               })}
             </div>
           ) : (
-            <p className="text-[13px] py-4 text-center" style={{ color: 'var(--muted)' }}>{t('profile.noTrophies')}</p>
+            <p className="text-[13px] py-5 text-center" style={{ color: 'var(--muted)' }}>{t('profile.noTrophies')}</p>
           )}
+
           {/* The shelf fills up as achievements unlock; the next one is the nudge. */}
           {isMe && nextTrophy && (
-            <div className="mt-3 pt-3 flex items-center gap-2.5" style={{ borderTop: '1px solid var(--glass-line)' }}>
+            <div className="mt-4 pt-3 flex items-center gap-2.5" style={{ borderTop: '1px solid var(--glass-line)' }}>
               <span className="text-[20px] grayscale opacity-60">{nextTrophy.trophy}</span>
               <div className="flex-1 min-w-0">
                 <b className="block text-[12px]">{nextTrophy.name[lang]}</b>
@@ -343,6 +373,52 @@ export default function MyRoomScene() {
               </span>
             </div>
           )}
+
+          {/* full detail lives here now — collapsed by default, no third copy */}
+          {isMe && (
+            <div className="mt-3">
+              <button
+                className="w-full text-center text-[12px] font-bold py-2 rounded-[var(--r-xs)] press"
+                style={{ color: 'var(--gold-hi)', background: 'rgba(227,178,60,.08)', border: '1px solid var(--gold-line)' }}
+                onClick={() => setAllAchOpen((v) => !v)}
+              >
+                {allAchOpen ? t('profile.hideAch') : t('profile.showAllAch', { n: ACHIEVEMENTS.length })}
+              </button>
+              {allAchOpen && (
+                <div className="grid gap-2.5 mt-3" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))' }}>
+                  {ACHIEVEMENTS.map((achievement) => {
+                    const unlocked = achievements.includes(achievement.id);
+                    const value = achievement.stat === 'level' ? me.level
+                      : achievement.stat === 'itemCount' ? owned.length
+                        : achievement.stat === 'friendCount' ? friends.length
+                          : (stats as unknown as Record<string, number>)[achievement.stat] ?? 0;
+                    return (
+                      <div key={achievement.id} className="p-3 rounded-[var(--r-sm)]"
+                        style={{ background: unlocked ? 'rgba(227,178,60,.08)' : 'rgba(255,255,255,.025)', border: '1px solid var(--glass-line)' }}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[16px]">{unlocked ? '🎖️' : '🔒'}</span>
+                          <b className="text-[13px]">{achievement.name[lang]}</b>
+                        </div>
+                        <p className="text-[11.5px] mb-2" style={{ color: 'var(--muted)' }}>{achievement.desc[lang]}</p>
+                        <Meter value={Math.min(value, achievement.goal)} max={achievement.goal} height={5} tone={unlocked ? 'gold' : 'jade'} />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </GlassPanel>
+
+        {/* My best — the pride card, shown for me and for a friend's room */}
+        <GlassPanel className="p-4">
+          <div className="eyebrow mb-3">{t('profile.myBest')}</div>
+          <div className="grid gap-2.5" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))' }}>
+            <StatTile label={t('profile.biggestWin')} value={view.biggestWin} tone="jade" delay={0.02} />
+            <StatTile label={t('profile.biggestBet')} value={view.biggestBet} delay={0.05} />
+            <StatTile label={t('profile.bestStreak')} value={view.bestStreak} delay={0.08} />
+            <StatTile label={t('profile.blackjacks')} value={view.blackjacks} delay={0.11} />
+          </div>
         </GlassPanel>
 
         {/* head-to-head against every friend I've actually played (§rivalry) */}
@@ -380,24 +456,6 @@ export default function MyRoomScene() {
           </GlassPanel>
         )}
 
-        {/* favourite and rare items on display */}
-        <GlassPanel className="p-4">
-          <div className="eyebrow mb-3">{t('profile.shelf')}</div>
-          {shelf.length ? (
-            <div className="flex gap-3 overflow-x-auto pb-1">
-              {shelf.map((item) => item && (
-                <motion.div key={item.id} className={`p-2.5 rounded-[var(--r-sm)] rar-card rar-${item.rarity} shrink-0`}
-                  style={{ background: 'rgba(0,0,0,.28)', width: 104 }} whileHover={{ y: -4 }}>
-                  <div className="h-[62px] grid place-items-center"><ItemPreview item={item} compact /></div>
-                  <div className="text-[10px] text-center truncate mt-1" style={{ color: 'var(--muted)' }}>{item.name[lang]}</div>
-                </motion.div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-[13px] py-4 text-center" style={{ color: 'var(--muted)' }}>{t('vault.empty')}</p>
-          )}
-        </GlassPanel>
-
         {/* the numbers */}
         <GlassPanel className="p-4">
           <div className="eyebrow mb-3">{t('profile.stats')}</div>
@@ -406,43 +464,43 @@ export default function MyRoomScene() {
             <StatTile label={t('profile.wins')} value={view.wins} tone="jade" delay={0.04} />
             <StatTile label={t('profile.losses')} value={view.losses} delay={0.06} />
             <StatTile label={t('profile.winRate')} value={winRate} delay={0.08} />
-            <StatTile label={t('profile.blackjacks')} value={view.blackjacks} delay={0.1} />
-            <StatTile label={t('profile.bestStreak')} value={view.bestStreak} delay={0.12} />
-            <StatTile label={t('profile.biggestWin')} value={view.biggestWin} tone="jade" delay={0.14} />
-            <StatTile label={t('profile.biggestBet')} value={view.biggestBet} delay={0.16} />
-            <StatTile label={t('profile.handsPlayed')} value={view.bjHands} delay={0.18} />
-            <StatTile label={t('profile.doubleWins')} value={view.doubleWins} delay={0.2} />
-            <StatTile label={t('profile.splitWins')} value={view.splitWins} delay={0.22} />
-            <StatTile label={t('profile.avgBet')} value={view.betCount ? Math.round(view.betTotal / view.betCount) : 0} delay={0.24} />
+            <StatTile label={t('profile.handsPlayed')} value={view.bjHands} delay={0.1} />
+            <StatTile label={t('profile.doubleWins')} value={view.doubleWins} delay={0.12} />
+            <StatTile label={t('profile.splitWins')} value={view.splitWins} delay={0.14} />
+            <StatTile label={t('profile.avgBet')} value={view.betCount ? Math.round(view.betTotal / view.betCount) : 0} delay={0.16} />
           </div>
-        </GlassPanel>
 
-        {/* achievements */}
-        {isMe && (
-          <GlassPanel className="p-4">
-            <div className="eyebrow mb-3">{t('profile.achievements')}</div>
-            <div className="grid gap-2.5" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))' }}>
-              {ACHIEVEMENTS.map((achievement) => {
-                const unlocked = achievements.includes(achievement.id);
-                const value = achievement.stat === 'level' ? me.level
-                  : achievement.stat === 'itemCount' ? owned.length
-                    : achievement.stat === 'friendCount' ? friends.length
-                      : (stats as unknown as Record<string, number>)[achievement.stat] ?? 0;
-                return (
-                  <div key={achievement.id} className="p-3 rounded-[var(--r-sm)]"
-                    style={{ background: unlocked ? 'rgba(227,178,60,.08)' : 'rgba(255,255,255,.025)', border: '1px solid var(--glass-line)' }}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[16px]">{unlocked ? '🎖️' : '🔒'}</span>
-                      <b className="text-[13px]">{achievement.name[lang]}</b>
+          {perGame.length > 0 && (
+            <div className="mt-4 pt-3" style={{ borderTop: '1px solid var(--glass-line)' }}>
+              <div className="eyebrow mb-2" style={{ fontSize: 10 }}>{t('profile.byGame')}</div>
+              <div className="flex flex-col gap-1.5">
+                {perGame.map((row) => {
+                  const rate = pct(row.wins, row.plays);
+                  return (
+                    <div key={row.key} className="flex items-center gap-3 text-[12.5px]">
+                      <span className="flex-1 truncate" style={{ color: 'var(--muted)' }}>{t(`games.${row.key}`)}</span>
+                      <span className="num text-[10.5px]" style={{ color: 'var(--dim)' }}>{fmt(row.wins)} / {fmt(row.plays)}</span>
+                      <div className="w-20"><Meter value={row.wins} max={row.plays} height={5} tone="jade" /></div>
+                      <b className="num" style={{ color: 'var(--gold-hi)', minWidth: 40, textAlign: 'end' }}>{rate}</b>
                     </div>
-                    <p className="text-[11.5px] mb-2" style={{ color: 'var(--muted)' }}>{achievement.desc[lang]}</p>
-                    <Meter value={Math.min(value, achievement.goal)} max={achievement.goal} height={5} tone={unlocked ? 'gold' : 'jade'} />
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </GlassPanel>
-        )}
+          )}
+
+          {prideStats.length > 0 && (
+            <div className="mt-3 pt-3 flex flex-wrap gap-2" style={{ borderTop: '1px solid var(--glass-line)' }}>
+              {prideStats.map((row) => (
+                <span key={row.label} className="px-2.5 py-1 rounded-full text-[11.5px]"
+                  style={{ background: 'rgba(255,255,255,.045)', border: '1px solid var(--glass-line)' }}>
+                  <span style={{ color: 'var(--muted)' }}>{row.label}</span>{' '}
+                  <b className="num" style={{ color: 'var(--gold-hi)' }}>{fmt(row.value)}</b>
+                </span>
+              ))}
+            </div>
+          )}
+        </GlassPanel>
 
         {/* recent hands */}
         {isMe && (
