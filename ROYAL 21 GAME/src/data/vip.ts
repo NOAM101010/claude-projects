@@ -11,13 +11,10 @@ export const VIP_MIN_LEVEL = 5;
 export const VIP_MIN_CHIPS = 150_000;
 export const VIP_DAILY_BONUS = 10_000;
 
-/** High-stakes coin flip bets — VIP only. */
-export const VIP_COINFLIP_STAKES = [5000, 10000, 25000, 50000, 100000] as const;
-/** High-stakes high card bets — VIP only. */
-export const VIP_HIGHCARD_STAKES = [5000, 10000, 25000, 50000, 100000] as const;
-/** High-stakes blackjack bets — VIP only. Larger than the base BetRail options
- *  so a VIP has something to spend seven figures of chips on at the felt. */
-export const VIP_BLACKJACK_BETS = [5000, 10000, 25000, 50000, 100000] as const;
+/** The four extra high-stakes chips appended to the base rail for VIP-eligible
+ *  players — same set in every game, so `[...BASE, ...VIP_CHIP_EXTRA]` is the
+ *  one pattern for a VIP rail everywhere. */
+export const VIP_CHIP_EXTRA = [25000, 50000, 100000, 250000] as const;
 
 /** VIP is sticky: once a player has qualified (level + chips at the same
  *  time), they stay VIP forever — losing chips at the tables shouldn't

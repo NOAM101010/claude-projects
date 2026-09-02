@@ -3,7 +3,7 @@ import { Chip } from '@/components/game/Chip';
 import { ChipStack } from '@/components/game/ChipStack';
 import { GameButton } from '@/components/ui/GameButton';
 import { BLACKJACK_BETS } from '@/data/economy';
-import { VIP_BLACKJACK_BETS } from '@/data/vip';
+import { VIP_CHIP_EXTRA } from '@/data/vip';
 import { useT } from '@/hooks/useT';
 import { fmt } from '@/lib/format';
 
@@ -65,7 +65,7 @@ export function BetRail({
             style={{ color: 'var(--gold-hi)', letterSpacing: '0.15em' }}>
             💎 VIP HIGH STAKES
           </span>
-          {VIP_BLACKJACK_BETS.map((value) => (
+          {VIP_CHIP_EXTRA.map((value) => (
             <Chip
               key={value}
               value={value}

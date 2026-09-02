@@ -19,6 +19,7 @@ import { audio } from '@/audio/AudioManager';
 import { haptic } from '@/lib/haptics';
 import { fmt } from '@/lib/format';
 import { XP_REWARDS } from '@/data/economy';
+import { VIP_CHIP_EXTRA, isVipEligible } from '@/data/vip';
 import { newSeed } from '@/lib/random';
 import {
   createState, reduce, handTotal, betCost, PAYTABLE, BACCARAT_BETS, outcomeLabel,
@@ -369,7 +370,7 @@ function BaccaratSolo() {
             </span>
           </div>
           <div className="flex flex-wrap gap-1.5 justify-center mb-3 max-w-[420px] mx-auto">
-            {BACCARAT_BETS.map((s) => (
+            {(isVipEligible(profile) ? [...BACCARAT_BETS, ...VIP_CHIP_EXTRA] : BACCARAT_BETS).map((s) => (
               <button key={s} onClick={() => { audio.play('click'); setStake(s); }}
                 style={{ opacity: stake === s ? 1 : 0.4, transform: stake === s ? 'translateY(-4px)' : 'none', transition: '.2s' }}>
                 <Chip value={s} size={34} skin={chipSkin} interactive />
@@ -988,7 +989,7 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
             </span>
           </div>
           <div className="flex flex-wrap gap-1.5 justify-center mb-3 max-w-[420px] mx-auto">
-            {BACCARAT_BETS.map((s) => (
+            {(isVipEligible(profile) ? [...BACCARAT_BETS, ...VIP_CHIP_EXTRA] : BACCARAT_BETS).map((s) => (
               <button key={s} onClick={() => { audio.play('click'); setStake(s); }}
                 style={{ opacity: stake === s ? 1 : 0.4, transform: stake === s ? 'translateY(-4px)' : 'none', transition: '.2s' }}>
                 <Chip value={s} size={34} skin={chipSkin} interactive />

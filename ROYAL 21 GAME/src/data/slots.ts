@@ -85,8 +85,9 @@ export const symbolsForTheme = (themeId: string): SlotSymbol[] => SLOT_THEME_SYM
 /** Two of a kind hands most of the stake back — the near miss that keeps you in. */
 export const PAIR_RETURN = 0.7;
 
-/** Stakes offered at the machine. */
-export const SLOT_STAKES = [25, 50, 100, 250, 500, 1000, 2500, 5000] as const;
+/** Stakes offered at the machine — the shared base chip rail. RTP (slotsRTP)
+ *  is a pure function of the symbol table, so any stake just scales linearly. */
+export const SLOT_STAKES = [25, 100, 250, 500, 1000, 2500, 5000, 10000] as const;
 
 export const symbolById = (id: string, symbols: SlotSymbol[] = SLOT_SYMBOLS) => symbols.find((s) => s.id === id) ?? symbols[0];
 

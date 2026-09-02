@@ -4,6 +4,11 @@ export const CHIP_COLORS: Record<number, string> = {
   10: '#3a4f9e', 25: '#2e9e6b', 50: '#a8413e', 100: '#2b2f38',
   250: '#7b5bd6', 500: '#e3b23c', 1000: '#38b6c8',
   2500: '#c23a8e', 5000: '#15161a', 10000: '#e8e3d4',
+  // VIP high-stakes chips.
+  25000: '#6b4f1a',   // deep gold
+  50000: '#0d0e12',   // obsidian
+  100000: '#4a2d7a',  // royal purple
+  250000: '#6e2e22',  // bronze-red
 };
 
 export const chipColor = (value: number) => {
@@ -13,8 +18,9 @@ export const chipColor = (value: number) => {
 
 export const chipLabel = (value: number) => (value >= 1000 ? `${value / 1000}K` : String(value));
 
-/** 10K's chip is near-white — its label needs a dark ink instead of the usual white text. */
-export const chipInk = (value: number) => (value >= 10000 ? '#1a1206' : '#fff');
+/** Only the 10K chip is a near-white face that needs dark ink; every other
+ *  chip (including the dark VIP ones) reads best with white. */
+export const chipInk = (value: number) => (chipColor(value) === CHIP_COLORS[10000] ? '#1a1206' : '#fff');
 
 interface Props {
   value: number;
@@ -38,7 +44,9 @@ export function Chip({ value, size = 52, skin = 'ck-classic', onClick, disabled,
           borderWidth: Math.max(2, size * 0.06),
           ['--chip-color' as string]: chipColor(value),
           color: chipInk(value),
-          textShadow: value >= 10000 ? '0 1px 1px rgba(255,255,255,.4)' : undefined,
+          textShadow: chipInk(value) === '#1a1206'
+            ? '0 1px 1px rgba(255,255,255,.4)'
+            : '0 1px 2px rgba(0,0,0,.55)',
           opacity: disabled ? 0.35 : 1,
           cursor: onClick && !disabled ? 'pointer' : 'default',
         }}

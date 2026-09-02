@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SceneShell } from '@/components/layout/SceneShell';
 import { GlassPanel } from '@/components/ui/GlassPanel';
@@ -24,7 +24,7 @@ import { useNightScoring } from '@/hooks/useNightScoring';
 import { isOnline } from '@/services/supabase';
 import { roomsService } from '@/services/roomsService';
 import { STAKES, XP_REWARDS } from '@/data/economy';
-import { VIP_COINFLIP_STAKES, isVipEligible } from '@/data/vip';
+import { VIP_CHIP_EXTRA, isVipEligible } from '@/data/vip';
 import type { CfSide } from '@/games/coinflip/types';
 import { fmt } from '@/lib/format';
 import { newSeed } from '@/lib/random';
@@ -40,7 +40,6 @@ export default function CoinFlipScene({ mode, roomCode }: Props) {
 /** One coin, one choice, one of the shortest loops in the room — unchanged solo economy: call it right, double your stake. */
 function CoinFlipSolo() {
   const navigate = useNavigate();
-  const [params] = useSearchParams();
   const { t } = useT();
   const nightReturn = useNightReturn();
   const reportNight = useNightScoring('coinflip');
@@ -52,9 +51,8 @@ function CoinFlipSolo() {
   const toast = useUI((s) => s.toast);
   const showMoment = useUI((s) => s.showMoment);
 
-  const vipMode = params.get('vip') === '1' && isVipEligible(profile);
-  const stakeTable = vipMode ? VIP_COINFLIP_STAKES : STAKES;
-  const [stake, setStake] = useState<number>(vipMode ? VIP_COINFLIP_STAKES[0] : 100);
+  const stakeTable = isVipEligible(profile) ? [...STAKES, ...VIP_CHIP_EXTRA] : STAKES;
+  const [stake, setStake] = useState<number>(100);
   const [side, setSide] = useState<CfSide>('heads');
   const [phase, setPhase] = useState<'bet' | 'flying' | 'result'>('bet');
   const [result, setResult] = useState<CfSide | null>(null);
@@ -619,7 +617,7 @@ function CoinFlipRoom({ roomCode }: { roomCode: string }) {
                   </GameButton>
                 ))}
               </div>
-              <BetSelector stakes={STAKES} value={stake} onChange={setStake} chipSkin={profile.equipped.chipSkin} disabled={!canPick} chips={profile.chips} />
+              <BetSelector stakes={isVipEligible(profile) ? [...STAKES, ...VIP_CHIP_EXTRA] : STAKES} value={stake} onChange={setStake} chipSkin={profile.equipped.chipSkin} disabled={!canPick} chips={profile.chips} />
               <div className="flex gap-2">
                 <GameButton tone="ghost" block disabled={phase !== 'betting' || !mySeat?.pick} onClick={clearPick}>{t('blackjack.clear')}</GameButton>
                 <GameButton tone="gold" block disabled={!isHost || picked.length < 2} onClick={handleFlip}>{t('games.flip')}</GameButton>

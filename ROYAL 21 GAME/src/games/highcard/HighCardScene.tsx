@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SceneShell } from '@/components/layout/SceneShell';
 import { GlassPanel } from '@/components/ui/GlassPanel';
@@ -26,7 +26,7 @@ import { useNightScoring } from '@/hooks/useNightScoring';
 import { isOnline } from '@/services/supabase';
 import { roomsService } from '@/services/roomsService';
 import { STAKES, XP_REWARDS } from '@/data/economy';
-import { VIP_HIGHCARD_STAKES, isVipEligible } from '@/data/vip';
+import { VIP_CHIP_EXTRA, isVipEligible } from '@/data/vip';
 import { fmt } from '@/lib/format';
 import { audio } from '@/audio/AudioManager';
 import { haptic } from '@/lib/haptics';
@@ -41,7 +41,6 @@ export default function HighCardScene({ mode, roomCode }: Props) {
 /** War, one card each, against the dealer — unchanged solo economy. */
 function HighCardSolo() {
   const navigate = useNavigate();
-  const [params] = useSearchParams();
   const { t } = useT();
   const nightReturn = useNightReturn();
   const reportNight = useNightScoring('highcard');
@@ -52,9 +51,8 @@ function HighCardSolo() {
   const recordResult = usePlayer((s) => s.recordResult);
   const toast = useUI((s) => s.toast);
 
-  const vipMode = params.get('vip') === '1' && isVipEligible(profile);
-  const stakeTable = vipMode ? VIP_HIGHCARD_STAKES : STAKES;
-  const [stake, setStake] = useState<number>(vipMode ? VIP_HIGHCARD_STAKES[0] : 100);
+  const stakeTable = isVipEligible(profile) ? [...STAKES, ...VIP_CHIP_EXTRA] : STAKES;
+  const [stake, setStake] = useState<number>(100);
   const [pot, setPot] = useState(0);
   const [phase, setPhase] = useState<'bet' | 'countdown' | 'reveal' | 'result'>('bet');
   const [count, setCount] = useState(3);
@@ -622,7 +620,7 @@ function HighCardRoom({ roomCode }: { roomCode: string }) {
         <GlassPanel gold className="p-4 w-full">
           {phase === 'betting' ? (
             <>
-              <BetSelector stakes={STAKES} value={stake} onChange={setStake} chipSkin={profile.equipped.chipSkin} disabled={!canAnte} chips={profile.chips} />
+              <BetSelector stakes={isVipEligible(profile) ? [...STAKES, ...VIP_CHIP_EXTRA] : STAKES} value={stake} onChange={setStake} chipSkin={profile.equipped.chipSkin} disabled={!canAnte} chips={profile.chips} />
               <div className="flex gap-2">
                 <GameButton tone="ghost" block disabled={phase !== 'betting' || !mySeat?.stake} onClick={clearAnte}>{t('blackjack.clear')}</GameButton>
                 <GameButton tone="gold" block disabled={!canAnte} onClick={ante}>{t('games.draw')} · {fmt(stake)}</GameButton>

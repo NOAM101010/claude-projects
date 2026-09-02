@@ -12,9 +12,10 @@ import type { Rarity } from '@/types';
 
 export const STARTING_CHIPS = 5000;
 
-/** Table stakes, offered as physical chips before every game. */
-export const STAKES = [25, 50, 100, 250, 500, 1000, 2500, 5000, 10000] as const;
-export const BLACKJACK_BETS = [10, 25, 50, 100, 250, 500, 1000] as const;
+/** Base chip rail — the same eight chips in front of every game with a stake
+ *  picker. VIP players get four bigger chips appended (see VIP_CHIP_EXTRA). */
+export const STAKES = [25, 100, 250, 500, 1000, 2500, 5000, 10000] as const;
+export const BLACKJACK_BETS = [25, 100, 250, 500, 1000, 2500, 5000, 10000] as const;
 
 /** Buy-ins for Blackjack vs friends. Everyone puts in, the winner takes the pot. */
 export const DUEL_BUYINS = [100, 250, 500, 1000, 2500, 5000] as const;

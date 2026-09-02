@@ -21,6 +21,7 @@ import { isOnline } from '@/services/supabase';
 import { roomsService } from '@/services/roomsService';
 import { presenceService } from '@/services/presenceService';
 import { STAKES, XP_REWARDS } from '@/data/economy';
+import { VIP_CHIP_EXTRA, isVipEligible } from '@/data/vip';
 import { fmt } from '@/lib/format';
 import { newSeed } from '@/lib/random';
 import { audio } from '@/audio/AudioManager';
@@ -611,7 +612,7 @@ export default function RouletteScene({ mode, roomCode }: Props) {
             <span className="num text-[12px]" style={{ color: 'var(--gold)' }}>{t('roulette.onTable')} · {fmt(myStake)}</span>
           </div>
           <div className="flex flex-wrap gap-2 justify-center mb-3">
-            {STAKES.map((s) => (
+            {(isVipEligible(profile) ? [...STAKES, ...VIP_CHIP_EXTRA] : STAKES).map((s) => (
               <button key={s} onClick={() => { audio.play('click'); setStake(s); }} style={{ opacity: stake === s ? 1 : 0.4, transform: stake === s ? 'translateY(-4px)' : 'none', transition: '.2s' }}>
                 <Chip value={s} size={38} skin={profile.equipped.chipSkin} interactive />
               </button>
