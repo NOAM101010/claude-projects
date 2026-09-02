@@ -7,6 +7,7 @@ import { useSocial } from '@/stores/useSocial';
 import { usePlayer } from '@/stores/usePlayer';
 import { useT } from '@/hooks/useT';
 import { roomRouteFor } from '@/services/lobbyService';
+import { roomsService } from '@/services/roomsService';
 import { fmt } from '@/lib/format';
 import type { AppNotification, Friend, GameKey } from '@/types';
 
@@ -37,19 +38,25 @@ export function NotificationsPanel() {
   const openPanel = useUI((s) => s.openPanel);
   const { t } = useT();
   const navigate = useNavigate();
+  const toast = useUI((s) => s.toast);
   const profile = usePlayer((s) => s.profile);
-  const { notifications, friends, markRead, refresh } = useSocial();
+  const { notifications, friends, markRead, refresh, dismiss } = useSocial();
   const open = panel === 'notifications';
 
   useEffect(() => {
     if (open && profile.id) void refresh(profile.id);
   }, [open, profile.id, refresh]);
 
-  const openInvite = (notification: AppNotification) => {
+  const openInvite = async (notification: AppNotification) => {
     const payload = notification.payload as { room_code?: string; game?: string } | undefined;
     if (notification.title !== 'invite' || !payload?.room_code) return;
+    if (!(await roomsService.isLive(payload.room_code))) {
+      void dismiss(notification.id);
+      toast(t('notifications.inviteExpired'), 'bad', '⚠');
+      return;
+    }
     openPanel(null);
-    navigate(roomRouteFor((payload.game ?? 'blackjack') as GameKey, payload.room_code));
+    navigate(roomRouteFor((payload.game ?? 'blackjack') as GameKey | 'night', payload.room_code));
   };
 
   return (
@@ -66,7 +73,7 @@ export function NotificationsPanel() {
             return (
               <div key={notification.id}
                 role={clickable ? 'button' : undefined}
-                onClick={clickable ? () => openInvite(notification) : undefined}
+                onClick={clickable ? () => void openInvite(notification) : undefined}
                 className={`flex items-center gap-3 p-3 rounded-[var(--r-sm)] border border-white/[0.07] ${clickable ? 'press cursor-pointer' : ''}`}
                 style={{ background: notification.read ? 'transparent' : 'rgba(227,178,60,.06)' }}>
                 <span className="text-[20px]">{icons[notification.kind] ?? '◆'}</span>

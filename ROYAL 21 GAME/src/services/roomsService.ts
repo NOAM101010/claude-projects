@@ -114,6 +114,31 @@ export const roomsService = {
     };
   },
 
+  /** True when a room with this code still exists AND has at least one member.
+   *  `rooms` rows are never deleted, so a bare byCode() isn't enough to tell a
+   *  live table from a dead one — an invite is only worth acting on if someone
+   *  is actually there.
+   *
+   *  A failed / errored query returns `true` ("assume live") so a network blip
+   *  never deletes a legitimate invite; only a query that *succeeds* and finds
+   *  no room / no members returns `false`. */
+  async isLive(code: string): Promise<boolean> {
+    const client = db();
+    if (!client) return true;
+    try {
+      const { data: room, error: roomErr } = await client
+        .from('rooms').select('id').eq('code', code.toUpperCase()).maybeSingle();
+      if (roomErr) return true;
+      if (!room) return false;
+      const { count, error: memberErr } = await client
+        .from('room_members').select('user_id', { count: 'exact', head: true }).eq('room_id', room.id);
+      if (memberErr) return true;
+      return (count ?? 0) > 0;
+    } catch {
+      return true;
+    }
+  },
+
   /** Check a password against a room's stored hash. Returns true when public. */
   async verifyPassword(roomId: string, password: string): Promise<boolean> {
     const client = db();

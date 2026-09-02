@@ -318,7 +318,7 @@
     "inviteSubtitle": "Send a link to a friend. They join — you both get {chips} chips!",
     "inviteStats": "Invited {count} friends · Earned {chips} chips",
     "inviteBonus": "Invite bonus!",
-    "inviteMessage": "Hey! Come play ROYAL 21 with me 🎰 We both get 500 free chips: {link}",
+    "inviteMessage": "Hey! Come play ROYAL 21 with me 🎰 We both get {chips} free chips: {link}",
     "sendRequest": "Send request",
     "requestSent": "Request sent to {name}",
     "accept": "Accept",
@@ -359,7 +359,8 @@
     "accepted": "{name} accepted your friend request",
     "giftReceived": "You received a gift of {amount} chips",
     "milestoneReward": "Level {level} milestone: +{chips} chips",
-    "generic": "New notification"
+    "generic": "New notification",
+    "inviteExpired": "That invite is no longer valid"
   },
   "rooms": {
     "title": "My room",

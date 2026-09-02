@@ -318,7 +318,7 @@
     "inviteSubtitle": "שלח קישור לחבר. הוא נכנס - שניכם מקבלים {chips} צ'יפים!",
     "inviteStats": "הזמנת {count} חברים · הרווחת {chips} צ'יפים",
     "inviteBonus": "בונוס הזמנה!",
-    "inviteMessage": "היי! בוא לשחק איתי ב-ROYAL 21 🎰 שנינו מקבלים 500 צ'יפים חינם: {link}",
+    "inviteMessage": "היי! בוא לשחק איתי ב-ROYAL 21 🎰 שנינו מקבלים {chips} צ'יפים חינם: {link}",
     "sendRequest": "שלח בקשה",
     "requestSent": "הבקשה נשלחה ל-{name}",
     "accept": "אשר",
@@ -359,7 +359,8 @@
     "accepted": "{name} אישר את בקשת החברות שלך",
     "giftReceived": "קיבלת מתנה של {amount} צ'יפים",
     "milestoneReward": "פרס לרמה {level}: +{chips} צ'יפים",
-    "generic": "התראה חדשה"
+    "generic": "התראה חדשה",
+    "inviteExpired": "ההזמנה כבר לא בתוקף"
   },
   "rooms": {
     "title": "החדר שלי",

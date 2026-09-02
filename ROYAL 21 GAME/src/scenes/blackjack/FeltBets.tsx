@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion';
 import { ChipStack } from '@/components/game/ChipStack';
 import { useT } from '@/hooks/useT';
 import { fmt } from '@/lib/format';
@@ -36,11 +35,11 @@ export function FeltBets({ chipSkin, lastChip, sideBets, sideResults, phase, com
     const result = sideResults?.[side] ?? 0;
     const won = result > 0 && !betting;
     return (
-      <motion.button
+      <button
         type="button"
         disabled={!betting}
         onClick={() => { if (betting) { audio.play('chip'); haptic('chip'); onSide(side, lastChip || 100); } }}
-        className="flex flex-col gap-0.5 rounded-[var(--r-sm)] press text-start"
+        className={`flex flex-col gap-0.5 rounded-[var(--r-sm)] press text-start ${won ? 'sb-won' : ''}`}
         style={{
           width: compact ? 104 : 134,
           padding: compact ? '7px 8px' : '9px 11px',
@@ -49,10 +48,6 @@ export function FeltBets({ chipSkin, lastChip, sideBets, sideResults, phase, com
           backdropFilter: 'blur(3px)',
           opacity: betting ? 1 : 0.9,
         }}
-        animate={won ? {
-          boxShadow: ['0 0 0 rgba(227,178,60,0)', '0 0 22px rgba(227,178,60,.8)', '0 0 0 rgba(227,178,60,0)'],
-        } : {}}
-        transition={won ? { duration: 1.1, repeat: 3 } : {}}
       >
         <span className="font-black tracking-widest" style={{ fontSize: 9.5, color: 'var(--gold-hi)', letterSpacing: '.12em' }}>
           {label}
@@ -75,7 +70,7 @@ export function FeltBets({ chipSkin, lastChip, sideBets, sideResults, phase, com
             <span style={{ fontSize: 9, color: 'var(--dim)' }}>{t('blackjack.sideBetHint')}</span>
           )}
         </div>
-      </motion.button>
+      </button>
     );
   };
 

@@ -32,6 +32,16 @@ export const notificationService = {
     await client.from('notifications').update({ read: true }).eq('user_id', userId).eq('read', false);
   },
 
+  /** Drop a single notification (owner-only, enforced by the RLS delete policy).
+   *  Returns whether the delete actually went through so callers don't remove it
+   *  from the UI on a network/RLS failure. */
+  async delete(id: string): Promise<boolean> {
+    const client = db();
+    if (!client) return false;
+    const { error } = await client.from('notifications').delete().eq('id', id);
+    return !error;
+  },
+
   async invite(fromId: string, toId: string, roomCode: string, game: string) {
     const client = db();
     if (!client) return;
@@ -41,8 +51,10 @@ export const notificationService = {
     });
   },
 
-  /** Realtime feed so invites arrive while you are mid-game. */
-  subscribe(userId: string, onInsert: (n: AppNotification) => void) {
+  /** Realtime feed so invites arrive while you are mid-game — and vanish when
+   *  a stale one is cleaned up elsewhere (DELETE needs `replica identity full`
+   *  on the table so `payload.old` carries `user_id` for the filter). */
+  subscribe(userId: string, onInsert: (n: AppNotification) => void, onDelete?: (id: string) => void) {
     const client = db();
     if (!client || !isRemoteId(userId)) return () => {};
     const channel = client
@@ -51,6 +63,11 @@ export const notificationService = {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
         (payload) => onInsert(toNotification(payload.new)),
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+        (payload) => { const id = (payload.old as { id?: string }).id; if (id) onDelete?.(id); },
       )
       .subscribe();
     return () => { void client.removeChannel(channel); };

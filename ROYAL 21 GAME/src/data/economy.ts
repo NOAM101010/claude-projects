@@ -222,24 +222,25 @@ export function milestoneReward(level: number) {
 /* long streaks unlock big weekly milestones so it is worth keeping the chain */
 /* alive past day 30.                                                         */
 /*                                                                            */
-/*   day  1–3   :   50 base                                                   */
-/*   day  4–6   :  100 base                                                   */
-/*   day  7     :  500 (7-day milestone)                                      */
-/*   day  8–13  :  250 base                                                   */
-/*   day 14     : 1000 (2-week milestone)                                     */
-/*   day 15–29  :  400 base                                                   */
-/*   day 30     : 3000 (monthly milestone)                                    */
-/*   day 30+    :  500 base                                                   */
+/*   day  1–3   :    500 base                                                 */
+/*   day  4–6   :  1,000 base                                                 */
+/*   day  7     :  5,000 (7-day milestone)                                    */
+/*   day  8–13  :  1,500 base                                                 */
+/*   day 14     : 15,000 (2-week milestone)                                   */
+/*   day 15–29  :  2,000 base                                                 */
+/*   day 30     : 50,000 (monthly milestone)                                  */
+/*   day 30+    :  2,500 base                                                 */
+/* Keep in sync with the CASE inside claim_daily_bonus (streak-rewards-v2.sql).*/
 /* -------------------------------------------------------------------------- */
 export const STREAK_REWARD = (day: number): number => {
-  if (day === 30) return 3000;
-  if (day === 14) return 1000;
-  if (day === 7) return 500;
-  if (day <= 3) return 50;
-  if (day <= 6) return 100;
-  if (day <= 13) return 250;
-  if (day <= 29) return 400;
-  return 500;
+  if (day === 30) return 50_000;
+  if (day === 14) return 15_000;
+  if (day === 7) return 5_000;
+  if (day <= 3) return 500;
+  if (day <= 6) return 1_000;
+  if (day <= 13) return 1_500;
+  if (day <= 29) return 2_000;
+  return 2_500;
 };
 
 /** Days on which the streak pays a milestone bonus instead of the base amount. */
@@ -278,3 +279,7 @@ export const daysSince = (dateKey: string) =>
 /* Mirrors claim_weekly_prize() in supabase/setup.sql.                        */
 /* -------------------------------------------------------------------------- */
 export const WEEKLY_PRIZE_CHIPS = 1000;
+
+/** Chips both sides get when a referral completes. Mirrors `v_bonus` +
+ *  `referrals.bonus_chips` default in supabase (referral-bonus-5k.sql). */
+export const REFERRAL_BONUS = 5_000;

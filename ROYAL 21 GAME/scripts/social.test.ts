@@ -20,20 +20,20 @@ const check = (name: string, condition: boolean, detail = '') => {
   }
 };
 
-console.log('\nlogin streak — reward ladder');
-check('day 1 pays the base amount', STREAK_REWARD(1) === 50);
-check('day 3 still pays the base amount', STREAK_REWARD(3) === 50);
-check('day 4 steps up', STREAK_REWARD(4) === 100);
-check('day 6 is still 100', STREAK_REWARD(6) === 100);
-check('day 7 pays 7-day milestone (500)', STREAK_REWARD(7) === 500);
-check('day 8 goes back to base (250)', STREAK_REWARD(8) === 250);
-check('day 13 still 250', STREAK_REWARD(13) === 250);
-check('day 14 pays 2-week milestone (1000)', STREAK_REWARD(14) === 1000);
-check('day 15 goes to 400 base', STREAK_REWARD(15) === 400);
-check('day 29 still 400', STREAK_REWARD(29) === 400);
-check('day 30 pays monthly milestone (3000)', STREAK_REWARD(30) === 3000);
-check('day 31 goes to 500 base', STREAK_REWARD(31) === 500);
-check('day 60 still 500', STREAK_REWARD(60) === 500);
+console.log('\nlogin streak — reward ladder (must match claim_daily_bonus CASE)');
+check('day 1 pays the base amount', STREAK_REWARD(1) === 500);
+check('day 3 still pays the base amount', STREAK_REWARD(3) === 500);
+check('day 4 steps up', STREAK_REWARD(4) === 1000);
+check('day 6 is still 1000', STREAK_REWARD(6) === 1000);
+check('day 7 pays 7-day milestone (5000)', STREAK_REWARD(7) === 5000);
+check('day 8 goes back to base (1500)', STREAK_REWARD(8) === 1500);
+check('day 13 still 1500', STREAK_REWARD(13) === 1500);
+check('day 14 pays 2-week milestone (15000)', STREAK_REWARD(14) === 15000);
+check('day 15 goes to 2000 base', STREAK_REWARD(15) === 2000);
+check('day 29 still 2000', STREAK_REWARD(29) === 2000);
+check('day 30 pays monthly milestone (50000)', STREAK_REWARD(30) === 50000);
+check('day 31 goes to 2500 base', STREAK_REWARD(31) === 2500);
+check('day 60 still 2500', STREAK_REWARD(60) === 2500);
 
 console.log('\nlogin streak — day tracking (nextStreakDay)');
 check('no prior claim starts at day 1', nextStreakDay({ lastClaim: null, day: 0 }) === 1);
@@ -46,6 +46,24 @@ check('no prior claim starts at day 1', nextStreakDay({ lastClaim: null, day: 0 
   const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10);
   check('a skipped day resets the streak to 1',
     nextStreakDay({ lastClaim: twoDaysAgo, day: 6 }) === 1);
+}
+
+console.log('\nlogin streak — double-claim guard (mirrors usePlayer.claimDaily)');
+{
+  // The gate in claimDaily(): `if (effectiveDaily.lastClaim === today) return null`
+  // — no grant, regardless of what the ladder would pay. The server RPC is the
+  // second, atomic gate for the multi-device case.
+  const today = new Date().toISOString().slice(0, 10);
+  const claimDailyWouldGrant = (daily: { lastClaim: string | null; day: number }) =>
+    daily.lastClaim !== today;
+  check('claiming again the same day is blocked by the lastClaim guard',
+    claimDailyWouldGrant({ lastClaim: today, day: 5 }) === false);
+  check('claiming on a fresh day is allowed',
+    claimDailyWouldGrant({ lastClaim: null, day: 0 }) === true);
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  check('claiming the day after continues (guard passes, ladder advances)',
+    claimDailyWouldGrant({ lastClaim: yesterday, day: 5 }) === true
+      && nextStreakDay({ lastClaim: yesterday, day: 5 }) === 6);
 }
 
 console.log('\nVIP tiers');

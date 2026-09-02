@@ -87,13 +87,14 @@ export const lobbyService = {
 };
 
 /** Where a joined table actually opens, per game — mirrors routes.tsx. */
-export const roomRouteFor = (game: GameKey, code: string): string => {
+export const roomRouteFor = (game: GameKey | 'night', code: string): string => {
   switch (game) {
     case 'roulette': return `/game/roulette/room/${code}`;
     case 'blackjack': return `/blackjack/room/${code}`;
     case 'duel': return `/room/${code}?game=duel`;
     case 'poker': return `/poker/${code}`;
     case 'sng': return `/poker/sng/${code}`;
+    case 'night': return `/night/${code}`;
     default: return `/room/${code}`;
   }
 };

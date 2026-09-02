@@ -16,6 +16,7 @@ import { notificationService } from '@/services/notificationService';
 import { friendsService } from '@/services/friendsService';
 import { referralService } from '@/services/referralService';
 import { useRoom } from '@/stores/useRoom';
+import { REFERRAL_BONUS } from '@/data/economy';
 import { fmt } from '@/lib/format';
 import type { Friend } from '@/types';
 
@@ -57,7 +58,7 @@ export function FriendsPanel() {
 
   const shareOnWhatsApp = () => {
     if (!inviteLink) return;
-    const message = t('friends.inviteMessage', { link: inviteLink });
+    const message = t('friends.inviteMessage', { link: inviteLink, chips: fmt(REFERRAL_BONUS) });
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
 
@@ -154,7 +155,7 @@ export function FriendsPanel() {
                         <b className="text-[13px]">{t('friends.inviteTitle')}</b>
                       </div>
                       <p className="text-[11.5px] mb-2" style={{ color: 'var(--muted)' }}>
-                        {t('friends.inviteSubtitle', { chips: '500' })}
+                        {t('friends.inviteSubtitle', { chips: fmt(REFERRAL_BONUS) })}
                       </p>
                       {refStats.count > 0 && (
                         <p className="text-[11.5px] mb-2" style={{ color: 'var(--gold-hi)' }}>

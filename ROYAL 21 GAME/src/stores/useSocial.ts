@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { friendsService } from '@/services/friendsService';
 import { notificationService } from '@/services/notificationService';
+import { roomsService } from '@/services/roomsService';
 import { isOnline } from '@/services/supabase';
 import { audio } from '@/audio/AudioManager';
 import { usePlayer } from './usePlayer';
@@ -16,8 +17,9 @@ interface SocialState {
   notifications: AppNotification[];
   searchResults: Friend[];
   searching: boolean;
-  /** Set by the realtime feed; the HUD shows it as a full-screen invite. */
-  pendingInvite: { from: Friend | null; code: string; game: string } | null;
+  /** Set by the realtime feed; the HUD shows it as a full-screen invite.
+   *  `id` is the notification row id so an expired one can be deleted on click. */
+  pendingInvite: { from: Friend | null; code: string; game: string; id: string } | null;
   refresh: (userId: string) => Promise<void>;
   search: (term: string, selfId: string) => Promise<void>;
   clearSearch: () => void;
@@ -27,8 +29,15 @@ interface SocialState {
   block: (userId: string, friendId: string) => Promise<void>;
   setInvite: (invite: SocialState['pendingInvite']) => void;
   markRead: (userId: string) => Promise<void>;
+  /** Delete one notification (server + store), e.g. a room invite that expired. */
+  dismiss: (id: string) => Promise<void>;
   listen: (userId: string) => () => void;
 }
+
+/** Age past which an unopened room invite is *checked* against the live room
+ *  (and dropped only if the room is confirmed gone). A real invite can wait
+ *  hours, so this is deliberately generous. */
+const INVITE_TTL_MS = 12 * 60 * 60 * 1000;
 
 export const useSocial = create<SocialState>()((set, get) => ({
   friends: [],
@@ -46,6 +55,20 @@ export const useSocial = create<SocialState>()((set, get) => ({
       notificationService.list(userId),
     ]);
     set({ friends, requests, notifications });
+    // Prune old room invites — but only the ones whose room is *confirmed* dead.
+    // isLive() returns true on any check failure, so a blip never nukes a real
+    // invite; and we never guess from age alone.
+    const cutoff = Date.now() - INVITE_TTL_MS;
+    const old = notifications.filter(
+      (n) => n.kind === 'invite' && new Date(n.createdAt).getTime() < cutoff,
+    );
+    for (const n of old) {
+      const code = (n.payload as { room_code?: string } | undefined)?.room_code;
+      if (!code || (await roomsService.isLive(code))) continue;
+      if (await notificationService.delete(n.id)) {
+        set((s) => ({ notifications: s.notifications.filter((x) => x.id !== n.id) }));
+      }
+    }
   },
 
   search: async (term, selfId) => {
@@ -82,16 +105,31 @@ export const useSocial = create<SocialState>()((set, get) => ({
     set((state) => ({ notifications: state.notifications.map((n) => ({ ...n, read: true })) }));
   },
 
+  dismiss: async (id) => {
+    // Await the server first — only touch the store if the row is really gone,
+    // otherwise a failed RLS/network delete would hide it locally forever.
+    const ok = await notificationService.delete(id);
+    if (!ok) {
+      const lang = useSettings.getState().lang;
+      useUI.getState().toast(translate(lang, 'common.retry'), 'bad', '⚠');
+      return;
+    }
+    set((state) => ({
+      notifications: state.notifications.filter((n) => n.id !== id),
+      pendingInvite: state.pendingInvite?.id === id ? null : state.pendingInvite,
+    }));
+  },
+
   listen: (userId) => {
     if (!isOnline()) return () => {};
     const offFriends = friendsService.subscribe(userId, () => void get().refresh(userId));
-    const offNotifications = notificationService.subscribe(userId, (notification) => {
+    const offNotifications = notificationService.subscribe(userId, (notification) => {  // onInsert
       set((state) => ({ notifications: [notification, ...state.notifications] }));
       audio.play('notify');
       if (notification.kind === 'invite') {
         const payload = notification.payload as { room_code?: string; game?: string } | undefined;
         const from = get().friends.find((f) => f.id === notification.actorId) ?? null;
-        set({ pendingInvite: { from, code: payload?.room_code ?? '', game: payload?.game ?? 'blackjack' } });
+        set({ pendingInvite: { from, code: payload?.room_code ?? '', game: payload?.game ?? 'blackjack', id: notification.id } });
       }
       if (notification.kind === 'friend_request') void get().refresh(userId);
       if (notification.kind === 'gift') {
@@ -107,6 +145,11 @@ export const useSocial = create<SocialState>()((set, get) => ({
           );
         }
       }
+    }, (id) => {  // onDelete — a notification was cleaned up elsewhere
+      set((state) => ({
+        notifications: state.notifications.filter((n) => n.id !== id),
+        pendingInvite: state.pendingInvite?.id === id ? null : state.pendingInvite,
+      }));
     });
     return () => {
       offFriends();

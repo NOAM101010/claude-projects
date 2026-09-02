@@ -658,6 +658,10 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
           if (!res) return;
           const current = get();
           if (current.profile.id !== s.profile.id) return; // switched account mid-flight
+          // The client passed the local guard (lastClaim !== today) but the
+          // server says it was already claimed — another device / a stale
+          // mirror beat us. Log it so we can see if this ever actually happens.
+          if (!res.granted) analytics.track('daily_double_attempt', { day });
           // Correct the optimistic grant against the authoritative balance as a
           // DELTA — never an overwrite. `lastSyncedChips` here still holds the
           // optimistic baseline stamped below; the difference is exactly what
