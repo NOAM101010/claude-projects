@@ -197,8 +197,6 @@ export interface RoomConfig {
   smallBlind?: number;
   bigBlind?: number;
   maxSeats?: number;
-  /** Seconds per action before auto-fold. */
-  actionSeconds?: number;
   /** SHA-256 hash of the password. Empty/missing = public. */
   passwordHash?: string;
   /** VIP-only table. */

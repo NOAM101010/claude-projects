@@ -69,8 +69,9 @@ export function createState(seed: number, sb = 25, bb = 50): PokerState {
   };
 }
 
-/** Base decision clock. Real poker rooms run 20–45s; 30 splits the difference. */
-export const ACTION_SECONDS = 30;
+/** Base decision clock — fixed at the generous end (was a 15/30/60 table
+ *  option that was never actually wired to the deadline). */
+export const ACTION_SECONDS = 60;
 /** Each of a player's two banked extensions adds this much. */
 export const TIME_BANK_SECONDS = 60;
 export const TIME_BANKS_PER_PLAYER = 2;
@@ -79,7 +80,7 @@ export const TIME_BANKS_PER_PLAYER = 2;
 export const SNG_BUYINS = [500, 1000, 2500, 5000, 10000] as const;
 export const SNG_STARTING_STACK = 1500;
 /** Every level runs this long before the next one kicks in. */
-export const SNG_LEVEL_MINUTES = 5;
+export const SNG_LEVEL_MINUTES = 2;
 /** A standard turbo escalation: ante joins once stacks start getting real pressure. */
 export const SNG_BLIND_LEVELS: BlindLevel[] = [
   { sb: 10, bb: 20, ante: 0 },

@@ -2,8 +2,12 @@ export type Suit = 'S' | 'H' | 'D' | 'C';
 export type Rank = 'A' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K';
 export interface Card { r: Rank; s: Suit }
 
-/** The three main outcomes at the table. */
+/** The three possible outcomes of a hand — a tie still happens and pushes any
+ *  Player/Banker bet, it just isn't a side you can bet ON. */
 export type BaccaratOutcome = 'player' | 'banker' | 'tie';
+
+/** The main bet: Player or Banker only (no Tie bet). */
+export type BaccaratMainSide = 'player' | 'banker';
 
 /** Side bets — the ones a Vegas/Macau table actually offers, not the
  *  homebrew ones. Each pays differently, listed in the paytable. */
@@ -17,8 +21,8 @@ export type BaccaratSide =
 export type BaccaratPhase = 'betting' | 'dealing' | 'settled';
 
 export interface BaccaratBet {
-  /** How many chips on the main P/B/T pool. Only one of the three is non-zero. */
-  main: { side: BaccaratOutcome; amount: number } | null;
+  /** Chips on the main bet — Player or Banker. */
+  main: { side: BaccaratMainSide; amount: number } | null;
   /** How many chips on each side bet. */
   sides: Partial<Record<BaccaratSide, number>>;
 }
@@ -67,7 +71,7 @@ export interface BaccaratState {
 }
 
 export type BaccaratAction =
-  | { type: 'setMainBet'; side: BaccaratOutcome; amount: number; userId?: string }
+  | { type: 'setMainBet'; side: BaccaratMainSide; amount: number; userId?: string }
   | { type: 'clearBet'; userId?: string }
   | { type: 'setSideBet'; side: BaccaratSide; amount: number; userId?: string }
   | { type: 'repeatLast'; userId?: string }

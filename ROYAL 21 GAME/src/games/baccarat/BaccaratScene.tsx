@@ -23,11 +23,11 @@ import { newSeed } from '@/lib/random';
 import {
   createState, reduce, handTotal, betCost, PAYTABLE, BACCARAT_BETS, outcomeLabel,
 } from './engine';
-import type { BaccaratOutcome, BaccaratSide, BaccaratState } from './types';
+import { useBaccaratReveal } from './useBaccaratReveal';
+import type { BaccaratMainSide, BaccaratSide, BaccaratState } from './types';
 
-const MAIN_BETS: { side: BaccaratOutcome; labelKey: string; color: string }[] = [
+const MAIN_BETS: { side: BaccaratMainSide; labelKey: string; color: string }[] = [
   { side: 'player', labelKey: 'baccarat.player', color: '#4a86d6' },
-  { side: 'tie',    labelKey: 'baccarat.tie',    color: '#5aa563' },
   { side: 'banker', labelKey: 'baccarat.banker', color: '#c14040' },
 ];
 
@@ -67,12 +67,14 @@ function BaccaratSolo() {
 
   const dispatch = (action: Parameters<typeof reduce>[1]) => setState((s) => reduce(s, action));
   const totalStaked = betCost(state.bet);
+  const rv = useBaccaratReveal(state, state.bet.main?.side ?? null);
 
   /* When the hand resolves, credit the net delta and let the moment layer
-     celebrate. Only fires once per round via the ref latch, so a re-render
-     doesn't re-credit. */
+     celebrate. Held back until the player has finished squeezing their side
+     (rv.revealComplete) so the result never precedes the last flip. Only fires
+     once per round via the ref latch, so a re-render doesn't re-credit. */
   useEffect(() => {
-    if (state.phase !== 'settled' || state.outcome === null) return;
+    if (state.phase !== 'settled' || state.outcome === null || !rv.revealComplete) return;
     if (settledRound.current === state.round) return;
     settledRound.current = state.round;
     const staked = betCost(state.lastBet);
@@ -89,9 +91,9 @@ function BaccaratSolo() {
       setTimeout(() => setVictory(false), 2200);
       showMoment({
         kind: 'bigWin',
-        title: t(state.outcome === 'player' ? 'baccarat.playerWins' : state.outcome === 'banker' ? 'baccarat.bankerWins' : 'baccarat.tieWins'),
+        title: t(state.outcome === 'player' ? 'baccarat.playerWins' : state.outcome === 'banker' ? 'baccarat.bankerWins' : 'baccarat.push'),
         subtitle: `+${fmt(state.net)}`,
-        icon: state.outcome === 'tie' ? '🤝' : state.outcome === 'player' ? '👤' : '🏦',
+        icon: state.outcome === 'tie' ? '🔄' : state.outcome === 'player' ? '👤' : '🏦',
         duration: 2000,
       });
     } else if (state.net < 0) {
@@ -100,9 +102,9 @@ function BaccaratSolo() {
       audio.play('push');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.phase, state.round]);
+  }, [state.phase, state.round, rv.revealComplete]);
 
-  const placeMain = (side: BaccaratOutcome) => {
+  const placeMain = (side: BaccaratMainSide) => {
     if (state.phase !== 'betting') return;
     const currentMain = state.bet.main?.side === side ? state.bet.main.amount : 0;
     const needed = stake;
@@ -204,7 +206,9 @@ function BaccaratSolo() {
             {(['player', 'banker'] as const).map((side) => {
               const cards = state[side];
               const total = cards.length ? handTotal(cards) : null;
-              const isWinner = state.outcome === side;
+              const isWinner = state.outcome === side && rv.revealComplete;
+              const anyDown = cards.some((_, i) => rv.faceDown(side, i));
+              const showTotal = total !== null && !anyDown;
               return (
                 <div key={side} className="flex flex-col items-center gap-2">
                   <div className="flex items-center gap-2">
@@ -212,7 +216,7 @@ function BaccaratSolo() {
                       style={{ color: side === 'player' ? '#8ab4ff' : '#ff8a8a' }}>
                       {side === 'player' ? t('baccarat.player').toUpperCase() : t('baccarat.banker').toUpperCase()}
                     </span>
-                    {total !== null && (
+                    {showTotal && (
                       <span className="num font-black rounded-full px-2 text-[13px]"
                         style={{
                           background: isWinner ? 'var(--brushed-gold)' : 'rgba(0,0,0,.5)',
@@ -224,46 +228,58 @@ function BaccaratSolo() {
                   <div className="flex justify-center min-h-[76px] items-end"
                     style={{ marginInlineStart: 14 }}>
                     <AnimatePresence mode="popLayout">
-                      {cards.map((card, i) => (
-                        <motion.div
-                          key={`${side}-${state.round}-${i}`}
-                          initial={{ y: -80, opacity: 0, rotate: -10 }}
-                          animate={{ y: 0, opacity: 1, rotate: 0 }}
-                          transition={{ delay: i * 0.18, type: 'spring', stiffness: 240, damping: 20 }}
-                          style={{ marginInlineStart: -14 }}
-                        >
-                          <PlayingCard card={card} size="md" index={i} face={face} back={back} />
-                        </motion.div>
-                      ))}
+                      {cards.map((card, i) => {
+                        const down = rv.faceDown(side, i);
+                        return (
+                          <motion.div
+                            key={`${side}-${state.round}-${i}`}
+                            initial={{ y: -80, opacity: 0, rotate: -10 }}
+                            animate={{ y: 0, opacity: 1, rotate: 0 }}
+                            transition={{ delay: i * 0.18, type: 'spring', stiffness: 240, damping: 20 }}
+                            style={{ marginInlineStart: -14 }}
+                          >
+                            <PlayingCard
+                              card={card} size="md" index={i} face={face} back={back}
+                              faceDown={down}
+                              onClick={down ? () => { rv.flip(side, i); audio.play('cardFlip'); } : undefined}
+                            />
+                          </motion.div>
+                        );
+                      })}
                     </AnimatePresence>
                     {cards.length === 0 && (
                       <div className="rounded-[6px] border-2 border-dashed w-[52px] h-[72px]"
                         style={{ borderColor: 'rgba(255,255,255,.12)' }} />
                     )}
                   </div>
+                  {anyDown && (
+                    <span className="text-[10px] font-bold ambient-float" style={{ color: 'var(--gold-hi)' }}>
+                      👆 {t('baccarat.tapReveal')}
+                    </span>
+                  )}
                 </div>
               );
             })}
           </div>
 
-          {state.phase === 'settled' && state.outcome && (
+          {state.phase === 'settled' && state.outcome && rv.revealComplete && (
             <div className="text-center">
               <b className="text-[15px]"
                 style={{ color: state.net > 0 ? 'var(--gold-hi)' : state.net < 0 ? 'var(--crimson-hi)' : 'var(--muted)' }}>
                 {state.net > 0 ? `+${fmt(state.net)}` : state.net < 0 ? fmt(state.net) : t('blackjack.push')}
               </b>
               <div className="text-[11px] mt-0.5" style={{ color: 'var(--muted)' }}>
-                {t(state.outcome === 'player' ? 'baccarat.playerWins' : state.outcome === 'banker' ? 'baccarat.bankerWins' : 'baccarat.tieWins')}
+                {t(state.outcome === 'player' ? 'baccarat.playerWins' : state.outcome === 'banker' ? 'baccarat.bankerWins' : 'baccarat.push')}
               </div>
             </div>
           )}
         </GlassPanel>
 
         {/* main bets — real casino P / T / B layout */}
-        <div className="grid grid-cols-3 gap-2 w-full">
+        <div className="grid grid-cols-2 gap-2 w-full">
           {MAIN_BETS.map(({ side, labelKey, color }) => {
             const on = state.bet.main?.side === side ? state.bet.main.amount : 0;
-            const hit = state.phase === 'settled' && state.outcome === side;
+            const hit = state.phase === 'settled' && state.outcome === side && rv.revealComplete;
             return (
               <button
                 key={side}
@@ -281,7 +297,7 @@ function BaccaratSolo() {
               >
                 <div className="text-[13px] font-black" style={{ color: '#fff' }}>{t(labelKey)}</div>
                 <div className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,.7)' }}>
-                  {side === 'tie' ? '8:1' : side === 'banker' ? '0.95:1' : '1:1'}
+                  {side === 'banker' ? '0.95:1' : '1:1'}
                 </div>
                 {on > 0 && (
                   <div className="absolute -top-2 -end-2 rounded-full px-2 py-0.5 num text-[11px] font-black"
@@ -446,6 +462,7 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
   const mySeat = state?.seats.find((s) => s.userId === profile.id);
   const myBet = mySeat?.bet ?? { main: null, sides: {} };
   const totalStaked = betCost(myBet);
+  const rv = useBaccaratReveal(state, mySeat?.bet.main?.side ?? null);
 
   /* The hand a bet placed right now will settle under. `deal` is what bumps
      state.round (not newRound), so a bet made while phase==='betting' and
@@ -544,9 +561,10 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
   }, [isHost, state?.phase, state?.deadline, state?.seats.map((s) => `${s.userId}:${betCost(s.bet)}`).join('|'), now]);
   const secondsLeft = state?.deadline ? Math.max(0, Math.ceil((state.deadline - now) / 1000)) : null;
 
-  /* Settle my own net when the hand resolves. */
+  /* Settle my own net when the hand resolves — held back until this client has
+     finished the squeeze on its bet side (rv.revealComplete). */
   useEffect(() => {
-    if (!state || state.phase !== 'settled' || !mySeat) return;
+    if (!state || state.phase !== 'settled' || !mySeat || !rv.revealComplete) return;
     if (settledRound.current === state.round) return;
     settledRound.current = state.round;
     const staked = betCost(mySeat.lastBet);
@@ -574,20 +592,22 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
       setTimeout(() => setVictory(false), 2200);
       showMoment({
         kind: 'bigWin',
-        title: t(state.outcome === 'player' ? 'baccarat.playerWins' : state.outcome === 'banker' ? 'baccarat.bankerWins' : 'baccarat.tieWins'),
+        title: t(state.outcome === 'player' ? 'baccarat.playerWins' : state.outcome === 'banker' ? 'baccarat.bankerWins' : 'baccarat.push'),
         subtitle: `+${fmt(mySeat.net)}`,
-        icon: state.outcome === 'tie' ? '🤝' : state.outcome === 'player' ? '👤' : '🏦',
+        icon: state.outcome === 'tie' ? '🔄' : state.outcome === 'player' ? '👤' : '🏦',
         duration: 2000,
       });
     } else if (mySeat.net < 0) audio.play('lose');
     else audio.play('push');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state?.phase, state?.round]);
+  }, [state?.phase, state?.round, rv.revealComplete]);
 
-  /* Auto-restart a new round 3s after settle so the table keeps moving. */
+  /* Auto-restart a new round after settle so the table keeps moving. Long
+     enough for every client's local squeeze (≤3 cards × ~1.5s auto-flip) plus
+     the credit animation to finish before the hand is wiped. */
   useEffect(() => {
     if (!isHost || !state || state.phase !== 'settled') return;
-    const timer = setTimeout(() => void send(profile.id, { type: 'newRound' }), 3200);
+    const timer = setTimeout(() => void send(profile.id, { type: 'newRound' }), 7000);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHost, state?.phase, state?.round]);
@@ -616,7 +636,7 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
   }, [room?.id, Boolean(mySeat), profile.id]);
 
   /* ---------- action handlers (reuse solo shapes, dispatch to room) ---- */
-  const placeMain = (side: BaccaratOutcome) => {
+  const placeMain = (side: BaccaratMainSide) => {
     if (!state || state.phase !== 'betting' || !mySeat) return;
     if (profile.chips < stake) {
       audio.play('error'); toast(t('games.tooPoor', { amount: fmt(stake - profile.chips) }), 'bad', '⚠');
@@ -811,7 +831,9 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
             {(['player', 'banker'] as const).map((side) => {
               const cards = state[side];
               const total = cards.length ? handTotal(cards) : null;
-              const isWinner = state.outcome === side;
+              const isWinner = state.outcome === side && rv.revealComplete;
+              const anyDown = cards.some((_, i) => rv.faceDown(side, i));
+              const showTotal = total !== null && !anyDown;
               return (
                 <div key={side} className="flex flex-col items-center gap-2">
                   <div className="flex items-center gap-2">
@@ -819,7 +841,7 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
                       style={{ color: side === 'player' ? '#8ab4ff' : '#ff8a8a' }}>
                       {side === 'player' ? t('baccarat.player').toUpperCase() : t('baccarat.banker').toUpperCase()}
                     </span>
-                    {total !== null && (
+                    {showTotal && (
                       <span className="num font-black rounded-full px-2 text-[13px]"
                         style={{ background: isWinner ? 'var(--brushed-gold)' : 'rgba(0,0,0,.5)',
                           color: isWinner ? '#1a1206' : 'var(--gold-hi)', border: '1px solid var(--gold-line)', minWidth: 26, textAlign: 'center' }}>
@@ -829,44 +851,56 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
                   </div>
                   <div className="flex justify-center min-h-[76px] items-end" style={{ marginInlineStart: 14 }}>
                     <AnimatePresence mode="popLayout">
-                      {cards.map((card, i) => (
-                        <motion.div key={`${side}-${state.round}-${i}`}
-                          initial={{ y: -80, opacity: 0, rotate: -10 }}
-                          animate={{ y: 0, opacity: 1, rotate: 0 }}
-                          transition={{ delay: i * 0.18, type: 'spring', stiffness: 240, damping: 20 }}
-                          style={{ marginInlineStart: -14 }}>
-                          <PlayingCard card={card} size="md" index={i} face={face} back={back2} />
-                        </motion.div>
-                      ))}
+                      {cards.map((card, i) => {
+                        const down = rv.faceDown(side, i);
+                        return (
+                          <motion.div key={`${side}-${state.round}-${i}`}
+                            initial={{ y: -80, opacity: 0, rotate: -10 }}
+                            animate={{ y: 0, opacity: 1, rotate: 0 }}
+                            transition={{ delay: i * 0.18, type: 'spring', stiffness: 240, damping: 20 }}
+                            style={{ marginInlineStart: -14 }}>
+                            <PlayingCard
+                              card={card} size="md" index={i} face={face} back={back2}
+                              faceDown={down}
+                              onClick={down ? () => { rv.flip(side, i); audio.play('cardFlip'); } : undefined}
+                            />
+                          </motion.div>
+                        );
+                      })}
                     </AnimatePresence>
                     {cards.length === 0 && (
                       <div className="rounded-[6px] border-2 border-dashed w-[52px] h-[72px]"
                         style={{ borderColor: 'rgba(255,255,255,.12)' }} />
                     )}
                   </div>
+                  {anyDown && (
+                    <span className="text-[10px] font-bold ambient-float" style={{ color: 'var(--gold-hi)' }}>
+                      👆 {t('baccarat.tapReveal')}
+                    </span>
+                  )}
                 </div>
               );
             })}
           </div>
 
-          {state.phase === 'settled' && state.outcome && mySeat && (
+          {state.phase === 'settled' && state.outcome && mySeat && rv.revealComplete && (
             <div className="text-center">
               <b className="text-[15px]"
                 style={{ color: mySeat.net > 0 ? 'var(--gold-hi)' : mySeat.net < 0 ? 'var(--crimson-hi)' : 'var(--muted)' }}>
                 {mySeat.net > 0 ? `+${fmt(mySeat.net)}` : mySeat.net < 0 ? fmt(mySeat.net) : t('blackjack.push')}
               </b>
               <div className="text-[11px] mt-0.5" style={{ color: 'var(--muted)' }}>
-                {t(state.outcome === 'player' ? 'baccarat.playerWins' : state.outcome === 'banker' ? 'baccarat.bankerWins' : 'baccarat.tieWins')}
+                {t(state.outcome === 'player' ? 'baccarat.playerWins' : state.outcome === 'banker' ? 'baccarat.bankerWins' : 'baccarat.push')}
               </div>
             </div>
           )}
         </GlassPanel>
 
         {/* main bets */}
-        <div className="grid grid-cols-3 gap-2 w-full">
+        <div className="grid grid-cols-2 gap-2 w-full">
           {MAIN_BETS.map(({ side, labelKey, color }) => {
             const on = mySeat?.bet.main?.side === side ? mySeat.bet.main.amount : 0;
-            const hit = state.phase === 'settled' && state.outcome === side;
+            const hit = state.phase === 'settled' && state.outcome === side && rv.revealComplete;
             return (
               <button key={side} onClick={() => placeMain(side)} disabled={state.phase !== 'betting'}
                 className="relative rounded-[var(--r-sm)] press"
@@ -879,7 +913,7 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
                 }}>
                 <div className="text-[13px] font-black" style={{ color: '#fff' }}>{t(labelKey)}</div>
                 <div className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,.7)' }}>
-                  {side === 'tie' ? '8:1' : side === 'banker' ? '0.95:1' : '1:1'}
+                  {side === 'banker' ? '0.95:1' : '1:1'}
                 </div>
                 {on > 0 && (
                   <div className="absolute -top-2 -end-2 rounded-full px-2 py-0.5 num text-[11px] font-black"
@@ -955,7 +989,7 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
             )}
             {state.phase === 'settled' && (
               <span className="text-[12px] px-3 py-2" style={{ color: 'var(--muted)' }}>
-                {t('roulette.newRound')} · 3s
+                {t('roulette.newRound')} · 7s
               </span>
             )}
           </div>

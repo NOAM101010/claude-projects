@@ -29,7 +29,6 @@ const VIP_STAKE_OPTIONS = [
   { sb: 5000,  bb: 10000, label: '5K / 10K',    tier: 'whale' },
 ] as const;
 
-const TIMER_OPTIONS = [15, 30, 60] as const;
 const SEAT_OPTIONS = [2, 4, 6] as const;
 const COLORS: { id: TableColor; swatch: string; ring: string }[] = [
   { id: 'green', swatch: 'linear-gradient(135deg, #1d4a37, #0c2018)', ring: '#2e9e6b' },
@@ -40,8 +39,8 @@ const COLORS: { id: TableColor; swatch: string; ring: string }[] = [
 
 /**
  * Host a private poker table. Every option here rides along in the room's
- * `config` jsonb — the poker scene renders the color and enforces the
- * timer/seats, and the join flow prompts for the password when set.
+ * `config` jsonb — the poker scene renders the color and enforces the seat
+ * cap, and the join flow prompts for the password when set.
  */
 export function PrivatePokerModal({ open, onClose, vipOnly = false }: Props) {
   const navigate = useNavigate();
@@ -54,7 +53,6 @@ export function PrivatePokerModal({ open, onClose, vipOnly = false }: Props) {
   const [stakeIdx, setStakeIdx] = useState(vipOnly ? 0 : 1);
   const [color, setColor] = useState<TableColor>(vipOnly ? 'gold' : 'green');
   const [seats, setSeats] = useState<typeof SEAT_OPTIONS[number]>(6);
-  const [timer, setTimer] = useState<typeof TIMER_OPTIONS[number]>(30);
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -72,7 +70,6 @@ export function PrivatePokerModal({ open, onClose, vipOnly = false }: Props) {
     const room = await create(profile.id, stake.sb, stake.bb, {
       tableColor: color,
       maxSeats: seats,
-      actionSeconds: timer,
       passwordHash,
       isVip: vipOnly,
     });
@@ -123,24 +120,6 @@ export function PrivatePokerModal({ open, onClose, vipOnly = false }: Props) {
                 onClick={() => setSeats(option)}
               >
                 {option}
-              </GameButton>
-            ))}
-          </div>
-        </div>
-
-        {/* Timer */}
-        <div>
-          <div className="eyebrow mb-1.5" style={{ fontSize: 10 }}>{t('privateTable.timer')}</div>
-          <div className="flex gap-1.5">
-            {TIMER_OPTIONS.map((option) => (
-              <GameButton
-                key={option}
-                size="sm"
-                block
-                tone={timer === option ? 'gold' : 'ghost'}
-                onClick={() => setTimer(option)}
-              >
-                {t('privateTable.seconds', { n: option })}
               </GameButton>
             ))}
           </div>

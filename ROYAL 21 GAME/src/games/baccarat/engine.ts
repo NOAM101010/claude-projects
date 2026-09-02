@@ -16,7 +16,7 @@ import type {
  * Payouts:
  *   Player  ...... 1:1
  *   Banker  ...... 1:0.95  (5% commission — the house edge that keeps the game legal)
- *   Tie     ...... 8:1
+ *   (a tie pushes any Player/Banker bet — there is no Tie bet)
  * Side bets:
  *   Player Pair .. 11:1
  *   Banker Pair .. 11:1
@@ -134,11 +134,9 @@ export function settleOne(bet: BaccaratBet, outcome: BaccaratOutcome, player: Ca
   if (bet.main) {
     const { side, amount } = bet.main;
     if (side === outcome) {
-      if (side === 'player') net += amount;
-      else if (side === 'banker') net += Math.round(amount * 0.95);
-      else net += amount * 8;
-    } else if (outcome === 'tie' && side !== 'tie') {
-      net += 0; // push
+      net += side === 'banker' ? Math.round(amount * 0.95) : amount;
+    } else if (outcome === 'tie') {
+      net += 0; // a tie pushes any Player/Banker bet — stake returned
     } else {
       net -= amount;
     }
@@ -180,7 +178,6 @@ export function betCost(bet: BaccaratBet): number {
 export const PAYTABLE = [
   { key: 'player', payout: '1 : 1' },
   { key: 'banker', payout: '1 : 0.95 (5% commission)' },
-  { key: 'tie', payout: '8 : 1' },
   { key: 'playerPair', payout: '11 : 1' },
   { key: 'bankerPair', payout: '11 : 1' },
   { key: 'perfectPair', payout: '25 : 1' },

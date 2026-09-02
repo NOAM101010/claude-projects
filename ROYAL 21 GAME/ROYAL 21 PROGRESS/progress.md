@@ -70,6 +70,14 @@
 - אימות: tsc נקי · vite build נקי · test:all ירוק (65/44/minigames/roulette) · i18n he/en 870/870 · רגרסיית single-flow poker/SnG/night: `revealing` clears תמיד (הקוד הקיים של `usePokerReveal` + אפקטי ה-auto-start כבר תלויים בזה); solo night host — pick→auto-nav→play→return→clear עובד.
 - **מגבלה ידועה (Stage 4):** `activeMiniGame` stale מסשן שקרס — נוקה ע"י ה-host כשחוזר/כשהיוצר נעלם, אבל לקוח שנכנס טרי ל-`/night/CODE` עם pointer ישן+היוצר עדיין member עלול להישאב פנימה לרגע.
 
+### כוונונים אחרי משחק (פוקר/SnG/באקרה) — מומש, **לא נבדק חי, לא נדחף**
+- **A** — `ACTION_SECONDS` 30→**60** (`poker/engine.ts`, משמש cash + SnG). בורר הטיימר הוסר מ-`PrivatePokerModal` (`TIMER_OPTIONS`/state/JSX/`actionSeconds` בקונפיג). `actionSeconds?` הוסר מ-`RoomConfig` (חדרים ישנים ב-DB עם השדה — נעלמים בשקט). i18n `privateTable.timer`+`seconds` נמחקו. time-bank נשאר 2×60 → מקס' תור = 60+120.
+- **B** — `SNG_LEVEL_MINUTES` 5→**2**. `poker.test.ts` — ה-offset של בדיקת התקדמות הרמות נגזר מ-`SNG_LEVEL_MINUTES` (`(4*SNG_LEVEL_MINUTES+1)*60_000`) במקום `22*60_000` קשיח, ה-assertion "רמה 4" נשמר. 44/44 עובר.
+  - **קוויאק ידוע (משאירים):** `tournament.startedAt` נחתם ביצירת הטורניר, לא ביד הראשונה → שעון הבליינדים רץ במהלך המתנת ה-registration. עם רמות של 2 דק', התחלה איטית (המתנה ארוכה לשחקנים) עלולה להתחיל כבר ברמה 2. לקבוצת חברים קטנה ה-ready-gate הופך התחלות למיידיות → מקובל. Follow-up אפשרי: לחתום `startedAt` ב-`startHand` הראשון.
+- **C** — הימור תיקו הוסר מבאקרה. `'tie'` נשאר **תוצאה** (push להימורי P/B) לא צד. `BaccaratMainSide='player'|'banker'` חדש, `bet.main.side` + `setMainBet` צומצמו אליו. `settleOne` — ענף זכיית תיקו נמחק, ענף push נשמר. `PAYTABLE`/`MAIN_BETS` ל-2 פריטים, רשת `grid-cols-2`, תווית תשלום בלי tie. טקסט תיקו → `baccarat.push` ("תיקו — ההימור מוחזר", אייקון 🔄). i18n: `baccarat.tie` נמחק, `tieWins`→`push`, `rulesGoalText` עודכן.
+- **D** — חשיפת squeeze בבאקרה: hook חדש `src/games/baccarat/useBaccaratReveal.ts` (לוקאלי לכל לקוח, אין שינוי מנוע). הצד שלא הימרת עליו — גלוי מיד; הצד שלך — הפוך, הקשה על קלף הופכת, auto-flip fallback כל 1.5ש. `PlayingCard` קיבל `onClick?`. תג-הסכום/הזוהר/טקסט-התוצאה + ה-settle `useEffect` (זיכוי + showMoment + אודיו) של הצד שלך מגודרים על `rv.revealComplete`. `reducedMotion`/quality low / אין הימור ראשי → חשיפה מיידית. MP auto-newRound של המארח 3200→**7000ms**.
+- אימות: tsc נקי · vite build נקי · test:all ירוק (poker 44, engine 65, minigames/roulette/social) · i18n he/en 865/865. רגרסיית סולו: אין הימור ראשי → `instant`, התנהגות זהה לקודם; פוקר סולו/single-flow לא נגע (רק הקבוע).
+
 **מגבלה ידועה (1d, לא בסקופ):** קיפאון עם מוות-host עדיין ~5-25ש (`reassign_room_host` חלון 20ש stale). שיפור עתידי: לקצר `HOST_HEARTBEAT_MS` או ש-host מקודם יעשה abort+restart לסיבוב.
 
 ### הבא בתור: רה-ארכיטקטורה של המולטיפלייר — **תוכנית מלאה ומאושרת:**

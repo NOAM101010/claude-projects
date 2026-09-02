@@ -13,6 +13,8 @@ interface Props {
   face?: string;
   back?: string;
   fresh?: boolean;
+  /** When set, the card is tappable (baccarat "squeeze" reveal). */
+  onClick?: () => void;
 }
 
 const dims = {
@@ -26,14 +28,15 @@ const dims = {
  * 3D rotation of one element, not two crossfading images.
  */
 export function PlayingCard({
-  card, faceDown, size = 'md', index = 0, face = 'cf-classic', back = 'bk-crimson', fresh = true,
+  card, faceDown, size = 'md', index = 0, face = 'cf-classic', back = 'bk-crimson', fresh = true, onClick,
 }: Props) {
   const d = dims[size];
   const red = card ? card.s === 'H' || card.s === 'D' : false;
   return (
     <motion.div
       className={`pc ${face}`}
-      style={{ width: d.w, height: d.h }}
+      onClick={onClick}
+      style={{ width: d.w, height: d.h, cursor: onClick ? 'pointer' : undefined }}
       initial={fresh ? { x: 120, y: -180, rotate: -22, opacity: 0, scale: 0.9 } : false}
       animate={{ x: 0, y: 0, rotate: 0, opacity: 1, scale: 1, rotateY: faceDown ? 180 : 0 }}
       transition={{

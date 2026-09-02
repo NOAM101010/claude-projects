@@ -2,6 +2,7 @@
 import { bestHand, compareScore } from '../src/games/poker/handEval';
 import {
   createState, reduce, createTournamentState, levelIndexFor, SNG_BLIND_LEVELS, SNG_STARTING_STACK,
+  SNG_LEVEL_MINUTES,
 } from '../src/games/poker/engine';
 import type { Card } from '../src/games/poker/types';
 import type { AvatarConfig } from '../src/types';
@@ -164,9 +165,10 @@ console.log('\nSit & Go tournament');
   const lateJoin = reduce(s, { type: 'join', userId: 'late', username: 'Late', avatar, level: 1, buyIn: 1000 });
   ok('nobody can join after the first hand — no late registration', lateJoin === s);
 
-  // Fast-forward the tournament clock into level 5 (which carries an ante) and start a fresh hand.
-  s.tournament!.startedAt = Date.now() - SNG_BLIND_LEVELS[0].sb * 0; // no-op, keeps type-checker calm
-  s.tournament!.startedAt = Date.now() - 22 * 60_000; // 22 minutes in, at 5 min/level = level index 4
+  // Fast-forward the tournament clock into level 5 (index 4, which carries an ante) and
+  // start a fresh hand. Offset derives from SNG_LEVEL_MINUTES so it survives tuning:
+  // (4 full levels + 1 min into the 5th) => floor(elapsed / levelMs) === 4.
+  s.tournament!.startedAt = Date.now() - (4 * SNG_LEVEL_MINUTES + 1) * 60_000;
   ok('levelIndexFor tracks elapsed wall-clock time', levelIndexFor(s.tournament!, Date.now()) === 4);
   // Settle the in-flight hand so a new one can start and re-read the level.
   let guard = 0;
