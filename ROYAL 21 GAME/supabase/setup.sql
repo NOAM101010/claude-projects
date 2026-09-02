@@ -375,12 +375,12 @@ declare
 begin
   if p_to_id = auth.uid() then raise exception 'cannot gift yourself'; end if;
   if not exists (select 1 from public.profiles where id = p_to_id) then raise exception 'unknown recipient'; end if;
-  if p_amount <= 0 or p_amount > 500 then raise exception 'invalid amount'; end if;
+  if p_amount <= 0 or p_amount > 50000 then raise exception 'invalid amount'; end if;
 
   select coalesce(sum(amount), 0) into sent_today
   from public.chip_gifts
   where from_id = auth.uid() and created_at >= date_trunc('day', now());
-  if sent_today + p_amount > 500 then raise exception 'daily gift limit exceeded'; end if;
+  if sent_today + p_amount > 50000 then raise exception 'daily gift limit exceeded'; end if;
 
   select chips into balance from public.profiles where id = auth.uid() for update;
   if balance < p_amount then raise exception 'insufficient chips'; end if;

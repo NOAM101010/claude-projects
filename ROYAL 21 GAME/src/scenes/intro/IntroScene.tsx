@@ -173,14 +173,9 @@ export default function IntroScene() {
                     <GameButton tone="gold" size="lg" block onClick={() => navigate('/login?mode=signin')}>
                       {t('intro.login')}
                     </GameButton>
-                    <div className="flex gap-2.5">
-                      <GameButton tone="metal" block onClick={() => navigate('/login?mode=signup')}>
-                        {t('intro.register')}
-                      </GameButton>
-                      <GameButton tone="ghost" block onClick={() => navigate('/login?mode=guest')}>
-                        {t('intro.guest')}
-                      </GameButton>
-                    </div>
+                    <GameButton tone="metal" block onClick={() => navigate('/login?mode=signup')}>
+                      {t('intro.register')}
+                    </GameButton>
                   </>
                 )}
               </div>

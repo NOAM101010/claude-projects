@@ -10,7 +10,7 @@ import { GIFT_DAILY_LIMIT } from '@/data/economy';
 import { audio } from '@/audio/AudioManager';
 import type { Friend } from '@/types';
 
-const QUICK_AMOUNTS = [50, 100, 250, 500];
+const QUICK_AMOUNTS = [500, 5000, 20000, 50000];
 
 const reasonKey: Record<string, string> = {
   self: 'friends.giftSelf',
@@ -28,7 +28,7 @@ export function GiftModal({ friend, onClose }: { friend: Friend | null; onClose:
   const profile = usePlayer((s) => s.profile);
   const addChips = usePlayer((s) => s.addChips);
   const [sentToday, setSentToday] = useState(0);
-  const [amount, setAmount] = useState(50);
+  const [amount, setAmount] = useState(500);
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
 
@@ -36,7 +36,7 @@ export function GiftModal({ friend, onClose }: { friend: Friend | null; onClose:
 
   useEffect(() => {
     if (!friend) return;
-    setAmount(50);
+    setAmount(500);
     setMessage('');
     void giftService.sentToday(profile.id).then(setSentToday);
   }, [friend, profile.id]);

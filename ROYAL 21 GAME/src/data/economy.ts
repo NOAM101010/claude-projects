@@ -210,8 +210,9 @@ export function nextStreakDay(daily: { lastClaim: string | null; day: number }):
   return daily.lastClaim === yesterday ? daily.day + 1 : 1;
 }
 
-/** Daily gift budget, chips/day — enforced server-side in send_gift(). */
-export const GIFT_DAILY_LIMIT = 500;
+/** Daily gift budget, chips/day — enforced server-side in send_gift().
+ *  Keep this in sync with the `> 50000` check in supabase/setup.sql. */
+export const GIFT_DAILY_LIMIT = 50_000;
 
 /* -------------------------------------------------------------------------- */
 /* Comeback bonus: a one-time top-up layered onto the day-1 streak reward     */

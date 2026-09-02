@@ -37,7 +37,6 @@
     "roomReady": "Your room is ready.",
     "login": "Log in",
     "register": "Create account",
-    "guest": "Continue as guest",
     "continueAs": "Continue as {name}",
     "notYou": "Not you? Log in or create an account",
     "legal": "Social play only. No real money, no deposits and no cash-outs — every chip is virtual and used for play only."
@@ -51,8 +50,6 @@
     "switchAccount": "Accounts on this device",
     "forgetAccount": "Remove from the list",
     "signUp": "Create account",
-    "guestPlay": "Play as guest",
-    "guestNote": "Start now. Link an account later and your progress comes with you.",
     "haveAccount": "Already have an account?",
     "needAccount": "No account yet?",
     "pickLook": "Customize your character",

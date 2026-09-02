@@ -77,7 +77,7 @@ check('rarity pool gets better with tier', (() => {
 })());
 
 console.log('\nGift system');
-check('daily limit matches send_gift()', GIFT_DAILY_LIMIT === 500);
+check('daily limit matches send_gift()', GIFT_DAILY_LIMIT === 50000);
 
 console.log('\nComeback bonus');
 {

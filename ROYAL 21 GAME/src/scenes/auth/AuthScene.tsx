@@ -15,7 +15,7 @@ import { isOnline } from '@/services/supabase';
 import { audio } from '@/audio/AudioManager';
 import type { AvatarConfig } from '@/types';
 
-type Mode = 'signin' | 'signup' | 'guest' | 'reset' | 'newPassword';
+type Mode = 'signin' | 'signup' | 'reset' | 'newPassword';
 
 /** The environment keeps moving behind a dark glass panel — never a white page. */
 export default function AuthScene() {
@@ -24,7 +24,8 @@ export default function AuthScene() {
   const { t } = useT();
   const toast = useUI((s) => s.toast);
   const setProfile = usePlayer((s) => s.setProfile);
-  const [mode, setMode] = useState<Mode>((params.get('mode') as Mode) ?? 'guest');
+  const requestedMode = params.get('mode') as Mode | null;
+  const [mode, setMode] = useState<Mode>(requestedMode === 'signup' ? 'signup' : 'signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
@@ -40,7 +41,7 @@ export default function AuthScene() {
     accountsService.remember({
       id: profile.id,
       username: profile.username,
-      email: mode === 'guest' ? undefined : email.trim() || undefined,
+      email: email.trim() || undefined,
       avatar: profile.avatar,
     });
     audio.unlock();
@@ -55,11 +56,9 @@ export default function AuthScene() {
     setProblem(null);
     try {
       const profile =
-        mode === 'guest'
-          ? await authService.signInAsGuest(username, avatar)
-          : mode === 'signup'
-            ? await authService.signUp(email, password, username || 'Player', avatar)
-            : await authService.signIn(email, password);
+        mode === 'signup'
+          ? await authService.signUp(email, password, username || 'Player', avatar)
+          : await authService.signIn(email, password);
       land(profile);
     } catch (error) {
       const failure: AuthFailure = error instanceof AuthError ? error.failure : 'unknown';
@@ -71,16 +70,6 @@ export default function AuthScene() {
         setProblem(failure);
         setMode('signin');
         toast(t('auth.err.needs-confirmation'), 'neutral', '✉️');
-        return;
-      }
-
-      /* Anonymous sign-ins are switched off for the project. Play still works
-         on this device, so let them in — but do not pretend it is the same
-         thing: without a session there are no friends, rooms or shop. */
-      if (failure === 'guest-disabled' && mode === 'guest') {
-        setProblem(failure);
-        toast(t('auth.err.guest-disabled'), 'bad', '⚠');
-        land(authService.playLocally(username, avatar));
         return;
       }
 
@@ -162,7 +151,7 @@ export default function AuthScene() {
         </div>
 
         <div className="flex gap-2 mb-5">
-          {(['guest', 'signin', 'signup'] as Mode[]).map((key) => (
+          {(['signin', 'signup'] as Mode[]).map((key) => (
             <GameButton
               key={key}
               size="sm"
@@ -170,7 +159,7 @@ export default function AuthScene() {
               tone={mode === key ? 'gold' : 'ghost'}
               onClick={() => setMode(key)}
             >
-              {t(key === 'guest' ? 'auth.guestPlay' : key === 'signin' ? 'auth.signIn' : 'auth.signUp')}
+              {t(key === 'signin' ? 'auth.signIn' : 'auth.signUp')}
             </GameButton>
           ))}
         </div>
@@ -239,29 +228,25 @@ export default function AuthScene() {
               onChange={(event) => setPassword(event.target.value)} />
           ) : (
             <>
-              {mode !== 'signin' && (
+              {mode === 'signup' && (
                 <input className={field} placeholder={t('auth.username')} value={username} maxLength={14}
                   onChange={(event) => setUsername(event.target.value)} />
               )}
-              {mode !== 'guest' && (
-                <>
-                  <input className={field} type="email" placeholder={t('auth.email')} value={email}
-                    onChange={(event) => setEmail(event.target.value)} />
-                  <input className={field} type="password" placeholder={t('auth.password')} value={password}
-                    onChange={(event) => setPassword(event.target.value)} />
-                  {mode === 'signin' && (
-                    <button type="button" className="text-[12px] text-start self-start"
-                      style={{ color: 'var(--gold)' }} onClick={() => setMode('reset')}>
-                      {t('auth.forgotPassword')}
-                    </button>
-                  )}
-                </>
+              <input className={field} type="email" placeholder={t('auth.email')} value={email}
+                onChange={(event) => setEmail(event.target.value)} />
+              <input className={field} type="password" placeholder={t('auth.password')} value={password}
+                onChange={(event) => setPassword(event.target.value)} />
+              {mode === 'signin' && (
+                <button type="button" className="text-[12px] text-start self-start"
+                  style={{ color: 'var(--gold)' }} onClick={() => setMode('reset')}>
+                  {t('auth.forgotPassword')}
+                </button>
               )}
             </>
           )}
         </div>
 
-        {(mode === 'guest' || mode === 'signup') && (
+        {mode === 'signup' && (
           <>
             <div className="hairline my-5"><span className="eyebrow">{t('auth.pickLook')}</span></div>
             {/* Big live preview */}
@@ -367,10 +352,6 @@ export default function AuthScene() {
             onClick={() => setMode('signin')}>
             {t('common.back')}
           </button>
-        )}
-
-        {mode === 'guest' && (
-          <p className="mt-3 text-center text-[12px]" style={{ color: 'var(--muted)' }}>{t('auth.guestNote')}</p>
         )}
       </GlassPanel>
     </motion.div>
