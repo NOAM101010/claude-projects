@@ -31,3 +31,7 @@ Thumbs.db
 
 # Claude local settings
 .claude/settings.local.json
+
+# compiled output shadowing TS/TSX source (ROYAL 21)
+ROYAL 21 GAME/src/**/*.js
+ROYAL 21 GAME/src/**/*.js.map
