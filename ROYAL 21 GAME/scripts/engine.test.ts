@@ -114,6 +114,27 @@ ok('split creates two hands', split.seats[0].hands.length === 2);
 ok('each split hand has two cards', split.seats[0].hands.every((h) => h.cards.length === 2));
 ok('each split hand keeps the stake', split.seats[0].hands.every((h) => h.bet === 100));
 ok('split hands cannot be blackjack', split.seats[0].hands.every((h) => !isBlackjack(h)));
+ok('8-8 split hands can still act', split.seats[0].hands.every((h) => !h.done));
+const hit88 = reduce(split, { type: 'hit', userId: 'me' });
+ok('hit on an 8-8 split hand is accepted', hit88.seats[0].hands[hit88.activeHand].cards.length > 2 || hit88.phase !== 'playing');
+
+console.log('\nSplit aces');
+let aa = createState(3);
+aa = reduce(aa, { type: 'join', userId: 'me', username: 'Me', avatar, level: 1 });
+aa = reduce(aa, { type: 'bet', userId: 'me', amount: 100 });
+aa = reduce(aa, { type: 'deal' });
+aa.seats[0].hands = [{ cards: [{ r: 'A', s: 'S' }, { r: 'A', s: 'H' }], bet: 100, done: false, doubled: false, fromSplit: false }];
+aa.phase = 'playing';
+aa.activeSeat = 0;
+aa.activeHand = 0;
+const aaSplit = reduce(aa, { type: 'split', userId: 'me' });
+ok('AA split makes two hands', aaSplit.seats[0].hands.length === 2);
+ok('each AA split hand gets exactly one more card', aaSplit.seats[0].hands.every((h) => h.cards.length === 2));
+ok('both AA split hands are done — no more action', aaSplit.seats[0].hands.every((h) => h.done === true));
+const aaHit = reduce(aaSplit, { type: 'hit', userId: 'me' });
+ok('hit on a split-ace hand is rejected', aaHit === aaSplit);
+ok('AA split with a ten counts as 21, not blackjack',
+  aaSplit.seats[0].hands.every((h) => !isBlackjack(h)));
 
 console.log('\nMultiplayer & spectators');
 let m = createState(11);

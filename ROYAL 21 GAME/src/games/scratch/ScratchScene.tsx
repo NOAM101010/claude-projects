@@ -11,7 +11,7 @@ import { useUI } from '@/stores/useUI';
 import { useT } from '@/hooks/useT';
 import { useNightReturn } from '@/hooks/useNightReturn';
 import { useNightScoring } from '@/hooks/useNightScoring';
-import { SCRATCH_TIERS, XP_REWARDS, rollScratch, type ScratchTier } from '@/data/economy';
+import { SCRATCH_TIERS, XP_REWARDS, rollScratch, scratchPaytable, type ScratchTier } from '@/data/economy';
 import { fmt } from '@/lib/format';
 import { audio } from '@/audio/AudioManager';
 import { pick } from '@/lib/random';
@@ -147,10 +147,22 @@ export default function ScratchScene() {
                           {tier.price === 0 ? t('scratch.free') : fmt(tier.price)}
                         </b>
                       </div>
-                      <div className="flex items-center justify-between text-[12px]">
-                        <span style={{ color: 'var(--muted)' }}>{t('scratch.top')}</span>
-                        <b className="num">{fmt(top)}</b>
+
+                      {/* mini paytable — the three richest lines, so the tiers
+                          read differently at a glance and the odds are visible. */}
+                      <div className="mt-2 pt-2 flex flex-col gap-1" style={{ borderTop: '1px solid var(--glass-line)' }}>
+                        <div className="flex items-center justify-between text-[10px] mb-0.5" style={{ color: 'var(--dim)' }}>
+                          <span className="eyebrow" style={{ fontSize: 9 }}>{t('scratch.prizes')}</span>
+                          <span>{t('scratch.top')} · {fmt(top)}</span>
+                        </div>
+                        {scratchPaytable(tier).slice(-3).reverse().map(({ symbol, prize }) => (
+                          <div key={symbol} className="flex items-center justify-between text-[12px]">
+                            <span style={{ letterSpacing: '-2px' }}>{symbol}{symbol}{symbol}</span>
+                            <b className="num" style={{ color: 'var(--gold-hi)' }}>{fmt(prize)}</b>
+                          </div>
+                        ))}
                       </div>
+
                       {tier.price === 0 && (
                         <p className="mt-2 text-[11px] leading-snug" style={{ color: 'var(--dim)' }}>{t('scratch.freeNote')}</p>
                       )}
@@ -186,6 +198,25 @@ export default function ScratchScene() {
                   frame={active.tier.frame}
                   onComplete={finish}
                 />
+              </div>
+
+              {/* Full paytable for this tier — visible before and during the scratch. */}
+              <div
+                className="mt-3 rounded-[var(--r-sm)] p-3"
+                style={{ background: 'rgba(255,255,255,.03)', border: `1px solid ${active.tier.accent}44` }}
+              >
+                <div className="flex items-baseline justify-between mb-2">
+                  <span className="eyebrow" style={{ fontSize: 10 }}>{t('scratch.prizes')}</span>
+                  <span className="text-[10.5px]" style={{ color: 'var(--dim)' }}>{t('scratch.threeSame')}</span>
+                </div>
+                <div className="grid gap-x-4 gap-y-1.5" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(120px,1fr))' }}>
+                  {scratchPaytable(active.tier).slice().reverse().map(({ symbol, prize }) => (
+                    <div key={symbol} className="flex items-center justify-between text-[13.5px]">
+                      <span style={{ letterSpacing: '-1px' }}>{symbol}{symbol}{symbol}</span>
+                      <b className="num" style={{ color: 'var(--gold-hi)' }}>{fmt(prize)}</b>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <AnimatePresence>

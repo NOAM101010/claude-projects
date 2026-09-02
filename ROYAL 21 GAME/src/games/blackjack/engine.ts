@@ -434,12 +434,16 @@ export function reduce(prev: BjState, action: BjAction): BjState {
       const hand = seat.hands[state.activeHand];
       if (!hand || hand.cards.length !== 2 || seat.hands.length >= MAX_HANDS) return prev;
       if (cardValue(hand.cards[0].r) !== cardValue(hand.cards[1].r)) return prev;
+      const splitAces = hand.cards[0].r === 'A';
       const moved = hand.cards.pop() as Card;
       const extra = newHand(hand.bet, true);
       extra.cards.push(moved);
       hand.fromSplit = true;
       hand.cards.push(draw(state));
       extra.cards.push(draw(state));
+      // Standard house rule: split aces get exactly one card each, no more
+      // action. hit/double/split all reject a done hand, so the buttons lock.
+      if (splitAces) { hand.done = true; extra.done = true; }
       seat.hands.splice(state.activeHand + 1, 0, extra);
       advance(state);
       if ((state.phase as Phase) === 'dealer') return reduce(state, { type: 'resolveDealer' });

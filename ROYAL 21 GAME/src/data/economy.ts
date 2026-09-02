@@ -116,6 +116,21 @@ export const SCRATCH_TIERS: ScratchTier[] = [
 
 export const scratchById = (id: string) => SCRATCH_TIERS.find((tier) => tier.id === id);
 
+/**
+ * The visible paytable for a tier: each winning symbol paired with what a line
+ * of three of it pays, low → high. Mirrors `faceFor` — a prize at `table[i]`
+ * (i ≥ 1) shows as `symbols[min(i, len-1)]`; `table[0]` is the losing face and
+ * is skipped. Read-only view of `table`, never changes odds. */
+export function scratchPaytable(tier: ScratchTier): { symbol: string; prize: number }[] {
+  return tier.table
+    .map(([prize], i) => ({ prize, i }))
+    .filter(({ i }) => i >= 1)
+    .map(({ prize, i }) => ({
+      symbol: tier.symbols[Math.min(i, tier.symbols.length - 1)],
+      prize,
+    }));
+}
+
 /** Expected return per card, as a fraction of its price. */
 export function scratchRTP(tier: ScratchTier) {
   const weight = tier.table.reduce((sum, [, w]) => sum + w, 0);
