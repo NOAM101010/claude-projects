@@ -37,6 +37,13 @@ export interface ScratchTier {
   symbols: string[];
   /** prize (in chips) -> relative weight */
   table: [number, number][];
+  /** Cosmetic only — every tier scratches to a different foil so the pricier
+   *  cards feel pricier. `foil` = 3 colour stops for the coating you rub off,
+   *  `bg` = the gradient behind the symbols, `frame` = the card's edge. None of
+   *  these touch odds (`table` / RTP). */
+  foil: [string, string, string];
+  bg: string;
+  frame: string;
 }
 
 export const SCRATCH_TIERS: ScratchTier[] = [
@@ -47,6 +54,10 @@ export const SCRATCH_TIERS: ScratchTier[] = [
     accent: '#8b8f98',
     symbols: ['🪙', '🍀', '🔔', '⭐', '💎'],
     table: [[0, 52], [5, 22], [10, 14], [25, 8], [60, 4]],
+    // worn matte silver-grey
+    foil: ['#aeb2ba', '#7b7f88', '#c2c6ce'],
+    bg: 'linear-gradient(160deg,#20242c,#111318)',
+    frame: '1px solid rgba(160,165,175,.32)',
   },
   {
     id: 'brass',
@@ -55,6 +66,10 @@ export const SCRATCH_TIERS: ScratchTier[] = [
     accent: '#c08a3e',
     symbols: ['🪙', '🍀', '🔔', '⭐', '💎', '👑'],
     table: [[0, 55], [50, 20], [120, 13], [300, 8], [600, 3], [1500, 1]],
+    // brushed copper / brass
+    foil: ['#d3a659', '#8a5a2b', '#e6c485'],
+    bg: 'linear-gradient(160deg,#241a10,#120c06)',
+    frame: '1px solid rgba(192,138,62,.5)',
   },
   {
     id: 'silver',
@@ -63,6 +78,10 @@ export const SCRATCH_TIERS: ScratchTier[] = [
     accent: '#b9c0cb',
     symbols: ['🪙', '🍀', '🔔', '⭐', '💎', '👑'],
     table: [[0, 54], [250, 21], [600, 13], [1500, 8], [3500, 3], [9000, 1]],
+    // bright cold silver with a hard sheen
+    foil: ['#e2e7ef', '#a7b0c0', '#f6f8fc'],
+    bg: 'linear-gradient(160deg,#191d25,#0b0d12)',
+    frame: '1px solid rgba(210,218,230,.55)',
   },
   {
     id: 'gold',
@@ -71,6 +90,10 @@ export const SCRATCH_TIERS: ScratchTier[] = [
     accent: '#e3b23c',
     symbols: ['🪙', '🍀', '🔔', '⭐', '💎', '👑'],
     table: [[0, 53], [1200, 21], [3000, 13], [7500, 9], [18000, 3], [45000, 1]],
+    // warm gold leaf, rich edge
+    foil: ['#f5db8d', '#c8922f', '#ffecb0'],
+    bg: 'linear-gradient(160deg,#241d0d,#120d04)',
+    frame: '2px solid rgba(227,178,60,.6)',
   },
   {
     id: 'obsidian',
@@ -79,6 +102,10 @@ export const SCRATCH_TIERS: ScratchTier[] = [
     accent: '#a878f0',
     symbols: ['🪙', '🍀', '🔔', '⭐', '💎', '👑'],
     table: [[0, 53], [5000, 21], [12000, 13], [28000, 9], [60000, 4], [150000, 1]],
+    // iridescent black-violet with a glow
+    foil: ['#3b3056', '#140f1d', '#7d5be0'],
+    bg: 'linear-gradient(160deg,#170f22,#09060f)',
+    frame: '2px solid rgba(168,120,240,.55)',
   },
 ];
 

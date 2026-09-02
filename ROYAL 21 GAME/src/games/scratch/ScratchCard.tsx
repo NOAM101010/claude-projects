@@ -7,7 +7,22 @@ import { useT } from '@/hooks/useT';
 interface Props {
   symbols: string[];
   accent: string;
+  /** Per-tier skin: 3 colour stops for the coating, gradient behind the
+   *  symbols, and the card edge. Cosmetic — no effect on odds. */
+  foil: [string, string, string];
+  bg: string;
+  frame?: string;
   onComplete: () => void;
+}
+
+/** Rough perceived-lightness test so the "scratch here" label keeps contrast on
+ *  both a bright silver foil and a near-black obsidian one. */
+function isLight(hex: string): boolean {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return r * 0.299 + g * 0.587 + b * 0.114 > 135;
 }
 
 /** Enough of the foil gone to call it revealed. */
@@ -27,7 +42,7 @@ const BRUSH = 24;
  * brush stroke from the cursor, and leave a rim that could never be cleared. The
  * card then sat below its own reveal threshold forever: scratched blank, no prize.
  */
-export function ScratchCard({ symbols, accent, onComplete }: Props) {
+export function ScratchCard({ symbols, accent, foil, bg, frame, onComplete }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
   const done = useRef(false);
@@ -46,26 +61,34 @@ export function ScratchCard({ symbols, accent, onComplete }: Props) {
     ctx.globalCompositeOperation = 'source-over';
     ctx.clearRect(0, 0, width, height);
 
+    const [c0, c1, c2] = foil;
     const gradient = ctx.createLinearGradient(0, 0, width, height);
-    gradient.addColorStop(0, '#b9bec9');
-    gradient.addColorStop(0.45, '#8f94a0');
-    gradient.addColorStop(0.55, '#c7ccd6');
-    gradient.addColorStop(1, '#8f94a0');
+    gradient.addColorStop(0, c0);
+    gradient.addColorStop(0.42, c1);
+    gradient.addColorStop(0.56, c2);
+    gradient.addColorStop(1, c1);
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, height);
 
+    // brushed-metal flecks: bright highlight streaks + a few dark ones so the
+    // texture reads on both light and dark foils.
+    const fleck = 14 * (height / 240);
     ctx.fillStyle = 'rgba(255,255,255,.16)';
-    for (let i = 0; i < 90; i++) {
-      ctx.fillRect(Math.random() * width, Math.random() * height, 14 * (height / 240), 1);
+    for (let i = 0; i < 80; i++) {
+      ctx.fillRect(Math.random() * width, Math.random() * height, fleck, 1);
+    }
+    ctx.fillStyle = 'rgba(0,0,0,.12)';
+    for (let i = 0; i < 40; i++) {
+      ctx.fillRect(Math.random() * width, Math.random() * height, fleck * 0.7, 1);
     }
 
     const scale = Math.max(1, height / 240);
     ctx.font = `bold ${13 * scale}px sans-serif`;
-    ctx.fillStyle = 'rgba(0,0,0,.28)';
+    ctx.fillStyle = isLight(c0) ? 'rgba(0,0,0,.3)' : 'rgba(255,255,255,.34)';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(t('scratch.here'), width / 2, height / 2);
-  }, [t]);
+  }, [t, foil]);
 
   /* Size the backing store to the real layout box and re-coat whenever it
      changes. offsetWidth ignores CSS transforms, so the entrance animation
@@ -199,11 +222,11 @@ export function ScratchCard({ symbols, accent, onComplete }: Props) {
   return (
     <div
       className="relative w-full select-none"
-      style={{ aspectRatio: '1.6', borderRadius: 'var(--r-md)', overflow: 'hidden', border: `1px solid ${accent}55`, boxShadow: 'var(--shadow-deep)' }}
+      style={{ aspectRatio: '1.6', borderRadius: 'var(--r-md)', overflow: 'hidden', border: frame ?? `1px solid ${accent}55`, boxShadow: 'var(--shadow-deep)' }}
     >
       <div
         className="absolute inset-0 grid place-items-center px-4"
-        style={{ background: 'linear-gradient(160deg,#1c1f27,#0e1014)', gridTemplateColumns: 'repeat(3,1fr)' }}
+        style={{ background: bg, gridTemplateColumns: 'repeat(3,1fr)' }}
       >
         {symbols.map((symbol, index) => (
           <motion.span

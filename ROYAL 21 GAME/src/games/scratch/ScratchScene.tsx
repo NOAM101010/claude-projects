@@ -120,11 +120,25 @@ export default function ScratchScene() {
                       whileTap={{ scale: 0.97 }}
                       onClick={() => take(tier)}
                     >
+                      {/* a real preview of this tier's scratch foil */}
                       <div
-                        className="h-16 rounded-[var(--r-xs)] mb-3 grid place-items-center text-[26px]"
-                        style={{ background: `linear-gradient(150deg, ${tier.accent}, #1b1f27 75%)` }}
+                        className="relative h-16 rounded-[var(--r-xs)] mb-3 grid place-items-center text-[24px] overflow-hidden"
+                        style={{
+                          background: `linear-gradient(125deg, ${tier.foil[0]}, ${tier.foil[1]} 46%, ${tier.foil[2]} 60%, ${tier.foil[1]})`,
+                          border: tier.frame,
+                          boxShadow: 'inset 0 1px 0 rgba(255,255,255,.28), inset 0 -8px 16px rgba(0,0,0,.35)',
+                        }}
                       >
-                        {tier.price === 0 ? '🎫' : '💳'}
+                        <span
+                          className="absolute inset-0"
+                          style={{
+                            background: 'repeating-linear-gradient(115deg, rgba(255,255,255,.12) 0 1px, transparent 1px 5px)',
+                            mixBlendMode: 'overlay',
+                          }}
+                        />
+                        <span style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.5))' }}>
+                          {tier.price === 0 ? '🎫' : '💳'}
+                        </span>
                       </div>
                       <b style={{ fontFamily: 'var(--font-display)', fontSize: 16 }}>{tier.name[lang]}</b>
                       <div className="flex items-center justify-between mt-1.5 text-[12px]">
@@ -163,7 +177,15 @@ export default function ScratchScene() {
 
               <div className="relative">
                 <AnimatePresence>{revealed && active.prize > 0 && <VictoryEffect kind={profile.equipped.victory} />}</AnimatePresence>
-                <ScratchCard key={active.ticket} symbols={active.symbols} accent={active.tier.accent} onComplete={finish} />
+                <ScratchCard
+                  key={active.ticket}
+                  symbols={active.symbols}
+                  accent={active.tier.accent}
+                  foil={active.tier.foil}
+                  bg={active.tier.bg}
+                  frame={active.tier.frame}
+                  onComplete={finish}
+                />
               </div>
 
               <AnimatePresence>
