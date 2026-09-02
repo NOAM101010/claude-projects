@@ -157,6 +157,27 @@ const runB = (() => {
 })();
 ok('same seed + same actions = identical state', JSON.stringify(runA) === JSON.stringify(runB));
 
+console.log('\nDealer natural blackjack');
+{
+  let found = false;
+  for (let seed = 1; seed < 600 && !found; seed++) {
+    let x = createState(seed);
+    x = reduce(x, { type: 'join', userId: 'me', username: 'Me', avatar, level: 1 });
+    x = reduce(x, { type: 'bet', userId: 'me', amount: 100 });
+    x = reduce(x, { type: 'deal' });
+    if (x.dealer.cards.length === 2 && handValue(x.dealer.cards).total === 21) {
+      found = true;
+      const h = x.seats[0].hands[0];
+      ok('dealer natural 21 settles the hand right at deal', x.phase === 'settled');
+      ok('dealer natural 21 reveals the hole card', x.dealer.hidden === false);
+      ok('no player turn was handed out', x.activeSeat === -1);
+      ok('player loses to the dealer natural (push if they also have blackjack)',
+        isBlackjack(h) ? h.outcome === 'push' : h.outcome === 'lose');
+    }
+  }
+  ok('found a dealer-natural seed within 600', found);
+}
+
 console.log('\nSide bets — Perfect Pairs');
 {
   const low: Card = { r: '2', s: 'C' };

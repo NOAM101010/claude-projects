@@ -52,7 +52,8 @@ export const SCRATCH_TIERS: ScratchTier[] = [
     price: 0,
     name: { he: 'כרטיס הבית', en: 'House Card' },
     accent: '#8b8f98',
-    symbols: ['🪙', '🍀', '🔔', '⭐', '💎'],
+    // everyday counter card
+    symbols: ['🪙', '🍀', '🔔', '🎲', '⭐'],
     table: [[0, 52], [5, 22], [10, 14], [25, 8], [60, 4]],
     // worn matte silver-grey
     foil: ['#aeb2ba', '#7b7f88', '#c2c6ce'],
@@ -64,7 +65,8 @@ export const SCRATCH_TIERS: ScratchTier[] = [
     price: 100,
     name: { he: 'פליז', en: 'Brass' },
     accent: '#c08a3e',
-    symbols: ['🪙', '🍀', '🔔', '⭐', '💎', '👑'],
+    // mechanical / vintage brass
+    symbols: ['🔩', '⚙️', '🗝️', '🧭', '🏮', '⏰'],
     table: [[0, 55], [50, 20], [120, 13], [300, 8], [600, 3], [1500, 1]],
     // brushed copper / brass
     foil: ['#d3a659', '#8a5a2b', '#e6c485'],
@@ -76,7 +78,8 @@ export const SCRATCH_TIERS: ScratchTier[] = [
     price: 500,
     name: { he: 'כסף', en: 'Silver' },
     accent: '#b9c0cb',
-    symbols: ['🪙', '🍀', '🔔', '⭐', '💎', '👑'],
+    // cold, mid-luxury silver
+    symbols: ['❄️', '🌙', '💠', '⭐', '🗡️', '💎'],
     table: [[0, 54], [250, 21], [600, 13], [1500, 8], [3500, 3], [9000, 1]],
     // bright cold silver with a hard sheen
     foil: ['#e2e7ef', '#a7b0c0', '#f6f8fc'],
@@ -88,7 +91,8 @@ export const SCRATCH_TIERS: ScratchTier[] = [
     price: 2500,
     name: { he: 'זהב', en: 'Gold' },
     accent: '#e3b23c',
-    symbols: ['🪙', '🍀', '🔔', '⭐', '💎', '👑'],
+    // wealth / royal
+    symbols: ['💵', '💍', '🏆', '💰', '👑', '💎'],
     table: [[0, 53], [1200, 21], [3000, 13], [7500, 9], [18000, 3], [45000, 1]],
     // warm gold leaf, rich edge
     foil: ['#f5db8d', '#c8922f', '#ffecb0'],
@@ -100,7 +104,8 @@ export const SCRATCH_TIERS: ScratchTier[] = [
     price: 10000,
     name: { he: 'אובסידיאן', en: 'Obsidian' },
     accent: '#a878f0',
-    symbols: ['🪙', '🍀', '🔔', '⭐', '💎', '👑'],
+    // rare / mystic
+    symbols: ['👁️', '☄️', '🔮', '🐉', '🌌', '💀'],
     table: [[0, 53], [5000, 21], [12000, 13], [28000, 9], [60000, 4], [150000, 1]],
     // iridescent black-violet with a glow
     foil: ['#3b3056', '#140f1d', '#7d5be0'],

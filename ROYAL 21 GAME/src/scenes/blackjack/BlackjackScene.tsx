@@ -63,7 +63,8 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
   const [victory, setVictory] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [emotes, setEmotes] = useState<Record<string, { emote?: string; message?: string }>>({});
-  const [selectedChip, setSelectedChip] = useState(100);
+  /** Value of the last chip tapped on the rail — dropped onto a side-bet panel. */
+  const [lastChip, setLastChip] = useState(100);
   const lastSideBets = useRef<Partial<Record<BjSide, number>>>({});
   const settledRound = useRef(-1);
   const autoOpenedRound = useRef(-1);
@@ -453,8 +454,6 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
     if (!solo || !state || state.phase !== 'betting' || amount <= 0) return;
     if (profile.chips < amount) { audio.play('error'); toast(t('blackjack.notEnough'), 'bad', '⚠'); return; }
     addChips(-amount, { silent: true });
-    audio.play('chip');
-    haptic('chip');
     void send(profile.id, { type: 'sideBet', userId: profile.id, side, amount });
   }, [solo, state, profile.chips, profile.id, addChips, send, toast, t]);
 
@@ -621,16 +620,15 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
             </div>
           )}
 
-          {/* Solo: side-bet betting circles fill the empty middle of the felt. */}
+          {/* Solo: Perfect Pairs + 21+3 panels pinned to the sides of the felt. */}
           {solo && (
             <FeltBets
               chipSkin={profile.equipped.chipSkin}
-              selectedChip={selectedChip}
-              mainBet={mySeat?.bet ?? 0}
+              lastChip={lastChip}
               sideBets={mySeat?.sideBets}
               sideResults={mySeat?.sideResults}
               phase={state.phase}
-              onHand={() => addBet(selectedChip)}
+              compact={compact}
               onSide={placeSide}
             />
           )}
@@ -692,10 +690,7 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
                 multiplayer={!solo}
                 chipSkin={profile.equipped.chipSkin}
                 vip={isVipEligible(profile)}
-                selectMode={solo}
-                selectedChip={selectedChip}
-                onSelectChip={setSelectedChip}
-                onAdd={addBet}
+                onAdd={(v) => { if (solo) setLastChip(v); addBet(v); }}
                 onClear={clearBet}
                 onRepeat={repeatBet}
                 onAll={() => addBet(profile.chips)}

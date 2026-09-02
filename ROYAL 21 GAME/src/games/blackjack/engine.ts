@@ -378,6 +378,15 @@ export function reduce(prev: BjState, action: BjAction): BjState {
       // Side bets resolve the instant the opening cards + dealer up card are out
       // (solo only — no seat carries sideBets in cash/duel).
       for (const seat of state.seats) settleSideBets(seat, state.dealer.cards[0]);
+      // Dealer natural blackjack ends the hand right here — nobody gets to act.
+      // settle() already pays it out correctly (players lose, or push on their
+      // own blackjack); the side bets are already scored above.
+      if (state.dealer.cards.length === 2 && handValue(state.dealer.cards).total === 21) {
+        state.phase = 'dealer';
+        state.activeSeat = -1;
+        state.activeHand = 0;
+        return reduce(state, { type: 'resolveDealer' });
+      }
       state.phase = 'playing';
       state.activeSeat = 0;
       state.activeHand = 0;
