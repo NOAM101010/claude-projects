@@ -30,15 +30,15 @@ export function ActionBar({ yourTurn, turnName, duel, canDouble, canSplit, onHit
       <p className="text-center mb-2.5 text-[12.5px] font-bold" style={{ color: yourTurn ? 'var(--gold-hi)' : 'var(--muted)' }}>
         {yourTurn ? t('blackjack.yourTurn') : t('blackjack.turnOf', { name: turnName ?? '…' })}
       </p>
-      <div className={`grid gap-2 ${duel ? 'grid-cols-2' : 'grid-cols-4'}`}>
+      <div className={`grid gap-2 ${duel ? 'grid-cols-3' : 'grid-cols-4'}`}>
         <GameButton tone="gold" size="lg" disabled={!yourTurn} onClick={onHit}>{t('blackjack.hit')}</GameButton>
         <GameButton tone="metal" size="lg" disabled={!yourTurn} onClick={onStand}>{t('blackjack.stand')}</GameButton>
+        {/* Double stays hidden in duel (no per-hand stake to double); Split is
+            kept — each split hand scores its own points, which is the point. */}
         {!duel && (
-          <>
-            <GameButton tone="metal" size="lg" disabled={!yourTurn || !canDouble} onClick={onDouble}>{t('blackjack.double')}</GameButton>
-            <GameButton tone="metal" size="lg" disabled={!yourTurn || !canSplit} onClick={onSplit}>{t('blackjack.split')}</GameButton>
-          </>
+          <GameButton tone="metal" size="lg" disabled={!yourTurn || !canDouble} onClick={onDouble}>{t('blackjack.double')}</GameButton>
         )}
+        <GameButton tone="metal" size="lg" disabled={!yourTurn || !canSplit} onClick={onSplit}>{t('blackjack.split')}</GameButton>
       </div>
     </motion.div>
   );

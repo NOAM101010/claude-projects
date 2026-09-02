@@ -661,7 +661,7 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
                 turnName={activeSeat?.username}
                 duel={!!duel}
                 canDouble={!duel && !!activeHand && canDouble(activeHand, profile.chips)}
-                canSplit={!duel && !!activeHand && !!mySeat && canSplit(activeHand, mySeat, profile.chips)}
+                canSplit={!!activeHand && !!mySeat && canSplit(activeHand, mySeat, profile.chips)}
                 onHit={() => act('hit')}
                 onStand={() => act('stand')}
                 onDouble={() => act('double')}
