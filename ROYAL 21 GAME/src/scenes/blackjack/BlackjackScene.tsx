@@ -10,6 +10,7 @@ import { LightPool } from '@/components/effects/LightPool';
 import { VictoryEffect } from '@/components/effects/VictoryEffect';
 import { EmoteBar } from '@/components/social/EmoteBar';
 import { BetRail } from './BetRail';
+import { FeltBets } from './FeltBets';
 import { ActionBar } from './ActionBar';
 import { SeatView } from './SeatView';
 import { DuelBoard } from './DuelBoard';
@@ -34,7 +35,7 @@ import { fmt } from '@/lib/format';
 import { XP_REWARDS } from '@/data/economy';
 import { isVipEligible } from '@/data/vip';
 import { isOnline } from '@/services/supabase';
-import type { BjSeat } from '@/games/blackjack/types';
+import type { BjSeat, BjSide } from '@/games/blackjack/types';
 
 type DealerMood = 'idle' | 'shuffle' | 'deal' | 'flip' | 'win' | 'lose' | 'blackjack' | 'bust';
 
@@ -62,6 +63,8 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
   const [victory, setVictory] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [emotes, setEmotes] = useState<Record<string, { emote?: string; message?: string }>>({});
+  const [selectedChip, setSelectedChip] = useState(100);
+  const lastSideBets = useRef<Partial<Record<BjSide, number>>>({});
   const settledRound = useRef(-1);
   const autoOpenedRound = useRef(-1);
   /* Latches true the first time this client sees `state.duel`. From then on the
@@ -218,7 +221,13 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
 
     const payout = mySeat.hands.reduce((sum, hand) => sum + (hand.payout ?? 0), 0);
     const staked = mySeat.hands.reduce((sum, hand) => sum + hand.bet, 0);
-    const net = payout - staked;
+    // Solo companion wagers — resolved at deal time, credited here alongside the
+    // main hand. `sideResults` is signed (win +amount*mult, loss -amount) so the
+    // returned amount is `stake + result` (0 on a loss).
+    const sideStaked = solo ? Object.values(mySeat.sideBets ?? {}).reduce((s, v) => s + (v ?? 0), 0) : 0;
+    const sideNet = solo ? Object.values(mySeat.sideResults ?? {}).reduce((s, v) => s + (v ?? 0), 0) : 0;
+    const sidePayout = sideStaked + sideNet;
+    const net = payout - staked + sideNet;
     netRef.current[profile.id] = (netRef.current[profile.id] ?? 0) + net;
 
     const gotBlackjack = mySeat.hands.some((hand) => isBlackjack(hand));
@@ -234,7 +243,7 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
     const inDuel = Boolean(duel) || Boolean(useRoom.getState().state?.duel) || duelConfirmed.current;
     const roomMode = Boolean(room && isOnline());
     if (!inDuel) {
-      if (payout > 0) addChips(payout, roomMode ? { localOnly: true } : undefined);
+      if (payout + sidePayout > 0) addChips(payout + sidePayout, roomMode ? { localOnly: true } : undefined);
       if (roomMode && room) {
         const claim = async () => {
           for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -437,10 +446,26 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.phase, state?.round]);
 
+  /* Solo companion wagers (Perfect Pairs / 21+3) — optimistic debit, then the
+     local reducer records the stake. Solo `send` is a synchronous local reduce
+     so there's no round-trip to roll back. */
+  const placeSide = useCallback((side: BjSide, amount: number) => {
+    if (!solo || !state || state.phase !== 'betting' || amount <= 0) return;
+    if (profile.chips < amount) { audio.play('error'); toast(t('blackjack.notEnough'), 'bad', '⚠'); return; }
+    addChips(-amount, { silent: true });
+    audio.play('chip');
+    haptic('chip');
+    void send(profile.id, { type: 'sideBet', userId: profile.id, side, amount });
+  }, [solo, state, profile.chips, profile.id, addChips, send, toast, t]);
+
+  const sideStakeOf = (seat: BjSeat | undefined) =>
+    Object.values(seat?.sideBets ?? {}).reduce((sum, v) => sum + (v ?? 0), 0);
+
   const clearBet = () => {
-    if (!mySeat?.bet) return;
-    const refunded = mySeat.bet;
-    if (!duel) addChips(refunded, solo ? { silent: true } : { silent: true, localOnly: true });
+    const sideTotal = solo ? sideStakeOf(mySeat) : 0;
+    if (!mySeat?.bet && !sideTotal) return;
+    const refunded = mySeat?.bet ?? 0;
+    if (!duel) addChips(refunded + sideTotal, solo ? { silent: true } : { silent: true, localOnly: true });
     // Offset the settle-time reconcile (above): once the host processes this
     // clearBet mySeat.bet drops to 0, and pendingBetTotal would still report
     // the full amount as "missing" → the reconcile would credit it a 2nd time.
@@ -453,13 +478,20 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
   const repeatBet = () => {
     const target = state?.lastBet ?? 0;
     const need = target - (mySeat?.bet ?? 0);
-    if (need <= 0 || profile.chips < need) return;
-    addBet(need);
+    if (need > 0 && profile.chips >= need) addBet(need);
+    if (solo) {
+      for (const [side, amount] of Object.entries(lastSideBets.current) as [BjSide, number][]) {
+        const delta = (amount ?? 0) - (mySeat?.sideBets?.[side] ?? 0);
+        if (delta > 0 && profile.chips >= delta) placeSide(side, delta);
+      }
+    }
   };
 
   const readyUp = () => {
     // Duel has no bet — readiness alone seats you.
     if (!duel && !mySeat?.bet) return;
+    // Snapshot the solo side bets so "Last bet" can restore them next round.
+    if (solo) lastSideBets.current = { ...(mySeat?.sideBets ?? {}) };
     audio.play('chipStack');
     if (solo && !duel) void send(profile.id, { type: 'deal' });
     else void send(profile.id, { type: 'ready', userId: profile.id });
@@ -589,6 +621,20 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
             </div>
           )}
 
+          {/* Solo: side-bet betting circles fill the empty middle of the felt. */}
+          {solo && (
+            <FeltBets
+              chipSkin={profile.equipped.chipSkin}
+              selectedChip={selectedChip}
+              mainBet={mySeat?.bet ?? 0}
+              sideBets={mySeat?.sideBets}
+              sideResults={mySeat?.sideResults}
+              phase={state.phase}
+              onHand={() => addBet(selectedChip)}
+              onSide={placeSide}
+            />
+          )}
+
           {/* me, always bottom centre and always the largest */}
           {mySeat && (
             <SeatView
@@ -646,6 +692,9 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
                 multiplayer={!solo}
                 chipSkin={profile.equipped.chipSkin}
                 vip={isVipEligible(profile)}
+                selectMode={solo}
+                selectedChip={selectedChip}
+                onSelectChip={setSelectedChip}
                 onAdd={addBet}
                 onClear={clearBet}
                 onRepeat={repeatBet}

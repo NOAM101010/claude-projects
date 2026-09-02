@@ -1,6 +1,6 @@
 /* Rule tests for the Blackjack engine. Run: npm run test:engine */
 import {
-  buildShoe, createState, handValue, isBlackjack, reduce, DECKS,
+  buildShoe, createState, handValue, isBlackjack, reduce, evalSideBets, DECKS,
 } from '../src/games/blackjack/engine';
 import type { BjState, Card } from '../src/games/blackjack/types';
 import type { AvatarConfig } from '../src/types';
@@ -157,6 +157,54 @@ const runB = (() => {
 })();
 ok('same seed + same actions = identical state', JSON.stringify(runA) === JSON.stringify(runB));
 
+console.log('\nSide bets — Perfect Pairs');
+{
+  const low: Card = { r: '2', s: 'C' };
+  const pp = (a: Card, b: Card) => evalSideBets([a, b], low).pairs;
+  ok('perfect pair pays 25', pp({ r: '9', s: 'S' }, { r: '9', s: 'S' }) === 25);
+  ok('coloured pair (both black) pays 12', pp({ r: '9', s: 'S' }, { r: '9', s: 'C' }) === 12);
+  ok('coloured pair (both red) pays 12', pp({ r: 'K', s: 'H' }, { r: 'K', s: 'D' }) === 12);
+  ok('mixed pair pays 6', pp({ r: '9', s: 'S' }, { r: '9', s: 'H' }) === 6);
+  ok('no pair = no pairs payout', pp({ r: '9', s: 'S' }, { r: '8', s: 'H' }) === undefined);
+}
+
+console.log('\nSide bets — 21+3');
+{
+  const trio = (a: Card, b: Card, up: Card) => evalSideBets([a, b], up).trio;
+  ok('flush pays 5', trio({ r: '2', s: 'S' }, { r: '7', s: 'S' }, { r: 'K', s: 'S' }) === 5);
+  ok('straight pays 10', trio({ r: '4', s: 'S' }, { r: '5', s: 'H' }, { r: '6', s: 'D' }) === 10);
+  ok('A-low straight (A-2-3) pays 10', trio({ r: 'A', s: 'S' }, { r: '2', s: 'H' }, { r: '3', s: 'D' }) === 10);
+  ok('A-high straight (Q-K-A) pays 10', trio({ r: 'Q', s: 'S' }, { r: 'K', s: 'H' }, { r: 'A', s: 'D' }) === 10);
+  ok('K-A-2 is not a straight', trio({ r: 'K', s: 'S' }, { r: 'A', s: 'H' }, { r: '2', s: 'D' }) === undefined);
+  ok('trips pay 30', trio({ r: '7', s: 'S' }, { r: '7', s: 'H' }, { r: '7', s: 'D' }) === 30);
+  ok('straight flush pays 40', trio({ r: '4', s: 'S' }, { r: '5', s: 'S' }, { r: '6', s: 'S' }) === 40);
+  ok('suited trips pay 100', trio({ r: '7', s: 'S' }, { r: '7', s: 'S' }, { r: '7', s: 'S' }) === 100);
+  ok('nothing = no trio payout', trio({ r: '2', s: 'S' }, { r: '7', s: 'H' }, { r: 'K', s: 'D' }) === undefined);
+}
+
+console.log('\nSide bets — engine flow + settle');
+{
+  let sb = createState(2);
+  sb = reduce(sb, { type: 'join', userId: 'me', username: 'Me', avatar, level: 1 });
+  sb = reduce(sb, { type: 'bet', userId: 'me', amount: 100 });
+  sb = reduce(sb, { type: 'sideBet', userId: 'me', side: 'pairs', amount: 25 });
+  sb = reduce(sb, { type: 'sideBet', userId: 'me', side: 'pairs', amount: 25 });
+  ok('side bets accumulate', sb.seats[0].sideBets?.pairs === 50);
+  const cleared = reduce(sb, { type: 'sideBet', userId: 'me', side: 'pairs', amount: -1 });
+  ok('a non-positive side bet clears the side', cleared.seats[0].sideBets === undefined);
+  sb = reduce(sb, { type: 'deal' });
+  ok('sideResults are written at deal time', sb.seats[0].sideResults !== undefined);
+  // Force a losing main hand but keep a winning pairs result, then settle.
+  sb.seats[0].hands = [{ cards: [{ r: '10', s: 'S' }, { r: '7', s: 'H' }], bet: 100, done: true, doubled: false, fromSplit: false }];
+  sb.seats[0].sideResults = { pairs: 50 * 25 };
+  sb.dealer.cards = [{ r: '10', s: 'C' }, { r: '9', s: 'D' }];
+  sb.phase = 'dealer';
+  sb = reduce(sb, { type: 'resolveDealer' });
+  ok('settle folds side results into net (-100 main + 1250 side)', sb.seats[0].net === 1150);
+  const reopened = reduce(sb, { type: 'openBetting' });
+  ok('openBetting clears side bets + results',
+    reopened.seats[0].sideBets === undefined && reopened.seats[0].sideResults === undefined);
+}
 
 if (fail > 0) process.exit(1);
 

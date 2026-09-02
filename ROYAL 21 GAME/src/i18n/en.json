@@ -438,7 +438,21 @@
     "spectating": "Spectating",
     "roundStartsIn": "Round starts in {sec}",
     "streak": "Streak",
-    "shuffling": "Shuffling the deck..."
+    "shuffling": "Shuffling the deck...",
+    "hand": "HAND",
+    "sideBets": "Side bets",
+    "pairs": "PAIRS",
+    "sideBetHint": "Pick a chip, then tap a circle to place it",
+    "pairsNote": "your first two cards",
+    "trioNote": "your two cards + the dealer's up card",
+    "perfectPair": "Perfect pair (same rank & suit)",
+    "coloredPair": "Coloured pair (same rank & colour)",
+    "mixedPair": "Mixed pair (same rank)",
+    "suitedTrips": "Suited three of a kind",
+    "straightFlush": "Straight flush",
+    "trips": "Three of a kind",
+    "straight": "Straight",
+    "flush": "Flush"
   },
   "poker": {
     "title": "Texas Hold'em",

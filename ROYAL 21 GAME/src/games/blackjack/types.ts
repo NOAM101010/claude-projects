@@ -8,6 +8,10 @@ export interface Card { r: Rank; s: Suit }
 export type Outcome = 'win' | 'lose' | 'push' | 'bust' | 'blackjack';
 export type Phase = 'betting' | 'dealing' | 'playing' | 'dealer' | 'settled';
 
+/** Solo-only companion wagers placed alongside the main bet:
+ *  `pairs` = Perfect Pairs, `trio` = 21+3. */
+export type BjSide = 'pairs' | 'trio';
+
 export interface BjHand {
   cards: Card[];
   bet: number;
@@ -31,6 +35,10 @@ export interface BjSeat {
   spectator: boolean;
   net: number;
   emote?: { id: string; at: number };
+  /** Solo side bets placed this round (chips staked per side). */
+  sideBets?: Partial<Record<BjSide, number>>;
+  /** Signed net per side, written at deal time: win `+amount*mult`, loss `-amount`. */
+  sideResults?: Partial<Record<BjSide, number>>;
 }
 
 export interface BjState {
@@ -67,6 +75,8 @@ export type BjAction =
   | { type: 'join'; userId: string; username: string; avatar: AvatarConfig; level: number }
   | { type: 'leave'; userId: string }
   | { type: 'bet'; userId: string; amount: number }
+  /** Solo companion wager (Perfect Pairs / 21+3). Additive; `amount <= 0` clears the side. */
+  | { type: 'sideBet'; userId: string; side: BjSide; amount: number }
   | { type: 'clearBet'; userId: string }
   | { type: 'ready'; userId: string }
   | { type: 'openBetting' }

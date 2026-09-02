@@ -1,6 +1,6 @@
 import { mulberry32, shuffle } from '@/lib/random';
 import type { AvatarConfig } from '@/types';
-import type { BjAction, BjHand, BjSeat, BjState, Card, Outcome, Phase, Rank, Suit } from './types';
+import type { BjAction, BjHand, BjSeat, BjSide, BjState, Card, Outcome, Phase, Rank, Suit } from './types';
 
 export const SUITS: Suit[] = ['S', 'H', 'D', 'C'];
 export const RANKS: Rank[] = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
@@ -94,6 +94,69 @@ const newHand = (bet: number, fromSplit = false): BjHand => ({
 
 const activePlayers = (state: BjState) => state.seats.filter((s) => !s.spectator && s.bet > 0);
 
+/* ------------------------------------------------------------------ side bets -- */
+
+const isRedSuit = (s: Suit) => s === 'H' || s === 'D';
+/** A=1 … K=13 for straight detection. */
+const rankRank = (r: Rank) => RANKS.indexOf(r) + 1;
+
+/** Whether three ranks form a run of 3, with the Ace allowed high (Q-K-A) or low (A-2-3). */
+function threeStraight(rs: Rank[]): boolean {
+  const base = rs.map(rankRank);
+  const variants = base.includes(1) ? [base, base.map((n) => (n === 1 ? 14 : n))] : [base];
+  return variants.some((v) => {
+    const s = [...v].sort((a, b) => a - b);
+    return new Set(s).size === 3 && s[1] === s[0] + 1 && s[2] === s[1] + 1;
+  });
+}
+
+/**
+ * Payout multiplier for each side bet given the opening cards. A missing key
+ * means the side lost. Pure — called once inside `deal`.
+ *
+ *   Perfect Pairs (player's first two): perfect 25 · coloured 12 · mixed 6
+ *   21+3 (player's two + dealer up, as a poker hand):
+ *     suited trips 100 · straight flush 40 · trips 30 · straight 10 · flush 5
+ */
+export function evalSideBets(playerFirstTwo: Card[], dealerUp: Card | undefined): Partial<Record<BjSide, number>> {
+  const out: Partial<Record<BjSide, number>> = {};
+  if (playerFirstTwo.length !== 2 || !dealerUp) return out;
+  const [a, b] = playerFirstTwo;
+
+  if (a.r === b.r) {
+    if (a.s === b.s) out.pairs = 25;
+    else if (isRedSuit(a.s) === isRedSuit(b.s)) out.pairs = 12;
+    else out.pairs = 6;
+  }
+
+  const three = [a, b, dealerUp];
+  const sameSuit = three.every((c) => c.s === a.s);
+  const trips = a.r === b.r && b.r === dealerUp.r;
+  const straight = threeStraight(three.map((c) => c.r));
+  if (trips && sameSuit) out.trio = 100;
+  else if (straight && sameSuit) out.trio = 40;
+  else if (trips) out.trio = 30;
+  else if (straight) out.trio = 10;
+  else if (sameSuit) out.trio = 5;
+
+  return out;
+}
+
+/** Resolve a seat's side bets against its opening two + the dealer up card. */
+function settleSideBets(seat: BjSeat, dealerUp: Card | undefined) {
+  if (!seat.sideBets) return;
+  const firstTwo = seat.hands[0]?.cards.slice(0, 2) ?? [];
+  const mult = evalSideBets(firstTwo, dealerUp);
+  const results: Partial<Record<BjSide, number>> = {};
+  for (const key of Object.keys(seat.sideBets) as BjSide[]) {
+    const amount = seat.sideBets[key] ?? 0;
+    if (amount <= 0) continue;
+    const m = mult[key];
+    results[key] = m ? amount * m : -amount;
+  }
+  seat.sideResults = results;
+}
+
 /** Moves the turn pointer to the next unfinished hand, or to the dealer. */
 function advance(state: BjState) {
   let seatIndex = state.activeSeat;
@@ -160,6 +223,10 @@ function settle(state: BjState) {
         round: state.round, userId: seat.userId, username: seat.username, game: 'blackjack', outcome, net: payout - hand.bet,
       });
     }
+    // Side bets were decided at deal time — fold their signed net in once.
+    if (seat.sideResults) {
+      seat.net += Object.values(seat.sideResults).reduce((sum, v) => sum + (v ?? 0), 0);
+    }
   }
   state.history = state.history.slice(-40);
   state.phase = 'settled';
@@ -221,6 +288,17 @@ export function reduce(prev: BjState, action: BjAction): BjState {
       if (!seat || state.phase !== 'betting') return prev;
       seat.bet = 0;
       seat.ready = false;
+      seat.sideBets = undefined;
+      return state;
+    }
+    case 'sideBet': {
+      const seat = seatOf(action.userId);
+      if (!seat || state.phase !== 'betting') return prev;
+      const bets: Partial<Record<BjSide, number>> = { ...(seat.sideBets ?? {}) };
+      if (action.amount <= 0) delete bets[action.side];
+      else bets[action.side] = (bets[action.side] ?? 0) + action.amount;
+      seat.sideBets = Object.keys(bets).length ? bets : undefined;
+      seat.spectator = false;
       return state;
     }
     case 'ready': {
@@ -258,6 +336,8 @@ export function reduce(prev: BjState, action: BjAction): BjState {
         seat.hands = [];
         seat.spectator = false;
         seat.net = 0;
+        seat.sideBets = undefined;
+        seat.sideResults = undefined;
       }
       return state;
     }
@@ -295,6 +375,9 @@ export function reduce(prev: BjState, action: BjAction): BjState {
         for (const seat of state.seats) if (seat.hands[0]) seat.hands[0].cards.push(draw(state));
         state.dealer.cards.push(draw(state));
       }
+      // Side bets resolve the instant the opening cards + dealer up card are out
+      // (solo only — no seat carries sideBets in cash/duel).
+      for (const seat of state.seats) settleSideBets(seat, state.dealer.cards[0]);
       state.phase = 'playing';
       state.activeSeat = 0;
       state.activeHand = 0;

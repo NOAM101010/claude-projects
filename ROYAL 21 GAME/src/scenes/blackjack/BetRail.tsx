@@ -16,6 +16,11 @@ interface Props {
   chipSkin: string;
   /** When true, the VIP high-stakes chip row is added underneath the base rail. */
   vip?: boolean;
+  /** Solo: tapping a chip SELECTS it (for the felt betting circles) instead of
+   *  adding straight to the main wager. */
+  selectMode?: boolean;
+  selectedChip?: number;
+  onSelectChip?: (value: number) => void;
   onAdd: (value: number) => void;
   onClear: () => void;
   onRepeat: () => void;
@@ -26,9 +31,16 @@ interface Props {
 /** Betting is done with physical chips on a rail, never with square buttons. */
 export function BetRail({
   bet, chips, lastBet, ready, multiplayer, chipSkin, vip,
+  selectMode, selectedChip, onSelectChip,
   onAdd, onClear, onRepeat, onAll, onReady,
 }: Props) {
   const { t } = useT();
+  const chipTap = (value: number) => (selectMode ? onSelectChip?.(value) : onAdd(value));
+  const chipWrap = (value: number) => ({
+    display: 'inline-block', borderRadius: '50%', transition: '.15s',
+    boxShadow: selectMode && selectedChip === value ? '0 0 0 3px var(--gold-hi)' : undefined,
+    transform: selectMode && selectedChip === value ? 'translateY(-5px)' : undefined,
+  } as const);
   return (
     <motion.div
       className="glass glass-gold p-3.5"
@@ -47,15 +59,16 @@ export function BetRail({
 
       <div className="flex flex-wrap justify-center gap-2 mb-2">
         {BLACKJACK_BETS.map((value) => (
-          <Chip
-            key={value}
-            value={value}
-            size={46}
-            skin={chipSkin}
-            interactive
-            disabled={chips < value || ready}
-            onClick={() => onAdd(value)}
-          />
+          <span key={value} style={chipWrap(value)}>
+            <Chip
+              value={value}
+              size={46}
+              skin={chipSkin}
+              interactive
+              disabled={chips < value || ready}
+              onClick={() => chipTap(value)}
+            />
+          </span>
         ))}
       </div>
       {vip && (
@@ -66,15 +79,16 @@ export function BetRail({
             💎 VIP HIGH STAKES
           </span>
           {VIP_CHIP_EXTRA.map((value) => (
-            <Chip
-              key={value}
-              value={value}
-              size={44}
-              skin={chipSkin}
-              interactive
-              disabled={chips < value || ready}
-              onClick={() => onAdd(value)}
-            />
+            <span key={value} style={chipWrap(value)}>
+              <Chip
+                value={value}
+                size={44}
+                skin={chipSkin}
+                interactive
+                disabled={chips < value || ready}
+                onClick={() => chipTap(value)}
+              />
+            </span>
           ))}
         </div>
       )}
