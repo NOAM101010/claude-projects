@@ -339,7 +339,7 @@ export function reduce(prev: BaccaratState, action: BaccaratAction): BaccaratSta
 }
 
 /** Suggested chip values for the rail — same tiers as other games. */
-export const BACCARAT_BETS = [100, 500, 1000, 5000, 10000] as const;
+export const BACCARAT_BETS = [25, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000] as const;
 
 export function outcomeLabel(o: BaccaratOutcome): string {
   return o === 'player' ? 'P' : o === 'banker' ? 'B' : 'T';

@@ -202,20 +202,30 @@ function BaccaratSolo() {
 
         {/* felt: two hands + totals */}
         <GlassPanel gold className="w-full p-4 flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             {(['player', 'banker'] as const).map((side) => {
               const cards = state[side];
               const total = cards.length ? handTotal(cards) : null;
               const isWinner = state.outcome === side && rv.revealComplete;
               const anyDown = cards.some((_, i) => rv.faceDown(side, i));
               const showTotal = total !== null && !anyDown;
+              const isBetSide = (state.bet.main?.side ?? null) === side;
               return (
-                <div key={side} className="flex flex-col items-center gap-2">
+                <div
+                  key={side}
+                  className="flex flex-col items-center gap-2 rounded-[var(--r-sm)] py-2 transition-all"
+                  style={isBetSide ? {
+                    background: 'rgba(227,178,60,.07)',
+                    border: '1px solid var(--gold-line)',
+                    boxShadow: '0 0 20px rgba(227,178,60,.14)',
+                  } : { border: '1px solid transparent' }}
+                >
                   <div className="flex items-center gap-2">
                     <span className="text-[12px] font-black tracking-widest"
                       style={{ color: side === 'player' ? '#8ab4ff' : '#ff8a8a' }}>
                       {side === 'player' ? t('baccarat.player').toUpperCase() : t('baccarat.banker').toUpperCase()}
                     </span>
+                    {isBetSide && <span className="text-[10px]" style={{ color: 'var(--gold-hi)' }}>★</span>}
                     {showTotal && (
                       <span className="num font-black rounded-full px-2 text-[13px]"
                         style={{
@@ -225,7 +235,7 @@ function BaccaratSolo() {
                         }}>{total}</span>
                     )}
                   </div>
-                  <div className="flex justify-center min-h-[76px] items-end"
+                  <div className="flex justify-center min-h-[92px] items-end"
                     style={{ marginInlineStart: 14 }}>
                     <AnimatePresence mode="popLayout">
                       {cards.map((card, i) => {
@@ -233,15 +243,16 @@ function BaccaratSolo() {
                         return (
                           <motion.div
                             key={`${side}-${state.round}-${i}`}
-                            initial={{ y: -80, opacity: 0, rotate: -10 }}
-                            animate={{ y: 0, opacity: 1, rotate: 0 }}
-                            transition={{ delay: i * 0.18, type: 'spring', stiffness: 240, damping: 20 }}
+                            initial={{ y: -46, opacity: 0, scale: 0.9 }}
+                            animate={{ y: 0, opacity: 1, scale: 1 }}
+                            transition={{ delay: i * 0.12, type: 'spring', stiffness: 260, damping: 22 }}
                             style={{ marginInlineStart: -14 }}
                           >
                             <PlayingCard
-                              card={card} size="md" index={i} face={face} back={back}
+                              card={card} size="md" index={i} face={face} back={back} fresh={false}
                               faceDown={down}
-                              onClick={down ? () => { rv.flip(side, i); audio.play('cardFlip'); } : undefined}
+                              highlight={rv.isNext(side, i)}
+                              onClick={down ? () => { rv.flip(); audio.play('cardFlip'); } : undefined}
                             />
                           </motion.div>
                         );
@@ -357,11 +368,11 @@ function BaccaratSolo() {
               {t('baccarat.onTable')} · {fmt(totalStaked)}
             </span>
           </div>
-          <div className="flex flex-wrap gap-2 justify-center mb-3">
+          <div className="flex flex-wrap gap-1.5 justify-center mb-3 max-w-[420px] mx-auto">
             {BACCARAT_BETS.map((s) => (
               <button key={s} onClick={() => { audio.play('click'); setStake(s); }}
                 style={{ opacity: stake === s ? 1 : 0.4, transform: stake === s ? 'translateY(-4px)' : 'none', transition: '.2s' }}>
-                <Chip value={s} size={38} skin={chipSkin} interactive />
+                <Chip value={s} size={34} skin={chipSkin} interactive />
               </button>
             ))}
           </div>
@@ -603,11 +614,11 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
   }, [state?.phase, state?.round, rv.revealComplete]);
 
   /* Auto-restart a new round after settle so the table keeps moving. Long
-     enough for every client's local squeeze (≤3 cards × ~1.5s auto-flip) plus
-     the credit animation to finish before the hand is wiped. */
+     enough for every client's local squeeze (up to 6 cards × ~1s auto-flip)
+     plus the credit animation to finish before the hand is wiped. */
   useEffect(() => {
     if (!isHost || !state || state.phase !== 'settled') return;
-    const timer = setTimeout(() => void send(profile.id, { type: 'newRound' }), 7000);
+    const timer = setTimeout(() => void send(profile.id, { type: 'newRound' }), 10_000);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHost, state?.phase, state?.round]);
@@ -827,20 +838,30 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
 
         {/* felt: two hands + totals */}
         <GlassPanel gold className="w-full p-4 flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             {(['player', 'banker'] as const).map((side) => {
               const cards = state[side];
               const total = cards.length ? handTotal(cards) : null;
               const isWinner = state.outcome === side && rv.revealComplete;
               const anyDown = cards.some((_, i) => rv.faceDown(side, i));
               const showTotal = total !== null && !anyDown;
+              const isBetSide = (mySeat?.bet.main?.side ?? null) === side;
               return (
-                <div key={side} className="flex flex-col items-center gap-2">
+                <div
+                  key={side}
+                  className="flex flex-col items-center gap-2 rounded-[var(--r-sm)] py-2 transition-all"
+                  style={isBetSide ? {
+                    background: 'rgba(227,178,60,.07)',
+                    border: '1px solid var(--gold-line)',
+                    boxShadow: '0 0 20px rgba(227,178,60,.14)',
+                  } : { border: '1px solid transparent' }}
+                >
                   <div className="flex items-center gap-2">
                     <span className="text-[12px] font-black tracking-widest"
                       style={{ color: side === 'player' ? '#8ab4ff' : '#ff8a8a' }}>
                       {side === 'player' ? t('baccarat.player').toUpperCase() : t('baccarat.banker').toUpperCase()}
                     </span>
+                    {isBetSide && <span className="text-[10px]" style={{ color: 'var(--gold-hi)' }}>★</span>}
                     {showTotal && (
                       <span className="num font-black rounded-full px-2 text-[13px]"
                         style={{ background: isWinner ? 'var(--brushed-gold)' : 'rgba(0,0,0,.5)',
@@ -849,20 +870,21 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
                       </span>
                     )}
                   </div>
-                  <div className="flex justify-center min-h-[76px] items-end" style={{ marginInlineStart: 14 }}>
+                  <div className="flex justify-center min-h-[92px] items-end" style={{ marginInlineStart: 14 }}>
                     <AnimatePresence mode="popLayout">
                       {cards.map((card, i) => {
                         const down = rv.faceDown(side, i);
                         return (
                           <motion.div key={`${side}-${state.round}-${i}`}
-                            initial={{ y: -80, opacity: 0, rotate: -10 }}
-                            animate={{ y: 0, opacity: 1, rotate: 0 }}
-                            transition={{ delay: i * 0.18, type: 'spring', stiffness: 240, damping: 20 }}
+                            initial={{ y: -46, opacity: 0, scale: 0.9 }}
+                            animate={{ y: 0, opacity: 1, scale: 1 }}
+                            transition={{ delay: i * 0.12, type: 'spring', stiffness: 260, damping: 22 }}
                             style={{ marginInlineStart: -14 }}>
                             <PlayingCard
-                              card={card} size="md" index={i} face={face} back={back2}
+                              card={card} size="md" index={i} face={face} back={back2} fresh={false}
                               faceDown={down}
-                              onClick={down ? () => { rv.flip(side, i); audio.play('cardFlip'); } : undefined}
+                              highlight={rv.isNext(side, i)}
+                              onClick={down ? () => { rv.flip(); audio.play('cardFlip'); } : undefined}
                             />
                           </motion.div>
                         );
@@ -965,11 +987,11 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
               {t('baccarat.onTable')} · {fmt(totalStaked)}
             </span>
           </div>
-          <div className="flex flex-wrap gap-2 justify-center mb-3">
+          <div className="flex flex-wrap gap-1.5 justify-center mb-3 max-w-[420px] mx-auto">
             {BACCARAT_BETS.map((s) => (
               <button key={s} onClick={() => { audio.play('click'); setStake(s); }}
                 style={{ opacity: stake === s ? 1 : 0.4, transform: stake === s ? 'translateY(-4px)' : 'none', transition: '.2s' }}>
-                <Chip value={s} size={38} skin={chipSkin} interactive />
+                <Chip value={s} size={34} skin={chipSkin} interactive />
               </button>
             ))}
           </div>
@@ -989,7 +1011,7 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
             )}
             {state.phase === 'settled' && (
               <span className="text-[12px] px-3 py-2" style={{ color: 'var(--muted)' }}>
-                {t('roulette.newRound')} · 7s
+                {t('roulette.newRound')} · 10s
               </span>
             )}
           </div>

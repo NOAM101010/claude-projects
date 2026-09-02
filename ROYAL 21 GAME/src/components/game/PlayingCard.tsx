@@ -15,6 +15,8 @@ interface Props {
   fresh?: boolean;
   /** When set, the card is tappable (baccarat "squeeze" reveal). */
   onClick?: () => void;
+  /** Ring the card in gold — it's the next one to turn over. */
+  highlight?: boolean;
 }
 
 const dims = {
@@ -24,24 +26,31 @@ const dims = {
 };
 
 /**
- * A card leaves the shoe, travels, rotates a little, lands. The flip is a real
- * 3D rotation of one element, not two crossfading images.
+ * A card travels in already showing its back if it's dealt face-down; turning it
+ * over is a separate 3D rotation triggered later by `faceDown` going false — not
+ * a spin folded into the deal. `transformPerspective` is what makes the flip
+ * read as a flip and not a mirrored squash (the bug this replaces).
  */
 export function PlayingCard({
-  card, faceDown, size = 'md', index = 0, face = 'cf-classic', back = 'bk-crimson', fresh = true, onClick,
+  card, faceDown, size = 'md', index = 0, face = 'cf-classic', back = 'bk-crimson',
+  fresh = true, onClick, highlight,
 }: Props) {
   const d = dims[size];
   const red = card ? card.s === 'H' || card.s === 'D' : false;
   return (
     <motion.div
-      className={`pc ${face}`}
+      className={`pc ${face} ${highlight ? 'pc-next' : ''}`}
       onClick={onClick}
-      style={{ width: d.w, height: d.h, cursor: onClick ? 'pointer' : undefined }}
-      initial={fresh ? { x: 120, y: -180, rotate: -22, opacity: 0, scale: 0.9 } : false}
+      style={{ width: d.w, height: d.h, cursor: onClick ? 'pointer' : undefined, transformPerspective: 900 }}
+      initial={
+        fresh
+          ? { x: 110, y: -160, rotate: -20, opacity: 0, scale: 0.9, rotateY: faceDown ? 180 : 0 }
+          : false
+      }
       animate={{ x: 0, y: 0, rotate: 0, opacity: 1, scale: 1, rotateY: faceDown ? 180 : 0 }}
       transition={{
-        type: 'spring', stiffness: 140, damping: 18, delay: fresh ? index * 0.11 : 0,
-        rotateY: { duration: 0.5, ease: [0.2, 0.8, 0.25, 1] },
+        default: { type: 'spring', stiffness: 150, damping: 18, delay: fresh ? index * 0.09 : 0 },
+        rotateY: { duration: 0.46, ease: [0.2, 0.8, 0.25, 1] },
       }}
     >
       <div className={`pc-face ${red ? 'pc-red' : ''}`}>

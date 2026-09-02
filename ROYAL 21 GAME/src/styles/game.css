@@ -9,6 +9,7 @@
   position: relative;
   flex: 0 0 auto;
   transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
   border-radius: 9px;
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.55);
 }
@@ -18,8 +19,16 @@
   inset: 0;
   border-radius: 9px;
   backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   overflow: hidden;
 }
+/* the card that is next to turn over in the baccarat squeeze */
+.pc-next { animation: pcNext 1.15s ease-in-out infinite; }
+@keyframes pcNext {
+  0%, 100% { box-shadow: 0 10px 20px rgba(0, 0, 0, 0.55), 0 0 0 2px var(--gold), 0 0 12px 2px rgba(227, 178, 60, 0.4); }
+  50%      { box-shadow: 0 10px 20px rgba(0, 0, 0, 0.55), 0 0 0 2px var(--gold-hi), 0 0 22px 5px rgba(227, 178, 60, 0.7); }
+}
+html[data-motion='reduced'] .pc-next { animation: none; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.55), 0 0 0 2px var(--gold-hi); }
 .pc-face {
   display: flex;
   flex-direction: column;

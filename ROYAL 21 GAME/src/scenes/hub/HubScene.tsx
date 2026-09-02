@@ -205,9 +205,6 @@ export default function HubScene() {
           </HubCard>
         </Section>
 
-        {/* ---------------------------- leaderboard ------------------------- */}
-        <div className="hub-section"><Leaderboard /></div>
-
         {/* --------------------------- quick games -------------------------- */}
         <Section idx="02" title={t('hub.sectionQuick')} hint={t('hub.sectionQuickHint')}>
           <HubCard
@@ -320,6 +317,9 @@ export default function HubScene() {
             {() => <GiftArt ready={giftReady} />}
           </HubCard>
         </Section>
+
+        {/* ---- leaderboard: the game-wide standings, below your own place ---- */}
+        <div className="hub-section"><Leaderboard /></div>
       </div>
 
       {/* First visit only; Settings can replay it. */}
