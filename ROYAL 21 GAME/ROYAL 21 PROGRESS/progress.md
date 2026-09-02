@@ -78,6 +78,13 @@
 - **D** — חשיפת squeeze בבאקרה: hook חדש `src/games/baccarat/useBaccaratReveal.ts` (לוקאלי לכל לקוח, אין שינוי מנוע). הצד שלא הימרת עליו — גלוי מיד; הצד שלך — הפוך, הקשה על קלף הופכת, auto-flip fallback כל 1.5ש. `PlayingCard` קיבל `onClick?`. תג-הסכום/הזוהר/טקסט-התוצאה + ה-settle `useEffect` (זיכוי + showMoment + אודיו) של הצד שלך מגודרים על `rv.revealComplete`. `reducedMotion`/quality low / אין הימור ראשי → חשיפה מיידית. MP auto-newRound של המארח 3200→**7000ms**.
 - אימות: tsc נקי · vite build נקי · test:all ירוק (poker 44, engine 65, minigames/roulette/social) · i18n he/en 865/865. רגרסיית סולו: אין הימור ראשי → `instant`, התנהגות זהה לקודם; פוקר סולו/single-flow לא נגע (רק הקבוע).
 
+### בלאק'ג'ק סולו — הימורי צד (Part A מ-`smooth-soaring-dove.md`) — מומש, **לא נבדק חי, לא נדחף**
+- **מנוע** (`blackjack/{types,engine}.ts`): `BjSide = 'pairs'|'trio'`. `BjSeat.sideBets?`/`sideResults?` (net חתום). action `sideBet` (additive, `amount<=0` מנקה). `evalSideBets(firstTwo, dealerUp)` exported — Perfect Pairs (25/12/6) + 21+3 (100/40/30/10/5, A גבוה/נמוך ל-straight). נקרא ב-`deal` reducer מיד אחרי חלוקת 2+1, כותב `seat.sideResults`. `settle()` מוסיף `Σ sideResults` ל-`net` פעם אחת. `openBetting`/`clearBet` מנקים.
+- **UI** — `src/scenes/blackjack/FeltBets.tsx` חדש: 3 עיגולי הימור (HAND/PAIRS/21+3) בפס האמצע הריק של השולחן, ChipStack + סכום + מקרא תשלום + מודל טבלה מלאה. **רק `solo`**. גיוט: `selectedChip` state; ב-`BetRail` סולו הקשה על ז'יטון **בוחרת** (זוהר), הקשה על עיגול מניחה. `placeSide` — debit אופטימי + `sideBet`. Clear/Last-bet כוללים צדדיים.
+- **זיכוי** — settlement effect בסולו: `sidePayout = sideStaked + sideNet` מתווסף ל-`addChips` הראשי, `net` הכולל לסטטיסטיקה. עיגול שזכה מהבהב זהב.
+- אימות: tsc נקי · vite build נקי · test:engine 84/84 (+~20 בדיקות evalSideBets/settle) · test:all ירוק · i18n he/en 879/879.
+- **רגרסיה:** חדר cash + דואל — `solo` false → אין `FeltBets`, `BetRail` הקשה=הוספה (`selectMode={solo}`), `placeSide` גדור, `sideStaked/sideNet = 0`, זרימת ההימור/הזיכוי זהה בית. סולו בלי הימורי צד — `sidePayout=0`, זהה. Part B (סקין קלף-גירוד) — המעצב, לא נגעתי ב-`scratch/`.
+
 **מגבלה ידועה (1d, לא בסקופ):** קיפאון עם מוות-host עדיין ~5-25ש (`reassign_room_host` חלון 20ש stale). שיפור עתידי: לקצר `HOST_HEARTBEAT_MS` או ש-host מקודם יעשה abort+restart לסיבוב.
 
 ### הבא בתור: רה-ארכיטקטורה של המולטיפלייר — **תוכנית מלאה ומאושרת:**
