@@ -36,6 +36,7 @@ insert into public.bundles (id, item_ids, discount) values
   ('pack_style',       array['cl_gold','wt_gold','cn_gold'],                 0.30),
   ('pack_luxury',      array['cf_gold','ch_ivory','tb_gold','cl_royal'],     0.40),
   ('pack_royal_table', array['tb_royal','cf_royal','bk_royal'],              0.35),
+  ('pack_royal_suite', array['tb_royal','bk_royal','cf_royal','vc_stars'],   0.40),
   ('pack_jade',        array['tb_jade','cf_jade','fr_jade'],                 0.30),
   ('pack_celebration', array['vc_fireworks','vc_stars','fr_rose'],           0.25)
 on conflict (id) do update set
@@ -121,11 +122,14 @@ insert into public.items (id, category, name, rarity, price, icon, payload, dail
   ('fr_rose',       'frames',  '{"he":"מסגרת ורד","en":"Rose Frame"}'::jsonb,         'rare',       2000, '🌹', '{"frame":"fr-rose"}'::jsonb,            false, false),
   ('vc_fireworks',  'victory', '{"he":"זיקוקים","en":"Fireworks"}'::jsonb,            'epic',       8000, '🎆', '{"victory":"vc-fireworks"}'::jsonb,     false, false),
   ('vc_stars',      'victory', '{"he":"מטר כוכבים","en":"Star Shower"}'::jsonb,       'legendary', 22000, '🌟', '{"victory":"vc-stars"}'::jsonb,         false, false),
-  ('cn_gem',        'coins',   '{"he":"מטבע יהלום","en":"Gem Coin"}'::jsonb,          'legendary', 30000, '💎', '{"currencySkin":"cn-gem"}'::jsonb,      false, true),
-  ('cn_crown_cur',  'coins',   '{"he":"מטבע כתר","en":"Crown Coin"}'::jsonb,          'mythic',    75000, '👑', '{"currencySkin":"cn-crown"}'::jsonb,    false, true),
-  ('cn_nova',       'coins',   '{"he":"מטבע נובה","en":"Nova Coin"}'::jsonb,          'mythic',    75000, '✦',  '{"currencySkin":"cn-nova"}'::jsonb,     false, true),
-  ('cn_ancient',    'coins',   '{"he":"מטבע עתיק","en":"Ancient Coin"}'::jsonb,       'legendary', 30000, '⚜',  '{"currencySkin":"cn-ancient"}'::jsonb,  true,  false),
-  ('cn_casino',     'coins',   '{"he":"ז׳יטון קזינו","en":"Casino Token"}'::jsonb,    'epic',       8000, '♠',  '{"currencySkin":"cn-casino"}'::jsonb,   true,  false)
+  -- Stage L — holographic cards + Royal Suite bundle handle (rare rotation) + synergy chip skins
+  ('cf_holo',       'cards',   '{"he":"קלפים הולוגרפיים","en":"Holographic Cards"}'::jsonb, 'mythic', 60000, '✨', '{"cardFace":"cf-holo"}'::jsonb,     false, true),
+  ('bundle_royal_suite', 'tables', '{"he":"ערכת שולחן מלכותית","en":"Royal Table Suite"}'::jsonb, 'legendary', 88000, '👑', '{"bundleHandle":"pack_royal_suite"}'::jsonb, false, true),
+  ('ch_royal',      'chips',   '{"he":"צ׳יפים מלכותיים","en":"Royal Chips"}'::jsonb,  'legendary', 22000, '👑', '{"chipSkin":"ck-royal"}'::jsonb,        false, false),
+  ('ch_jade',       'chips',   '{"he":"צ׳יפי אזמרגד","en":"Jade Chips"}'::jsonb,      'epic',       8000, '💚', '{"chipSkin":"ck-jade"}'::jsonb,         false, false),
+  ('ch_crimson',    'chips',   '{"he":"צ׳יפים ארגמניים","en":"Crimson Chips"}'::jsonb, 'epic',      8000, '🍷', '{"chipSkin":"ck-crimson"}'::jsonb,      false, false),
+  ('ch_frost',      'chips',   '{"he":"צ׳יפי כפור","en":"Frost Chips"}'::jsonb,       'rare',       2000, '❄️', '{"chipSkin":"ck-frost"}'::jsonb,        false, false),
+  ('ch_rosegold',   'chips',   '{"he":"צ׳יפי זהב ורוד","en":"Rose Gold Chips"}'::jsonb, 'rare',     2000, '🌹', '{"chipSkin":"ck-rosegold"}'::jsonb,     false, false)
 on conflict (id) do update set
   category = excluded.category, name = excluded.name, rarity = excluded.rarity,
   price = excluded.price, icon = excluded.icon, payload = excluded.payload,

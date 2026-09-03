@@ -135,7 +135,7 @@ export interface ShopItem {
   price: number;
   icon: string;
   /** what equipping this item changes on the profile */
-  payload: Partial<Equipped> & Partial<AvatarConfig> & { emote?: string; decorId?: string };
+  payload: Partial<Equipped> & Partial<AvatarConfig> & { emote?: string; decorId?: string; bundleHandle?: string };
   /** Only obtainable through the Daily Rarity slot — hidden from normal shop lists. */
   dailyRarityOnly?: boolean;
   /** Only obtainable through the weekday Rare Rotation slot — hidden from normal shop lists. */

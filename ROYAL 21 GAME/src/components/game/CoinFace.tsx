@@ -22,12 +22,6 @@ export const COIN_SKINS: Record<string, CoinSkinDef> = {
   'cn-yen': { name: { he: 'יין', en: 'Yen' }, emblem: '¥', emblemSize: 38, metal: { light: '#f4d8de', mid: '#d8637a', dark: '#742537', glow: 'rgba(216,99,122,.55)' } },
   'cn-bitcoin': { name: { he: 'ביטקוין', en: 'Bitcoin' }, emblem: '₿', emblemSize: 38, metal: { light: '#ffe6c2', mid: '#ff9f2f', dark: '#8a3f00', glow: 'rgba(255,159,47,.6)' } },
   'cn-shekel-gold': { name: { he: 'שקל זהב', en: 'Gold Shekel' }, emblem: '₪', emblemSize: 38, metal: { light: '#fff4c8', mid: '#ffcf3d', dark: '#8a5a00', glow: 'rgba(255,207,61,.6)' } },
-  // ---- Stage G currency skins ----
-  'cn-gem': { name: { he: 'יהלום', en: 'Gem' }, emblem: '💎', emblemSize: 30, metal: { light: '#ffffff', mid: '#a9e6ff', dark: '#3d90c4', glow: 'rgba(150,220,255,.6)' } },
-  'cn-crown': { name: { he: 'כתר', en: 'Crown' }, emblem: '👑', emblemSize: 30, metal: { light: '#fff0c8', mid: '#c98cff', dark: '#5c1fa0', glow: 'rgba(180,110,255,.55)' } },
-  'cn-nova': { name: { he: 'נובה', en: 'Nova' }, emblem: '✦', emblemSize: 38, metal: { light: '#e8dcff', mid: '#8f7be0', dark: '#2f2160', glow: 'rgba(143,123,224,.6)' } },
-  'cn-ancient': { name: { he: 'עתיק', en: 'Ancient' }, emblem: '⚜', emblemSize: 34, metal: { light: '#ece0c0', mid: '#b98f4c', dark: '#5e3d12', glow: 'rgba(185,143,76,.55)' } },
-  'cn-casino': { name: { he: 'קזינו', en: 'Casino' }, emblem: '♠', emblemSize: 34, metal: { light: '#f0f0f0', mid: '#3a3f47', dark: '#15161a', glow: 'rgba(120,125,135,.5)' } },
 };
 
 export const coinSkinOf = (id: string): CoinSkinDef => COIN_SKINS[id] ?? COIN_SKINS['cn-classic'];

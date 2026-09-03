@@ -69,6 +69,19 @@ html[data-motion='reduced'] .sb-won { animation: none; }
 .cf-jade .pc-red { color: #1f7a55; }
 .cf-blush .pc-face { background: linear-gradient(160deg, #fdeef0, #f4d3da); color: #4a2530; }
 .cf-blush .pc-red { color: #c0392b; }
+.cf-holo .pc-face {
+  background: linear-gradient(125deg, #b7f0ff, #ffd6f4 25%, #d8c9ff 50%, #c6ffe0 75%, #b7f0ff);
+  background-size: 300% 300%;
+  color: #2a2350;
+  animation: holoShift 6s linear infinite;
+  box-shadow: inset 0 0 16px rgba(180, 200, 255, 0.35);
+}
+.cf-holo .pc-red { color: #c0396b; }
+@keyframes holoShift {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 300% 50%; }
+}
+html[data-motion='reduced'] .cf-holo .pc-face { animation: none; background-position: 30% 50%; }
 
 /* card backs */
 .bk-crimson { background: repeating-linear-gradient(45deg, #7d2523 0 6px, #93302d 6px 12px); }
@@ -116,6 +129,11 @@ html[data-motion='reduced'] .sb-won { animation: none; }
 .ck-ivory .chip-obj { filter: saturate(0.2) brightness(1.35); }
 .ck-obsidian .chip-obj { filter: saturate(0.35) brightness(0.55); border-color: rgba(255, 255, 255, 0.35); }
 .ck-ember .chip-obj { filter: hue-rotate(-22deg) saturate(1.6) brightness(1.12); }
+.ck-royal .chip-obj { filter: hue-rotate(220deg) saturate(1.35) brightness(1.05); box-shadow: 0 0 16px rgba(168, 120, 240, 0.7), 0 6px 14px rgba(0, 0, 0, 0.5); }
+.ck-jade .chip-obj { filter: hue-rotate(95deg) saturate(1.4) brightness(1.02); }
+.ck-crimson .chip-obj { filter: hue-rotate(-12deg) saturate(1.9) brightness(0.9); }
+.ck-frost .chip-obj { filter: hue-rotate(175deg) saturate(0.7) brightness(1.28); box-shadow: 0 0 14px rgba(150, 220, 255, 0.55), 0 6px 14px rgba(0, 0, 0, 0.5); }
+.ck-rosegold .chip-obj { filter: hue-rotate(-25deg) saturate(0.85) brightness(1.15) sepia(0.3); box-shadow: 0 0 14px rgba(255, 180, 200, 0.5), 0 6px 14px rgba(0, 0, 0, 0.5); }
 
 /* the All-In chip — always red/gold regardless of the equipped chip skin, so it reads as a distinct action */
 .all-in-chip {

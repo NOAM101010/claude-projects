@@ -50,7 +50,7 @@ function dateSeed(date = new Date()): number {
  */
 export function todaysDailyOffers(date = new Date()): { item: ShopItem; discount: number }[] {
   const candidates = ITEMS.filter(
-    (item) => item.price > 0 && item.rarity !== 'mythic' && !item.dailyRarityOnly,
+    (item) => item.price > 0 && item.rarity !== 'mythic' && !item.dailyRarityOnly && !item.rareRotationOnly,
   );
   const shuffled = shuffleSeeded(candidates, dateSeed(date));
   return shuffled.slice(0, 3).map((item) => ({ item, discount: DAILY_DISCOUNT }));
@@ -159,6 +159,15 @@ export const PACKS: Pack[] = [
     discount: 0.30,
     icon: '💚',
     color: '#4fd39a',
+  },
+  {
+    id: 'pack_royal_suite',
+    name: { he: 'ערכת שולחן מלכותית', en: 'Royal Table Suite' },
+    subtitle: { he: 'שולחן, גב, קלפים ואפקט ניצחון', en: 'Table, back, cards & victory effect' },
+    itemIds: ['tb_royal', 'bk_royal', 'cf_royal', 'vc_stars'],
+    discount: 0.40,
+    icon: '👑',
+    color: '#a878f0',
   },
   {
     id: 'pack_celebration',

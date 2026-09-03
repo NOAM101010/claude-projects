@@ -113,14 +113,18 @@ export const ITEMS: ShopItem[] = [
   // ---- victory animations ----
   { id: 'vc_fireworks', category: 'victory', name: { he: 'זיקוקים', en: 'Fireworks' }, rarity: 'epic', price: 8000, icon: '🎆', payload: { victory: 'vc-fireworks' } },
   { id: 'vc_stars', category: 'victory', name: { he: 'מטר כוכבים', en: 'Star Shower' }, rarity: 'legendary', price: 22000, icon: '🌟', payload: { victory: 'vc-stars' } },
-  // ---- currency skins (change the chip glyph everywhere) ----
-  // Rare Rotation pool — surface one per weekday, hidden from the regular grid.
-  { id: 'cn_gem', category: 'coins', name: { he: 'מטבע יהלום', en: 'Gem Coin' }, desc: { he: 'מטבע קריסטל עם סמל 💎', en: 'Crystal coin bearing a 💎 mark' }, rarity: 'legendary', price: 30000, icon: '💎', payload: { currencySkin: 'cn-gem' }, rareRotationOnly: true },
-  { id: 'cn_crown_cur', category: 'coins', name: { he: 'מטבע כתר', en: 'Crown Coin' }, desc: { he: 'מטבע זהב-סגול עם כתר', en: 'Purple-gold coin crowned in gold' }, rarity: 'mythic', price: 75000, icon: '👑', payload: { currencySkin: 'cn-crown' }, rareRotationOnly: true },
-  { id: 'cn_nova', category: 'coins', name: { he: 'מטבע נובה', en: 'Nova Coin' }, desc: { he: 'מטבע קוסמי עם סמל ✦', en: 'Cosmic coin bearing a ✦ mark' }, rarity: 'mythic', price: 75000, icon: '✦', payload: { currencySkin: 'cn-nova' }, rareRotationOnly: true },
-  // Daily Rarity pool — one exclusive per day.
-  { id: 'cn_ancient', category: 'coins', name: { he: 'מטבע עתיק', en: 'Ancient Coin' }, desc: { he: 'מטבע נחושת עתיק עם סמל ⚜', en: 'Antique copper coin with a ⚜ mark' }, rarity: 'legendary', price: 30000, icon: '⚜', payload: { currencySkin: 'cn-ancient' }, dailyRarityOnly: true },
-  { id: 'cn_casino', category: 'coins', name: { he: 'ז׳יטון קזינו', en: 'Casino Token' }, desc: { he: 'ז׳יטון קלאסי עם סמל ♠', en: 'Classic casino token with a ♠ mark' }, rarity: 'epic', price: 8000, icon: '♠', payload: { currencySkin: 'cn-casino' }, dailyRarityOnly: true },
+
+  // ==== Stage L — new rare-rotation items + synergy chips ====================
+  // ---- card faces ----
+  { id: 'cf_holo', category: 'cards', name: { he: 'קלפים הולוגרפיים', en: 'Holographic Cards' }, desc: { he: 'ברק הולוגרפי רב-צבעוני', en: 'Shifting holographic sheen' }, rarity: 'mythic', price: 60000, icon: '✨', payload: { cardFace: 'cf-holo' }, rareRotationOnly: true },
+  // ---- rare rotation bundle handle — a placeholder that surfaces the Royal Suite pack in the Rare Rotation slot. Never rendered as a normal item (hidden by rareRotationOnly); tapping it opens pack_royal_suite. ----
+  { id: 'bundle_royal_suite', category: 'tables', name: { he: 'ערכת שולחן מלכותית', en: 'Royal Table Suite' }, desc: { he: 'שולחן, גב, קלפים ואפקט ניצחון תואמים', en: 'Matching table, back, cards & victory effect' }, rarity: 'legendary', price: 88000, icon: '👑', payload: { bundleHandle: 'pack_royal_suite' }, rareRotationOnly: true },
+  // ---- synergy chips (physical chip skin) ----
+  { id: 'ch_royal', category: 'chips', name: { he: 'צ׳יפים מלכותיים', en: 'Royal Chips' }, rarity: 'legendary', price: 22000, icon: '👑', payload: { chipSkin: 'ck-royal' } },
+  { id: 'ch_jade', category: 'chips', name: { he: 'צ׳יפי אזמרגד', en: 'Jade Chips' }, rarity: 'epic', price: 8000, icon: '💚', payload: { chipSkin: 'ck-jade' } },
+  { id: 'ch_crimson', category: 'chips', name: { he: 'צ׳יפים ארגמניים', en: 'Crimson Chips' }, rarity: 'epic', price: 8000, icon: '🍷', payload: { chipSkin: 'ck-crimson' } },
+  { id: 'ch_frost', category: 'chips', name: { he: 'צ׳יפי כפור', en: 'Frost Chips' }, rarity: 'rare', price: 2000, icon: '❄️', payload: { chipSkin: 'ck-frost' } },
+  { id: 'ch_rosegold', category: 'chips', name: { he: 'צ׳יפי זהב ורוד', en: 'Rose Gold Chips' }, rarity: 'rare', price: 2000, icon: '🌹', payload: { chipSkin: 'ck-rosegold' } },
 ];
 
 export const priceOf = (rarity: string) => PRICE_BY_RARITY[rarity] ?? 0;
