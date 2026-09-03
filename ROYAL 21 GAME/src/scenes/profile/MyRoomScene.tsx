@@ -6,6 +6,7 @@ import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GameButton } from '@/components/ui/GameButton';
 import { Meter } from '@/components/ui/Meter';
 import { Avatar } from '@/components/social/Avatar';
+import { AvatarEditor } from '@/components/social/AvatarEditor';
 import { LightPool } from '@/components/effects/LightPool';
 import { useCountUp } from '@/hooks/useCountUp';
 import { usePlayer } from '@/stores/usePlayer';
@@ -64,6 +65,7 @@ export default function MyRoomScene() {
   const friend = friends.find((entry) => entry.id === userId);
   const [remote, setRemote] = useState<{ profile: Profile | null; stats: Partial<Stats> | null }>({ profile: null, stats: null });
   const [allAchOpen, setAllAchOpen] = useState(false);
+  const [editAvatarOpen, setEditAvatarOpen] = useState(false);
 
   useEffect(() => {
     if (isMe || !userId) return;
@@ -184,6 +186,15 @@ export default function MyRoomScene() {
                 <p className="text-[12px] num mt-0.5" style={{ color: 'var(--muted)' }}>
                   {t('profile.totalPlaytime')}: {formatPlaytime(playtimeSeconds, lang)}
                 </p>
+              )}
+              {isMe && (
+                <button
+                  className="mt-2 px-2.5 py-1 rounded-full text-[11.5px] press"
+                  style={{ background: 'rgba(255,255,255,.05)', color: 'var(--muted)', border: '1px solid var(--glass-line)' }}
+                  onClick={() => setEditAvatarOpen(true)}
+                >
+                  🎨 {t('avatar.editTitle')}
+                </button>
               )}
             </div>
             <div className="min-w-[190px] flex-1">
@@ -569,6 +580,8 @@ export default function MyRoomScene() {
           <GameButton tone="ghost" block onClick={() => navigate('/hub')}>{t('common.back')}</GameButton>
         </div>
       </div>
+
+      <AvatarEditor open={editAvatarOpen} onClose={() => setEditAvatarOpen(false)} />
     </SceneShell>
   );
 }

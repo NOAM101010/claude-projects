@@ -313,8 +313,15 @@
     "valueStreak": "{count} ברצף",
     "valueLevel": "רמה {count}"
   },
+  "avatar": {
+    "editTitle": "עריכת דמות",
+    "skin": "גוון עור",
+    "hair": "שיער",
+    "save": "שמירה"
+  },
   "friends": {
     "title": "חברים",
+    "friendJoined": "{name} נכנס למשחק",
     "online": "מחוברים",
     "allFriends": "כל החברים",
     "requests": "בקשות",

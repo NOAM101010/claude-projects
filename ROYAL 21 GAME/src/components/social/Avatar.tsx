@@ -1,8 +1,12 @@
 import { rankOf } from '@/services/profileService';
 import type { AvatarConfig, Presence } from '@/types';
 
-const SKIN = ['#f0c9a6', '#e0ab7f', '#c78d5e', '#8d5a35', '#5f3a20'];
-const HAIR = ['#241a12', '#4a3423', '#8c5a2b', '#c8a15a', '#1b1b1f', '#7a2b2b'];
+/** Every skin tone / hair colour the bust can render — the avatar editor
+ *  (Stage H) walks these same arrays so the indices stay in sync. */
+export const AVATAR_SKINS = ['#f0c9a6', '#e0ab7f', '#c78d5e', '#8d5a35', '#5f3a20'];
+export const AVATAR_HAIRS = ['#241a12', '#4a3423', '#8c5a2b', '#c8a15a', '#1b1b1f', '#7a2b2b'];
+const SKIN = AVATAR_SKINS;
+const HAIR = AVATAR_HAIRS;
 const SHIRT: Record<string, string> = {
   base: '#2c3140', gold: '#a5842f', royal: '#4a2f78',
   neon: '#12706a', crimson: '#7d2c2c', white: '#d8d4c9',

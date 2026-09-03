@@ -313,8 +313,15 @@
     "valueStreak": "{count} in a row",
     "valueLevel": "Level {count}"
   },
+  "avatar": {
+    "editTitle": "Edit character",
+    "skin": "Skin tone",
+    "hair": "Hair",
+    "save": "Save"
+  },
   "friends": {
     "title": "Friends",
+    "friendJoined": "{name} joined the game",
     "online": "Online",
     "allFriends": "All friends",
     "requests": "Requests",

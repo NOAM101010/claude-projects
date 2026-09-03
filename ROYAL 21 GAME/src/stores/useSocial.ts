@@ -9,6 +9,7 @@ import { usePlayer } from './usePlayer';
 import { useUI } from './useUI';
 import { useSettings } from './useSettings';
 import { translate } from '@/i18n';
+import { isFriendOnline } from '@/lib/presence';
 import { fmt } from '@/lib/format';
 import type { AppNotification, DirectMessage, Friend, FriendRequest } from '@/types';
 
@@ -46,6 +47,38 @@ interface SocialState {
  *  (and dropped only if the room is confirmed gone). A real invite can wait
  *  hours, so this is deliberately generous. */
 const INVITE_TTL_MS = 12 * 60 * 60 * 1000;
+
+/* --- "friend joined the game" toast (Stage H) -------------------------------
+ * A light, non-persistent nudge when a friend flips offline -> online. Driven
+ * off refresh()'s friend list (route changes + the friends realtime sub), so
+ * detection is only as fresh as the last refresh — fine for a low-priority cue.
+ * Never creates a notification row. Suppressed when showPresence is off. */
+let friendJoinReady = false;
+const friendWasOnline: Record<string, boolean> = {};
+const friendJoinAnnouncedAt: Record<string, number> = {};
+const FRIEND_JOIN_DEBOUNCE_MS = 10 * 60 * 1000;
+
+function detectFriendJoins(friends: Friend[]): void {
+  const showPresence = useSettings.getState().showPresence;
+  const now = Date.now();
+  for (const friend of friends) {
+    const online = isFriendOnline(friend);
+    const was = friendWasOnline[friend.id] ?? false;
+    friendWasOnline[friend.id] = online;
+    // Skip the very first refresh (the whole list "comes online" at once) and
+    // honour the privacy toggle — but keep tracking state so the next flip fires.
+    if (!friendJoinReady || !showPresence) continue;
+    if (online && !was) {
+      const last = friendJoinAnnouncedAt[friend.id] ?? 0;
+      if (now - last < FRIEND_JOIN_DEBOUNCE_MS) continue;
+      friendJoinAnnouncedAt[friend.id] = now;
+      const lang = useSettings.getState().lang;
+      useUI.getState().toast(translate(lang, 'friends.friendJoined', { name: friend.username }), 'good', '👋');
+      audio.play('friendJoin');
+    }
+  }
+  friendJoinReady = true;
+}
 
 export const useSocial = create<SocialState>()((set, get) => ({
   friends: [],
@@ -85,6 +118,7 @@ export const useSocial = create<SocialState>()((set, get) => ({
       dmService.unreadCounts(userId),
     ]);
     set({ friends, requests, notifications, dmUnread });
+    detectFriendJoins(friends);
     // Prune old room invites — but only the ones whose room is *confirmed* dead.
     // isLive() returns true on any check failure, so a blip never nukes a real
     // invite; and we never guess from age alone.
@@ -152,6 +186,9 @@ export const useSocial = create<SocialState>()((set, get) => ({
 
   listen: (userId) => {
     if (!isOnline()) return () => {};
+    // Fresh session: re-arm the "friend joined" detector so the first refresh
+    // after sign-in doesn't announce the whole friend list.
+    friendJoinReady = false;
     const offFriends = friendsService.subscribe(userId, () => void get().refresh(userId));
     const offDM = dmService.subscribe(userId, (msg) => {
       const otherId = msg.senderId === userId ? msg.recipientId : msg.senderId;
