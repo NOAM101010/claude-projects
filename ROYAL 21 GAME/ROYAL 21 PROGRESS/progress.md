@@ -7,6 +7,13 @@
 
 ## Roadmap חדש (2026-09-03) — 8 שלבים A–H
 
+### ביניים (2026-09-03, `3969ecf`) — ניקוי .js + באקרה + playtime
+- **170 קבצי `.js` מקומפלים חזרו ל-`src/`** (הצללו tsx ב-Vite). שורש: `package.json` script `typecheck` היה `tsc -b --noEmit false` — פלט JS. תוקן ל-`tsc --noEmit`; `build` → `tsc --noEmit && vite build`. **אם עריכה "לא מופיעה": `find src -name '*.js' -delete` קודם. אל תריץ `npm run typecheck` הישן.**
+- **באקרה — אין באג אמיתי ב-TS** (מה שהמשתמש ראה = `engine.js` ישן). עמלת בנקאי הפכה מתכווננת: `app_config.baccarat_banker_payout` (0.95 default, 1.0 = בלי עמלה) → `settleOne`/`BaccaratState`, host-authoritative ב-MP. טסט `scripts/baccarat.test.ts` (16) ב-`test:all`.
+- **playtime מצטבר:** `profiles.playtime_seconds` + `add_playtime(sec)` RPC (clamp 0..3600). accumulator ב-`App.tsx` (flush /60ש + pagehide). תצוגה: MyRoomScene + כרטיס אדמין.
+- **הרצה ב-Supabase:** `app-config.sql` (חוזר) → `playtime.sql` (חדש) → `admin-tools.sql` (חוזר).
+
+
 תוכנית מלאה: `C:\Users\noam7\.claude\plans\swift-snuggling-harp.md`. סדר: A→C→D→B→F→E→G→H.
 - **STAGE A — איפוס מלא ✅ נדחף** (`a0c269a`). `reset-all.sql` הורחב (עמודת `ever_vip`, איפוסה, `truncate friendships`); `localStore` bump `royal21.save.v1`→`v2` + `migrateToV2()` שמנקה save ישן + `daily.v1.*` + `ref`; `rowToProfile` ממפה `ever_vip`→`everVip`. **המשתמש צריך להריץ `supabase/reset-all.sql`.** tsc/build/test ירוקים.
 - **STAGE C — מסך פתיחה ✅ נדחף** (`45a600e`). `IntroScene` שוכתב מאפס — אפס framer-motion, אנימציית CSS keyframes בלבד (opacity/transform) בסגנון `AuthScene` (מסגרת זהב + רקע ירוק), לוגו "ROYAL 21" נחשף, כפתור "דלג" תמיד גלוי שמנווט החוצה מיד. ~1.3ש auto-advance (~0.38ש לחוזר/reduced-motion). keyframes ב-`game.css` בלוק INTRO. tsc/build/test ירוקים. **ממתין לאישור ויזואלי של המשתמש.**
