@@ -19,7 +19,7 @@ export interface Toast {
   icon?: string;
 }
 
-export type PanelKind = 'friends' | 'notifications' | 'settings' | 'chips' | null;
+export type PanelKind = 'friends' | 'notifications' | 'settings' | 'chips' | 'missions' | null;
 
 export interface ConfirmRequest {
   title: string;

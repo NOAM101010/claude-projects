@@ -14,6 +14,18 @@ export interface ActivityEntry {
   at: string;
 }
 
+/** Device-local daily/weekly mission counters. Rolls at the UTC day / week
+ *  boundary. Not server-synced — progress is ephemeral; only the *claim* is
+ *  authoritative (server RPC + `missionClaims` guest mirror). */
+export interface MissionProgress {
+  day: string;   // dateKey these daily counters belong to
+  week: string;  // weekKey these weekly counters belong to
+  counts: Record<string, number>;
+  games: string[];
+  weekCounts: Record<string, number>;
+  weekGames: string[];
+}
+
 export interface SaveData {
   profile: Profile;
   stats: Stats;
@@ -26,7 +38,14 @@ export interface SaveData {
   daily: { lastClaim: string | null; day: number };
   wheel: { lastSpin: string | null };
   seenIntro: boolean;
+  missionProgress: MissionProgress;
+  /** `<periodKey>:<missionId>` -> true. Mirrors profiles.mission_claims. */
+  missionClaims: Record<string, boolean>;
 }
+
+export const EMPTY_MISSION_PROGRESS: MissionProgress = {
+  day: '', week: '', counts: {}, games: [], weekCounts: {}, weekGames: [],
+};
 
 export const DEFAULT_EQUIPPED: Equipped = {
   cardFace: 'cf-classic',
@@ -67,6 +86,8 @@ export function emptySave(profile: Profile): SaveData {
     daily: { lastClaim: null, day: 0 },
     wheel: { lastSpin: null },
     seenIntro: false,
+    missionProgress: { ...EMPTY_MISSION_PROGRESS, counts: {}, games: [], weekCounts: {}, weekGames: [] },
+    missionClaims: {},
   };
 }
 

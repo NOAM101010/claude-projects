@@ -103,6 +103,21 @@ export const profileService = {
     return typeof data === 'number' ? data : null;
   },
 
+  /** Atomic mission claim, keyed by `<periodKey>:<missionId>`. Returns
+   *  `{ granted, new_balance }` — `new_balance` is always the authoritative
+   *  balance so the client can delta-correct its optimistic grant. */
+  async claimMission(missionId: string, reward: number, periodKey: string): Promise<{ granted: boolean; new_balance: number } | null> {
+    const client = db();
+    if (!client) return null;
+    const { data, error } = await client.rpc('claim_mission', {
+      p_mission_id: missionId,
+      p_reward: Math.round(reward),
+      p_period_key: periodKey,
+    });
+    if (error || !data) return null;
+    return data as { granted: boolean; new_balance: number };
+  },
+
   /** Pull the server-authoritative list of already-earned achievement ids. */
   async fetchAchievements(): Promise<string[] | null> {
     const client = db();

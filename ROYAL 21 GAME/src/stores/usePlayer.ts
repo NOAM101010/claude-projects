@@ -3,7 +3,12 @@ import { ACHIEVEMENTS } from '@/data/achievements';
 import { itemById } from '@/data/items';
 import {
   STREAK_REWARD, discountedPrice, nextStreakDay, COMEBACK_THRESHOLD_DAYS, COMEBACK_BONUS, daysSince,
+  MISSION_ALL_DONE_BONUS, MAX_MISSION_REWARD,
 } from '@/data/economy';
+import {
+  dailyMissions, weeklyMission, weekKeyFor, missionById, missionComplete,
+  ALL_DONE_MISSION_ID, type Mission,
+} from '@/data/missions';
 import { audio } from '@/audio/AudioManager';
 import { haptic } from '@/lib/haptics';
 import { todayKey, fmt } from '@/lib/format';
@@ -14,7 +19,8 @@ import { adminService } from '@/services/adminService';
 import { analytics } from '@/services/analyticsService';
 import { isRemoteId } from '@/services/supabase';
 import {
-  localStore, emptySave, EMPTY_STATS, DEFAULT_EQUIPPED, type ActivityEntry, type SaveData,
+  localStore, emptySave, EMPTY_STATS, EMPTY_MISSION_PROGRESS, DEFAULT_EQUIPPED,
+  type ActivityEntry, type SaveData, type MissionProgress,
 } from '@/services/localStore';
 import { useUI } from './useUI';
 import { useSettings } from './useSettings';
@@ -45,6 +51,9 @@ interface PlayerState extends SaveData {
   equip: (itemId: string) => void;
   toggleFavorite: (itemId: string) => void;
   claimDaily: () => { chips: number; day: number; comeback: boolean } | null;
+  /** Claim a completed daily/weekly mission (or the 'all_done' bonus) — atomic
+   *  server RPC + guest mirror, delta-corrected like claimDaily. */
+  claimMission: (missionId: string) => void;
   /** Grants any level milestones (every 5 levels) reached but not yet claimed. */
   claimMilestones: () => Promise<void>;
   markWheelSpin: () => void;
@@ -216,6 +225,8 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
       profile: s.profile, stats: s.stats, owned: s.owned, favorites: s.favorites,
       achievements: s.achievements, notifications: s.notifications, activity: s.activity,
       rivalries: s.rivalries, daily: s.daily, wheel: s.wheel, seenIntro: s.seenIntro,
+      missionProgress: s.missionProgress ?? EMPTY_MISSION_PROGRESS,
+      missionClaims: s.missionClaims ?? {},
     };
     localStore.write(save);
     /* Daily gift + streak also live under a per-profile mirror key so a wonky
@@ -548,6 +559,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
       activity: [entry, ...s.activity].slice(0, 40),
       profile: { ...s.profile, favoriteGame: favorite },
     });
+    bumpMissions(get, set, game, outcome, net);
     get().persist();
     checkAchievements(get, set);
   },
@@ -706,6 +718,78 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
     return { chips, day, comeback };
   },
 
+  claimMission: (missionId) => {
+    const s = get();
+    const today = todayKey();
+    const week = weekKeyFor(today);
+    const mp = rollMissionProgress(s.missionProgress, today, week);
+    const claims = s.missionClaims ?? {};
+
+    /* Resolve the mission, its period key, and which counter bucket to check. */
+    let reward = 0;
+    let periodKey = today;
+
+    if (missionId === ALL_DONE_MISSION_ID) {
+      const daily = dailyMissions(today);
+      if (!daily.every((m) => claims[`${today}:${m.id}`])) return; // not all 3 claimed yet
+      reward = MISSION_ALL_DONE_BONUS;
+    } else {
+      const weekly = weeklyMission(week);
+      let mission: Mission | undefined;
+      let counters: { counts: Record<string, number>; games: string[] };
+      if (missionId === weekly.id) {
+        mission = weekly;
+        periodKey = week;
+        counters = { counts: mp.weekCounts, games: mp.weekGames };
+      } else {
+        mission = dailyMissions(today).find((m) => m.id === missionId) ?? missionById(missionId);
+        counters = { counts: mp.counts, games: mp.games };
+      }
+      if (!mission || !missionComplete(mission, counters)) return;
+      reward = mission.reward;
+    }
+
+    if (reward <= 0 || reward > MAX_MISSION_REWARD) return;
+    const claimKey = `${periodKey}:${missionId}`;
+    if (claims[claimKey]) return;
+
+    /* Optimistic mark + grant — mirrors claimDaily's delta-correction. */
+    set({
+      missionClaims: { ...claims, [claimKey]: true },
+      profile: { ...s.profile, chips: s.profile.chips + reward },
+    });
+
+    if (isRemoteId(s.profile.id)) {
+      lastSyncedChips[s.profile.id] = s.profile.chips + reward;
+      void profileService.claimMission(missionId, reward, periodKey).then((res) => {
+        if (!res) return;
+        const current = get();
+        if (current.profile.id !== s.profile.id) return;
+        // Server balance already reflects the grant (or the already-claimed
+        // no-op). Correct the optimistic figure as a DELTA — a rollback when
+        // !granted, drift otherwise. Never an overwrite (a bet/payout may have
+        // landed in flight).
+        const correction = res.new_balance - (lastSyncedChips[current.profile.id] ?? res.new_balance);
+        lastSyncedChips[current.profile.id] = res.new_balance;
+        if (correction !== 0) {
+          set({ profile: { ...current.profile, chips: Math.max(0, Math.round(current.profile.chips + correction)) } });
+        }
+        get().persist();
+      });
+    }
+    get().persist();
+
+    const isBonus = missionId === ALL_DONE_MISSION_ID;
+    useUI.getState().showMoment({
+      kind: 'bigWin',
+      title: isBonus ? 'moments.missionsDone' : 'moments.mission',
+      subtitle: `+${fmt(reward)}`,
+      icon: isBonus ? '🏆' : '🎯',
+      duration: 2200,
+    });
+    audio.play('win');
+  },
+
   markWheelSpin: () => {
     set({ wheel: { lastSpin: todayKey() } });
     get().persist();
@@ -726,6 +810,48 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
 /* ---- achievements are evaluated centrally, never inside a component ---- */
 type Getter = () => PlayerState;
 type Setter = (partial: Partial<PlayerState>) => void;
+
+/* ---- daily / weekly mission progress (device-local, rolls at UTC boundary) -- */
+
+/** Returns `mp` with the daily bucket reset if the day rolled over and the
+ *  weekly bucket reset if the week rolled over. */
+export function rollMissionProgress(mp: MissionProgress | undefined, today: string, week: string): MissionProgress {
+  let out: MissionProgress = mp ?? EMPTY_MISSION_PROGRESS;
+  if (out.day !== today) out = { ...out, day: today, counts: {}, games: [] };
+  if (out.week !== week) out = { ...out, week, weekCounts: {}, weekGames: [] };
+  return out;
+}
+
+/** Called once per settled round from recordResult — bumps the daily + weekly
+ *  counters that missions read. Metrics keyed by game key so per-game missions
+ *  ('play blackjack', 'spin roulette', …) work off the same bucket. */
+function bumpMissions(get: Getter, set: Setter, game: GameKey, outcome: 'win' | 'lose' | 'push', net: number) {
+  const today = todayKey();
+  const week = weekKeyFor(today);
+  const mp = rollMissionProgress(get().missionProgress, today, week);
+  const won = outcome === 'win';
+  const gain = Math.max(0, net);
+
+  const bumped = (counts: Record<string, number>) => {
+    const c = { ...counts };
+    c.hands = (c.hands ?? 0) + 1;
+    if (won) c.wins = (c.wins ?? 0) + 1;
+    if (gain > 0) c.chipsWon = (c.chipsWon ?? 0) + gain;
+    c[game] = (c[game] ?? 0) + 1;
+    return c;
+  };
+  const withGame = (games: string[]) => (games.includes(game) ? games : [...games, game]);
+
+  set({
+    missionProgress: {
+      ...mp,
+      counts: bumped(mp.counts),
+      games: withGame(mp.games),
+      weekCounts: bumped(mp.weekCounts),
+      weekGames: withGame(mp.weekGames),
+    },
+  });
+}
 
 function statValue(state: PlayerState, key: string): number {
   if (key === 'level') return state.profile.level;

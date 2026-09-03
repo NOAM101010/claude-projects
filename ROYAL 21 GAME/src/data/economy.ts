@@ -283,3 +283,12 @@ export const WEEKLY_PRIZE_CHIPS = 1000;
 /** Chips both sides get when a referral completes. Mirrors `v_bonus` +
  *  `referrals.bonus_chips` default in supabase (referral-bonus-5k.sql). */
 export const REFERRAL_BONUS = 5_000;
+
+/* -------------------------------------------------------------------------- */
+/* Daily / weekly missions (src/data/missions.ts). Rewards are baked into each */
+/* mission; these are the shared extras + the server-side validation cap.     */
+/* -------------------------------------------------------------------------- */
+/** Bonus for clearing all three of today's missions. */
+export const MISSION_ALL_DONE_BONUS = 5_000;
+/** claim_mission() refuses any reward above this — matches the SQL guard. */
+export const MAX_MISSION_REWARD = 20_000;

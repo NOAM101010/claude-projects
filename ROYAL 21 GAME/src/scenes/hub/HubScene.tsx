@@ -19,6 +19,7 @@ import { useT } from '@/hooks/useT';
 import { todayKey, fmt } from '@/lib/format';
 import { audio } from '@/audio/AudioManager';
 import { STREAK_REWARD, STREAK_MILESTONES, isStreakMilestone, nextStreakDay } from '@/data/economy';
+import { dailyMissions, weeklyMission, weekKeyFor, missionComplete } from '@/data/missions';
 import { isVipEligible, VIP_MIN_LEVEL, VIP_MIN_CHIPS } from '@/data/vip';
 import { SNG_BUYINS } from '@/games/poker/engine';
 
@@ -51,6 +52,8 @@ export default function HubScene() {
   const { t } = useT();
   const profile = usePlayer((s) => s.profile);
   const daily = usePlayer((s) => s.daily);
+  const missionClaims = usePlayer((s) => s.missionClaims);
+  const missionProgress = usePlayer((s) => s.missionProgress);
   const claimDaily = usePlayer((s) => s.claimDaily);
   const addXp = usePlayer((s) => s.addXp);
   const allFriends = useSocial((s) => s.friends);
@@ -64,6 +67,21 @@ export default function HubScene() {
 
   const giftReady = daily.lastClaim !== todayKey();
   const previewDay = nextStreakDay(daily);
+
+  /* Missions: how many of today's 3 are done, and whether any reward is waiting. */
+  const missionState = useMemo(() => {
+    const today = todayKey();
+    const claims = missionClaims ?? {};
+    const dailyC = { counts: missionProgress?.counts ?? {}, games: missionProgress?.games ?? [] };
+    const weekC = { counts: missionProgress?.weekCounts ?? {}, games: missionProgress?.weekGames ?? [] };
+    const daily3 = dailyMissions(today);
+    const weekly = weeklyMission(weekKeyFor(today));
+    const claimedCount = daily3.filter((m) => claims[`${today}:${m.id}`]).length;
+    const anyDailyReady = daily3.some((m) => missionComplete(m, dailyC) && !claims[`${today}:${m.id}`]);
+    const allDoneReady = claimedCount === 3 && !claims[`${today}:all_done`];
+    const weeklyReady = missionComplete(weekly, weekC) && !claims[`${weekKeyFor(today)}:${weekly.id}`];
+    return { claimedCount, ready: anyDailyReady || allDoneReady || weeklyReady };
+  }, [missionClaims, missionProgress]);
   const vipEligible = isVipEligible(profile);
   const previewChips = STREAK_REWARD(previewDay);
 
@@ -250,6 +268,30 @@ export default function HubScene() {
 
         {/* ---------------------------- your place --------------------------- */}
         <Section idx="03" title={t('hub.sectionYours')} hint={t('hub.sectionYoursHint')}>
+          <HubCard
+            label={t('missions.title')}
+            action={t('missions.completed', { n: missionState.claimedCount })}
+            blurb={missionState.ready ? t('missions.rewardWaiting') : t('missions.blurb')}
+            hoverSound="chip"
+            glow="rgba(46,158,107,.24)"
+            badge={missionState.ready ? '🎯' : undefined}
+            onEnter={() => useUI.getState().openPanel('missions')}
+          >
+            {(focused) => (
+              <div className="relative w-full h-full grid place-items-center" style={{ minHeight: 120 }}>
+                <div className="text-[58px]" style={{
+                  transform: focused ? 'scale(1.08)' : 'scale(1)', transition: 'all .3s',
+                  filter: `drop-shadow(0 6px 20px rgba(46,158,107,${focused ? 0.55 : 0.3}))`,
+                }}>
+                  🎯
+                </div>
+                <div className="absolute bottom-2 text-[12px] num font-black" style={{ color: 'var(--jade-hi)' }}>
+                  {missionState.claimedCount} / 3
+                </div>
+              </div>
+            )}
+          </HubCard>
+
           <HubCard
             label={t('hub.lounge')}
             action={t('friends.title')}

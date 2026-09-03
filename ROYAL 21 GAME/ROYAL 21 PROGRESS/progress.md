@@ -86,6 +86,14 @@
 - אימות: tsc נקי · vite build נקי · test:engine 84/84 (+~20 בדיקות evalSideBets/settle) · test:all ירוק · i18n he/en 879/879.
 - **רגרסיה:** חדר cash + דואל — `solo` false → אין `FeltBets`, `BetRail` הקשה=הוספה (`selectMode={solo}`), `placeSide` גדור, `sideStaked/sideNet = 0`, זרימת ההימור/הזיכוי זהה בית. סולו בלי הימורי צד — `sidePayout=0`, זהה. Part B (סקין קלף-גירוד) — המעצב, לא נגעתי ב-`scratch/`.
 
+### STAGE 1 מ-`smooth-soaring-dove.md` (תיקונים + כוונון צמיחה) — מומש, **לא נבדק חי, לא נדחף**
+- **1a באג זוהר:** `.sb-won` CSS `@keyframes sbWon 1.1s ease-in-out 3` (3 חזרות ונעצר) ב-`game.css` + `html[data-motion='reduced']`/`@media`. `FeltBets.tsx` — `<motion.button>` → `<button>`, הוסר `animate`/`transition`/import framer, קלאס מותנה `${won ? 'sb-won' : ''}`.
+- **1b היגיינת התראות:** SQL `notifications-cleanup.sql` (RLS delete לבעלים + `replica identity full` ל-realtime DELETE). `notificationService.delete(id)` + handler DELETE ב-`subscribe` (arg 3 `onDelete`). `useSocial` — `dismiss(id)` action, handler DELETE שמסיר מ-store + מנקה `pendingInvite`, `pendingInvite` קיבל `id`, `refresh` מוחק `kind:'invite'` מעל 2 שעות. `InviteOverlay`+`NotificationsPanel` — לפני ניווט `roomsService.isLive(code)` (byCode + members>0); לא-חי → `dismiss` + toast `notifications.inviteExpired` (he+en), בלי ניווט. Decline → `markRead`. `roomRouteFor` קיבל `case 'night'` + טיפוס `GameKey|'night'`; `InviteOverlay` עבר לניתוב אחיד דרכו (לא `/room/CODE` קשיח).
+- **1c רצף ימים:** `STREAK_REWARD` → `1-3:500 · 4-6:1K · 7:5K · 8-13:1.5K · 14:15K · 15-29:2K · 30:50K · 30+:2.5K`. SQL `streak-rewards-v2.sql` — `claim_daily_bonus` מחשב את הפרס server-side מ-`next_day` (CASE זהה), `p_streak_reward` נשמר לחתימה אך לא נסמך. UTC ללא שינוי. `social.test.ts` — מדרגות מעודכנות + בדיקת double-claim guard. `usePlayer.claimDaily` — `analytics.track('daily_double_attempt')` כש-`!res.granted`.
+- **1d בונוס הפניה:** `REFERRAL_BONUS = 5_000` ב-`economy.ts`. SQL `referral-bonus-5k.sql` — `referrals.bonus_chips` default 5000 + `v_bonus := 5000` ב-`claim_referral`. `FriendsPanel` + i18n `friends.inviteMessage`/`inviteSubtitle` → אינטרפולציה מ-`fmt(REFERRAL_BONUS)`.
+- **SQL להרצה על prod (3 קבצים, אידמפוטנטיים):** `supabase/notifications-cleanup.sql` · `supabase/streak-rewards-v2.sql` · `supabase/referral-bonus-5k.sql`.
+- אימות: tsc נקי · vite build נקי · test:all ירוק (engine 96, poker 44, social כולל מדרגות+guard) · i18n he/en 878/878.
+
 **מגבלה ידועה (1d, לא בסקופ):** קיפאון עם מוות-host עדיין ~5-25ש (`reassign_room_host` חלון 20ש stale). שיפור עתידי: לקצר `HOST_HEARTBEAT_MS` או ש-host מקודם יעשה abort+restart לסיבוב.
 
 ### הבא בתור: רה-ארכיטקטורה של המולטיפלייר — **תוכנית מלאה ומאושרת:**

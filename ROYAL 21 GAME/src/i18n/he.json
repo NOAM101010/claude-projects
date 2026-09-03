@@ -387,6 +387,19 @@
     "inviteText": "בוא לשחק איתי ב-ROYAL 21. קוד החדר: {code}",
     "needsBackend": "כדי לשחק עם חברים צריך לחבר את Supabase. ההוראות נמצאות ב-README."
   },
+  "missions": {
+    "title": "משימות",
+    "blurb": "3 משימות שמתחלפות מדי יום",
+    "rewardWaiting": "פרס מחכה לאיסוף!",
+    "completed": "{n}/3 הושלמו",
+    "rotatesIn": "מתחלף בעוד {time}",
+    "claim": "אסוף",
+    "claimed": "נאסף",
+    "inProgress": "בתהליך",
+    "allDone": "השלם את כל שלוש המשימות",
+    "claimAll3First": "אסוף קודם את שלושתן",
+    "weekly": "משימה שבועית"
+  },
   "lobby": {
     "title": "שולחנות פתוחים",
     "subtitle": "כל השולחנות הפעילים כרגע — הצטרפו לאחד, או פתחו משלכם",
@@ -808,6 +821,8 @@
     "reward": "פרס",
     "bigWin": "זכייה גדולה",
     "rareItem": "פריט נדיר",
+    "mission": "משימה הושלמה!",
+    "missionsDone": "כל המשימות היום!",
     "friendJoined": "{name} הצטרף",
     "sessionTitle": "הערב",
     "gamesPlayed": "משחקים",

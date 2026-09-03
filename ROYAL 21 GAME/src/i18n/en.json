@@ -387,6 +387,19 @@
     "inviteText": "Come play with me on ROYAL 21. Room code: {code}",
     "needsBackend": "Playing with friends needs Supabase connected. The steps are in the README."
   },
+  "missions": {
+    "title": "Missions",
+    "blurb": "Three missions that rotate every day",
+    "rewardWaiting": "A reward is waiting to be claimed!",
+    "completed": "{n}/3 done",
+    "rotatesIn": "Rotates in {time}",
+    "claim": "Claim",
+    "claimed": "Claimed",
+    "inProgress": "In progress",
+    "allDone": "Clear all three missions",
+    "claimAll3First": "Claim all three first",
+    "weekly": "Weekly mission"
+  },
   "lobby": {
     "title": "Open tables",
     "subtitle": "Every table live right now — jump into one, or start your own",
@@ -808,6 +821,8 @@
     "reward": "Reward",
     "bigWin": "Big win",
     "rareItem": "Rare find",
+    "mission": "Mission complete!",
+    "missionsDone": "All missions cleared!",
     "friendJoined": "{name} joined",
     "sessionTitle": "Tonight",
     "gamesPlayed": "Games",

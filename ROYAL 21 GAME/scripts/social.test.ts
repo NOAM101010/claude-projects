@@ -9,6 +9,10 @@ import {
   STREAK_REWARD, VIP_TIERS, vipTierOf, discountedPrice, milestoneReward, GIFT_DAILY_LIMIT, MILESTONE_EVERY,
   nextStreakDay, daysSince, COMEBACK_THRESHOLD_DAYS, COMEBACK_BONUS,
 } from '@/data/economy';
+import {
+  MISSIONS, WEEKLY_MISSIONS, MAX_MISSION_REWARD, dailyMissions, weeklyMission,
+  weekKeyFor, shiftDateKey, missionValue, missionComplete,
+} from '@/data/missions';
 
 let failures = 0;
 const check = (name: string, condition: boolean, detail = '') => {
@@ -115,6 +119,42 @@ check('the threshold is 3 days', COMEBACK_THRESHOLD_DAYS === 3);
   check('missing 3+ days triggers the comeback bonus', daysSince(threeDaysAgo) >= COMEBACK_THRESHOLD_DAYS);
 }
 check('comeback bonus is a flat top-up', COMEBACK_BONUS === 300);
+
+console.log('\nMissions — rotation + progress');
+{
+  const day = '2026-03-15';
+  const a = dailyMissions(day);
+  const b = dailyMissions(day);
+  check('dailyMissions is deterministic per date', JSON.stringify(a.map((m) => m.id)) === JSON.stringify(b.map((m) => m.id)));
+  check('dailyMissions returns exactly 3', a.length === 3);
+  check('the 3 missions are distinct', new Set(a.map((m) => m.id)).size === 3);
+  check('the lineup mixes kinds (≥1 quantity + ≥1 variety)',
+    a.some((m) => m.kind === 'quantity') && a.some((m) => m.kind === 'variety'));
+  const yesterday = shiftDateKey(day, -1);
+  const y = new Set(dailyMissions(yesterday).map((m) => m.id));
+  check("today's set is not identical to yesterday's",
+    !a.every((m) => y.has(m.id)));
+  check('a different date gives a different (or at least re-rolled) lineup — determinism holds both ways',
+    JSON.stringify(dailyMissions('2026-06-01').map((m) => m.id)) === JSON.stringify(dailyMissions('2026-06-01').map((m) => m.id)));
+
+  const w1 = weeklyMission(weekKeyFor(day));
+  const w2 = weeklyMission(weekKeyFor(day));
+  check('weeklyMission is deterministic per week', w1.id === w2.id);
+  check('weeklyMission is one of the weekly pool', WEEKLY_MISSIONS.some((m) => m.id === w1.id));
+
+  check('no daily mission pays over the cap', MISSIONS.every((m) => m.reward <= MAX_MISSION_REWARD));
+  check('no weekly mission pays over the cap', WEEKLY_MISSIONS.every((m) => m.reward <= MAX_MISSION_REWARD));
+
+  // missionValue / missionComplete
+  const handsM = MISSIONS.find((m) => m.id === 'hands10')!;
+  check('missionValue reads the right counter', missionValue(handsM, { counts: { hands: 7 }, games: [] }) === 7);
+  check('missionComplete is false below goal', missionComplete(handsM, { counts: { hands: 9 }, games: [] }) === false);
+  check('missionComplete is true at goal', missionComplete(handsM, { counts: { hands: 10 }, games: [] }) === true);
+  const gamesM = MISSIONS.find((m) => m.id === 'games3')!;
+  check('gamesVariety counts distinct games', missionValue(gamesM, { counts: {}, games: ['blackjack', 'roulette', 'slots'] }) === 3);
+  const pokerM = MISSIONS.find((m) => m.id === 'poker1')!;
+  check('pokerAny sums poker + sng', missionValue(pokerM, { counts: { poker: 0, sng: 1 }, games: [] }) === 1);
+}
 
 console.log(failures ? `\n${failures} failing check(s)\n` : '\nall social checks passed\n');
 process.exit(failures ? 1 : 0);
