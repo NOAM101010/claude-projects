@@ -5,10 +5,11 @@ import { Meter } from '@/components/ui/Meter';
 import { useUI } from '@/stores/useUI';
 import { usePlayer } from '@/stores/usePlayer';
 import { useT } from '@/hooks/useT';
+import { useAppConfig } from '@/hooks/useAppConfig';
 import { todayKey, fmt } from '@/lib/format';
 import {
   dailyMissions, weeklyMission, weekKeyFor, missionValue, missionComplete,
-  ALL_DONE_MISSION_ID, MISSION_ALL_DONE_BONUS, type Mission,
+  ALL_DONE_MISSION_ID, type Mission,
 } from '@/data/missions';
 
 /** Hours:minutes left until the UTC day rolls (daily missions rotate). */
@@ -28,6 +29,7 @@ export function MissionsPanel() {
   const missionProgress = usePlayer((s) => s.missionProgress);
   const missionClaims = usePlayer((s) => s.missionClaims);
   const claimMission = usePlayer((s) => s.claimMission);
+  const config = useAppConfig();
 
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -98,7 +100,7 @@ export function MissionsPanel() {
           }}>
           <div className="flex items-center justify-between gap-2">
             <b className="text-[13px]">🏆 {t('missions.allDone')}</b>
-            <span className="num text-[11.5px]" style={{ color: 'var(--gold-hi)' }}>+{fmt(MISSION_ALL_DONE_BONUS)}</span>
+            <span className="num text-[11.5px]" style={{ color: 'var(--gold-hi)' }}>+{fmt(config.missionAllDoneBonus)}</span>
           </div>
           <div className="flex items-center justify-between mt-1.5">
             <span className="num text-[10.5px]" style={{ color: 'var(--dim)' }}>{dailyClaimedCount} / 3</span>

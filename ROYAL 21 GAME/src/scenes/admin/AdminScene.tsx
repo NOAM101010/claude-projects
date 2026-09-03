@@ -12,7 +12,42 @@ import { fmt, shortDate } from '@/lib/format';
 import { ITEMS } from '@/data/items';
 import {
   adminService, type AdminOverview, type AdminRoom, type HealthCheck, type AdminActivePlayer,
+  type AdminPlayer, type AdminBug,
 } from '@/services/adminService';
+
+type ConfigShape = 'number' | 'array3' | 'numArray' | 'numObject';
+
+/** Each app_config key + the shape the server will accept. Mirrors the
+ *  validation in admin_set_config() so a bad edit is caught before the round
+ *  trip (and the economy RPCs never see a value that would break a cast). */
+const CONFIG_KEYS: { key: string; shape: ConfigShape }[] = [
+  { key: 'gift_daily_limit', shape: 'number' },
+  { key: 'streak_rewards', shape: 'numObject' },
+  { key: 'weekly_podium', shape: 'array3' },
+  { key: 'mission_all_done_bonus', shape: 'number' },
+  { key: 'max_mission_reward', shape: 'number' },
+  { key: 'referrer_tiers', shape: 'numArray' },
+];
+
+const isNonNegNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0;
+
+/** Returns an error string, or null when `value` matches `shape`. */
+function validateConfig(shape: ConfigShape, value: unknown): string | null {
+  switch (shape) {
+    case 'number':
+      return isNonNegNum(value) ? null : 'must be a number ≥ 0';
+    case 'array3':
+      return Array.isArray(value) && value.length === 3 && value.every(isNonNegNum)
+        ? null : 'must be an array of 3 numbers ≥ 0';
+    case 'numArray':
+      return Array.isArray(value) && value.length > 0 && value.every(isNonNegNum)
+        ? null : 'must be a non-empty array of numbers ≥ 0';
+    case 'numObject':
+      return value !== null && typeof value === 'object' && !Array.isArray(value)
+        && Object.values(value as Record<string, unknown>).every(isNonNegNum)
+        ? null : 'must be an object of numbers ≥ 0';
+  }
+}
 
 function Stat({ label, value, tone = 'gold' }: { label: string; value: string | number; tone?: 'gold' | 'jade' | 'crimson' }) {
   const color = tone === 'jade' ? 'var(--jade-hi)' : tone === 'crimson' ? 'var(--crimson-hi)' : 'var(--gold-hi)';
@@ -54,6 +89,40 @@ export default function AdminScene() {
   const [setTag, setSetTag] = useState('');
   const [setAmount, setSetAmount] = useState('50000');
 
+  // ---- player support ----
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<AdminPlayer[]>([]);
+  const [picked, setPicked] = useState<AdminPlayer | null>(null);
+  const [grantId, setGrantId] = useState(ITEMS[0]?.id ?? '');
+  const [levelDraft, setLevelDraft] = useState('1');
+
+  // ---- bug reports ----
+  const [bugs, setBugs] = useState<AdminBug[]>([]);
+
+  // ---- economy config ----
+  const [config, setConfig] = useState<Record<string, unknown>>({});
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+
+  const refreshPicked = useCallback(async (id: string) => {
+    const rows = await adminService.findPlayer(id);
+    const row = rows.find((r) => r.id === id) ?? null;
+    setPicked(row);
+    if (row) setLevelDraft(String(row.level));
+  }, []);
+
+  const runSearch = useCallback(async () => {
+    if (!query.trim()) return;
+    setResults(await adminService.findPlayer(query.trim()));
+  }, [query]);
+
+  const loadConfig = useCallback(async () => {
+    const cfg = await adminService.getConfig();
+    setConfig(cfg);
+    setDrafts(Object.fromEntries(CONFIG_KEYS.map(({ key }) => [key, JSON.stringify(cfg[key] ?? null)])));
+  }, []);
+
+  const loadBugs = useCallback(async () => { setBugs(await adminService.listBugs()); }, []);
+
   const load = useCallback(async () => {
     setBusy(true);
     const [checks, stats, roomList, live] = await Promise.all([
@@ -69,7 +138,7 @@ export default function AdminScene() {
     setBusy(false);
   }, [profile]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void load(); void loadConfig(); void loadBugs(); }, [load, loadConfig, loadBugs]);
 
   /* Auto-refresh: every 5 seconds while autoRefresh is on. Skip the health
      check on the interval (it's a big RPC bag) — reload on demand for that. */
@@ -152,6 +221,44 @@ export default function AdminScene() {
     setTransferTag(tag);
     setSetTag(tag);
     setSetAmount(String(currentChips));
+  };
+
+  const resetPlayer = async (p: AdminPlayer) => {
+    if (!confirm(`Reset ${p.username} ${p.tag} to a fresh start? Chips → 5,000, level 1, cosmetics → starters, friends/referrals wiped. This cannot be undone.`)) return;
+    const ok = await adminService.resetPlayer(p.id);
+    toast(ok ? `✅ ${p.username} reset` : 'Reset failed', ok ? 'good' : 'bad', ok ? '♻️' : '⛔');
+    if (ok) void refreshPicked(p.id);
+  };
+
+  const grantItemTo = async (p: AdminPlayer, revoke: boolean) => {
+    const ok = revoke ? await adminService.revokeItem(p.id, grantId) : await adminService.grantItem(p.id, grantId);
+    toast(ok ? `✅ ${revoke ? 'Removed' : 'Gave'} ${grantId}` : 'Failed', ok ? 'good' : 'bad', ok ? '🎁' : '⛔');
+    if (ok) void refreshPicked(p.id);
+  };
+
+  const setPlayerLevel = async (p: AdminPlayer) => {
+    const lvl = parseInt(levelDraft, 10);
+    if (!lvl || lvl < 1) { toast('Enter a valid level', 'bad', '⚠'); return; }
+    const result = await adminService.setPlayerLevel(p.id, lvl);
+    toast(result !== null ? `✅ ${p.username} → level ${result}` : 'Failed', result !== null ? 'good' : 'bad', result !== null ? '🎖️' : '⛔');
+    if (result !== null) void refreshPicked(p.id);
+  };
+
+  const resolveBug = async (id: number) => {
+    const ok = await adminService.resolveBug(id);
+    if (ok) void loadBugs();
+    else toast('Failed', 'bad', '⛔');
+  };
+
+  const saveConfig = async (key: string, shape: ConfigShape) => {
+    let parsed: unknown;
+    try { parsed = JSON.parse(drafts[key] ?? ''); }
+    catch { toast(`${key}: not valid JSON`, 'bad', '⚠'); return; }
+    const err = validateConfig(shape, parsed);
+    if (err) { toast(`${key}: ${err}`, 'bad', '⚠'); return; }
+    const ok = await adminService.setConfig(key, parsed);
+    toast(ok ? `✅ ${key} saved` : `${key}: save failed`, ok ? 'good' : 'bad', ok ? '💾' : '⛔');
+    if (ok) void loadConfig();
   };
 
   return (
@@ -280,6 +387,151 @@ export default function AdminScene() {
               />
             </div>
             <GameButton tone="gold" size="sm" onClick={() => void setExact()}>Set</GameButton>
+          </div>
+        </GlassPanel>
+
+        {/* --------------------------- help a player ---------------------- */}
+        <GlassPanel className="p-4">
+          <div className="eyebrow mb-2.5">🔎 Help a player</div>
+          <div className="flex gap-2 items-end">
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') void runSearch(); }}
+              placeholder="tag or username"
+              className="flex-1 px-2.5 py-1.5 rounded-[var(--r-xs)] text-[12px]"
+              style={{ background: 'rgba(255,255,255,.08)', border: '1px solid var(--glass-line)', color: 'inherit' }}
+            />
+            <GameButton tone="metal" size="sm" onClick={() => void runSearch()}>Search</GameButton>
+          </div>
+
+          {results.length > 0 && !picked && (
+            <div className="flex flex-col gap-1 mt-2.5">
+              {results.map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => { setPicked(r); setLevelDraft(String(r.level)); }}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-[var(--r-xs)] text-[12.5px] text-start press"
+                  style={{ background: 'rgba(255,255,255,.03)' }}
+                >
+                  <b className="flex-1 truncate">{r.username} <span style={{ color: 'var(--dim)' }}>{r.tag}</span></b>
+                  <span style={{ color: 'var(--muted)' }}>Lv {r.level}</span>
+                  <b className="num" style={{ color: 'var(--gold-hi)' }}>{fmt(r.chips)}</b>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {picked && (
+            <div className="mt-3 p-3 rounded-[var(--r-sm)]" style={{ background: 'rgba(255,255,255,.04)', border: '1px solid var(--glass-line)' }}>
+              <div className="flex items-center justify-between mb-2">
+                <b className="text-[13.5px]">{picked.username} <span style={{ color: 'var(--dim)' }}>{picked.tag}</span></b>
+                <button className="text-[11px] press" style={{ color: 'var(--muted)' }} onClick={() => { setPicked(null); }}>✕ close</button>
+              </div>
+              <div className="grid gap-1.5 text-[11.5px] mb-3" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(110px,1fr))', color: 'var(--muted)' }}>
+                <span>Chips <b style={{ color: 'var(--gold-hi)' }}>{fmt(picked.chips)}</b></span>
+                <span>Level <b style={{ color: 'inherit' }}>{picked.level}</b> · XP {picked.xp}</span>
+                <span>Streak <b>{picked.daily_streak}</b></span>
+                <span>Items <b>{picked.item_count}</b></span>
+                <span>Friends <b>{picked.friend_count}</b></span>
+                <span>Referrals <b>{picked.referral_count}</b></span>
+                <span>{picked.is_guest ? 'guest' : 'account'}{picked.is_admin ? ' · ADMIN' : ''}{picked.ever_vip ? ' · VIP' : ''}</span>
+                <span>{picked.presence}{picked.current_game ? ` · ${picked.current_game}` : ''}</span>
+                <span>Joined {shortDate(picked.created_at, lang)}</span>
+                <span>Seen {picked.last_seen ? shortDate(picked.last_seen, lang) : '—'}</span>
+              </div>
+
+              <div className="flex flex-wrap gap-2 items-end">
+                <div>
+                  <label className="text-[10.5px]" style={{ color: 'var(--dim)' }}>Level</label>
+                  <div className="flex gap-1 mt-1">
+                    <input type="number" value={levelDraft} onChange={(e) => setLevelDraft(e.target.value)}
+                      className="w-16 px-2 py-1.5 rounded-[var(--r-xs)] text-[12px]"
+                      style={{ background: 'rgba(255,255,255,.08)', border: '1px solid var(--glass-line)', color: 'inherit' }} />
+                    <GameButton tone="metal" size="sm" onClick={() => void setPlayerLevel(picked)}>Set</GameButton>
+                  </div>
+                </div>
+                <div className="flex-1 min-w-[180px]">
+                  <label className="text-[10.5px]" style={{ color: 'var(--dim)' }}>Item</label>
+                  <div className="flex gap-1 mt-1">
+                    <select value={grantId} onChange={(e) => setGrantId(e.target.value)}
+                      className="flex-1 px-2 py-1.5 rounded-[var(--r-xs)] text-[12px]"
+                      style={{ background: 'rgba(255,255,255,.08)', border: '1px solid var(--glass-line)', color: 'inherit' }}>
+                      {ITEMS.map((it) => <option key={it.id} value={it.id}>{it.name[lang]} ({it.id})</option>)}
+                    </select>
+                    <GameButton tone="gold" size="sm" onClick={() => void grantItemTo(picked, false)}>Give</GameButton>
+                    <GameButton tone="ghost" size="sm" onClick={() => void grantItemTo(picked, true)}>Remove</GameButton>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2 mt-3">
+                <GameButton tone="metal" size="sm" onClick={() => prefillTag(picked.tag, picked.chips)}>Prefill chip forms ↑</GameButton>
+                <GameButton tone="ghost" size="sm" onClick={() => void resetPlayer(picked)}>♻️ Reset player</GameButton>
+              </div>
+            </div>
+          )}
+        </GlassPanel>
+
+        {/* --------------------------- bug reports ------------------------ */}
+        <GlassPanel className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="eyebrow">🐞 Bug reports ({bugs.filter((b) => !b.resolved_at).length} open)</div>
+            <GameButton tone="ghost" size="sm" onClick={() => void loadBugs()}>{t('admin.refresh')}</GameButton>
+          </div>
+          {bugs.length === 0 ? (
+            <p className="text-[13px] py-3 text-center" style={{ color: 'var(--muted)' }}>No bug reports.</p>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {bugs.map((b) => (
+                <div key={b.id} className="px-3 py-2 rounded-[var(--r-xs)] text-[12px]"
+                  style={{ background: b.resolved_at ? 'rgba(46,158,107,.07)' : 'rgba(168,65,62,.10)' }}>
+                  <div className="flex items-start gap-2">
+                    <span className="flex-1 break-words">{b.description}</span>
+                    {!b.resolved_at && (
+                      <GameButton tone="ghost" size="sm" onClick={() => void resolveBug(b.id)}>Mark done</GameButton>
+                    )}
+                  </div>
+                  <div className="text-[10.5px] mt-1" style={{ color: 'var(--dim)' }}>
+                    {b.reporter ?? 'anon'}{b.reporter_tag ? ` ${b.reporter_tag}` : ''} · {shortDate(b.created_at, lang)}
+                    {b.screen_size ? ` · ${b.screen_size}` : ''}{b.url ? ` · ${b.url}` : ''}
+                    {b.resolved_at ? ' · ✅ resolved' : ''}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </GlassPanel>
+
+        {/* --------------------------- economy tuning -------------------- */}
+        <GlassPanel gold className="p-4">
+          <div className="flex items-center justify-between mb-1">
+            <div className="eyebrow">⚖️ Economy tuning (app_config)</div>
+            <GameButton tone="ghost" size="sm" onClick={() => void loadConfig()}>{t('admin.refresh')}</GameButton>
+          </div>
+          <p className="text-[11px] mb-3" style={{ color: 'var(--dim)' }}>
+            Each value is JSON. Server RPCs fall back to the shipped economy.ts constant when a key is missing.
+          </p>
+          <div className="flex flex-col gap-2.5">
+            {CONFIG_KEYS.map(({ key, shape }) => (
+              <div key={key}>
+                <label className="text-[11px] flex items-center justify-between" style={{ color: 'var(--muted)' }}>
+                  <span><b style={{ color: 'inherit' }}>{key}</b></span>
+                  {config[key] === undefined && <span style={{ color: 'var(--dim)' }}>using fallback</span>}
+                </label>
+                <div className="flex gap-1.5 mt-1">
+                  <input
+                    type="text"
+                    value={drafts[key] ?? ''}
+                    onChange={(e) => setDrafts((d) => ({ ...d, [key]: e.target.value }))}
+                    className="flex-1 px-2.5 py-1.5 rounded-[var(--r-xs)] text-[12px] num"
+                    style={{ background: 'rgba(255,255,255,.08)', border: '1px solid var(--glass-line)', color: 'inherit' }}
+                  />
+                  <GameButton tone="gold" size="sm" onClick={() => void saveConfig(key, shape)}>Save</GameButton>
+                </div>
+              </div>
+            ))}
           </div>
         </GlassPanel>
 

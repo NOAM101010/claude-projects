@@ -26,7 +26,9 @@ declare
   my_rank     integer;
   prize       bigint;
   balance     bigint;
-  podium      bigint[] := array[5000, 2500, 1000];
+  -- Live payouts from app_config.weekly_podium ([#1,#2,#3]); config_bigint_array
+  -- falls back to this array on a missing / malformed key. Run app-config.sql first.
+  podium      bigint[] := public.config_bigint_array('weekly_podium', array[5000, 2500, 1000]);
 begin
   select weekly_prize_claimed_week into claimed_wk
   from public.profiles where id = auth.uid() for update;

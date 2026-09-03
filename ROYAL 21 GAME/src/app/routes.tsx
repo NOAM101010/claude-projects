@@ -43,6 +43,15 @@ function RequireSession({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+/** Server-flagged admins only. The scene re-checks and every power it offers is
+ *  an RPC that checks a third time, in the database — this is just so the page
+ *  chrome never renders for a non-admin. */
+function RequireAdmin({ children }: { children: ReactNode }) {
+  const isAdmin = usePlayer((s) => s.profile.isAdmin);
+  if (!isAdmin) return <Navigate to="/hub" replace />;
+  return <>{children}</>;
+}
+
 function BlackjackRoomRoute() {
   const { roomCode } = useParams();
   return <BlackjackScene mode="room" roomCode={roomCode} />;
@@ -98,9 +107,7 @@ export function AppRoutes() {
         <Route path="/inventory" element={<RequireSession><InventoryScene /></RequireSession>} />
         <Route path="/profile/:userId" element={<RequireSession><MyRoomScene /></RequireSession>} />
         <Route path="/settings" element={<RequireSession><SettingsScene /></RequireSession>} />
-        {/* The scene checks the flag again and every power it offers is an RPC
-            that checks it a third time, in the database. */}
-        <Route path="/admin" element={<RequireSession><AdminScene /></RequireSession>} />
+        <Route path="/admin" element={<RequireSession><RequireAdmin><AdminScene /></RequireAdmin></RequireSession>} />
         <Route path="*" element={<NotFoundScene />} />
       </Routes>
     </Suspense>

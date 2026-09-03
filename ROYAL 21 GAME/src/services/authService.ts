@@ -304,5 +304,10 @@ export function rowToProfile(row: any): Profile {
     favoriteGame: row.favorite_game ?? null,
     isAdmin: row.is_admin ?? false,
     everVip: row.ever_vip ?? false,
+    dailyStreak: row.daily_streak ?? 0,
+    achievements: row.achievements ?? [],
+    missionClaims: row.mission_claims ?? {},
+    referrerTier: row.referrer_tier ?? 0,
+    onboardedAt: row.onboarded_at ?? null,
   };
 }

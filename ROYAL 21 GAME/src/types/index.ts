@@ -60,6 +60,18 @@ export interface Profile {
   /** Set once the player has qualified for VIP (level + chips at the same
    *  time). Sticky: dropping chips later doesn't lose them the VIP room. */
   everVip?: boolean;
+  /* --- server-owned progression mirrors (read-only on the client) --------- */
+  /** Consecutive-day login streak, server-authoritative (claim_daily_bonus). */
+  dailyStreak?: number;
+  /** Achievement ids the server has granted. The store keeps the working copy
+   *  in `usePlayer.achievements`; this is just the row value at hydrate time. */
+  achievements?: string[];
+  /** `<periodKey>:<missionId>` -> true. Mirror of profiles.mission_claims. */
+  missionClaims?: Record<string, boolean>;
+  /** How many referrer-tier rewards this account has collected (0..3). */
+  referrerTier?: number;
+  /** When the player finished onboarding, or null if they never have. */
+  onboardedAt?: string | null;
 }
 
 export interface Stats {

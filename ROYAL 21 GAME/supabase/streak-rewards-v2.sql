@@ -12,6 +12,11 @@
 --   day  7    :  5,000                                 day 30+   :  2,500
 --
 -- Reset window stays UTC (unchanged).
+--
+-- The ladder amounts now come from app_config.streak_rewards (jsonb object,
+-- keys "1-3" / "4-6" / "7" / "8-13" / "14" / "15-29" / "30" / "31+"), each with
+-- the hard-coded fallback below. Run supabase/app-config.sql first; with no
+-- config row the payout is byte-for-byte identical to before.
 -- =============================================================================
 
 create or replace function public.claim_daily_bonus(
@@ -59,15 +64,17 @@ begin
   end;
 
   -- Server-side ladder — the client's p_streak_reward is no longer trusted.
+  -- config_num_from_obj is exception-safe: a malformed streak_rewards row falls
+  -- straight through to the hard-coded amount instead of aborting the RPC.
   v_reward := case
-    when next_day = 30 then 50000
-    when next_day = 14 then 15000
-    when next_day = 7  then 5000
-    when next_day <= 3 then 500
-    when next_day <= 6 then 1000
-    when next_day <= 13 then 1500
-    when next_day <= 29 then 2000
-    else 2500
+    when next_day = 30  then public.config_num_from_obj('streak_rewards', '30',    50000)
+    when next_day = 14  then public.config_num_from_obj('streak_rewards', '14',    15000)
+    when next_day = 7   then public.config_num_from_obj('streak_rewards', '7',     5000)
+    when next_day <= 3  then public.config_num_from_obj('streak_rewards', '1-3',   500)
+    when next_day <= 6  then public.config_num_from_obj('streak_rewards', '4-6',   1000)
+    when next_day <= 13 then public.config_num_from_obj('streak_rewards', '8-13',  1500)
+    when next_day <= 29 then public.config_num_from_obj('streak_rewards', '15-29', 2000)
+    else                     public.config_num_from_obj('streak_rewards', '31+',   2500)
   end;
 
   is_comeback := last_ is not null and (today_ - last_) >= p_comeback_threshold;

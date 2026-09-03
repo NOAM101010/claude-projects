@@ -57,6 +57,42 @@ export interface HealthCheck {
   detail: string;
 }
 
+/** Full player card from admin_find_player. */
+export interface AdminPlayer {
+  id: string;
+  username: string;
+  tag: string;
+  level: number;
+  xp: number;
+  chips: number;
+  presence: string;
+  current_game: string | null;
+  last_seen: string | null;
+  is_admin: boolean;
+  is_guest: boolean;
+  created_at: string;
+  ever_vip: boolean;
+  daily_streak: number;
+  onboarded_at: string | null;
+  item_count: number;
+  friend_count: number;
+  referral_count: number;
+}
+
+/** One row of admin_list_bugs. */
+export interface AdminBug {
+  id: number;
+  description: string;
+  url: string | null;
+  screen_size: string | null;
+  user_agent: string | null;
+  created_at: string;
+  resolved_at: string | null;
+  notes: string | null;
+  reporter: string | null;
+  reporter_tag: string | null;
+}
+
 export const adminService = {
   async overview(): Promise<AdminOverview | null> {
     const client = db();
@@ -122,6 +158,79 @@ export const adminService = {
     const { data, error } = await client.rpc('admin_active_players', { p_limit: limit });
     if (error) return [];
     return (data ?? []) as AdminActivePlayer[];
+  },
+
+  /* ----------------------------- player support ----------------------------- */
+
+  async findPlayer(q: string): Promise<AdminPlayer[]> {
+    const client = db();
+    if (!client) return [];
+    const { data, error } = await client.rpc('admin_find_player', { q });
+    if (error) return [];
+    return (data ?? []) as AdminPlayer[];
+  },
+
+  async resetPlayer(targetId: string): Promise<boolean> {
+    const client = db();
+    if (!client) return false;
+    const { data, error } = await client.rpc('admin_reset_player', { target_id: targetId });
+    return !error && Boolean(data?.ok);
+  },
+
+  async grantItem(targetId: string, itemId: string): Promise<boolean> {
+    const client = db();
+    if (!client) return false;
+    const { data, error } = await client.rpc('admin_grant_item', { target_id: targetId, p_item_id: itemId });
+    return !error && Boolean(data?.ok);
+  },
+
+  async revokeItem(targetId: string, itemId: string): Promise<boolean> {
+    const client = db();
+    if (!client) return false;
+    const { data, error } = await client.rpc('admin_revoke_item', { target_id: targetId, p_item_id: itemId });
+    return !error && Boolean(data?.ok);
+  },
+
+  async setPlayerLevel(targetId: string, level: number): Promise<number | null> {
+    const client = db();
+    if (!client) return null;
+    const { data, error } = await client.rpc('admin_set_level', { target_id: targetId, p_level: Math.round(level) });
+    if (error) return null;
+    return typeof data === 'number' ? data : null;
+  },
+
+  /* --------------------------------- bugs ---------------------------------- */
+
+  async listBugs(): Promise<AdminBug[]> {
+    const client = db();
+    if (!client) return [];
+    const { data, error } = await client.rpc('admin_list_bugs');
+    if (error) return [];
+    return (data ?? []) as AdminBug[];
+  },
+
+  async resolveBug(id: number): Promise<boolean> {
+    const client = db();
+    if (!client) return false;
+    const { data, error } = await client.rpc('admin_resolve_bug', { p_id: id });
+    return !error && Boolean(data?.ok);
+  },
+
+  /* ---------------------------- economy config --------------------------- */
+
+  async getConfig(): Promise<Record<string, unknown>> {
+    const client = db();
+    if (!client) return {};
+    const { data, error } = await client.rpc('get_app_config');
+    if (error || !data) return {};
+    return data as Record<string, unknown>;
+  },
+
+  async setConfig(key: string, value: unknown): Promise<boolean> {
+    const client = db();
+    if (!client) return false;
+    const { data, error } = await client.rpc('admin_set_config', { p_key: key, p_value: value });
+    return !error && Boolean(data?.ok);
   },
 
   /**
