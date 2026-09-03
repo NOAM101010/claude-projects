@@ -30,6 +30,7 @@ export function isHolePublic(state: PokerState, seat: PokerSeat, viewerId: strin
     folded: seat.folded,
     runoutReveal: state.allInEquity !== null,
     holeLen: seat.hole.length,
+    voluntarilyShown: state.revealed?.includes(seat.userId) ?? false,
   });
 }
 
@@ -49,8 +50,11 @@ export function holeVisible(opts: {
   folded: boolean;
   runoutReveal: boolean;
   holeLen: number;
+  /** The seat's owner hit "show cards" at the end of the hand — public regardless of fold state. */
+  voluntarilyShown?: boolean;
 }): boolean {
   const revealed = opts.inShowdown && !opts.folded;
   const runoutShow = opts.runoutReveal && !opts.folded && opts.holeLen === 2;
-  return opts.isMe || revealed || runoutShow;
+  const shown = Boolean(opts.voluntarilyShown) && opts.holeLen === 2;
+  return opts.isMe || revealed || runoutShow || shown;
 }

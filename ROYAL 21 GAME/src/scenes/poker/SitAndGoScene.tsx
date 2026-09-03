@@ -20,11 +20,13 @@ import { roomsService } from '@/services/roomsService';
 import { audio } from '@/audio/AudioManager';
 import { chipGlyphOf } from '@/components/game/CoinFace';
 import { fmt } from '@/lib/format';
-import { SNG_BUYINS, ACTION_SECONDS, levelIndexFor } from '@/games/poker/engine';
+import { SNG_BUYINS, ACTION_SECONDS, NEXT_HAND_DELAY_MS, levelIndexFor } from '@/games/poker/engine';
 import { XP_REWARDS } from '@/data/economy';
 import { usePokerReveal } from '@/games/poker/useReveal';
+import { bestHand } from '@/games/poker/handEval';
 import { MAX_SEATS } from '@/games/poker/types';
-import { SeatCard, ActionBar } from './PokerScene';
+import type { PokerSeat } from '@/games/poker/types';
+import { SeatCard, ActionBar, HandOverBar } from './PokerScene';
 
 const SLOTS = [
   { left: '50%', top: '90%' },
@@ -51,6 +53,7 @@ export default function SitAndGoScene() {
   const { room, members, state, isHost, create, joinByCode, send, leave } = useSngRoom();
   const [raiseTo, setRaiseTo] = useState<number | null>(null);
   const processedHand = useRef(0);
+  const knownEliminated = useRef<string[]>([]);
   const settledTournament = useRef(false);
   const booting = useRef(false);
 
@@ -87,7 +90,6 @@ export default function SitAndGoScene() {
   const tournament = state?.tournament ?? null;
   const registered = state ? state.seats.length : 0;
   const started = Boolean(state && state.handNumber > 0);
-  const alive = state?.seats.filter((s) => s.stack > 0) ?? [];
 
   const [spectators, setSpectators] = useState<string[]>([]);
   useEffect(() => {
@@ -130,7 +132,63 @@ export default function SitAndGoScene() {
   }, [isHost, state?.toAct, state?.deadline, now]);
   const secondsLeft = state?.deadline ? Math.max(0, Math.ceil((state.deadline - now) / 1000)) : null;
 
-  const { displayCommunity, displayShowdown, liveEquity, revealing } = usePokerReveal(state);
+  const { displayCommunity, displayShowdown, liveEquity, revealing, displayStacks } = usePokerReveal(state);
+
+  /* Players still in the tournament. Frozen against the raw eliminated list while
+     an all-in runout is playing out — otherwise "players left" ticks down and a
+     seat greys out before the last card lands, spoiling the result. */
+  const prevEliminated = useRef<string[]>([]);
+  useEffect(() => {
+    if (tournament && !revealing) prevEliminated.current = tournament.eliminated;
+  }, [tournament?.eliminated, revealing]);
+  const displayEliminated = revealing ? prevEliminated.current : (tournament?.eliminated ?? []);
+  const alive = state?.seats.filter((s) => !displayEliminated.includes(s.userId) && (displayStacks[s.userId] ?? s.stack) > 0) ?? [];
+
+  const winnerIds = useMemo(() => {
+    if (!state || state.street !== 'waiting' || revealing) return new Set<string>();
+    const fromShowdown = state.showdown?.filter((e) => e.won > 0).map((e) => e.userId) ?? [];
+    if (fromShowdown.length) return new Set(fromShowdown);
+    return new Set((state.lastResult ?? []).filter((r) => r.net > 0).map((r) => r.userId));
+  }, [state, revealing]);
+
+  const myHandLabel = useMemo(() => {
+    if (!mySeat || (mySeat.hole?.length ?? 0) < 2 || displayCommunity.length < 3) return null;
+    return t(`poker.hand.${bestHand([...mySeat.hole, ...displayCommunity]).category}`);
+  }, [mySeat, displayCommunity, t]);
+
+  const actLabelOf = (s: PokerSeat): string | null => {
+    switch (s.lastAction) {
+      case 'fold': return t('poker.act.fold');
+      case 'check': return t('poker.act.check');
+      case 'call': return t('poker.act.call');
+      case 'bet': return t('poker.act.bet', { amount: fmt(Math.max(s.committed, 0)) });
+      case 'raise': return t('poker.act.raise', { amount: fmt(Math.max(s.committed, 0)) });
+      case 'allin': return t('poker.act.allin');
+      default: return null;
+    }
+  };
+
+  const [handOverAt, setHandOverAt] = useState<number | null>(null);
+  const [mucked, setMucked] = useState(false);
+  const [, forceTick] = useState(0);
+  useEffect(() => {
+    if (state?.street === 'waiting' && state?.lastResult && !revealing && !state?.tournament?.finished) {
+      setHandOverAt((prev) => prev ?? Date.now());
+    } else {
+      setHandOverAt(null);
+    }
+  }, [state?.street, state?.lastResult, state?.handNumber, state?.tournament?.finished, revealing]);
+  useEffect(() => { setMucked(false); }, [state?.handNumber]);
+  useEffect(() => {
+    if (handOverAt == null) return;
+    const id = setInterval(() => forceTick((n) => n + 1), 500);
+    return () => clearInterval(id);
+  }, [handOverAt]);
+  const nextHandIn = handOverAt != null
+    ? Math.max(0, Math.ceil((NEXT_HAND_DELAY_MS - (Date.now() - handOverAt)) / 1000))
+    : null;
+  const iPlayedThisHand = Boolean(mySeat && mySeat.hole?.length === 2 && state?.lastResult);
+  const iShowed = Boolean(state?.revealed?.includes(profile.id));
 
   /* Ghost cleanup: host removes any seat whose player dropped out of room
      membership so a stranded seat can't freeze the table. Shared hook. */
@@ -147,7 +205,7 @@ export default function SitAndGoScene() {
     if (!isHost || !state || !tournament || tournament.finished) return;
     if (state.street !== 'waiting' || revealing) return;
     if (alive.length < 2) return;
-    const timer = setTimeout(() => void send(profile.id, { type: 'startHand' }), 2200);
+    const timer = setTimeout(() => void send(profile.id, { type: 'startHand' }), NEXT_HAND_DELAY_MS);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHost, state?.street, state?.handNumber, tournament?.finished, alive.length, revealing]);
@@ -159,6 +217,16 @@ export default function SitAndGoScene() {
     if (revealing) return; // wait for this client's own board reveal to finish
     if (state.handNumber === processedHand.current) return;
     processedHand.current = state.handNumber;
+
+    /* Knockout call-out — only once the reveal is done (guarded above). */
+    const elim = state.tournament?.eliminated ?? [];
+    const newlyOut = elim.filter((id) => !knownEliminated.current.includes(id) && id !== profile.id);
+    knownEliminated.current = [...elim];
+    if (newlyOut.length && !state.tournament?.finished) {
+      const name = state.seats.find((s) => s.userId === newlyOut[0])?.username ?? '—';
+      useUI.getState().showMoment({ kind: 'friendJoined', title: t('sng.knockedOut', { name }), icon: '💥', duration: 1800 });
+    }
+
     const mine = state.lastResult.find((r) => r.userId === profile.id);
     if (mine?.net) audio.play(mine.net > 0 ? 'win' : 'lose');
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -189,6 +257,8 @@ export default function SitAndGoScene() {
     } else {
       bumpStat({ sngWinStreak: 0 });
       recordResult('sng', 'lose', -tournament.buyIn, {});
+      const place = (tournament.eliminated.length + 1) - tournament.eliminated.indexOf(profile.id);
+      useUI.getState().showMoment({ kind: 'sessionEnd', title: t('sng.placed', { place }), icon: place === 2 ? '🥈' : place === 3 ? '🥉' : '🎯', duration: 2600 });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tournament?.finished, revealing]);
@@ -343,7 +413,13 @@ export default function SitAndGoScene() {
                   runoutReveal={state.allInEquity !== null}
                   cardFace={profile.equipped.cardFace}
                   cardBack={profile.equipped.cardBack}
-                  label={{ fold: t('poker.folded'), sitOut: t('sng.eliminated'), allin: t('poker.allInLabel') }}
+                  label={{ fold: t('poker.folded'), sitOut: t('sng.eliminated'), allin: t('poker.allInLabel'), winner: t('poker.handWinner') }}
+                  revealedIds={state.revealed}
+                  displayStack={displayStacks[occupant.userId]}
+                  isWinner={winnerIds.has(occupant.userId)}
+                  actLabel={actLabelOf(occupant)}
+                  potDir={{ x: (50 - parseFloat(position.left)) * 2.6, y: (36 - parseFloat(position.top)) * 2.2 }}
+                  handLabel={occupant.userId === profile.id ? myHandLabel : null}
                 />
               ) : (
                 !started && (
@@ -379,7 +455,8 @@ export default function SitAndGoScene() {
           </div>
         )}
 
-        {state.log.length > 0 && (
+        {/* Hidden during an all-in runout — see PokerScene. */}
+        {state.log.length > 0 && !revealing && (
           <div className="text-[11.5px] px-2 flex flex-col gap-0.5 max-h-[64px] overflow-y-auto" style={{ color: 'var(--dim)' }}>
             {state.log.slice(-4).map((line, i) => <span key={i}>{line}</span>)}
           </div>
@@ -404,15 +481,38 @@ export default function SitAndGoScene() {
           </GlassPanel>
         )}
 
+        {state.street === 'waiting' && state.lastResult && !tournament.finished && !revealing && (
+          <HandOverBar
+            nextIn={nextHandIn}
+            canChoose={iPlayedThisHand}
+            shown={iShowed}
+            mucked={mucked}
+            onShow={() => void send(profile.id, { type: 'showCards', userId: profile.id })}
+            onMuck={() => setMucked(true)}
+            t={t}
+          />
+        )}
+
         {/* --------------------------- controls ---------------------------- */}
         {tournament.finished && !revealing ? (
-          <GlassPanel gold className="p-5 text-center">
-            <div className="text-[40px] mb-2">🏆</div>
-            <h2 className="mb-1">
+          <GlassPanel gold className="p-6 text-center">
+            <div className="text-[56px] mb-1">🏆</div>
+            {(() => {
+              const myPlace = tournament.winnerId === profile.id
+                ? 1
+                : (tournament.eliminated.length + 1) - tournament.eliminated.indexOf(profile.id);
+              const wasIn = tournament.winnerId === profile.id || tournament.eliminated.includes(profile.id);
+              return wasIn ? (
+                <div className="text-[34px] font-black leading-none mb-1" style={{ color: 'var(--gold-hi)' }}>
+                  {t('sng.finishPlace', { place: myPlace })}
+                </div>
+              ) : null;
+            })()}
+            <h2 className="mb-1 text-[22px]">
               {tournament.winnerId === profile.id ? t('sng.youWon') : t('sng.winnerIs', { name: state.seats.find((s) => s.userId === tournament.winnerId)?.username ?? '' })}
             </h2>
             {tournament.winnerId === profile.id && (
-              <p className="num mb-3" style={{ color: 'var(--gold-hi)' }}>+{fmt(tournament.buyIn * (tournament.eliminated.length + 1))}</p>
+              <p className="num mb-3 text-[18px]" style={{ color: 'var(--gold-hi)' }}>+{fmt(tournament.buyIn * (tournament.eliminated.length + 1))}</p>
             )}
             <GameButton tone="ghost" onClick={leaveTable}>{t('common.back')}</GameButton>
           </GlassPanel>

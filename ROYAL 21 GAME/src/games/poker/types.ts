@@ -55,6 +55,10 @@ export interface PokerState {
   street: Street;
   seats: PokerSeat[];
   community: Card[];
+  /** userIds who chose "show cards" at the end of the current hand (street === 'waiting').
+   *  Their hole stays public — through redaction and the reveal rule — until the next
+   *  hand starts. Reset to [] every `startHand`. */
+  revealed: string[];
   /** Seat index of the dealer button; -1 before the first hand. */
   dealerSeat: number;
   smallBlind: number;
@@ -113,6 +117,8 @@ export type PokerAction =
   | { type: 'bet'; userId: string; amount: number }
   | { type: 'raise'; userId: string; amount: number }
   | { type: 'allin'; userId: string }
+  /** End of hand only (street === 'waiting'): the sender flips their own hole face-up for the table. */
+  | { type: 'showCards'; userId: string }
   /** Host stamps the acting seat's decision clock after every action that hands play to someone new. */
   | { type: 'setDeadline'; deadline: number }
   /** The acting player spends one of their two 60s extensions. */

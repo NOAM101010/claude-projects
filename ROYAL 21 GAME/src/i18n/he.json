@@ -532,6 +532,21 @@
     "notEnoughChips": "אין מספיק צ'יפים לכניסה הזו",
     "handNumber": "יד #{n}",
     "longshotWin": "ניצחת all-in עם סיכוי של 10% או פחות! 🎲",
+    "showCards": "הצג קלפים",
+    "muckCards": "זרוק",
+    "cardsShown": "הקלפים הוצגו",
+    "nextHandIn": "יד הבאה בעוד {s}ש'",
+    "wonPot": "{name} לקח את הקופה",
+    "splitPotMoment": "{names} חילקו את הקופה ({amount})",
+    "handWinner": "מנצח",
+    "act": {
+      "fold": "פרש",
+      "check": "צ'ק",
+      "call": "קולל",
+      "bet": "הימר {amount}",
+      "raise": "העלה ל-{amount}",
+      "allin": "אול-אין!"
+    },
     "hand": {
       "highCard": "קלף גבוה",
       "pair": "זוג",
@@ -562,6 +577,9 @@
     "spectating": "צופה בטורניר",
     "youWon": "ניצחת בטורניר! 🏆",
     "winnerIs": "{name} ניצח בטורניר",
+    "knockedOut": "{name} הודח",
+    "placed": "סיימת במקום {place}",
+    "finishPlace": "מקום {place}",
     "registrationFailed": "ההרשמה נכשלה — הטורניר כבר התחיל. הצ'יפים הוחזרו."
   },
   "roulette": {

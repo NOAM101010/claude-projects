@@ -50,6 +50,7 @@ export function createState(seed: number, sb = 25, bb = 50): PokerState {
     street: 'waiting',
     seats: [],
     community: [],
+    revealed: [],
     dealerSeat: -1,
     smallBlind: sb,
     bigBlind: bb,
@@ -72,6 +73,9 @@ export function createState(seed: number, sb = 25, bb = 50): PokerState {
 /** Base decision clock — fixed at the generous end (was a 15/30/60 table
  *  option that was never actually wired to the deadline). */
 export const ACTION_SECONDS = 60;
+/** How long a finished hand stays on screen — cards on show, countdown running — before
+ *  the host deals the next one. Long enough to read the showdown and hit "show cards". */
+export const NEXT_HAND_DELAY_MS = 6000;
 /** Each of a player's two banked extensions adds this much. */
 export const TIME_BANK_SECONDS = 60;
 export const TIME_BANKS_PER_PLAYER = 2;
@@ -370,6 +374,7 @@ function startHand(state: PokerState) {
 
   state.handNumber += 1;
   state.community = [];
+  state.revealed = [];
   state.pot = 0;
   state.pots = [];
   state.showdown = null;
@@ -655,6 +660,18 @@ export function reduce(prev: PokerState, action: PokerAction): PokerState {
       pushLog(state, `${seat.username} is all-in for ${level}`);
       advanceToAct(state);
       if (state.toAct === -1) resolveStreetEnd(state);
+      return state;
+    }
+    case 'showCards': {
+      // End of hand only. The sender flips their own hole for the whole table —
+      // a folded bluff-show or a slow-roll reveal. Anyone dealt into the hand
+      // just played may show; nobody else, and never mid-hand.
+      if (state.street !== 'waiting') return prev;
+      const seat = seatOf(state, action.userId);
+      if (!seat || seat.hole.length !== 2) return prev;
+      if (state.revealed.includes(action.userId)) return prev;
+      state.revealed = [...state.revealed, action.userId];
+      pushLog(state, `${seat.username} shows their hand`);
       return state;
     }
     case 'setDeadline': {

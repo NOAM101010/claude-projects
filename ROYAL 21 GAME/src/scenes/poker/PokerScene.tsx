@@ -29,10 +29,11 @@ import { JackpotWin } from '@/components/effects/JackpotWin';
 import { PasswordPromptModal } from '@/components/game/PasswordPromptModal';
 import { isVipEligible } from '@/data/vip';
 import {
-  POKER_STAKES, buyInFor, callCost, minRaiseTo, canSeatAct, ACTION_SECONDS,
+  POKER_STAKES, buyInFor, callCost, minRaiseTo, canSeatAct, ACTION_SECONDS, NEXT_HAND_DELAY_MS,
 } from '@/games/poker/engine';
 import { usePokerReveal } from '@/games/poker/useReveal';
 import { holeVisible } from '@/games/poker/reveal';
+import { bestHand } from '@/games/poker/handEval';
 import { XP_REWARDS } from '@/data/economy';
 import { MAX_SEATS } from '@/games/poker/types';
 import type { PokerAction, PokerSeat, PokerState, ShowdownEntry } from '@/games/poker/types';
@@ -205,7 +206,58 @@ export default function PokerScene() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHost, state?.version, state?.deadline, state?.toAct, now, room?.id, profile.id]);
 
-  const { displayCommunity, displayShowdown, liveEquity, revealing } = usePokerReveal(state);
+  const { displayCommunity, displayShowdown, liveEquity, revealing, displayStacks } = usePokerReveal(state);
+
+  /* Seats that took (part of) the pot on the hand that just finished — gold ring
+     until the next deal. From the showdown when there was one, else the single
+     net-positive line of an uncontested pot. */
+  const winnerIds = useMemo(() => {
+    if (!state || state.street !== 'waiting' || revealing) return new Set<string>();
+    const fromShowdown = state.showdown?.filter((e) => e.won > 0).map((e) => e.userId) ?? [];
+    if (fromShowdown.length) return new Set(fromShowdown);
+    return new Set((state.lastResult ?? []).filter((r) => r.net > 0).map((r) => r.userId));
+  }, [state, revealing]);
+
+  /* "Pair" / "Flush" … for the local player, recomputed as the board reveals. */
+  const myHandLabel = useMemo(() => {
+    if (!mySeat || (mySeat.hole?.length ?? 0) < 2 || displayCommunity.length < 3) return null;
+    return t(`poker.hand.${bestHand([...mySeat.hole, ...displayCommunity]).category}`);
+  }, [mySeat, displayCommunity, t]);
+
+  const actLabelOf = (s: PokerSeat): string | null => {
+    switch (s.lastAction) {
+      case 'fold': return t('poker.act.fold');
+      case 'check': return t('poker.act.check');
+      case 'call': return t('poker.act.call');
+      case 'bet': return t('poker.act.bet', { amount: fmt(Math.max(s.committed, 0)) });
+      case 'raise': return t('poker.act.raise', { amount: fmt(Math.max(s.committed, 0)) });
+      case 'allin': return t('poker.act.allin');
+      default: return null;
+    }
+  };
+
+  /* End-of-hand: countdown to the next deal + local show/muck choice. */
+  const [handOverAt, setHandOverAt] = useState<number | null>(null);
+  const [mucked, setMucked] = useState(false);
+  const [, forceTick] = useState(0);
+  useEffect(() => {
+    if (state?.street === 'waiting' && state?.lastResult && !revealing) {
+      setHandOverAt((prev) => prev ?? Date.now());
+    } else {
+      setHandOverAt(null);
+    }
+  }, [state?.street, state?.lastResult, state?.handNumber, revealing]);
+  useEffect(() => { setMucked(false); }, [state?.handNumber]);
+  useEffect(() => {
+    if (handOverAt == null) return;
+    const id = setInterval(() => forceTick((n) => n + 1), 500);
+    return () => clearInterval(id);
+  }, [handOverAt]);
+  const nextHandIn = handOverAt != null
+    ? Math.max(0, Math.ceil((NEXT_HAND_DELAY_MS - (Date.now() - handOverAt)) / 1000))
+    : null;
+  const iPlayedThisHand = Boolean(mySeat && mySeat.hole?.length === 2 && state?.lastResult);
+  const iShowed = Boolean(state?.revealed?.includes(profile.id));
 
   const seatSlots = useMemo(() => {
     const mySeatNum = mySeat?.seat ?? null;
@@ -236,6 +288,18 @@ export default function PokerScene() {
     if (revealing) return;
     if (state.handNumber === processedHand.current) return;
     processedHand.current = state.handNumber;
+
+    /* Clear "who won the pot" moment for the whole table. */
+    const nameOf = (id: string) => state.seats.find((s) => s.userId === id)?.username ?? '—';
+    const potWinners = state.showdown?.filter((e) => e.won > 0)
+      ?? state.lastResult.filter((r) => r.net > 0).map((r) => ({ userId: r.userId, won: r.net }));
+    if (potWinners.length === 1) {
+      useUI.getState().showMoment({ kind: 'bigWin', title: t('poker.wonPot', { name: nameOf(potWinners[0].userId) }), icon: '🏆', duration: 2200 });
+    } else if (potWinners.length > 1) {
+      const total = potWinners.reduce((sum, w) => sum + w.won, 0);
+      useUI.getState().showMoment({ kind: 'bigWin', title: t('poker.splitPotMoment', { names: potWinners.map((w) => nameOf(w.userId)).join(' · '), amount: fmt(total) }), icon: '🤝', duration: 2200 });
+    }
+
     const mine = state.lastResult.find((r) => r.userId === profile.id);
     if (!mine) return;
     const outcome = mine.net > 0 ? 'win' : mine.net < 0 ? 'lose' : 'push';
@@ -313,7 +377,7 @@ export default function PokerScene() {
     if (!isHost || !state || state.street !== 'waiting' || revealing) return;
     const eligible = state.seats.filter((s) => !s.sittingOut && s.stack > 0);
     if (eligible.length < 2) return;
-    const timer = setTimeout(() => void send(profile.id, { type: 'startHand' }), 2500);
+    const timer = setTimeout(() => void send(profile.id, { type: 'startHand' }), NEXT_HAND_DELAY_MS);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHost, state?.street, state?.handNumber, revealing,
@@ -540,8 +604,14 @@ export default function PokerScene() {
                   cardFace={profile.equipped.cardFace}
                   cardBack={profile.equipped.cardBack}
                   label={{
-                    fold: t('poker.folded'), sitOut: t('poker.sittingOut'), allin: t('poker.allInLabel'),
+                    fold: t('poker.folded'), sitOut: t('poker.sittingOut'), allin: t('poker.allInLabel'), winner: t('poker.handWinner'),
                   }}
+                  revealedIds={state.revealed}
+                  displayStack={displayStacks[occupant.userId]}
+                  isWinner={winnerIds.has(occupant.userId)}
+                  actLabel={actLabelOf(occupant)}
+                  potDir={{ x: (50 - parseFloat(position.left)) * 2.6, y: (36 - parseFloat(position.top)) * 2.2 }}
+                  handLabel={occupant.userId === profile.id ? myHandLabel : null}
                 />
               ) : (
                 <button
@@ -576,7 +646,10 @@ export default function PokerScene() {
         )}
 
         {/* -------------------------- table log -------------------------- */}
-        {state.log.length > 0 && (
+        {/* Hidden during an all-in runout: the engine settles synchronously and
+            pushes "X wins N" into the log immediately, which would spoil the
+            reveal that's still playing out above. */}
+        {state.log.length > 0 && !revealing && (
           <div className="text-[11.5px] px-2 flex flex-col gap-0.5 max-h-[64px] overflow-y-auto" style={{ color: 'var(--dim)' }}>
             {state.log.slice(-4).map((line, i) => <span key={i}>{line}</span>)}
           </div>
@@ -600,6 +673,18 @@ export default function PokerScene() {
               })}
             </div>
           </GlassPanel>
+        )}
+
+        {state.street === 'waiting' && state.lastResult && !revealing && (
+          <HandOverBar
+            nextIn={nextHandIn}
+            canChoose={iPlayedThisHand}
+            shown={iShowed}
+            mucked={mucked}
+            onShow={() => void send(profile.id, { type: 'showCards', userId: profile.id })}
+            onMuck={() => setMucked(true)}
+            t={t}
+          />
         )}
 
         {/* --------------------------- controls ---------------------------- */}
@@ -669,14 +754,29 @@ export default function PokerScene() {
   );
 }
 
-export function SeatCard({ seat, isMe, isTurn, isDealer, street, showdown, runoutReveal, cardFace, cardBack, label }: {
+export function SeatCard({
+  seat, isMe, isTurn, isDealer, street, showdown, runoutReveal, cardFace, cardBack, label,
+  revealedIds, displayStack, isWinner, actLabel, potDir, handLabel,
+}: {
   seat: PokerSeat; isMe: boolean; isTurn: boolean; isDealer: boolean; street: string;
   showdown: ShowdownEntry[] | null;
   /** True whenever we're in an all-in runout — flip everyone still in the hand
    *  face-up so the players can see who's ahead as the board comes out. */
   runoutReveal?: boolean;
   cardFace: string; cardBack: string;
-  label: { fold: string; sitOut: string; allin: string };
+  label: { fold: string; sitOut: string; allin: string; winner: string };
+  /** userIds who hit "show cards" this hand — hole stays face-up for the table. */
+  revealedIds?: string[];
+  /** Chip count to render — the staged pre-settle value during an all-in runout. */
+  displayStack?: number;
+  /** This seat took (part of) the pot on the hand that just finished. */
+  isWinner?: boolean;
+  /** Short "raised to X" / "folded" badge text for the seat's last action, or null. */
+  actLabel?: string | null;
+  /** Rough vector (px) from this seat toward the pot, for the chip-toss animation. */
+  potDir?: { x: number; y: number };
+  /** "Pair" / "Flush" … — only passed for the local player. */
+  handLabel?: string | null;
 }) {
   const showHole = holeVisible({
     isMe,
@@ -684,7 +784,30 @@ export function SeatCard({ seat, isMe, isTurn, isDealer, street, showdown, runou
     folded: seat.folded,
     runoutReveal: Boolean(runoutReveal),
     holeLen: seat.hole.length,
+    voluntarilyShown: revealedIds?.includes(seat.userId) ?? false,
   });
+
+  /* Fire the action badge (and a chip toss on money actions) once each time the
+     seat's last action changes. Keyed on lastAction + totalCommitted so a second
+     raise on a later street re-triggers. Entrance-only, cleared by a timer. */
+  const [badge, setBadge] = useState<string | null>(null);
+  const [toss, setToss] = useState(0);
+  const actKey = useRef('');
+  useEffect(() => {
+    const la = seat.lastAction;
+    if (!la || la === 'post') return;
+    const key = `${la}:${seat.totalCommitted}`;
+    if (key === actKey.current) return;
+    actKey.current = key;
+    if (actLabel) setBadge(actLabel);
+    if (la === 'bet' || la === 'raise' || la === 'call' || la === 'allin') setToss((n) => n + 1);
+    const id = window.setTimeout(() => setBadge(null), 1600);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seat.lastAction, seat.totalCommitted]);
+
+  const stack = displayStack ?? seat.stack;
+
   return (
     <div className="flex flex-col items-center gap-1" style={{ opacity: seat.folded ? 0.45 : seat.sittingOut ? 0.55 : 1 }}>
       <div className="flex gap-0.5">
@@ -692,22 +815,71 @@ export function SeatCard({ seat, isMe, isTurn, isDealer, street, showdown, runou
           <PlayingCard key={i} card={showHole ? card : undefined} faceDown={!showHole} size="sm" index={i} face={cardFace} back={cardBack} fresh={false} />
         ))}
       </div>
+      {isMe && handLabel && (
+        <span className="px-1.5 py-0.5 rounded-full text-[9px] num" style={{ background: 'rgba(0,0,0,.45)', border: '1px solid var(--gold-line)', color: 'var(--gold-hi)' }}>
+          {handLabel}
+        </span>
+      )}
       <div className="relative">
         <Avatar config={seat.avatar} size={44} level={seat.level} id={`pk-${seat.userId}`} />
         {isDealer && (
           <span className="absolute -top-1 -start-1 grid place-items-center rounded-full text-[9px] font-black" style={{ width: 16, height: 16, background: 'var(--gold-hi)', color: '#1a1206' }}>D</span>
         )}
         {isTurn && <span className="absolute inset-0 rounded-full" style={{ boxShadow: '0 0 0 2px var(--gold-hi)', animation: 'pulse 1.2s infinite' }} />}
+        {isWinner && <span className="absolute inset-0 rounded-full" style={{ boxShadow: '0 0 0 3px var(--gold-hi), 0 0 18px 2px rgba(227,178,60,.6)' }} />}
+        {badge && (
+          <div
+            className="absolute left-1/2 -top-4 -translate-x-1/2 px-2 py-0.5 rounded-full text-[9px] whitespace-nowrap z-30"
+            style={{ background: 'var(--gold-hi)', color: '#1a1206', fontWeight: 700 }}
+          >
+            {badge}
+          </div>
+        )}
+        {toss > 0 && (
+          <motion.div
+            key={toss}
+            className="absolute left-1/2 top-1/2 text-[13px] z-20"
+            initial={{ opacity: 0, x: '-50%', y: '-50%' }}
+            animate={{ opacity: [0, 1, 0], x: `calc(-50% + ${potDir?.x ?? 0}px)`, y: `calc(-50% + ${potDir?.y ?? -40}px)` }}
+            transition={{ duration: 1.1, ease: 'easeOut' }}
+          >
+            🪙
+          </motion.div>
+        )}
       </div>
-      <b className="text-[10.5px] truncate max-w-[70px]">{seat.username}</b>
-      <span className="text-[10px] num" style={{ color: 'var(--gold)' }}>{fmt(seat.stack)}</span>
+      <b className="text-[10.5px] truncate max-w-[70px]" style={isWinner ? { color: 'var(--gold-hi)' } : undefined}>{seat.username}</b>
+      <span className="text-[10px] num" style={{ color: 'var(--gold)' }}>{fmt(stack)}</span>
       {seat.committed > 0 && street !== 'waiting' && (
         <div className="flex items-center gap-1"><Chip value={Math.max(10, seat.committed)} size={20} /><span className="text-[9px] num">{fmt(seat.committed)}</span></div>
       )}
-      {seat.folded && <span className="text-[9px]" style={{ color: 'var(--dim)' }}>{label.fold}</span>}
+      {isWinner && <span className="text-[9px] font-bold" style={{ color: 'var(--gold-hi)' }}>{label.winner}</span>}
+      {!isWinner && seat.folded && <span className="text-[9px]" style={{ color: 'var(--dim)' }}>{label.fold}</span>}
       {!seat.folded && seat.sittingOut && <span className="text-[9px]" style={{ color: 'var(--dim)' }}>{label.sitOut}</span>}
-      {!seat.folded && seat.allIn && <span className="text-[9px]" style={{ color: 'var(--crimson-hi)' }}>{label.allin}</span>}
+      {!seat.folded && seat.allIn && !isWinner && <span className="text-[9px]" style={{ color: 'var(--crimson-hi)' }}>{label.allin}</span>}
     </div>
+  );
+}
+
+/** End-of-hand strip: countdown to the next deal + "show / muck" for a player who was in it. */
+export function HandOverBar({ nextIn, canChoose, shown, mucked, onShow, onMuck, t }: {
+  nextIn: number | null; canChoose: boolean; shown: boolean; mucked: boolean;
+  onShow: () => void; onMuck: () => void;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+}) {
+  return (
+    <GlassPanel className="p-3 flex items-center justify-between gap-3 flex-wrap">
+      <span className="text-[12px] num" style={{ color: 'var(--muted)' }}>
+        {nextIn != null ? t('poker.nextHandIn', { s: nextIn }) : t('poker.waitingRoom')}
+      </span>
+      {shown ? (
+        <span className="text-[11px]" style={{ color: 'var(--gold-hi)' }}>{t('poker.cardsShown')}</span>
+      ) : canChoose && !mucked ? (
+        <div className="flex gap-2">
+          <GameButton size="sm" tone="gold" onClick={onShow}>{t('poker.showCards')}</GameButton>
+          <GameButton size="sm" tone="ghost" onClick={onMuck}>{t('poker.muckCards')}</GameButton>
+        </div>
+      ) : null}
+    </GlassPanel>
   );
 }
 

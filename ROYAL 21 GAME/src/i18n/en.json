@@ -532,6 +532,21 @@
     "notEnoughChips": "Not enough chips for this buy-in",
     "handNumber": "Hand #{n}",
     "longshotWin": "You won an all-in with 10% equity or less! 🎲",
+    "showCards": "Show cards",
+    "muckCards": "Muck",
+    "cardsShown": "Cards shown",
+    "nextHandIn": "Next hand in {s}s",
+    "wonPot": "{name} takes the pot",
+    "splitPotMoment": "{names} split the pot ({amount})",
+    "handWinner": "Winner",
+    "act": {
+      "fold": "Folded",
+      "check": "Checked",
+      "call": "Called",
+      "bet": "Bet {amount}",
+      "raise": "Raised to {amount}",
+      "allin": "All in!"
+    },
     "hand": {
       "highCard": "High Card",
       "pair": "Pair",
@@ -562,6 +577,9 @@
     "spectating": "Spectating the tournament",
     "youWon": "You won the tournament! 🏆",
     "winnerIs": "{name} won the tournament",
+    "knockedOut": "{name} is out",
+    "placed": "You finished #{place}",
+    "finishPlace": "#{place} place",
     "registrationFailed": "Registration failed — the tournament already started. Your chips are refunded."
   },
   "roulette": {

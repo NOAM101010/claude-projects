@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { computeEquity } from './equity';
 import type { Card, PokerState, ShowdownEntry } from './types';
 
@@ -24,6 +24,19 @@ export function usePokerReveal(state: PokerState | null | undefined) {
   const [liveEquity, setLiveEquity] = useState<Record<string, number> | null>(null);
   const [revealing, setRevealing] = useState(false);
   const revealTimers = useRef<number[]>([]);
+  /* Stacks as they stood the last frame before the engine settled the pot.
+     The engine pays winners / zeroes losers in the same synchronous step that
+     starts the runout, so the raw `seat.stack` jumps ahead of the theatrical
+     reveal — showing who won before the last card lands. While `revealing`,
+     seats render from this frozen snapshot instead. */
+  const preSettleStacks = useRef<Record<string, number>>({});
+  const revealDoneFor = useRef(0);
+
+  useEffect(() => {
+    if (state && state.street !== 'waiting') {
+      preSettleStacks.current = Object.fromEntries(state.seats.map((s) => [s.userId, s.stack]));
+    }
+  }, [state?.version, state?.street]);
 
   useEffect(() => {
     if (!state) return;
@@ -41,7 +54,7 @@ export function usePokerReveal(state: PokerState | null | undefined) {
     const isRunout = state.allInEquity !== null;
     const caughtUp = displayCommunity.length === state.community.length
       && (state.showdown === null || displayShowdown !== null);
-    if (!isRunout || caughtUp) {
+    if (!isRunout || caughtUp || revealDoneFor.current === state.handNumber) {
       if (!isRunout) { setDisplayCommunity(state.community); setDisplayShowdown(state.showdown); }
       return;
     }
@@ -57,7 +70,10 @@ export function usePokerReveal(state: PokerState | null | undefined) {
     setLiveEquity(computeEquity(runoutContenders, displayCommunity, seed));
 
     const stages = [3, 4, 5].filter((n) => n > displayCommunity.length && n <= state.community.length);
-    let delay = 0;
+    // River all-in (or any all-in where the board is already fully out): there are
+    // no cards left to stage, but we still hold everything back for a beat so the
+    // table sees the showdown flip before the win banner / next hand.
+    let delay = stages.length ? 0 : REVEAL_STEP_MS;
     stages.forEach((n) => {
       delay += REVEAL_STEP_MS;
       const id = window.setTimeout(() => {
@@ -73,18 +89,32 @@ export function usePokerReveal(state: PokerState | null | undefined) {
         setDisplayShowdown(state.showdown);
         setLiveEquity(null);
         setRevealing(false);
+        revealDoneFor.current = state.handNumber;
       }, delay);
       revealTimers.current.push(id);
     } else if (stages.length) {
-      const id = window.setTimeout(() => setRevealing(false), delay);
+      const id = window.setTimeout(() => {
+        setRevealing(false);
+        revealDoneFor.current = state.handNumber;
+      }, delay);
       revealTimers.current.push(id);
     } else {
       setRevealing(false);
+      revealDoneFor.current = state.handNumber;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.handNumber, state?.community.length, state?.showdown, state?.allInEquity]);
 
   useEffect(() => () => revealTimers.current.forEach((id) => clearTimeout(id)), []);
 
-  return { displayCommunity, displayShowdown, liveEquity, revealing };
+  /* What each seat's chip count should read as right now: the frozen pre-settle
+     snapshot while the runout is playing out, the live value otherwise. */
+  const displayStacks = useMemo(() => {
+    const raw: Record<string, number> = {};
+    for (const s of state?.seats ?? []) raw[s.userId] = s.stack;
+    return revealing ? { ...raw, ...preSettleStacks.current } : raw;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state?.seats, revealing]);
+
+  return { displayCommunity, displayShowdown, liveEquity, revealing, displayStacks };
 }

@@ -4,6 +4,7 @@ import {
   createState, reduce, createTournamentState, levelIndexFor, SNG_BLIND_LEVELS, SNG_STARTING_STACK,
   SNG_LEVEL_MINUTES,
 } from '../src/games/poker/engine';
+import { redactPokerState } from '../src/games/poker/redact';
 import type { Card } from '../src/games/poker/types';
 import type { AvatarConfig } from '../src/types';
 
@@ -196,6 +197,42 @@ console.log('\nSit & Go tournament');
   ok('all starting chips are still accounted for at the end', totalChips === SNG_STARTING_STACK * 3);
   ok('the winner holds every chip on the table', s.seats.find((seat) => seat.userId === s.tournament!.winnerId)!.stack === totalChips);
   ok('the two losers are recorded as eliminated', s.tournament!.eliminated.length === 2);
+}
+
+console.log('\nShow cards at end of hand');
+{
+  let s = createState(7, 25, 50);
+  s = reduce(s, { type: 'join', userId: 'a', username: 'A', avatar, level: 1, buyIn: 2000 });
+  s = reduce(s, { type: 'join', userId: 'b', username: 'B', avatar, level: 1, buyIn: 2000 });
+  s = reduce(s, { type: 'startHand' });
+  const first = s.seats[s.toAct].userId;
+  const other = s.seats.find((x) => x.userId !== first)!.userId;
+  s = reduce(s, { type: 'fold', userId: first });
+  ok('hand is over (uncontested)', s.street === 'waiting');
+  ok('revealed starts empty', s.revealed.length === 0);
+
+  const midHand = createState(1, 25, 50);
+  ok('showCards is rejected while not in the waiting street', reduce(
+    reduce(reduce(reduce(midHand,
+      { type: 'join', userId: 'a', username: 'A', avatar, level: 1, buyIn: 2000 }),
+      { type: 'join', userId: 'b', username: 'B', avatar, level: 1, buyIn: 2000 }),
+      { type: 'startHand' }),
+    { type: 'showCards', userId: 'a' }).street === 'preflop');
+
+  s = reduce(s, { type: 'showCards', userId: other });
+  ok('showCards records the player in revealed', s.revealed.includes(other));
+  const again = reduce(s, { type: 'showCards', userId: other });
+  ok('showCards is idempotent', again === s);
+  ok('an unknown user cannot show', reduce(s, { type: 'showCards', userId: 'ghost' }) === s);
+
+  const pub = redactPokerState(s, null);
+  const shownSeat = pub.seats.find((x) => x.userId === other)!;
+  ok('a revealed hole survives public redaction', shownSeat.hole.length === 2 && shownSeat.hole[0].r !== '?');
+  const hiddenSeat = pub.seats.find((x) => x.userId === first)!;
+  ok('a non-revealed folded hole stays redacted', hiddenSeat.hole.every((cc) => cc.r === '?'));
+
+  s = reduce(s, { type: 'startHand' });
+  ok('revealed resets on the next hand', s.revealed.length === 0);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
