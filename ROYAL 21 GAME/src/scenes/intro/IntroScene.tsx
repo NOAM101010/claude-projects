@@ -37,9 +37,9 @@ export default function IntroScene() {
   };
 
   useEffect(() => {
-    const holdMs = short ? 380 : 1300;
+    const holdMs = short ? 420 : 2400;
     const advance = setTimeout(enter, holdMs);
-    const cue = short ? -1 : window.setTimeout(() => audio.play('card'), 260);
+    const cue = short ? -1 : window.setTimeout(() => audio.play('card'), 420);
     return () => {
       clearTimeout(advance);
       if (cue !== -1) clearTimeout(cue);

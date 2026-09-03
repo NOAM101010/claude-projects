@@ -839,7 +839,7 @@ html[data-motion='reduced'] .auth-swap { animation: none; }
   position: relative;
   z-index: 1;
   width: min(420px, 100%);
-  animation: introFrame 0.4s var(--ease-out) both;
+  animation: introFrame 0.6s var(--ease-out) both;
 }
 .intro-panel {
   display: grid;
@@ -857,11 +857,11 @@ html[data-motion='reduced'] .auth-swap { animation: none; }
   background-clip: text;
   color: transparent;
   filter: drop-shadow(0 10px 34px rgba(227, 178, 60, 0.4));
-  animation: introTitle 0.65s var(--ease-out) 0.25s both;
+  animation: introTitle 1s var(--ease-out) 0.45s both;
 }
-.intro-panel .eyebrow { animation: introFade 0.45s var(--ease-out) 0.55s both; }
-.intro-card .auth-deco-card.d0 { animation: introDeckL 0.65s var(--ease-out) 0.2s both; }
-.intro-card .auth-deco-card.d1 { animation: introDeckR 0.65s var(--ease-out) 0.28s both; }
+.intro-panel .eyebrow { animation: introFade 0.7s var(--ease-out) 1.15s both; }
+.intro-card .auth-deco-card.d0 { animation: introDeckL 0.9s var(--ease-out) 0.4s both; }
+.intro-card .auth-deco-card.d1 { animation: introDeckR 0.9s var(--ease-out) 0.52s both; }
 .intro-skip {
   position: absolute;
   inset-inline-end: 22px;
