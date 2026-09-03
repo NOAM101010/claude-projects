@@ -5,6 +5,12 @@
 משחק קזינו חברתי פרטי (~15 חברים, צ'יפים וירטואליים בלבד — אין כסף אמיתי). Vite + React + TS + Supabase.
 תיקייה: `C:\CLAUDE AI\ROYAL 21 GAME`. חי: https://royal21.vercel.app (מתפרס אוטומטית מ-`origin/main`).
 
+## סבב 2 (2026-09-04) — תיקונים + ליטושים
+
+תוכנית: `swift-snuggling-harp.md` "סבב 2". סדר: J→I→K→L→H → תוכנית reworks גדולים (ערב חברה + VIP).
+- **STAGE J ✅ נדחף** (`d6f21a7`). J1: מתנת צ'יפים זיכתה פעמיים (RPC + client both) — ההודעה עכשיו receipt-only, נושאת `new_balance`, הקליינט `setChips`. J2: רולטה MP — כפתור "סיימתי להמר" (action `ready` שכבר היה ב-engine) + countdown 15ש, הגלגל ננעל רק כש-`every(ready)`, הוסר כפתור "סובב עכשיו" של המארח. reviewer: חוסם realtime-visibility תוקן. **המשתמש צריך להריץ `RUN-THIS-NEXT.sql` (send_gift + claim_weekly_prize מעודכנים).**
+- STAGE I — פוקר/SnG · K — HUB/קוסמטי · L — חנות · H — כניסה+דמות.
+
 ## Roadmap חדש (2026-09-03) — 8 שלבים A–H
 
 ### ביניים (2026-09-03, `3969ecf`) — ניקוי .js + באקרה + playtime
