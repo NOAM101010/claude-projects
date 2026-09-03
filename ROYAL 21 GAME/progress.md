@@ -41,6 +41,17 @@ BlackjackScene לא היה לו unmount cleanup (בניגוד ל-PokerScene). ע
 - `supabase/achievements-daily.sql` — 4 הפונקציות + העמודות. שגיאות ה-404 של fetch_achievements/fetch_daily_state אמורות להיעלם. הישגים + בונוס יומי עכשיו server-authoritative.
 - (בעבר גם `supabase/poker-privacy.sql` הורץ — gate של קלפי hole פעיל.)
 
+## שלב D — פודיום שבועי חי + הודעה נתבעת + מחיקת הודעות (2026-09-03)
+- פאנל חדש `WeeklyPodiumPanel.tsx` (Modal, `panel==='weeklyPodium'`, ממונט ב-App.tsx ליד NotificationsPanel). טבלה: אתה + כל החברים ממוין לפי chips, מדליות top-3 + פרס, דירוג נוכחי, טיימר לאיפוס (יום ראשון 00:00 UTC). חי דרך `useSocial.friends` (subscribe הקיים על profiles UPDATE).
+- כרטיס hub → `openPanel('weeklyPodium')` (היה 'friends').
+- `supabase/weekly-snapshot.sql` (חדש): טבלה `weekly_chip_snapshot` + RPC `capture_weekly_snapshot()` (idempotent, ISO week של השבוע שהסתיים `IYYY-"W"IW`). נקרא בפתיחת הפאנל.
+- `supabase/weekly-podium.sql` (שכתוב): `profiles.weekly_prize_claimed_week text`. `claim_weekly_prize()` מדרג מול ה-snapshot (חברים + עצמי), מזכה מיד + מכניס notification `podium_prize`/title `weekly_podium_won`. reasons: already/no_snapshot/off_podium.
+- `useSocial.listen`: `podium_prize` → `audio.play('bigWin')` + toast. לא מזכה (ה-RPC כבר זיכה).
+- `NotificationsPanel`: כפתור ✕ לכל שורה (`dismiss`), אייקון 🏆, `describe` case ל-`weekly_podium_won`.
+- i18n: `notifications.podiumWon`, section `podium.*` (he+en).
+- **המשתמש צריך להריץ ב-Supabase לפי הסדר:** `weekly-snapshot.sql` ואז `weekly-podium.sql`.
+- אימות: tsc נקי, build ✓, test:all ✓ (social + כל השאר ירוקים).
+
 ## נשאר (המשתמש)
 - **אימות מולטיפלייר 2 דפדפנים** — `MP_VERIFICATION_GUIDE.md`. באגים 2/3/4 + host handoff + קלפי hole ב-devtools. סצנות שלא נבדקו סולו (פוקר/SnG/ערב חברה) — כאן. זה הפריט האחרון הפתוח.
 
