@@ -278,11 +278,20 @@ export const daysSince = (dateKey: string) =>
 /* no snapshot needed) — only the prize cycle needs a server-checked cooldown.*/
 /* Mirrors claim_weekly_prize() in supabase/setup.sql.                        */
 /* -------------------------------------------------------------------------- */
-export const WEEKLY_PRIZE_CHIPS = 1000;
+/** Podium payout for the weekly friends leaderboard — #1 / #2 / #3 by chips.
+ *  Mirrors the WEEKLY_PODIUM CASE in claim_weekly_prize (referral-growth.sql). */
+export const WEEKLY_PODIUM = [5_000, 2_500, 1_000] as const;
 
-/** Chips both sides get when a referral completes. Mirrors `v_bonus` +
- *  `referrals.bonus_chips` default in supabase (referral-bonus-5k.sql). */
+/* -------------------------------------------------------------------------- */
+/* Referrals — base + staged. Mirrors supabase/referral-growth.sql.           */
+/* -------------------------------------------------------------------------- */
+/** Chips both sides get the moment a referral completes. */
 export const REFERRAL_BONUS = 5_000;
+/** Chips both sides get once the referred friend reaches level 5. */
+export const REFERRAL_STAGE2_BONUS = 10_000;
+export const REFERRAL_STAGE2_LEVEL = 5;
+/** What the referrer earns for their 1st / 2nd / 3rd completed referral. */
+export const REFERRER_TIERS = [3_000, 7_000, 15_000] as const;
 
 /* -------------------------------------------------------------------------- */
 /* Daily / weekly missions (src/data/missions.ts). Rewards are baked into each */

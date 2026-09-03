@@ -283,6 +283,8 @@
     "blurbScratch": "כרטיס הבית תמיד חינם",
     "blurbLounge": "הזמן חברים ושחקו יחד",
     "blurbLoungeLive": "{count} חברים מחוברים עכשיו",
+    "inviteFriend": "הזמן חבר",
+    "inviteFriendBlurb": "שלח קישור. חבר מצטרף — שניכם מקבלים {chips} צ'יפים",
     "blurbVault": "קלפים, צ׳יפים ושולחנות להחלפה",
     "blurbMyRoom": "הישגים, סטטיסטיקות ומדף הגביעים",
     "blurbGift": "כניסה יומית ברצף — מפספסים יום וחוזרים להתחלה"
@@ -351,7 +353,12 @@
     "giftInsufficient": "אין לך מספיק צ'יפים",
     "giftOffline": "צריך להיות מחובר כדי לשלוח מתנות",
     "giftFailed": "השליחה נכשלה, נסה שוב",
-    "weeklyPrizeWon": "זכית בפרס השבועי! +{amount} צ'יפים"
+    "weeklyPrizeWon": "זכית בפרס השבועי! +{amount} צ'יפים",
+    "weeklyPodium": "מקום {rank} השבוע! +{amount} צ'יפים",
+    "tierStatus": "הבאת {count}/3 חברים · הבא: +{next}",
+    "tierMaxed": "הבאת 3 חברים · כל פרסי ההזמנה נוצלו",
+    "referrerTier": "פרס הבאת חברים!",
+    "inviteMilestone": "בונוס הזמנה · רמה 5"
   },
   "notifications": {
     "invite": "{name} הזמין אותך לשחק {game}",

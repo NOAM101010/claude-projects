@@ -15,8 +15,9 @@ import { isOnline, isRemoteId } from '@/services/supabase';
 import { notificationService } from '@/services/notificationService';
 import { friendsService } from '@/services/friendsService';
 import { referralService } from '@/services/referralService';
+import { analytics } from '@/services/analyticsService';
 import { useRoom } from '@/stores/useRoom';
-import { REFERRAL_BONUS } from '@/data/economy';
+import { REFERRAL_BONUS, REFERRER_TIERS } from '@/data/economy';
 import { fmt } from '@/lib/format';
 import type { Friend } from '@/types';
 
@@ -35,8 +36,17 @@ export function FriendsPanel() {
   const [tab, setTab] = useState<Tab>('online');
   const [term, setTerm] = useState('');
   const [giftTarget, setGiftTarget] = useState<Friend | null>(null);
-  const [refStats, setRefStats] = useState<{ count: number; chipsEarned: number }>({ count: 0, chipsEarned: 0 });
+  const [refStats, setRefStats] = useState<{ count: number; chipsEarned: number; tier: number }>({ count: 0, chipsEarned: 0, tier: 0 });
   const room = useRoom((s) => s.room);
+  const friendsTab = useUI((s) => s.friendsTab);
+
+  // Hub "invite a friend" card opens us straight on the Add tab.
+  useEffect(() => {
+    if (panel === 'friends' && friendsTab) {
+      setTab(friendsTab);
+      useUI.getState().clearFriendsTab();
+    }
+  }, [panel, friendsTab]);
 
   // Refresh referral stats when the Add tab opens
   useEffect(() => {
@@ -60,10 +70,26 @@ export function FriendsPanel() {
     }
   };
 
+  const inviteMessage = () => t('friends.inviteMessage', { link: inviteLink, chips: fmt(REFERRAL_BONUS) });
+
   const shareOnWhatsApp = () => {
     if (!inviteLink) return;
-    const message = t('friends.inviteMessage', { link: inviteLink, chips: fmt(REFERRAL_BONUS) });
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+    window.open(`https://wa.me/?text=${encodeURIComponent(inviteMessage())}`, '_blank');
+    analytics.track('invite_shared', { method: 'whatsapp' });
+  };
+
+  // Native share sheet where the browser has one; otherwise fall back to copy.
+  const shareInvite = async () => {
+    if (!inviteLink) return;
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({ title: t('friends.inviteTitle'), text: inviteMessage(), url: inviteLink });
+        analytics.track('invite_shared', { method: 'web_share' });
+      } catch { /* user dismissed the sheet */ }
+      return;
+    }
+    await copyInvite();
+    analytics.track('invite_shared', { method: 'copy' });
   };
 
   const open = panel === 'friends';
@@ -78,7 +104,8 @@ export function FriendsPanel() {
       if (result.claimed && result.chips) {
         addChips(result.chips, { silent: true });
         usePlayer.getState().grantEvent('ev_weekly_winner');
-        toast(t('friends.weeklyPrizeWon', { amount: fmt(result.chips) }), 'good', '🏆');
+        toast(t('friends.weeklyPodium', { rank: result.rank ?? 1, amount: fmt(result.chips) }), 'good', '🏆');
+        analytics.track('weekly_prize', { rank: result.rank ?? 1, chips: result.chips });
       }
     });
     // Fires once when the panel opens, not on every friends/profile refresh.
@@ -163,17 +190,30 @@ export function FriendsPanel() {
                         {t('friends.inviteSubtitle', { chips: fmt(REFERRAL_BONUS) })}
                       </p>
                       {refStats.count > 0 && (
-                        <p className="text-[11.5px] mb-2" style={{ color: 'var(--gold-hi)' }}>
+                        <p className="text-[11.5px] mb-1" style={{ color: 'var(--gold-hi)' }}>
                           ✨ {t('friends.inviteStats', { count: refStats.count, chips: fmt(refStats.chipsEarned) })}
                         </p>
                       )}
-                      <div className="flex gap-2">
-                        <GameButton size="sm" tone="gold" block onClick={shareOnWhatsApp}>
-                          💬 {t('common.whatsapp')}
+                      <p className="text-[11.5px] mb-2" style={{ color: 'var(--jade-hi)' }}>
+                        🎯 {refStats.tier >= REFERRER_TIERS.length
+                          ? t('friends.tierMaxed')
+                          : t('friends.tierStatus', {
+                              count: Math.min(refStats.count, REFERRER_TIERS.length),
+                              next: fmt(REFERRER_TIERS[refStats.tier]),
+                            })}
+                      </p>
+                      <div className="flex flex-col gap-2">
+                        <GameButton size="sm" tone="gold" block onClick={shareInvite}>
+                          📤 {t('common.share')}
                         </GameButton>
-                        <GameButton size="sm" tone="ghost" block onClick={copyInvite}>
-                          🔗 {t('common.copy')}
-                        </GameButton>
+                        <div className="flex gap-2">
+                          <GameButton size="sm" tone="ghost" block onClick={shareOnWhatsApp}>
+                            💬 {t('common.whatsapp')}
+                          </GameButton>
+                          <GameButton size="sm" tone="ghost" block onClick={copyInvite}>
+                            🔗 {t('common.copy')}
+                          </GameButton>
+                        </div>
                       </div>
                     </div>
                   )}

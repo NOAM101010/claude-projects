@@ -283,6 +283,8 @@
     "blurbScratch": "The house card is always free",
     "blurbLounge": "Invite friends and play together",
     "blurbLoungeLive": "{count} friends online right now",
+    "inviteFriend": "Invite a friend",
+    "inviteFriendBlurb": "Send a link. A friend joins — you both get {chips} chips",
     "blurbVault": "Cards, chips and tables to swap in",
     "blurbMyRoom": "Trophies, stats and your shelf",
     "blurbGift": "Daily login streak — miss a day and it resets"
@@ -351,7 +353,12 @@
     "giftInsufficient": "Not enough chips",
     "giftOffline": "Sign in to send gifts",
     "giftFailed": "Send failed, try again",
-    "weeklyPrizeWon": "You won the weekly prize! +{amount} chips"
+    "weeklyPrizeWon": "You won the weekly prize! +{amount} chips",
+    "weeklyPodium": "Rank {rank} this week! +{amount} chips",
+    "tierStatus": "Brought {count}/3 friends · Next: +{next}",
+    "tierMaxed": "Brought 3 friends · all referral rewards claimed",
+    "referrerTier": "Referral milestone!",
+    "inviteMilestone": "Invite bonus · level 5"
   },
   "notifications": {
     "invite": "{name} invited you to play {game}",

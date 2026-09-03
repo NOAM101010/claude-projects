@@ -9,6 +9,7 @@ import { usePlayer } from '@/stores/usePlayer';
 import { useT } from '@/hooks/useT';
 import { useSound } from '@/hooks/useSound';
 import { roomsService } from '@/services/roomsService';
+import { analytics } from '@/services/analyticsService';
 import { roomRouteFor } from '@/services/lobbyService';
 import type { GameKey } from '@/types';
 
@@ -40,6 +41,7 @@ export function InviteOverlay() {
       toast(t('notifications.inviteExpired'), 'bad', '⚠');
       return;
     }
+    analytics.track('notification_click', { kind: 'invite', surface: 'overlay' });
     play('friendJoin');
     setInvite(null);
     navigate(roomRouteFor((invite.game || 'blackjack') as GameKey | 'night', invite.code));

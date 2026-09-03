@@ -84,12 +84,12 @@ export const friendsService = {
    * that opens the leaderboard tries this, and the RPC itself decides whether
    * 7 days have passed and whether the caller is actually #1 among friends.
    */
-  async claimWeeklyPrize(userId: string): Promise<{ claimed: boolean; chips?: number; reason?: string }> {
+  async claimWeeklyPrize(userId: string): Promise<{ claimed: boolean; chips?: number; rank?: number; reason?: string }> {
     const client = db();
     if (!client || !isRemoteId(userId)) return { claimed: false };
     const { data, error } = await client.rpc('claim_weekly_prize');
     if (error || !data) return { claimed: false };
-    return data as { claimed: boolean; chips?: number; reason?: string };
+    return data as { claimed: boolean; chips?: number; rank?: number; reason?: string };
   },
 
   /** Live presence updates for the friend panel. */

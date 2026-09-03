@@ -8,6 +8,7 @@ import { usePlayer } from '@/stores/usePlayer';
 import { useT } from '@/hooks/useT';
 import { roomRouteFor } from '@/services/lobbyService';
 import { roomsService } from '@/services/roomsService';
+import { analytics } from '@/services/analyticsService';
 import { fmt } from '@/lib/format';
 import type { AppNotification, Friend, GameKey } from '@/types';
 
@@ -55,6 +56,7 @@ export function NotificationsPanel() {
       toast(t('notifications.inviteExpired'), 'bad', '⚠');
       return;
     }
+    analytics.track('notification_click', { kind: 'invite', surface: 'panel' });
     openPanel(null);
     navigate(roomRouteFor((payload.game ?? 'blackjack') as GameKey | 'night', payload.room_code));
   };

@@ -85,18 +85,51 @@ export const referralService = {
     };
   },
 
-  /** How many people this user has invited, and how many chips they earned. */
-  async stats(userId: string): Promise<{ count: number; chipsEarned: number }> {
+  /**
+   * Once the referred friend reaches level 5, both sides earn a second bonus.
+   * The referee's client calls this; the RPC checks their own level + guard.
+   * Idempotent — a repeat call is a no-op.
+   */
+  async claimStage2(userId: string): Promise<{ ok: boolean; bonusChips?: number }> {
     const client = db();
-    if (!client || !isRemoteId(userId)) return { count: 0, chipsEarned: 0 };
+    if (!client || !isRemoteId(userId)) return { ok: false };
+    const { data, error } = await client.rpc('claim_referral_stage2');
+    if (error || !data) return { ok: false };
+    const r = data as { ok: boolean; bonus_chips?: number };
+    return { ok: r.ok, bonusChips: r.bonus_chips };
+  },
+
+  /**
+   * The referrer collects their next tier reward (after their 1st / 2nd / 3rd
+   * completed referral). The RPC counts referrals and bumps the tier atomically.
+   */
+  async claimReferrerTier(userId: string): Promise<{ ok: boolean; bonusChips?: number; tier?: number }> {
+    const client = db();
+    if (!client || !isRemoteId(userId)) return { ok: false };
+    const { data, error } = await client.rpc('claim_referrer_tier');
+    if (error || !data) return { ok: false };
+    const r = data as { ok: boolean; bonus_chips?: number; tier?: number };
+    return { ok: r.ok, bonusChips: r.bonus_chips, tier: r.tier };
+  },
+
+  /** How many people this user has invited, chips earned, and tier progress. */
+  async stats(userId: string): Promise<{ count: number; chipsEarned: number; tier: number }> {
+    const client = db();
+    if (!client || !isRemoteId(userId)) return { count: 0, chipsEarned: 0, tier: 0 };
     const { data } = await client
       .from('referral_stats')
       .select('referred_count, chips_earned')
       .eq('user_id', userId)
       .maybeSingle();
+    const { data: prof } = await client
+      .from('profiles')
+      .select('referrer_tier')
+      .eq('id', userId)
+      .maybeSingle();
     return {
       count: data?.referred_count ?? 0,
       chipsEarned: data?.chips_earned ?? 0,
+      tier: prof?.referrer_tier ?? 0,
     };
   },
 

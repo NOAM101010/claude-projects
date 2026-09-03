@@ -18,7 +18,7 @@ import { useUI } from '@/stores/useUI';
 import { useT } from '@/hooks/useT';
 import { todayKey, fmt } from '@/lib/format';
 import { audio } from '@/audio/AudioManager';
-import { STREAK_REWARD, STREAK_MILESTONES, isStreakMilestone, nextStreakDay } from '@/data/economy';
+import { STREAK_REWARD, STREAK_MILESTONES, isStreakMilestone, nextStreakDay, REFERRAL_BONUS } from '@/data/economy';
 import { dailyMissions, weeklyMission, weekKeyFor, missionComplete } from '@/data/missions';
 import { isVipEligible, VIP_MIN_LEVEL, VIP_MIN_CHIPS } from '@/data/vip';
 import { SNG_BUYINS } from '@/games/poker/engine';
@@ -301,6 +301,18 @@ export default function HubScene() {
             onEnter={() => useUI.getState().openPanel('friends')}
           >
             {(focused) => <LoungeArt friends={friends} focused={focused} />}
+          </HubCard>
+
+          <HubCard
+            label={t('hub.inviteFriend')}
+            action={t('common.share')}
+            blurb={t('hub.inviteFriendBlurb', { chips: fmt(REFERRAL_BONUS) })}
+            hoverSound="notify"
+            glow="rgba(227,178,60,.24)"
+            badge="🎁"
+            onEnter={() => useUI.getState().openFriendsAdd()}
+          >
+            {(focused) => <GiftArt ready={focused} />}
           </HubCard>
 
           <HubCard

@@ -75,6 +75,33 @@ export function App() {
       });
       analytics.track('referral_claimed', { bonus: result.bonusChips });
     });
+
+    // Staged referral rewards — the referred friend hitting level 5 (both
+    // sides), and the referrer's tier milestones. Both RPCs are idempotent.
+    void referralService.claimStage2(profile.id).then((result) => {
+      if (!result.ok || !result.bonusChips) return;
+      usePlayer.getState().addChips(result.bonusChips, { silent: true });
+      useUI.getState().showMoment({
+        kind: 'bigWin',
+        title: t('friends.inviteMilestone'),
+        subtitle: `+${fmt(result.bonusChips)}`,
+        icon: '🎁',
+        duration: 2600,
+      });
+      analytics.track('referral_stage2', { bonus: result.bonusChips });
+    });
+    void referralService.claimReferrerTier(profile.id).then((result) => {
+      if (!result.ok || !result.bonusChips) return;
+      usePlayer.getState().addChips(result.bonusChips, { silent: true });
+      useUI.getState().showMoment({
+        kind: 'bigWin',
+        title: t('friends.referrerTier'),
+        subtitle: `+${fmt(result.bonusChips)}`,
+        icon: '🎉',
+        duration: 2600,
+      });
+      analytics.track('referrer_tier', { tier: result.tier, bonus: result.bonusChips });
+    });
   }, [profile.id, ready, t]);
 
   /* A session can end without anyone clicking anything — a refresh token that

@@ -35,6 +35,8 @@ interface UIState {
   toasts: Toast[];
   moment: Moment | null;
   panel: PanelKind;
+  /** When the friends panel opens, jump straight to this tab (hub "invite" card). */
+  friendsTab: 'add' | null;
   /** Side menu drawer. On desktop the rail is always visible; this is the compact drawer. */
   navOpen: boolean;
   loading: string | null;
@@ -48,6 +50,9 @@ interface UIState {
   showMoment: (moment: Omit<Moment, 'id'>) => void;
   clearMoment: () => void;
   openPanel: (panel: PanelKind) => void;
+  /** Open the friends panel on the "add" tab (invite surface). */
+  openFriendsAdd: () => void;
+  clearFriendsTab: () => void;
   setLoading: (label: string | null) => void;
   setConnectionLost: (value: boolean) => void;
   confirm: (request: ConfirmRequest) => void;
@@ -58,6 +63,7 @@ export const useUI = create<UIState>()((set) => ({
   toasts: [],
   moment: null,
   panel: null,
+  friendsTab: null,
   navOpen: false,
   loading: null,
   connectionLost: false,
@@ -75,6 +81,8 @@ export const useUI = create<UIState>()((set) => ({
   showMoment: (moment) => set({ moment: { ...moment, id: Math.random().toString(36).slice(2) } }),
   clearMoment: () => set({ moment: null }),
   openPanel: (panel) => set({ panel }),
+  openFriendsAdd: () => set({ panel: 'friends', friendsTab: 'add' }),
+  clearFriendsTab: () => set({ friendsTab: null }),
   setLoading: (loading) => set({ loading }),
   setConnectionLost: (connectionLost) => set({ connectionLost }),
   confirm: (request) => set({ confirmPrompt: request }),

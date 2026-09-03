@@ -803,6 +803,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
       duration: 2200,
     });
     audio.play('win');
+    analytics.track('mission_claimed', { missionId, reward, bonus: isBonus });
   },
 
   grantEvent: (id) => grantEventTrophy(get, set, id),
