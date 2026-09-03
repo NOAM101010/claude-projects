@@ -115,7 +115,9 @@ audio.startMusic();
 const afterDouble = scheduled.length;
 ctx.currentTime += 0.25;
 timers.forEach((fn) => fn());
-check('starting twice does not double the track', scheduled.length - afterDouble < 12,
+// One pump of the richer arrangement schedules ~12 oscillators on the downbeat
+// (pad + bass + arpeggio); a doubled track would be ~24. 18 splits the two.
+check('starting twice does not double the track', scheduled.length - afterDouble < 18,
   `${scheduled.length - afterDouble} notes in one tick`);
 
 console.log(failures ? `\n${failures} failing check(s)\n` : '\nall music checks passed\n');

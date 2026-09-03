@@ -14,12 +14,12 @@ import { audio, type Bus } from '@/audio/AudioManager';
 import { bugReportService } from '@/services/bugReportService';
 import type { Lang } from '@/types';
 
-function Slider({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
+function Slider({ label, value, onChange, disabled }: { label: string; value: number; onChange: (value: number) => void; disabled?: boolean }) {
   return (
-    <label className="flex items-center gap-3">
+    <label className={`flex items-center gap-3 ${disabled ? 'opacity-45' : ''}`}>
       <span className="text-[13px] w-24" style={{ color: 'var(--muted)' }}>{label}</span>
       <input
-        type="range" min={0} max={1} step={0.05} value={value}
+        type="range" min={0} max={1} step={0.05} value={value} disabled={disabled}
         onChange={(event) => onChange(Number(event.target.value))}
         className="flex-1 accent-[color:var(--gold)]"
       />
@@ -83,11 +83,24 @@ export default function SettingsScene() {
         </div>
 
         <GlassPanel className="p-4 flex flex-col gap-3">
-          <div className="eyebrow">{t('settings.audio')}</div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="eyebrow">{t('settings.audio')}</div>
+            <GameButton size="sm" tone={settings.muted ? 'gold' : 'ghost'}
+              onClick={() => { settings.toggleMuteAll(); if (settings.muted) audio.play('click'); }}>
+              {settings.muted ? t('settings.unmuteAll') : t('settings.muteAll')}
+            </GameButton>
+          </div>
           {(['master', 'music', 'sfx', 'ambient'] as Bus[]).map((bus) => (
-            <Slider key={bus} label={t(`settings.${bus}`)} value={settings[bus]}
+            <Slider key={bus} label={t(`settings.${bus}`)} value={settings[bus]} disabled={settings.muted}
               onChange={(value) => { settings.setLevel(bus, value); audio.play('click'); }} />
           ))}
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[13px]" style={{ color: 'var(--muted)' }}>{t('settings.preview')}</span>
+            <GameButton size="sm" tone="ghost" disabled={settings.muted}
+              onClick={() => audio.play('win')}>
+              {t('settings.previewAction')}
+            </GameButton>
+          </div>
         </GlassPanel>
 
         <GlassPanel className="p-4 flex flex-col gap-3">

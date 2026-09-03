@@ -16,8 +16,11 @@ interface SettingsState {
   reducedMotion: boolean;
   haptics: boolean;
   showPresence: boolean;
+  muted: boolean;
+  preMute: { master: number; music: number; sfx: number; ambient: number } | null;
   setLang: (lang: Lang) => void;
   setLevel: (bus: Bus, value: number) => void;
+  toggleMuteAll: () => void;
   setQuality: (quality: Quality) => void;
   setReducedMotion: (value: boolean) => void;
   setHapticsEnabled: (value: boolean) => void;
@@ -37,9 +40,9 @@ function autoQuality(): Exclude<Quality, 'auto'> {
 }
 
 function persist(state: SettingsState) {
-  const { lang, master, music, sfx, ambient, quality, reducedMotion, haptics, showPresence } = state;
+  const { lang, master, music, sfx, ambient, quality, reducedMotion, haptics, showPresence, muted, preMute } = state;
   try {
-    localStorage.setItem(KEY, JSON.stringify({ lang, master, music, sfx, ambient, quality, reducedMotion, haptics, showPresence }));
+    localStorage.setItem(KEY, JSON.stringify({ lang, master, music, sfx, ambient, quality, reducedMotion, haptics, showPresence, muted, preMute }));
   } catch { /* ignore */ }
 }
 
@@ -59,6 +62,8 @@ export const useSettings = create<SettingsState>()((set, get) => ({
   reducedMotion: false,
   haptics: true,
   showPresence: true,
+  muted: false,
+  preMute: null,
 
   setLang: (lang) => {
     set({ lang });
@@ -66,8 +71,22 @@ export const useSettings = create<SettingsState>()((set, get) => ({
     persist(get());
   },
   setLevel: (bus, value) => {
-    set({ [bus]: value } as unknown as Partial<SettingsState>);
+    set({ [bus]: value, muted: false, preMute: null } as unknown as Partial<SettingsState>);
     audio.setLevel(bus, value);
+    persist(get());
+  },
+  toggleMuteAll: () => {
+    const buses: Bus[] = ['master', 'music', 'sfx', 'ambient'];
+    const s = get();
+    if (s.muted) {
+      const p = s.preMute ?? { master: 0.7, music: 0.35, sfx: 0.8, ambient: 0.4 };
+      set({ muted: false, preMute: null, ...p });
+      buses.forEach((bus) => audio.setLevel(bus, p[bus]));
+    } else {
+      const p = { master: s.master, music: s.music, sfx: s.sfx, ambient: s.ambient };
+      set({ muted: true, preMute: p, master: 0, music: 0, sfx: 0, ambient: 0 });
+      buses.forEach((bus) => audio.setLevel(bus, 0));
+    }
     persist(get());
   },
   setQuality: (quality) => {
