@@ -2,9 +2,31 @@ import type { AppNotification, Equipped, GameKey, Profile, Rivalry, Stats } from
 import { DEFAULT_OWNED } from '@/data/items';
 import { DEFAULT_ROOM_BACKGROUND } from '@/data/roomThemes';
 
-const KEY = 'royal21.save.v1';
+const KEY = 'royal21.save.v2';
 /** Per-profile mirror of just the daily-gift state. See localStore.writeDaily. */
 const DAILY_KEY_PREFIX = 'royal21.daily.v1.';
+
+/* One-time migration to v2 (full-reset boundary — everyone starts fresh from the
+ * server). We deliberately do NOT import the old v1 blob: chips / level / VIP /
+ * items all come from the DB now. Just drop the stale local state so a leftover
+ * blob can't "restore" pre-reset values. */
+(function migrateToV2() {
+  try {
+    if (localStorage.getItem(KEY) || !hasLegacyState()) return;
+    localStorage.removeItem('royal21.save.v1');
+    localStorage.removeItem('royal21.ref');
+    for (const k of Object.keys(localStorage)) {
+      if (k.startsWith('royal21.daily.v1.')) localStorage.removeItem(k);
+    }
+  } catch {
+    /* private mode / no storage — nothing to migrate */
+  }
+})();
+
+function hasLegacyState(): boolean {
+  if (localStorage.getItem('royal21.save.v1') || localStorage.getItem('royal21.ref')) return true;
+  return Object.keys(localStorage).some((k) => k.startsWith('royal21.daily.v1.'));
+}
 
 export interface ActivityEntry {
   id: string;

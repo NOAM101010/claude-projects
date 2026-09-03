@@ -2,7 +2,6 @@
 -- ROYAL 21 — FULL RESET. Everyone starts over.
 --
 -- KEEPS:  • the accounts themselves (profiles — you can all sign back in)
---         • friendships (who is friends with whom)
 --         • the block list (safety — silently un-blocking people is not worth it)
 --         • the shop catalogue, jackpot config, RLS, functions
 --
@@ -10,8 +9,8 @@
 --           the 12 starter items)
 --         • all stats, achievements, event trophies, daily streak, milestones,
 --           mission progress + claims, weekly-prize cooldown, referrer tier
---         • all referral records, chip-gift history, rivalries, pending friend
---           requests
+--         • all friendships, referral records, chip-gift history, rivalries,
+--           pending friend requests
 --         • every room + all game history (blackjack / poker / sng / baccarat)
 --         • all notifications, bug reports, analytics events
 --         • the progressive jackpot pools → back to seed
@@ -31,7 +30,8 @@ alter table public.profiles
   add column if not exists mission_claims   jsonb   not null default '{}'::jsonb,
   add column if not exists referrer_tier    integer not null default 0,
   add column if not exists last_milestone_claimed  integer not null default 0,
-  add column if not exists weekly_prize_claimed_at timestamptz;
+  add column if not exists weekly_prize_claimed_at timestamptz,
+  add column if not exists ever_vip                boolean default false;
 
 begin;
 
@@ -41,7 +41,7 @@ declare n_reset int; n_admin int;
 begin
   select count(*) into n_reset from public.profiles where not is_admin;
   select count(*) into n_admin from public.profiles where is_admin;
-  raise notice 'Resetting % non-admin profile(s). Preserving % admin profile(s) + all friendships.', n_reset, n_admin;
+  raise notice 'Resetting % non-admin profile(s). Preserving % admin profile(s).', n_reset, n_admin;
 end $$;
 
 -- --- 1. Profiles → fresh start (non-admin only) -------------------------------
@@ -51,6 +51,7 @@ update public.profiles p set
   level                   = 1,
   last_milestone_claimed  = 0,
   weekly_prize_claimed_at = null,
+  ever_vip                = false,
   achievements            = '{}',
   daily_last_claim        = null,
   daily_streak            = 0,
@@ -91,8 +92,9 @@ on conflict do nothing;
 delete from public.user_achievements
 where user_id in (select id from public.profiles where not is_admin);
 
--- --- 5. Social progress (everyone) — friendships + blocks are NOT here -----
+-- --- 5. Social progress (everyone) — blocks are deliberately NOT here ------
 truncate table
+  public.friendships,
   public.referrals,
   public.chip_gifts,
   public.rivalries,
@@ -134,9 +136,8 @@ truncate table public.jackpot_wins restart identity;
 -- --- 9. Final count -------------------------------------------------------------
 do $$
 begin
-  raise notice 'Done. Non-admin profiles now at 5000 chips / level 1: %. Friendships kept: %.',
-    (select count(*) from public.profiles where not is_admin and chips = 5000 and level = 1),
-    (select count(*) from public.friendships);
+  raise notice 'Done. Non-admin profiles now at 5000 chips / level 1: %.',
+    (select count(*) from public.profiles where not is_admin and chips = 5000 and level = 1);
 end $$;
 
 commit;

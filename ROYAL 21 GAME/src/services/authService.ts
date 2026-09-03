@@ -303,5 +303,6 @@ export function rowToProfile(row: any): Profile {
     equipped: { ...DEFAULT_EQUIPPED, ...(row.equipped ?? {}) },
     favoriteGame: row.favorite_game ?? null,
     isAdmin: row.is_admin ?? false,
+    everVip: row.ever_vip ?? false,
   };
 }
