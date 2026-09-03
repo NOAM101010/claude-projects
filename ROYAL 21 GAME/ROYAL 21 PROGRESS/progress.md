@@ -14,7 +14,9 @@
 - **STAGE L ✅ נדחף** (`69b4805`). הוסרו 5 מטבעות ה-currencySkin מסבב G (+ migration שמנקה equipped/user_items). נוסף `cf_holo` (mythic, shimmer CSS) + חבילת "ערכת שולחן מלכותית" (`pack_royal_suite`, -40%, נדירה). טאב "הכל" ממוין ומקובץ לפי קטגוריה+נדירות עם כותרות. 5 ז'יטונים חדשים (`ck-royal/jade/crimson/frost/rosegold`). reviewer: חוסם seed תוקן. **הרצה: `RUN-THIS-NEXT.sql` (מחיקת מטבעות + seed פריטים חדשים).**
 - **STAGE H ✅ נדחף** (`01a4f50`). H1: toast "חבר נכנס למשחק" + צליל כשחבר עובר offline→online (debounce 10 דק', מדלג על refresh ראשון, מכבד showPresence, לא יוצר notification). H2: `AvatarEditor` מודל (skin/hair, תצוגה חיה) מ-`MyRoomScene` — נשמר דרך `setAvatar`→`syncProfile`; פריטי חנות לא נגעו. אין SQL.
 
-**סבב 2 הושלם (J·I·K·L·H). הבא: תוכנית ה-reworks הגדולים — ערב חברה + VIP + BJ-עם-חברים.**
+- **תיקון המשך (`1431c48`)** — all-in חשף מנצח מוקדם **גם בפוקר cash** (לא רק SnG). השורש היה ב-`useReveal.ts` עצמו: "cold" client (non-host שפספס את שלב ההימורים) קיבל showdown מסודר כפריים ראשון → דילג על staging. תוקן: cold all-in showdown מריץ runout מ-0; `displayStacks` נגזר מ-`stack - showdown.won`.
+
+**סבב 2 הושלם (J·I·K·L·H). הבא: תוכנית ה-reworks הגדולים — ערב חברה + VIP + חנות + BJ-עם-חברים. חקירת קוד בוצעה — סיכום בהמשך.**
 
 ## Roadmap חדש (2026-09-03) — 8 שלבים A–H
 
