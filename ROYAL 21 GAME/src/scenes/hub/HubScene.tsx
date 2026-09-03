@@ -18,7 +18,7 @@ import { useUI } from '@/stores/useUI';
 import { useT } from '@/hooks/useT';
 import { todayKey, fmt } from '@/lib/format';
 import { audio } from '@/audio/AudioManager';
-import { STREAK_REWARD, STREAK_MILESTONES, isStreakMilestone, nextStreakDay, REFERRAL_BONUS } from '@/data/economy';
+import { STREAK_REWARD, STREAK_MILESTONES, isStreakMilestone, nextStreakDay, REFERRAL_BONUS, WEEKLY_PODIUM } from '@/data/economy';
 import { dailyMissions, weeklyMission, weekKeyFor, missionComplete } from '@/data/missions';
 import { isVipEligible, VIP_MIN_LEVEL, VIP_MIN_CHIPS } from '@/data/vip';
 import { SNG_BUYINS } from '@/games/poker/engine';
@@ -84,6 +84,14 @@ export default function HubScene() {
   }, [missionClaims, missionProgress]);
   const vipEligible = isVipEligible(profile);
   const previewChips = STREAK_REWARD(previewDay);
+
+  /* Weekly podium standing among friends — computed client-side from chip counts
+     so the hub can surface it. The actual claim still runs when the friends
+     panel opens (friendsService.claimWeeklyPrize). */
+  const podium = useMemo(() => {
+    const ahead = allFriends.filter((f) => f.chips > profile.chips).length;
+    return { rank: ahead + 1, field: allFriends.length + 1, hasFriends: allFriends.length > 0 };
+  }, [allFriends, profile.chips]);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -288,6 +296,36 @@ export default function HubScene() {
                 <div className="absolute bottom-2 text-[12px] num font-black" style={{ color: 'var(--jade-hi)' }}>
                   {missionState.claimedCount} / 3
                 </div>
+              </div>
+            )}
+          </HubCard>
+
+          <HubCard
+            label={t('hub.weeklyPodium')}
+            action={podium.hasFriends
+              ? t('hub.podiumRank', { rank: podium.rank, field: podium.field })
+              : t('hub.podiumNoFriends')}
+            blurb={t('hub.podiumBlurb', {
+              first: fmt(WEEKLY_PODIUM[0]), second: fmt(WEEKLY_PODIUM[1]), third: fmt(WEEKLY_PODIUM[2]),
+            })}
+            hoverSound="notify"
+            glow="rgba(227,178,60,.3)"
+            badge={podium.hasFriends && podium.rank <= 3 ? '🏆' : undefined}
+            onEnter={() => useUI.getState().openPanel('friends')}
+          >
+            {(focused) => (
+              <div className="relative w-full h-full grid place-items-center" style={{ minHeight: 120 }}>
+                <div className="text-[56px]" style={{
+                  transform: focused ? 'scale(1.08)' : 'scale(1)', transition: 'all .3s',
+                  filter: `drop-shadow(0 6px 20px rgba(227,178,60,${focused ? 0.55 : 0.3}))`,
+                }}>
+                  🏆
+                </div>
+                {podium.hasFriends && (
+                  <div className="absolute bottom-2 text-[12px] num font-black" style={{ color: 'var(--gold-hi)' }}>
+                    #{podium.rank} / {podium.field}
+                  </div>
+                )}
               </div>
             )}
           </HubCard>

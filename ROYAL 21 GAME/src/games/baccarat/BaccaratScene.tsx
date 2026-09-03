@@ -25,19 +25,12 @@ import {
   createState, reduce, handTotal, betCost, PAYTABLE, BACCARAT_BETS, outcomeLabel,
 } from './engine';
 import { useBaccaratReveal } from './useBaccaratReveal';
+import { BaccaratSideBets } from './BaccaratSideBets';
 import type { BaccaratMainSide, BaccaratSide, BaccaratState } from './types';
 
 const MAIN_BETS: { side: BaccaratMainSide; labelKey: string; color: string }[] = [
   { side: 'player', labelKey: 'baccarat.player', color: '#4a86d6' },
   { side: 'banker', labelKey: 'baccarat.banker', color: '#c14040' },
-];
-
-const SIDE_BETS: { side: BaccaratSide; labelKey: string }[] = [
-  { side: 'playerPair',  labelKey: 'baccarat.playerPair' },
-  { side: 'bankerPair',  labelKey: 'baccarat.bankerPair' },
-  { side: 'perfectPair', labelKey: 'baccarat.perfectPair' },
-  { side: 'big',         labelKey: 'baccarat.big' },
-  { side: 'small',       labelKey: 'baccarat.small' },
 ];
 
 interface SceneProps { mode?: 'solo' | 'room'; roomCode?: string }
@@ -322,43 +315,20 @@ function BaccaratSolo() {
           })}
         </div>
 
-        {/* side bets row */}
-        <GlassPanel className="w-full p-2.5">
-          <div className="text-[10.5px] text-center mb-1.5 font-black tracking-widest"
+        {/* side bets — FeltBets-style panels with a visible paytable + win pulse */}
+        <GlassPanel className="w-full p-3">
+          <div className="text-[10.5px] text-center mb-2 font-black tracking-widest"
             style={{ color: 'var(--gold-hi)', letterSpacing: '.15em' }}>
             ✨ {t('baccarat.sideBets').toUpperCase()}
           </div>
-          <div className="grid grid-cols-5 gap-1.5">
-            {SIDE_BETS.map(({ side, labelKey }) => {
-              const on = state.bet.sides[side] ?? 0;
-              const hit = (state.sideResults[side] ?? 0) > 0 && state.phase === 'settled';
-              return (
-                <button
-                  key={side}
-                  onClick={() => placeSide(side)}
-                  disabled={state.phase !== 'betting'}
-                  className="relative rounded-[6px] press"
-                  style={{
-                    border: `1px solid ${hit ? 'var(--gold-hi)' : 'var(--gold-line)'}`,
-                    background: on > 0 ? 'rgba(227,178,60,.15)' : 'rgba(255,255,255,.03)',
-                    padding: '10px 4px',
-                    boxShadow: hit ? '0 0 14px rgba(227,178,60,.55)' : 'none',
-                    opacity: state.phase === 'betting' ? 1 : 0.75,
-                  }}
-                >
-                  <div className="text-[10.5px] font-bold" style={{ color: 'var(--text)', lineHeight: 1.15 }}>
-                    {t(labelKey)}
-                  </div>
-                  {on > 0 && (
-                    <div className="absolute -top-1.5 -end-1.5 rounded-full px-1.5 num text-[10px] font-black"
-                      style={{ background: 'var(--brushed-gold)', color: '#1a1206' }}>
-                      {fmt(on)}
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+          <BaccaratSideBets
+            sideBets={state.bet.sides}
+            sideResults={state.sideResults}
+            betting={state.phase === 'betting'}
+            settled={state.phase === 'settled'}
+            chipSkin={chipSkin}
+            onSide={placeSide}
+          />
         </GlassPanel>
 
         {/* chip rail + actions */}
@@ -962,35 +932,20 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
           })}
         </div>
 
-        {/* side bets */}
-        <GlassPanel className="w-full p-2.5">
-          <div className="text-[10.5px] text-center mb-1.5 font-black tracking-widest"
+        {/* side bets — same panels as solo */}
+        <GlassPanel className="w-full p-3">
+          <div className="text-[10.5px] text-center mb-2 font-black tracking-widest"
             style={{ color: 'var(--gold-hi)', letterSpacing: '.15em' }}>
             ✨ {t('baccarat.sideBets').toUpperCase()}
           </div>
-          <div className="grid grid-cols-5 gap-1.5">
-            {SIDE_BETS.map(({ side, labelKey }) => {
-              const on = mySeat?.bet.sides[side] ?? 0;
-              const hit = (mySeat?.sideResults?.[side] ?? 0) > 0 && state.phase === 'settled';
-              return (
-                <button key={side} onClick={() => placeSide(side)} disabled={state.phase !== 'betting'}
-                  className="relative rounded-[6px] press"
-                  style={{
-                    border: `1px solid ${hit ? 'var(--gold-hi)' : 'var(--gold-line)'}`,
-                    background: on > 0 ? 'rgba(227,178,60,.15)' : 'rgba(255,255,255,.03)',
-                    padding: '10px 4px',
-                    boxShadow: hit ? '0 0 14px rgba(227,178,60,.55)' : 'none',
-                    opacity: state.phase === 'betting' ? 1 : 0.75,
-                  }}>
-                  <div className="text-[10.5px] font-bold" style={{ color: 'var(--text)', lineHeight: 1.15 }}>{t(labelKey)}</div>
-                  {on > 0 && (
-                    <div className="absolute -top-1.5 -end-1.5 rounded-full px-1.5 num text-[10px] font-black"
-                      style={{ background: 'var(--brushed-gold)', color: '#1a1206' }}>{fmt(on)}</div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+          <BaccaratSideBets
+            sideBets={mySeat?.bet.sides ?? {}}
+            sideResults={mySeat?.sideResults}
+            betting={state.phase === 'betting'}
+            settled={state.phase === 'settled'}
+            chipSkin={chipSkin}
+            onSide={placeSide}
+          />
         </GlassPanel>
 
         {/* chip rail + actions */}

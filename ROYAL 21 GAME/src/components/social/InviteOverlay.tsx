@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GameButton } from '@/components/ui/GameButton';
 import { Avatar } from './Avatar';
@@ -47,15 +47,13 @@ export function InviteOverlay() {
     navigate(roomRouteFor((invite.game || 'blackjack') as GameKey | 'night', invite.code));
   };
 
+  if (!invite) return null;
   return (
-    <AnimatePresence>
-      {invite && (
         <motion.div
           className="fixed inset-x-0 z-[520] flex justify-center px-4"
           style={{ top: 'calc(env(safe-area-inset-top, 0px) + 14px)' }}
           initial={{ y: -120, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          exit={{ y: -120, opacity: 0 }}
           transition={{ type: 'spring', stiffness: 320, damping: 28 }}
         >
           <GlassPanel gold animate={false} className="p-4 w-full max-w-[440px] flex items-center gap-3">
@@ -79,7 +77,5 @@ export function InviteOverlay() {
             </GameButton>
           </GlassPanel>
         </motion.div>
-      )}
-    </AnimatePresence>
   );
 }

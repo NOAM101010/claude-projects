@@ -40,6 +40,12 @@ function StatTile({ label, value, tone = 'gold', delay = 0 }: { label: string; v
 /** Bronze → platinum, so the trophy case reads as a progression. */
 const TIER_RANK: Record<string, number> = { bronze: 0, silver: 1, gold: 2, platinum: 3 };
 
+/* The shelf shows only real trophies — the event ones, granted the instant they
+   happen. The 31 stat achievements live in their own section below, as a
+   checklist the player can choose to chase. */
+const EVENT_TROPHIES = ACHIEVEMENTS.filter((a) => a.kind === 'event');
+const STAT_ACHIEVEMENTS = ACHIEVEMENTS.filter((a) => a.kind !== 'event');
+
 /** My Room: a place with a trophy shelf, not a dashboard. */
 export default function MyRoomScene() {
   const { userId } = useParams();
@@ -79,7 +85,7 @@ export default function MyRoomScene() {
   /* Trophies on the shelf, graded bronze → platinum. The last id in
      `achievements` is the freshest unlock. */
   const earnedTrophies = useMemo(
-    () => ACHIEVEMENTS.filter((entry) => achievements.includes(entry.id))
+    () => EVENT_TROPHIES.filter((entry) => achievements.includes(entry.id))
       .sort((a, b) => (TIER_RANK[a.tier] - TIER_RANK[b.tier]) || 0),
     [achievements],
   );
@@ -88,8 +94,8 @@ export default function MyRoomScene() {
   /* The closest one still missing, as a nudge under the shelf. Event trophies
      (no stat/goal) can't be "progressed toward", so they're never the nudge. */
   const nextTrophy = useMemo(() => {
-    const locked = ACHIEVEMENTS.filter(
-      (entry) => !achievements.includes(entry.id) && entry.kind !== 'event' && entry.stat && entry.goal,
+    const locked = STAT_ACHIEVEMENTS.filter(
+      (entry) => !achievements.includes(entry.id) && entry.stat && entry.goal,
     );
     const progress = (entry: (typeof ACHIEVEMENTS)[number]) => {
       const value = entry.stat === 'level'
@@ -108,14 +114,15 @@ export default function MyRoomScene() {
 
   const winRate = pct(view.wins, Math.max(1, view.games));
 
-  /* Per-game win rates — only the games that keep a wins/plays pair. The rest
-     (poker winnings, royal flushes, night wins…) are single counters, shown
-     below as pride stats. */
+  /* Per-game breakdown — only the fields that actually exist in Stats. Slots and
+     scratch are deliberately left out of this section (§room rework). Roulette
+     and baccarat keep no per-game counters, so they can't be shown. High card
+     tracks plays only — no wins field — so it shows a play count, not a rate. */
   const perGame = ([
     { key: 'blackjack', plays: view.bjHands, wins: view.bjWins },
     { key: 'coinflip', plays: view.cfGames, wins: view.cfWins },
-    { key: 'slots', plays: view.slSpins, wins: view.slWins },
-  ] as const).filter((row) => row.plays > 0);
+    { key: 'highcard', plays: view.hcGames, wins: undefined },
+  ] as { key: GameKey; plays: number; wins?: number }[]).filter((row) => row.plays > 0);
 
   const prideStats = ([
     { label: t('games.duel'), value: view.duelWins },
@@ -123,7 +130,6 @@ export default function MyRoomScene() {
     { label: t('profile.royalFlushes'), value: view.royalFlushes },
     { label: t('profile.pokerWon'), value: view.pokerChipsWon },
     { label: t('profile.sngStreak'), value: view.sngWinStreak },
-    { label: t('games.scratch'), value: view.scCards },
   ] as const).filter((row) => row.value > 0);
   const rank = rankOf(profile.level);
   const vip = isVipEligible(me);
@@ -311,11 +317,11 @@ export default function MyRoomScene() {
                 <b className="num" style={{ fontFamily: 'var(--font-display)', fontSize: 30, color: 'var(--gold-hi)' }}>
                   {earnedTrophies.length}
                 </b>
-                <span className="num text-[13px]" style={{ color: 'var(--dim)' }}>/ {ACHIEVEMENTS.length}</span>
+                <span className="num text-[13px]" style={{ color: 'var(--dim)' }}>/ {EVENT_TROPHIES.length}</span>
               </div>
             </div>
             <div className="flex-1 min-w-[140px] max-w-[260px]">
-              <Meter value={earnedTrophies.length} max={ACHIEVEMENTS.length} />
+              <Meter value={earnedTrophies.length} max={EVENT_TROPHIES.length} />
             </div>
           </div>
 
@@ -355,6 +361,9 @@ export default function MyRoomScene() {
                     <div className="text-[9px] uppercase tracking-[.14em] mt-0.5" style={{ color: style.ring }}>
                       {style.label[lang]}
                     </div>
+                    <div className="num text-[10px] mt-0.5" style={{ color: 'var(--gold-hi)' }}>
+                      +{fmt(entry.reward)}
+                    </div>
                   </motion.div>
                 );
               })}
@@ -377,45 +386,57 @@ export default function MyRoomScene() {
             </div>
           )}
 
-          {/* full detail lives here now — collapsed by default, no third copy */}
-          {isMe && (
-            <div className="mt-3">
-              <button
-                className="w-full text-center text-[12px] font-bold py-2 rounded-[var(--r-xs)] press"
-                style={{ color: 'var(--gold-hi)', background: 'rgba(227,178,60,.08)', border: '1px solid var(--gold-line)' }}
-                onClick={() => setAllAchOpen((v) => !v)}
-              >
-                {allAchOpen ? t('profile.hideAch') : t('profile.showAllAch', { n: ACHIEVEMENTS.length })}
-              </button>
-              {allAchOpen && (
-                <div className="grid gap-2.5 mt-3" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))' }}>
-                  {ACHIEVEMENTS.map((achievement) => {
-                    const unlocked = achievements.includes(achievement.id);
-                    const isEvent = achievement.kind === 'event' || !achievement.stat || !achievement.goal;
-                    const value = achievement.stat === 'level' ? me.level
-                      : achievement.stat === 'itemCount' ? owned.length
-                        : achievement.stat === 'friendCount' ? friends.length
-                          : (stats as unknown as Record<string, number>)[achievement.stat as string] ?? 0;
-                    return (
-                      <div key={achievement.id} className="p-3 rounded-[var(--r-sm)]"
-                        style={{ background: unlocked ? 'rgba(227,178,60,.08)' : 'rgba(255,255,255,.025)', border: '1px solid var(--glass-line)' }}>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[16px]">{unlocked ? achievement.trophy : isEvent ? '✨' : '🔒'}</span>
-                          <b className="text-[13px]">{achievement.name[lang]}</b>
-                          {isEvent && <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ color: 'var(--gold-hi)', border: '1px solid var(--gold-line)' }}>{t('profile.eventTag')}</span>}
-                        </div>
-                        <p className="text-[11.5px] mb-2" style={{ color: 'var(--muted)' }}>{achievement.desc[lang]}</p>
-                        {isEvent
-                          ? <div className="text-[11px]" style={{ color: unlocked ? 'var(--jade-hi)' : 'var(--dim)' }}>{unlocked ? `✅ ${t('profile.eventEarned')}` : t('profile.eventLocked')}</div>
-                          : <Meter value={Math.min(value, achievement.goal ?? 1)} max={achievement.goal ?? 1} height={5} tone={unlocked ? 'gold' : 'jade'} />}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
         </GlassPanel>
+
+        {/* Achievements — the 31 stat trophies, as a checklist the player can
+            choose to chase. Each shows the chip reward it pays + progress. */}
+        {isMe && (
+          <GlassPanel className="p-4">
+            <button
+              className="w-full flex items-baseline justify-between gap-2 press"
+              onClick={() => setAllAchOpen((v) => !v)}
+            >
+              <div className="text-start">
+                <div className="eyebrow">{t('profile.achievements')}</div>
+                <span className="block text-[10.5px] mt-0.5" style={{ color: 'var(--dim)' }}>{t('profile.achHint')}</span>
+              </div>
+              <span className="flex items-center gap-2 shrink-0">
+                <span className="num text-[13px]" style={{ color: 'var(--gold-hi)' }}>
+                  {STAT_ACHIEVEMENTS.filter((a) => achievements.includes(a.id)).length}
+                  <span style={{ color: 'var(--dim)' }}> / {STAT_ACHIEVEMENTS.length}</span>
+                </span>
+                <span className="text-[12px]" style={{ color: 'var(--gold-hi)' }}>{allAchOpen ? '▲' : '▼'}</span>
+              </span>
+            </button>
+            {allAchOpen && (
+              <div className="grid gap-2.5 mt-3" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))' }}>
+                {STAT_ACHIEVEMENTS.map((achievement) => {
+                  const unlocked = achievements.includes(achievement.id);
+                  const goal = achievement.goal ?? 1;
+                  const value = achievement.stat === 'level' ? me.level
+                    : achievement.stat === 'itemCount' ? owned.length
+                      : achievement.stat === 'friendCount' ? friends.length
+                        : (stats as unknown as Record<string, number>)[achievement.stat as string] ?? 0;
+                  return (
+                    <div key={achievement.id} className="p-3 rounded-[var(--r-sm)]"
+                      style={{ background: unlocked ? 'rgba(227,178,60,.08)' : 'rgba(255,255,255,.025)', border: '1px solid var(--glass-line)' }}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[16px]">{unlocked ? achievement.trophy : '🔒'}</span>
+                        <b className="text-[13px] flex-1">{achievement.name[lang]}</b>
+                        <span className="num text-[11px] shrink-0" style={{ color: 'var(--gold-hi)' }}>+{fmt(achievement.reward)}</span>
+                      </div>
+                      <p className="text-[11.5px] mb-2" style={{ color: 'var(--muted)' }}>{achievement.desc[lang]}</p>
+                      <Meter value={Math.min(value, goal)} max={goal} height={5} tone={unlocked ? 'gold' : 'jade'} />
+                      <div className="num text-[10px] mt-1 text-end" style={{ color: 'var(--dim)' }}>
+                        {unlocked ? `✅ ${t('profile.eventEarned')}` : `${fmt(Math.min(value, goal))} / ${fmt(goal)}`}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </GlassPanel>
+        )}
 
         {/* My best — the pride card, shown for me and for a friend's room */}
         <GlassPanel className="p-4">
@@ -481,17 +502,20 @@ export default function MyRoomScene() {
             <div className="mt-4 pt-3" style={{ borderTop: '1px solid var(--glass-line)' }}>
               <div className="eyebrow mb-2" style={{ fontSize: 10 }}>{t('profile.byGame')}</div>
               <div className="flex flex-col gap-1.5">
-                {perGame.map((row) => {
-                  const rate = pct(row.wins, row.plays);
-                  return (
-                    <div key={row.key} className="flex items-center gap-3 text-[12.5px]">
-                      <span className="flex-1 truncate" style={{ color: 'var(--muted)' }}>{t(`games.${row.key}`)}</span>
-                      <span className="num text-[10.5px]" style={{ color: 'var(--dim)' }}>{fmt(row.wins)} / {fmt(row.plays)}</span>
-                      <div className="w-20"><Meter value={row.wins} max={row.plays} height={5} tone="jade" /></div>
-                      <b className="num" style={{ color: 'var(--gold-hi)', minWidth: 40, textAlign: 'end' }}>{rate}</b>
-                    </div>
-                  );
-                })}
+                {perGame.map((row) => (
+                  <div key={row.key} className="flex items-center gap-3 text-[12.5px]">
+                    <span className="flex-1 truncate" style={{ color: 'var(--muted)' }}>{t(`games.${row.key}`)}</span>
+                    {row.wins !== undefined ? (
+                      <>
+                        <span className="num text-[10.5px]" style={{ color: 'var(--dim)' }}>{fmt(row.wins)} / {fmt(row.plays)}</span>
+                        <div className="w-20"><Meter value={row.wins} max={row.plays} height={5} tone="jade" /></div>
+                        <b className="num" style={{ color: 'var(--gold-hi)', minWidth: 40, textAlign: 'end' }}>{pct(row.wins, row.plays)}</b>
+                      </>
+                    ) : (
+                      <span className="num text-[11px]" style={{ color: 'var(--dim)' }}>{fmt(row.plays)} {t('profile.plays')}</span>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           )}

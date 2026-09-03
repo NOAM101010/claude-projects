@@ -75,15 +75,13 @@ export function Onboarding({ onDone }: { onDone?: () => void }) {
 
   const current = STEPS[step];
 
+  if (!open) return null;
   return (
-    <AnimatePresence>
-      {open && (
         <motion.div
           className="fixed inset-0 z-[80] grid place-items-center px-4"
           style={{ background: 'rgba(4,5,7,.72)', backdropFilter: 'blur(4px)' }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
           role="dialog"
           aria-modal="true"
           aria-label={t('tour.title')}
@@ -150,7 +148,5 @@ export function Onboarding({ onDone }: { onDone?: () => void }) {
             </div>
           </motion.div>
         </motion.div>
-      )}
-    </AnimatePresence>
   );
 }

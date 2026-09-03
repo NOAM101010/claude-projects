@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { GlassPanel } from './GlassPanel';
 import { fade } from '@/lib/motion';
 import { useT } from '@/hooks/useT';
@@ -19,16 +19,14 @@ interface Props {
 export function Modal({ open, onClose, title, subtitle, children, width = 520, sticky }: Props) {
   const { t } = useT();
   const { play } = useSound();
+  if (!open) return null;
   return (
-    <AnimatePresence>
-      {open && (
         <motion.div
           className="fixed inset-0 z-[500] grid place-items-center p-4"
           style={{ background: 'rgba(4,5,7,.72)', backdropFilter: 'blur(8px)' }}
           variants={fade}
           initial="hidden"
           animate="show"
-          exit="exit"
           onClick={() => {
             if (sticky) return;
             play('back');
@@ -62,7 +60,5 @@ export function Modal({ open, onClose, title, subtitle, children, width = 520, s
             {children}
           </GlassPanel>
         </motion.div>
-      )}
-    </AnimatePresence>
   );
 }

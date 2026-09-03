@@ -147,16 +147,14 @@ export function SideNav() {
   );
 
   if (compact) {
+    if (!navOpen) return null;
     return (
-      <AnimatePresence>
-        {navOpen && (
           <>
             <motion.div
               className="fixed inset-0 z-[60]"
               style={{ background: 'rgba(4,5,7,.62)', backdropFilter: 'blur(3px)' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
               onClick={() => setNavOpen(false)}
             />
             <motion.aside
@@ -170,7 +168,6 @@ export function SideNav() {
               }}
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
               transition={{ type: 'spring', stiffness: 320, damping: 34 }}
               /* RTL flips the drawer to the right edge automatically via
                  insetInlineStart; the transform is mirrored by dir=rtl. */
@@ -178,8 +175,6 @@ export function SideNav() {
               {list}
             </motion.aside>
           </>
-        )}
-      </AnimatePresence>
     );
   }
 

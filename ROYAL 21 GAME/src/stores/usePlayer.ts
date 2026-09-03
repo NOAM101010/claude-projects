@@ -713,7 +713,6 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
       });
       lastSyncedChips[s.profile.id] = s.profile.chips + chips;
       get().persist();
-      if (day >= 30) get().grantEvent('ev_streak30');
       return { chips, day, comeback };
     }
 
@@ -726,7 +725,6 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
       profile: { ...s.profile, chips: s.profile.chips + chips },
     });
     get().persist();
-    if (day >= 30) get().grantEvent('ev_streak30');
     return { chips, day, comeback };
   },
 

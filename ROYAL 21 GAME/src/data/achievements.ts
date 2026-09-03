@@ -64,7 +64,6 @@ export const ACHIEVEMENTS: Achievement[] = [
    * usePlayer.grantEvent(). See the wiring in the scenes/hooks noted below.  */
   { id: 'ev_sng_win', kind: 'event', tier: 'gold', trophy: '🏆', social: true, name: { he: 'ניצחון בטורניר', en: 'Tournament win' }, desc: { he: 'נצח בטורניר Sit & Go', en: 'Win a Sit & Go tournament' }, reward: 2500 },
   { id: 'ev_jackpot', kind: 'event', tier: 'platinum', trophy: '💰', name: { he: "פיצוץ הג'קפוט", en: 'Jackpot!' }, desc: { he: "זכה בקופת הג'קפוט המצטברת", en: 'Hit a progressive jackpot pool' }, reward: 5000 },
-  { id: 'ev_streak30', kind: 'event', tier: 'platinum', trophy: '📅', name: { he: 'חודש ברצף', en: 'A month straight' }, desc: { he: 'שמור על רצף כניסה של 30 יום', en: 'Keep a 30-day login streak alive' }, reward: 5000 },
   { id: 'ev_duel_victor', kind: 'event', tier: 'gold', trophy: '⚔️', social: true, name: { he: 'מנצח הדואל', en: 'Duel victor' }, desc: { he: 'נצח בדואל בלאק׳ג׳ק מול חבר', en: 'Win a blackjack duel against a friend' }, reward: 2500 },
   { id: 'ev_night_champion', kind: 'event', tier: 'gold', trophy: '🎉', social: true, name: { he: 'אלוף הערב', en: 'Night champion' }, desc: { he: 'סיים ערב חברה במקום הראשון', en: 'Finish a game night in first place' }, reward: 2500 },
   { id: 'ev_side_bet_10x', kind: 'event', tier: 'gold', trophy: '🎯', name: { he: 'פי-10 בצד', en: '10x on the side' }, desc: { he: 'זכה פי-10 או יותר בהימור צד בבלאק׳ג׳ק', en: 'Win 10x or more on a blackjack side bet' }, reward: 2500 },
