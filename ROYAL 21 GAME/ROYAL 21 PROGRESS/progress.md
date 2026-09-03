@@ -11,7 +11,8 @@
 - **STAGE J ✅ נדחף** (`d6f21a7`). J1: מתנת צ'יפים זיכתה פעמיים (RPC + client both) — ההודעה עכשיו receipt-only, נושאת `new_balance`, הקליינט `setChips`. J2: רולטה MP — כפתור "סיימתי להמר" (action `ready` שכבר היה ב-engine) + countdown 15ש, הגלגל ננעל רק כש-`every(ready)`, הוסר כפתור "סובב עכשיו" של המארח. reviewer: חוסם realtime-visibility תוקן. **המשתמש צריך להריץ `RUN-THIS-NEXT.sql` (send_gift + claim_weekly_prize מעודכנים).**
 - **STAGE I ✅ נדחף** (`56638f3`). פוקר/SnG: badge פעולה + ז'יטון לקופה (מ-`seat.lastAction` שכבר היה ב-state); `showCards` action + `revealed[]` + `HandOverBar` (countdown 6ש, `NEXT_HAND_DELAY_MS`); תווית `bestHand` מתחת לקלפים; `showMoment` למנצח יד + knockout/placement ב-SnG; **תיקון all-in שחשף מנצח מוקדם** — `displayStacks` מוקפא ב-`useReveal`, log/alive/moments גדורים על `!revealing`, river all-in כופה חלון reveal. reviewer נקי. אין SQL. **ממתין לבדיקה חיה 2-דפדפנים.**
 - **STAGE K ✅ נדחף** (`e87f41a`). K1: הוסר גביע `ev_weekly_winner` (הפרס הכספי נשאר). K2: `StreakBadge` עוצב מחדש — צבע tier (ברונזה/כסף/זהב) + להבה מונפשת CSS. K3: כרטיס "הזמן חבר" קיבל `InviteArt` ✈️ (היה 🎁 כפול). K4: `SettingsPanel` — גלגל השיניים ב-HUD פותח פאנל אודיו מהיר במקום לנווט (מונע teardown של משחק חי). **הרצה: `RUN-THIS-NEXT.sql` = `delete ... ev_weekly_winner`.**
-- L — חנות · H — כניסה+דמות.
+- **STAGE L ✅ נדחף** (`69b4805`). הוסרו 5 מטבעות ה-currencySkin מסבב G (+ migration שמנקה equipped/user_items). נוסף `cf_holo` (mythic, shimmer CSS) + חבילת "ערכת שולחן מלכותית" (`pack_royal_suite`, -40%, נדירה). טאב "הכל" ממוין ומקובץ לפי קטגוריה+נדירות עם כותרות. 5 ז'יטונים חדשים (`ck-royal/jade/crimson/frost/rosegold`). reviewer: חוסם seed תוקן. **הרצה: `RUN-THIS-NEXT.sql` (מחיקת מטבעות + seed פריטים חדשים).**
+- H — כניסה+דמות (הבא).
 
 ## Roadmap חדש (2026-09-03) — 8 שלבים A–H
 
