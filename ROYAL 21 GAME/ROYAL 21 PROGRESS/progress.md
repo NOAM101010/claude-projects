@@ -9,7 +9,8 @@
 
 תוכנית מלאה: `C:\Users\noam7\.claude\plans\swift-snuggling-harp.md`. סדר: A→C→D→B→F→E→G→H.
 - **STAGE A — איפוס מלא ✅ נדחף** (`a0c269a`). `reset-all.sql` הורחב (עמודת `ever_vip`, איפוסה, `truncate friendships`); `localStore` bump `royal21.save.v1`→`v2` + `migrateToV2()` שמנקה save ישן + `daily.v1.*` + `ref`; `rowToProfile` ממפה `ever_vip`→`everVip`. **המשתמש צריך להריץ `supabase/reset-all.sql`.** tsc/build/test ירוקים.
-- STAGE C — מסך פתיחה · STAGE D — פודיום כטבלה+הודעות · STAGE B — Supabase+אדמין · STAGE F — presence+צ'אט · STAGE E — אודיו · STAGE G — חנות · STAGE H — (אופ') כניסה+דמות.
+- **STAGE C — מסך פתיחה ✅ נדחף** (`45a600e`). `IntroScene` שוכתב מאפס — אפס framer-motion, אנימציית CSS keyframes בלבד (opacity/transform) בסגנון `AuthScene` (מסגרת זהב + רקע ירוק), לוגו "ROYAL 21" נחשף, כפתור "דלג" תמיד גלוי שמנווט החוצה מיד. ~1.3ש auto-advance (~0.38ש לחוזר/reduced-motion). keyframes ב-`game.css` בלוק INTRO. tsc/build/test ירוקים. **ממתין לאישור ויזואלי של המשתמש.**
+- STAGE D — פודיום כטבלה+הודעות · STAGE B — Supabase+אדמין · STAGE F — presence+צ'אט · STAGE E — אודיו · STAGE G — חנות · STAGE H — (אופ') כניסה+דמות.
 
 ## Current status
 
