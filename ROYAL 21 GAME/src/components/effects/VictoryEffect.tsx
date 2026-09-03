@@ -38,6 +38,50 @@ export function VictoryEffect({ kind }: { kind: string | null }) {
     );
   }
 
+  if (kind === 'vc-fireworks') {
+    return (
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {[{ x: 28, y: 34, c: '#ffd75e', d: 0 }, { x: 70, y: 26, c: '#ff7ab0', d: 0.25 }, { x: 50, y: 52, c: '#5ef2d6', d: 0.5 }].map((burst, b) => (
+          <div key={b} className="absolute" style={{ left: `${burst.x}%`, top: `${burst.y}%` }}>
+            {Array.from({ length: 14 }).map((_, i) => (
+              <motion.span
+                key={i}
+                className="absolute w-1.5 h-1.5 rounded-full"
+                style={{ background: burst.c }}
+                initial={{ scale: 0, opacity: 1 }}
+                animate={{
+                  x: Math.cos((i / 14) * Math.PI * 2) * 90,
+                  y: Math.sin((i / 14) * Math.PI * 2) * 90,
+                  scale: [0, 1.4, 0], opacity: [1, 1, 0],
+                }}
+                transition={{ duration: 1.2, delay: burst.d + i * 0.01, repeat: 1, repeatDelay: 0.3 }}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (kind === 'vc-stars') {
+    return (
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {Array.from({ length: 16 }).map((_, i) => (
+          <motion.span
+            key={i}
+            className="absolute"
+            style={{ left: `${4 + i * 6}%`, bottom: -20, fontSize: 14 + (i % 3) * 6, color: 'var(--gold-hi)' }}
+            initial={{ y: 40, opacity: 0, rotate: 0 }}
+            animate={{ y: '-95vh', opacity: [0, 1, 1, 0], rotate: 220 }}
+            transition={{ duration: 1.8 + (i % 4) * 0.25, delay: i * 0.06, ease: 'easeOut' }}
+          >
+            ✦
+          </motion.span>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="absolute inset-0 grid place-items-center pointer-events-none">
       {Array.from({ length: 12 }).map((_, i) => (

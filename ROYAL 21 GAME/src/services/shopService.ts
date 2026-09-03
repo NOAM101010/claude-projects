@@ -11,6 +11,8 @@ export interface BuyResult {
   reason?: BuyFailure;
   /** Raw message from Postgres, for the toast when nothing else explains it. */
   detail?: string;
+  /** buy_pack only: how many rows were actually inserted into user_items. */
+  granted?: number;
 }
 
 export const shopService = {
@@ -58,6 +60,31 @@ export const shopService = {
        next load. */
     if (data === null || data === undefined) return { ok: false, reason: 'not-signed-in' };
     return { ok: true, chips: typeof data === 'number' ? data : undefined };
+  },
+
+  /**
+   * Buy a whole bundle pack in one atomic transaction. buy_pack() reads the
+   * pack's item list + discount from public.bundles (server-side source of
+   * truth — the client only names the pack), re-prices from public.items and
+   * skips items already owned. The pack discount replaces the VIP discount
+   * (not stacked).
+   */
+  async buyPack(userId: string, packId: string): Promise<BuyResult> {
+    const client = db();
+    // Device-local players own their catalogue locally; nothing to charge.
+    if (!client || !isRemoteId(userId)) return { ok: true };
+
+    const { data, error } = await client.rpc('buy_pack', { p_pack_id: packId });
+    if (error) {
+      const message = error.message ?? '';
+      if (message.includes('insufficient')) return { ok: false, reason: 'insufficient', detail: message };
+      if (message.includes('not signed in')) return { ok: false, reason: 'not-signed-in', detail: message };
+      if (message.includes('unknown pack')) return { ok: false, reason: 'unknown-item', detail: message };
+      return { ok: false, reason: 'server', detail: message };
+    }
+    if (data === null || data === undefined) return { ok: false, reason: 'not-signed-in' };
+    const row = data as { chips?: number; spent?: number; granted?: number };
+    return { ok: true, chips: typeof row.chips === 'number' ? row.chips : undefined, granted: row.granted };
   },
 
   async toggleFavorite(userId: string, itemId: string, favorite: boolean) {

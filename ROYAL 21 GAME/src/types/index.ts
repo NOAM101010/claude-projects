@@ -138,6 +138,8 @@ export interface ShopItem {
   payload: Partial<Equipped> & Partial<AvatarConfig> & { emote?: string; decorId?: string };
   /** Only obtainable through the Daily Rarity slot — hidden from normal shop lists. */
   dailyRarityOnly?: boolean;
+  /** Only obtainable through the weekday Rare Rotation slot — hidden from normal shop lists. */
+  rareRotationOnly?: boolean;
 }
 
 export interface Achievement {

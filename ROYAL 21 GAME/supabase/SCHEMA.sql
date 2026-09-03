@@ -66,8 +66,13 @@ alter table public.app_config enable row level security;
 --   poker_hole /
 --   poker_hand_secret /
 --   bj_hand_secret      server-only hole cards (poker-privacy.sql)
---   items               shop catalogue (seeded from src/data/items.ts)
+--   items               shop catalogue (seeded from src/data/items.ts);
+--                       + daily_rarity_only / rare_rotation_only bool flags (buy-pack.sql)
 --   user_items          (user_id, item_id) ownership
+--   bundles             id, item_ids text[], discount numeric(check 0..0.6)
+--                       — server-side source of truth for buy_pack(p_pack_id);
+--                       kept in sync with PACKS in src/data/shopOffers.ts
+--                       (buy-pack.sql). RLS: select for authenticated.
 --   achievements        catalogue: id, tier, trophy, kind ('stat'|'event'), goal
 --   user_achievements   legacy per-user grants (superseded by profiles.achievements)
 --   notifications       id, user_id, kind, actor_id, title, body, payload, read

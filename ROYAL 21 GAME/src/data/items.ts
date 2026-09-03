@@ -93,6 +93,34 @@ export const ITEMS: ShopItem[] = [
   { id: 'rb_crimson', category: 'backgrounds', name: { he: 'אדום ארגמן', en: 'Crimson Room' }, desc: { he: 'אדום עמוק וחם', en: 'Deep warm crimson' }, rarity: 'rare', price: 2000, icon: '❤️', payload: { roomBackground: 'rb-crimson' } },
   { id: 'rb_midnight', category: 'backgrounds', name: { he: 'כחול חצות', en: 'Midnight Room' }, desc: { he: 'כחול קר וסתרי', en: 'Cool midnight blue' }, rarity: 'epic', price: 8000, icon: '💙', payload: { roomBackground: 'rb-midnight' } },
   { id: 'rb_gold', category: 'backgrounds', name: { he: 'זהב מלכותי', en: 'Royal Gold Room' }, desc: { he: 'זהב בוהק וממלכתי', en: 'Lustrous royal gold' }, rarity: 'legendary', price: 22000, icon: '💛', payload: { roomBackground: 'rb-gold' } },
+
+  // ==== Stage G — shop expansion (themed packs + rare rotation pool) ==========
+  // ---- card faces ----
+  { id: 'cf_royal', category: 'cards', name: { he: 'קלפים מלכותיים', en: 'Royal Cards' }, rarity: 'legendary', price: 22000, icon: '♛', payload: { cardFace: 'cf-royal' } },
+  { id: 'cf_jade', category: 'cards', name: { he: 'קלפי אזמרגד', en: 'Jade Cards' }, rarity: 'epic', price: 8000, icon: '💚', payload: { cardFace: 'cf-jade' } },
+  { id: 'cf_blush', category: 'cards', name: { he: 'קלפי ורד', en: 'Blush Cards' }, rarity: 'rare', price: 2000, icon: '🌹', payload: { cardFace: 'cf-blush' } },
+  // ---- card backs ----
+  { id: 'bk_royal', category: 'backs', name: { he: 'גב מלכותי', en: 'Royal Back' }, rarity: 'legendary', price: 22000, icon: '♛', payload: { cardBack: 'bk-royal' } },
+  { id: 'bk_jade', category: 'backs', name: { he: 'גב אזמרגד', en: 'Jade Back' }, rarity: 'epic', price: 8000, icon: '💚', payload: { cardBack: 'bk-jade' } },
+  { id: 'bk_wave', category: 'backs', name: { he: 'גב גלים', en: 'Wave Back' }, rarity: 'rare', price: 2000, icon: '🌊', payload: { cardBack: 'bk-wave' } },
+  // ---- tables ----
+  { id: 'tb_royal', category: 'tables', name: { he: 'קטיפה מלכותית', en: 'Royal Velvet' }, rarity: 'legendary', price: 22000, icon: '👑', payload: { table: 'tb-royal' } },
+  { id: 'tb_jade', category: 'tables', name: { he: 'לבד אזמרגד', en: 'Jade Felt' }, rarity: 'epic', price: 8000, icon: '💚', payload: { table: 'tb-jade' } },
+  // ---- avatar frames ----
+  { id: 'fr_royal', category: 'frames', name: { he: 'מסגרת מלכותית', en: 'Royal Frame' }, rarity: 'legendary', price: 22000, icon: '👑', payload: { frame: 'fr-royal' } },
+  { id: 'fr_jade', category: 'frames', name: { he: 'מסגרת אזמרגד', en: 'Jade Frame' }, rarity: 'epic', price: 8000, icon: '💠', payload: { frame: 'fr-jade' } },
+  { id: 'fr_rose', category: 'frames', name: { he: 'מסגרת ורד', en: 'Rose Frame' }, rarity: 'rare', price: 2000, icon: '🌹', payload: { frame: 'fr-rose' } },
+  // ---- victory animations ----
+  { id: 'vc_fireworks', category: 'victory', name: { he: 'זיקוקים', en: 'Fireworks' }, rarity: 'epic', price: 8000, icon: '🎆', payload: { victory: 'vc-fireworks' } },
+  { id: 'vc_stars', category: 'victory', name: { he: 'מטר כוכבים', en: 'Star Shower' }, rarity: 'legendary', price: 22000, icon: '🌟', payload: { victory: 'vc-stars' } },
+  // ---- currency skins (change the chip glyph everywhere) ----
+  // Rare Rotation pool — surface one per weekday, hidden from the regular grid.
+  { id: 'cn_gem', category: 'coins', name: { he: 'מטבע יהלום', en: 'Gem Coin' }, desc: { he: 'מטבע קריסטל עם סמל 💎', en: 'Crystal coin bearing a 💎 mark' }, rarity: 'legendary', price: 30000, icon: '💎', payload: { currencySkin: 'cn-gem' }, rareRotationOnly: true },
+  { id: 'cn_crown_cur', category: 'coins', name: { he: 'מטבע כתר', en: 'Crown Coin' }, desc: { he: 'מטבע זהב-סגול עם כתר', en: 'Purple-gold coin crowned in gold' }, rarity: 'mythic', price: 75000, icon: '👑', payload: { currencySkin: 'cn-crown' }, rareRotationOnly: true },
+  { id: 'cn_nova', category: 'coins', name: { he: 'מטבע נובה', en: 'Nova Coin' }, desc: { he: 'מטבע קוסמי עם סמל ✦', en: 'Cosmic coin bearing a ✦ mark' }, rarity: 'mythic', price: 75000, icon: '✦', payload: { currencySkin: 'cn-nova' }, rareRotationOnly: true },
+  // Daily Rarity pool — one exclusive per day.
+  { id: 'cn_ancient', category: 'coins', name: { he: 'מטבע עתיק', en: 'Ancient Coin' }, desc: { he: 'מטבע נחושת עתיק עם סמל ⚜', en: 'Antique copper coin with a ⚜ mark' }, rarity: 'legendary', price: 30000, icon: '⚜', payload: { currencySkin: 'cn-ancient' }, dailyRarityOnly: true },
+  { id: 'cn_casino', category: 'coins', name: { he: 'ז׳יטון קזינו', en: 'Casino Token' }, desc: { he: 'ז׳יטון קלאסי עם סמל ♠', en: 'Classic casino token with a ♠ mark' }, rarity: 'epic', price: 8000, icon: '♠', payload: { currencySkin: 'cn-casino' }, dailyRarityOnly: true },
 ];
 
 export const priceOf = (rarity: string) => PRICE_BY_RARITY[rarity] ?? 0;

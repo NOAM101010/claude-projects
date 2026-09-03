@@ -46,6 +46,10 @@ interface PlayerState extends SaveData {
   bumpStat: (patch: Partial<Stats>) => void;
   /** Resolves with why it failed, so the shop can say something instead of nothing. */
   buy: (itemId: string) => Promise<{ ok: boolean; reason?: string; detail?: string }>;
+  /** Buy a whole bundle pack atomically. The pack discount replaces the VIP
+   *  discount (never stacked); only items not already owned are charged. */
+  buyPack: (packId: string, itemIds: string[], discount: number) =>
+    Promise<{ ok: boolean; reason?: string; detail?: string; granted?: number }>;
   /** Records one settled round against everyone else at the table. */
   recordRivalry: (game: GameKey, myNet: number, opponents: { userId: string; net: number }[]) => void;
   equip: (itemId: string) => void;
@@ -619,6 +623,62 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
     get().persist();
     checkAchievements(get, set);
     return { ok: true };
+  },
+
+  buyPack: async (packId, itemIds, discount) => {
+    const s = get();
+    const packItems = itemIds
+      .map((id) => itemById(id))
+      .filter((x): x is import('@/types').ShopItem => !!x);
+    const toGrant = packItems.filter((it) => !s.owned.includes(it.id));
+    if (toGrant.length === 0) return { ok: false, reason: 'owned' as const };
+
+    // Mirror buy_pack()'s server-side maths for the local guard + guest path.
+    const clamped = Math.max(0, Math.min(0.6, discount));
+    const fullPrice = toGrant.reduce((sum, it) => sum + it.price, 0);
+    const price = Math.floor(fullPrice * (1 - clamped));
+    if (s.profile.chips < price) {
+      audio.play('error');
+      return { ok: false, reason: 'insufficient' as const };
+    }
+
+    if (isRemoteId(s.profile.id)) {
+      // Push the on-screen balance up first — every game settles locally and
+      // syncs afterwards, so the server could still hold a stale, lower number.
+      const synced = await profileService.syncProfile(s.profile, s.stats);
+      if (!synced.ok) {
+        audio.play('error');
+        return { ok: false, reason: 'not-signed-in', detail: synced.detail };
+      }
+      // The server reads item list + discount from public.bundles; it only
+      // needs the pack name. itemIds/clamped here drive the local guard above.
+      const result = await shopService.buyPack(s.profile.id, packId);
+      if (!result.ok) {
+        audio.play('error');
+        return { ok: false, reason: result.reason ?? 'server', detail: result.detail };
+      }
+      // buy_pack() already charged server-side and returned the real balance —
+      // stamp it so persist() doesn't also push the deduction through adjust_chips.
+      if (typeof result.chips === 'number') lastSyncedChips[s.profile.id] = result.chips;
+      set((state) => ({
+        owned: Array.from(new Set([...state.owned, ...toGrant.map((it) => it.id)])),
+        profile: { ...state.profile, chips: result.chips ?? state.profile.chips - price },
+      }));
+      audio.play('vault');
+      get().persist();
+      checkAchievements(get, set);
+      return { ok: true, granted: result.granted ?? toGrant.length };
+    }
+
+    // Guest / offline: grant locally, exactly like buy().
+    set((state) => ({
+      owned: Array.from(new Set([...state.owned, ...toGrant.map((it) => it.id)])),
+      profile: { ...state.profile, chips: state.profile.chips - price },
+    }));
+    audio.play('vault');
+    get().persist();
+    checkAchievements(get, set);
+    return { ok: true, granted: toGrant.length };
   },
 
   equip: (itemId) => {

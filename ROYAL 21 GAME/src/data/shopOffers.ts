@@ -69,22 +69,17 @@ export function todaysRarityItem(date = new Date()): ShopItem | null {
 }
 
 /**
- * The "rare rotation": five hand-picked rare-or-better items that appear one
- * per weekday. If a player wants a specific one they know exactly when to
- * check back — the point is scarcity you can plan around, not a lottery.
+ * The "rare rotation": one `rareRotationOnly` item per weekday. These never
+ * appear in the normal grid — the only way to buy one is to catch it on its
+ * day. The pick is deterministic (weekday indexes the id-sorted pool) so a
+ * player who wants a specific one knows exactly when to check back.
  */
-const RARE_ROTATION_IDS = [
-  'cn_diamond',   // Diamond coin (legendary)
-  'ch_ember',     // Ember chips (mythic)
-  'cf_fire',      // Fire cards (mythic)
-  'vc_crown',     // Coronation victory (mythic)
-  'tb_crimson',   // Crimson velvet table (mythic)
-];
-
 export function todaysRareRotation(date = new Date()): ShopItem | null {
-  const day = date.getDay(); // 0..6
-  const id = RARE_ROTATION_IDS[day % RARE_ROTATION_IDS.length];
-  return ITEMS.find((item) => item.id === id) ?? null;
+  const pool = ITEMS
+    .filter((item) => item.rareRotationOnly)
+    .sort((a, b) => a.id.localeCompare(b.id));
+  if (pool.length === 0) return null;
+  return pool[date.getDay() % pool.length];
 }
 
 /** How much time until the offers rotate (returns "23:12:04" etc). */
@@ -99,8 +94,14 @@ export function timeUntilNextRotation(now = new Date()): string {
 
 /* -------------------------------------------------------------------------- */
 /* Bundle packs — a curated multi-item purchase with a flat discount.         */
-/* Every pack pays out through buy_pack() (client-side for now — the same     */
-/* server RPC pattern as buy_item() would be a natural upgrade).              */
+/*                                                                            */
+/* SOURCE OF TRUTH for a signed-in player is public.bundles (supabase/buy-    */
+/* pack.sql) — buy_pack(p_pack_id) reads item_ids + discount from there and    */
+/* re-prices server-side, so this table MUST be kept in sync with that seed.   */
+/* The list below is what the shop renders and what the guest / offline path   */
+/* charges locally. The pack discount REPLACES the VIP shop discount (never    */
+/* stacked); since every pack discount (0.25+) already beats the top VIP tier  */
+/* (0.15), that is also always the cheaper deal for the player.               */
 /* -------------------------------------------------------------------------- */
 
 export interface Pack {
@@ -140,6 +141,33 @@ export const PACKS: Pack[] = [
     discount: 0.40,
     icon: '👑',
     color: '#a878f0',
+  },
+  {
+    id: 'pack_royal_table',
+    name: { he: 'שולחן מלכותי', en: 'Royal Table' },
+    subtitle: { he: 'שולחן, קלפים וגב תואמים', en: 'Matching table, cards & back' },
+    itemIds: ['tb_royal', 'cf_royal', 'bk_royal'],
+    discount: 0.35,
+    icon: '👑',
+    color: '#a878f0',
+  },
+  {
+    id: 'pack_jade',
+    name: { he: 'ערכת אזמרגד', en: 'Jade Set' },
+    subtitle: { he: 'שולחן, קלפים ומסגרת', en: 'Table, cards & a frame' },
+    itemIds: ['tb_jade', 'cf_jade', 'fr_jade'],
+    discount: 0.30,
+    icon: '💚',
+    color: '#4fd39a',
+  },
+  {
+    id: 'pack_celebration',
+    name: { he: 'חבילת חגיגה', en: 'Celebration Pack' },
+    subtitle: { he: 'שני אפקטי ניצחון ומסגרת', en: 'Two victory effects & a frame' },
+    itemIds: ['vc_fireworks', 'vc_stars', 'fr_rose'],
+    discount: 0.25,
+    icon: '🎆',
+    color: '#e3b23c',
   },
 ];
 

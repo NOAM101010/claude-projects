@@ -63,6 +63,12 @@ html[data-motion='reduced'] .sb-won { animation: none; }
 .cf-ice .pc-red { color: #1f6fa8; }
 .cf-fire .pc-face { background: linear-gradient(160deg, #2a0f06, #521a08); color: #ffd9a3; box-shadow: inset 0 0 18px rgba(224, 84, 19, 0.45); }
 .cf-fire .pc-red { color: #ff7a3d; }
+.cf-royal .pc-face { background: linear-gradient(160deg, #2c1c47, #3a2568); color: #f3e6c8; box-shadow: inset 0 0 16px rgba(200, 160, 255, 0.3); }
+.cf-royal .pc-red { color: #ff8fae; }
+.cf-jade .pc-face { background: linear-gradient(160deg, #e6f5ec, #bfe6cf); color: #123a28; }
+.cf-jade .pc-red { color: #1f7a55; }
+.cf-blush .pc-face { background: linear-gradient(160deg, #fdeef0, #f4d3da); color: #4a2530; }
+.cf-blush .pc-red { color: #c0392b; }
 
 /* card backs */
 .bk-crimson { background: repeating-linear-gradient(45deg, #7d2523 0 6px, #93302d 6px 12px); }
@@ -75,6 +81,12 @@ html[data-motion='reduced'] .sb-won { animation: none; }
 .bk-ember::after { content: '✦'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 20px; color: rgba(0, 0, 0, 0.35); }
 .bk-frost { background: linear-gradient(160deg, #0d3a4d, #38b6c8 60%, #bdf0f7); }
 .bk-frost::after { content: '❄'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 24px; color: rgba(255, 255, 255, 0.55); }
+.bk-royal { background: linear-gradient(140deg, #2f1d55, #a878f0 50%, #2f1d55); }
+.bk-royal::after { content: '♛'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 26px; color: rgba(255, 255, 255, 0.5); }
+.bk-jade { background: repeating-linear-gradient(45deg, #124a34 0 6px, #1b6349 6px 12px); }
+.bk-jade::after { content: '❖'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 22px; color: rgba(255, 255, 255, 0.45); }
+.bk-wave { background: radial-gradient(circle at 30% 25%, #2f6fa8, #123048 60%, #0a1a2a); }
+.bk-wave::after { content: '≈'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 26px; color: rgba(255, 255, 255, 0.5); }
 
 /* ---------- chips ---------- */
 .chip-obj {
@@ -142,6 +154,8 @@ html[data-motion='reduced'] .sb-won { animation: none; }
 .tb-gold { --table-a: #4a3a14; --table-b: #2b210c; --table-rim: rgba(248, 227, 168, 0.45); }
 .tb-cyber { --table-a: #10233d; --table-b: #0a1226; --table-rim: rgba(56, 182, 200, 0.4); }
 .tb-crimson { --table-a: #3d1220; --table-b: #200912; --table-rim: rgba(232, 128, 125, 0.32); }
+.tb-royal { --table-a: #3a2568; --table-b: #1e1338; --table-rim: rgba(200, 160, 255, 0.4); }
+.tb-jade { --table-a: #12402f; --table-b: #0a2a1e; --table-rim: rgba(80, 210, 150, 0.34); }
 .table-felt {
   background:
     radial-gradient(ellipse 58% 42% at 50% 10%, rgba(255, 255, 255, 0.1), transparent 70%),
@@ -154,6 +168,9 @@ html[data-motion='reduced'] .sb-won { animation: none; }
 .fr-gold { box-shadow: 0 0 0 2px var(--gold), 0 0 18px var(--glow-gold); }
 .fr-ice { box-shadow: 0 0 0 2px #9fe3f2, 0 0 20px rgba(56, 182, 200, 0.5); }
 .fr-ember { box-shadow: 0 0 0 2px #f0894a, 0 0 22px rgba(224, 84, 19, 0.55); }
+.fr-royal { box-shadow: 0 0 0 2px #b98cff, 0 0 22px rgba(168, 120, 240, 0.55); }
+.fr-jade { box-shadow: 0 0 0 2px #4fd39a, 0 0 20px rgba(56, 200, 150, 0.5); }
+.fr-rose { box-shadow: 0 0 0 2px #f2a0b4, 0 0 18px rgba(240, 140, 170, 0.5); }
 
 /* rank rings, used when no frame is equipped */
 .rk-bronze { box-shadow: 0 0 0 2px #a06a34; }

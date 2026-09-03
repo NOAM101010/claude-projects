@@ -44,6 +44,7 @@ Each file's own header says "run after X"; this is the full dependency-sorted li
 | 25 | **`admin-tools.sql`** | player-support RPCs: `admin_find_player`, `admin_reset_player`, `admin_grant_item` / `admin_revoke_item`, `admin_set_level(uuid,int)`, `admin_list_bugs`, `admin_resolve_bug` | setup, admin, telemetry, playtime |
 | 26 | **`playtime.sql`** | `profiles.playtime_seconds` + `add_playtime(int)` — lifetime foreground seconds, clamped 1h/call | setup |
 | 27 | **`direct-messages.sql`** | `direct_messages` table + RLS (friends-only, block-aware) + `mark_dm_read(uuid)` + rate-limit trigger + realtime — 1:1 friend chat (Stage F) | setup |
+| 28 | **`buy-pack.sql`** | `public.bundles` (server-side pack catalogue, RLS select) + `buy_pack(text)` — atomic bundle purchase that reads item list + discount from `bundles` and actually charges the pack discount (replaces the old per-item loop) + `items.daily_rarity_only` / `items.rare_rotation_only` flag columns + Stage G item seed | setup |
 
 `app-config.sql` and `admin-tools.sql` must come **after** `admin.sql`; put them
 after the `#17–19` files so the economy RPCs pick up `config_num()`. Re-running
@@ -84,6 +85,7 @@ after `app-config.sql` is harmless and gets you the config-aware bodies.
 | Level-milestone rewards | `setup.sql` (`claim_level_milestone`) + `economy.ts` `milestoneReward()` | — |
 | VIP tiers / shop discount | `economy.ts` `VIP_TIERS` + `buy_item` in `setup.sql` | — |
 | Shop item prices | `src/data/economy.ts` `PRICE_BY_RARITY` + `items` seed in `setup.sql` + `src/data/items.ts` | — |
+| Bundle packs (content + discount) | `public.bundles` in `buy-pack.sql` (`buy_pack(text)`, server-authoritative) mirrored by `PACKS` in `src/data/shopOffers.ts` | — |
 | Scratch-card odds / prizes | `src/data/economy.ts` `SCRATCH_TIERS` (client-authoritative) | — |
 | Daily missions lineup | `src/data/missions.ts` `MISSIONS` / `WEEKLY_MISSIONS` | — |
 | Achievements catalogue | `src/data/achievements.ts` + `event-trophies.sql` | — |

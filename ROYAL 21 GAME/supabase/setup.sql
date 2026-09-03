@@ -216,7 +216,10 @@ create table if not exists public.items (
   rarity   text not null check (rarity in ('common','rare','epic','legendary','mythic')),
   price    bigint not null default 0 check (price >= 0),
   icon     text not null default '',
-  payload  jsonb not null default '{}'::jsonb
+  payload  jsonb not null default '{}'::jsonb,
+  -- client-side display flags (mirrored from src/data/items.ts); see buy-pack.sql
+  daily_rarity_only  boolean not null default false,
+  rare_rotation_only boolean not null default false
 );
 
 create table if not exists public.user_items (
@@ -813,7 +816,26 @@ insert into public.items (id, category, name, rarity, price, icon, payload) valu
   ('dl_house', 'dealers', '{"he":"דילר הבית","en":"House Dealer"}'::jsonb, 'common', 0, '🎩', '{"dealerSkin":"dl-house"}'::jsonb),
   ('cn_classic', 'coins', '{"he":"מטבע קלאסי","en":"Classic Coin"}'::jsonb, 'common', 0, '🪙', '{"coinSkin":"cn-classic"}'::jsonb),
   ('sl_classic', 'reels', '{"he":"מכונה קלאסית","en":"Classic Machine"}'::jsonb, 'common', 0, '🎰', '{"slotsTheme":"sl-classic"}'::jsonb),
-  ('rb_default', 'backgrounds', '{"he":"רקע קלאסי","en":"Classic Room"}'::jsonb, 'common', 0, '🌑', '{"roomBackground":"rb-default"}'::jsonb)
+  ('rb_default', 'backgrounds', '{"he":"רקע קלאסי","en":"Classic Room"}'::jsonb, 'common', 0, '🌑', '{"roomBackground":"rb-default"}'::jsonb),
+  -- Stage G — shop expansion (themed packs + rare rotation pool)
+  ('cf_royal', 'cards', '{"he":"קלפים מלכותיים","en":"Royal Cards"}'::jsonb, 'legendary', 22000, '♛', '{"cardFace":"cf-royal"}'::jsonb),
+  ('cf_jade', 'cards', '{"he":"קלפי אזמרגד","en":"Jade Cards"}'::jsonb, 'epic', 8000, '💚', '{"cardFace":"cf-jade"}'::jsonb),
+  ('cf_blush', 'cards', '{"he":"קלפי ורד","en":"Blush Cards"}'::jsonb, 'rare', 2000, '🌹', '{"cardFace":"cf-blush"}'::jsonb),
+  ('bk_royal', 'backs', '{"he":"גב מלכותי","en":"Royal Back"}'::jsonb, 'legendary', 22000, '♛', '{"cardBack":"bk-royal"}'::jsonb),
+  ('bk_jade', 'backs', '{"he":"גב אזמרגד","en":"Jade Back"}'::jsonb, 'epic', 8000, '💚', '{"cardBack":"bk-jade"}'::jsonb),
+  ('bk_wave', 'backs', '{"he":"גב גלים","en":"Wave Back"}'::jsonb, 'rare', 2000, '🌊', '{"cardBack":"bk-wave"}'::jsonb),
+  ('tb_royal', 'tables', '{"he":"קטיפה מלכותית","en":"Royal Velvet"}'::jsonb, 'legendary', 22000, '👑', '{"table":"tb-royal"}'::jsonb),
+  ('tb_jade', 'tables', '{"he":"לבד אזמרגד","en":"Jade Felt"}'::jsonb, 'epic', 8000, '💚', '{"table":"tb-jade"}'::jsonb),
+  ('fr_royal', 'frames', '{"he":"מסגרת מלכותית","en":"Royal Frame"}'::jsonb, 'legendary', 22000, '👑', '{"frame":"fr-royal"}'::jsonb),
+  ('fr_jade', 'frames', '{"he":"מסגרת אזמרגד","en":"Jade Frame"}'::jsonb, 'epic', 8000, '💠', '{"frame":"fr-jade"}'::jsonb),
+  ('fr_rose', 'frames', '{"he":"מסגרת ורד","en":"Rose Frame"}'::jsonb, 'rare', 2000, '🌹', '{"frame":"fr-rose"}'::jsonb),
+  ('vc_fireworks', 'victory', '{"he":"זיקוקים","en":"Fireworks"}'::jsonb, 'epic', 8000, '🎆', '{"victory":"vc-fireworks"}'::jsonb),
+  ('vc_stars', 'victory', '{"he":"מטר כוכבים","en":"Star Shower"}'::jsonb, 'legendary', 22000, '🌟', '{"victory":"vc-stars"}'::jsonb),
+  ('cn_gem', 'coins', '{"he":"מטבע יהלום","en":"Gem Coin"}'::jsonb, 'legendary', 30000, '💎', '{"currencySkin":"cn-gem"}'::jsonb),
+  ('cn_crown_cur', 'coins', '{"he":"מטבע כתר","en":"Crown Coin"}'::jsonb, 'mythic', 75000, '👑', '{"currencySkin":"cn-crown"}'::jsonb),
+  ('cn_nova', 'coins', '{"he":"מטבע נובה","en":"Nova Coin"}'::jsonb, 'mythic', 75000, '✦', '{"currencySkin":"cn-nova"}'::jsonb),
+  ('cn_ancient', 'coins', '{"he":"מטבע עתיק","en":"Ancient Coin"}'::jsonb, 'legendary', 30000, '⚜', '{"currencySkin":"cn-ancient"}'::jsonb),
+  ('cn_casino', 'coins', '{"he":"ז׳יטון קזינו","en":"Casino Token"}'::jsonb, 'epic', 8000, '♠', '{"currencySkin":"cn-casino"}'::jsonb)
 on conflict (id) do update set
   category = excluded.category, name = excluded.name, rarity = excluded.rarity,
   price = excluded.price, icon = excluded.icon, payload = excluded.payload;

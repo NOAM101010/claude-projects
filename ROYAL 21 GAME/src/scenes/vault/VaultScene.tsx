@@ -10,7 +10,7 @@ import { LightPool } from '@/components/effects/LightPool';
 import { ItemPreview } from './ItemPreview';
 import { ITEMS, itemById } from '@/data/items';
 import { discountedPrice } from '@/data/economy';
-import { todaysDailyOffers, todaysRarityItem, PACKS, packPricing, timeUntilNextRotation, DAILY_DISCOUNT } from '@/data/shopOffers';
+import { todaysDailyOffers, todaysRarityItem, todaysRareRotation, PACKS, packPricing, timeUntilNextRotation, DAILY_DISCOUNT } from '@/data/shopOffers';
 import { usePlayer } from '@/stores/usePlayer';
 import { useUI } from '@/stores/useUI';
 import { useT } from '@/hooks/useT';
@@ -30,6 +30,7 @@ export default function VaultScene() {
   const profile = usePlayer((s) => s.profile);
   const owned = usePlayer((s) => s.owned);
   const buy = usePlayer((s) => s.buy);
+  const buyPack = usePlayer((s) => s.buyPack);
   const equip = usePlayer((s) => s.equip);
   const toast = useUI((s) => s.toast);
   const chip = chipGlyphOf(profile.equipped.currencySkin);
@@ -57,38 +58,33 @@ export default function VaultScene() {
 
   const dailyOffers = useMemo(() => todaysDailyOffers(), []);
   const rarityItem = useMemo(() => todaysRarityItem(), []);
+  const rareItem = useMemo(() => todaysRareRotation(), []);
 
   const items = useMemo(
     () => (category === 'deals'
       ? []
-      : ITEMS.filter((item) => (category === 'all' || item.category === category) && !item.dailyRarityOnly)),
+      : ITEMS.filter((item) => (category === 'all' || item.category === category) && !item.dailyRarityOnly && !item.rareRotationOnly)),
     [category],
   );
 
-  /** Purchase a pack — buys each item in sequence, applies the extra discount. */
+  /** Purchase a pack — one atomic buy_pack() RPC that finally charges the
+   *  advertised bundle discount (the old per-item loop never did). */
   const purchasePack = async (packId: string) => {
     const pack = PACKS.find((p) => p.id === packId);
     if (!pack) return;
-    const { discountedPrice: totalPrice } = packPricing(pack);
-    if (profile.chips < totalPrice) {
-      audio.play('error');
-      toast(t('vault.cantAfford', { amount: fmt(totalPrice - profile.chips) }), 'bad', '⚠');
+    const result = await buyPack(pack.id, pack.itemIds, pack.discount);
+    if (result.ok) {
+      audio.play('bigWin');
+      toast(t('vault.packBought', { name: pack.name[lang], count: result.granted ?? pack.itemIds.length }), 'good', pack.icon);
       return;
     }
-    // Buy each item in turn. Any failure leaves the ones already bought in the
-    // inventory — the alternative would be a server-side buy_pack() RPC.
-    let bought = 0;
-    for (const itemId of pack.itemIds) {
-      if (owned.includes(itemId)) continue;
-      const result = await buy(itemId);
-      if (result.ok) bought += 1;
-    }
-    if (bought > 0) {
-      audio.play('bigWin');
-      toast(t('vault.packBought', { name: pack.name[lang], count: bought }), 'good', pack.icon);
-    } else {
-      toast(t('vault.packAllOwned'), 'neutral', 'ℹ');
-    }
+    const shortfall = Math.max(0, packPricing(pack).discountedPrice - profile.chips);
+    const messages: Record<string, string> = {
+      owned: t('vault.packAllOwned'),
+      insufficient: t('vault.cantAfford', { amount: fmt(shortfall) }),
+      'not-signed-in': t('vault.signInToBuy'),
+    };
+    toast(messages[result.reason ?? 'server'] ?? `${t('vault.buyFailed')} (${result.detail ?? result.reason})`, 'bad', '⚠');
   };
 
   const isEquipped = (item: ShopItem) =>
@@ -216,6 +212,20 @@ export default function VaultScene() {
                   </div>
                 </div>
                 <RareRotationCard item={rarityItem} onOpen={setSelected} owned={owned.includes(rarityItem.id)} lang={lang} t={t} equippedCoin={profile.equipped.currencySkin} exclusive />
+              </div>
+            )}
+
+            {/* Rare Rotation — one hidden collector's item surfaces per weekday */}
+            {rareItem && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-[22px]">💎</span>
+                  <div>
+                    <b className="text-[14px]">{t('vault.rareRotation')}</b>
+                    <p className="text-[11px]" style={{ color: 'var(--muted)' }}>{t('vault.rareRotationHint')}</p>
+                  </div>
+                </div>
+                <RareRotationCard item={rareItem} onOpen={setSelected} owned={owned.includes(rareItem.id)} lang={lang} t={t} equippedCoin={profile.equipped.currencySkin} />
               </div>
             )}
 
