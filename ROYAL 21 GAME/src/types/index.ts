@@ -164,7 +164,7 @@ export interface FriendRequest {
 
 export interface AppNotification {
   id: string;
-  kind: 'friend_request' | 'invite' | 'reward' | 'level' | 'achievement' | 'system' | 'gift';
+  kind: 'friend_request' | 'invite' | 'reward' | 'level' | 'achievement' | 'system' | 'gift' | 'podium_prize';
   title: string;
   body?: string;
   actorId?: string;

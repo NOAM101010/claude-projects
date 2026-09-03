@@ -370,8 +370,15 @@
     "accepted": "{name} אישר את בקשת החברות שלך",
     "giftReceived": "קיבלת מתנה של {amount} צ'יפים",
     "milestoneReward": "פרס לרמה {level}: +{chips} צ'יפים",
+    "podiumWon": "זכית ב-{amount} 🏆 — מקום {rank} בפודיום השבועי!",
     "generic": "התראה חדשה",
     "inviteExpired": "ההזמנה כבר לא בתוקף"
+  },
+  "podium": {
+    "subtitle": "3 החברים המובילים בכל שבוע: {first} / {second} / {third} צ'יפים",
+    "yourRank": "אתה מקום {rank} מתוך {field}",
+    "resetDays": "מתאפס בעוד {days} ימים {hours} שעות",
+    "resetHours": "מתאפס בעוד {hours} שעות"
   },
   "rooms": {
     "title": "החדר שלי",

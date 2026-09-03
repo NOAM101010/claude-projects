@@ -92,6 +92,17 @@ export const friendsService = {
     return data as { claimed: boolean; chips?: number; rank?: number; reason?: string };
   },
 
+  /**
+   * Take (or top up) the chip snapshot for the last completed ISO week. The RPC
+   * is idempotent — once a week_key has rows it is a no-op — so every hub load
+   * can call it and whichever client fires first freezes the standings.
+   */
+  async captureWeeklySnapshot(): Promise<void> {
+    const client = db();
+    if (!client) return;
+    await client.rpc('capture_weekly_snapshot');
+  },
+
   /** Live presence updates for the friend panel. */
   subscribe(userId: string, onChange: () => void) {
     const client = db();

@@ -370,8 +370,15 @@
     "accepted": "{name} accepted your friend request",
     "giftReceived": "You received a gift of {amount} chips",
     "milestoneReward": "Level {level} milestone: +{chips} chips",
+    "podiumWon": "You won {amount} 🏆 — rank {rank} on the weekly podium!",
     "generic": "New notification",
     "inviteExpired": "That invite is no longer valid"
+  },
+  "podium": {
+    "subtitle": "Top 3 friends every week: {first} / {second} / {third} chips",
+    "yourRank": "You're #{rank} of {field}",
+    "resetDays": "Resets in {days}d {hours}h",
+    "resetHours": "Resets in {hours}h"
   },
   "rooms": {
     "title": "My room",

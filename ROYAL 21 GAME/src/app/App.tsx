@@ -9,6 +9,7 @@ import { AmbientBackground } from '@/components/effects/AmbientBackground';
 import { AppBackdrop } from '@/components/layout/AppBackdrop';
 import { FriendsPanel } from '@/components/social/FriendsPanel';
 import { NotificationsPanel } from '@/components/social/NotificationsPanel';
+import { WeeklyPodiumPanel } from '@/components/social/WeeklyPodiumPanel';
 import { MissionsPanel } from '@/components/social/MissionsPanel';
 import { InviteOverlay } from '@/components/social/InviteOverlay';
 import { ChipsPanel } from '@/components/layout/ChipsPanel';
@@ -194,6 +195,7 @@ export function App() {
       <ConnectionBanner />
       <FriendsPanel />
       <NotificationsPanel />
+      <WeeklyPodiumPanel />
       <MissionsPanel />
       <ChipsPanel />
       <InviteOverlay />

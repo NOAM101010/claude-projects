@@ -14,6 +14,7 @@ import type { AppNotification, Friend, GameKey } from '@/types';
 
 const icons: Record<string, string> = {
   friend_request: '👋', invite: '🎮', reward: '🎁', level: '🎖️', achievement: '🏆', system: '◆', gift: '🎁',
+  podium_prize: '🏆',
 };
 
 /**
@@ -23,8 +24,9 @@ const icons: Record<string, string> = {
  */
 function describe(n: AppNotification, friends: Friend[], t: (path: string, vars?: Record<string, string | number>) => string): string {
   const actor = friends.find((f) => f.id === n.actorId)?.username ?? t('common.someone');
-  const payload = (n.payload ?? {}) as { game?: string; amount?: number; level?: number; chips?: number };
+  const payload = (n.payload ?? {}) as { game?: string; amount?: number; level?: number; chips?: number; rank?: number };
   switch (n.title) {
+    case 'weekly_podium_won': return t('notifications.podiumWon', { amount: fmt(payload.amount ?? 0), rank: payload.rank ?? 1 });
     case 'invite': return t('notifications.invite', { name: actor, game: t(`games.${payload.game ?? 'blackjack'}`) });
     case 'accepted': return t('notifications.accepted', { name: actor });
     case 'friend_request': return t('notifications.friendRequest', { name: actor });
@@ -80,6 +82,14 @@ export function NotificationsPanel() {
                 style={{ background: notification.read ? 'transparent' : 'rgba(227,178,60,.06)' }}>
                 <span className="text-[20px]">{icons[notification.kind] ?? '◆'}</span>
                 <span className="flex-1 text-[13.5px]">{describe(notification, friends, t)}</span>
+                <button
+                  aria-label={t('common.close')}
+                  className="w-6 h-6 grid place-items-center rounded-[var(--r-xs)] text-[11px] opacity-40 hover:opacity-90 transition-opacity"
+                  style={{ color: 'var(--muted)' }}
+                  onClick={(event) => { event.stopPropagation(); void dismiss(notification.id); }}
+                >
+                  ✕
+                </button>
               </div>
             );
           })}

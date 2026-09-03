@@ -132,6 +132,16 @@ export const useSocial = create<SocialState>()((set, get) => ({
         set({ pendingInvite: { from, code: payload?.room_code ?? '', game: payload?.game ?? 'blackjack', id: notification.id } });
       }
       if (notification.kind === 'friend_request') void get().refresh(userId);
+      if (notification.kind === 'podium_prize') {
+        // The RPC already credited the chips server-side; this is the receipt.
+        audio.play('bigWin');
+        const payload = notification.payload as { amount?: number } | undefined;
+        const lang = useSettings.getState().lang;
+        useUI.getState().toast(
+          translate(lang, 'friends.weeklyPrizeWon', { amount: fmt(payload?.amount ?? 0) }),
+          'good', '🏆',
+        );
+      }
       if (notification.kind === 'gift') {
         const payload = notification.payload as { amount?: number } | undefined;
         const amount = payload?.amount ?? 0;

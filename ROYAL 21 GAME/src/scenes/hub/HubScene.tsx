@@ -311,7 +311,7 @@ export default function HubScene() {
             hoverSound="notify"
             glow="rgba(227,178,60,.3)"
             badge={podium.hasFriends && podium.rank <= 3 ? '🏆' : undefined}
-            onEnter={() => useUI.getState().openPanel('friends')}
+            onEnter={() => useUI.getState().openPanel('weeklyPodium')}
           >
             {(focused) => (
               <div className="relative w-full h-full grid place-items-center" style={{ minHeight: 120 }}>
