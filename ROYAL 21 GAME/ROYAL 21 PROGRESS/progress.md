@@ -9,7 +9,8 @@
 
 תוכנית: `swift-snuggling-harp.md` "סבב 2". סדר: J→I→K→L→H → תוכנית reworks גדולים (ערב חברה + VIP).
 - **STAGE J ✅ נדחף** (`d6f21a7`). J1: מתנת צ'יפים זיכתה פעמיים (RPC + client both) — ההודעה עכשיו receipt-only, נושאת `new_balance`, הקליינט `setChips`. J2: רולטה MP — כפתור "סיימתי להמר" (action `ready` שכבר היה ב-engine) + countdown 15ש, הגלגל ננעל רק כש-`every(ready)`, הוסר כפתור "סובב עכשיו" של המארח. reviewer: חוסם realtime-visibility תוקן. **המשתמש צריך להריץ `RUN-THIS-NEXT.sql` (send_gift + claim_weekly_prize מעודכנים).**
-- STAGE I — פוקר/SnG · K — HUB/קוסמטי · L — חנות · H — כניסה+דמות.
+- **STAGE I ✅ נדחף** (`56638f3`). פוקר/SnG: badge פעולה + ז'יטון לקופה (מ-`seat.lastAction` שכבר היה ב-state); `showCards` action + `revealed[]` + `HandOverBar` (countdown 6ש, `NEXT_HAND_DELAY_MS`); תווית `bestHand` מתחת לקלפים; `showMoment` למנצח יד + knockout/placement ב-SnG; **תיקון all-in שחשף מנצח מוקדם** — `displayStacks` מוקפא ב-`useReveal`, log/alive/moments גדורים על `!revealing`, river all-in כופה חלון reveal. reviewer נקי. אין SQL. **ממתין לבדיקה חיה 2-דפדפנים.**
+- K — HUB/קוסמטי · L — חנות · H — כניסה+דמות.
 
 ## Roadmap חדש (2026-09-03) — 8 שלבים A–H
 
