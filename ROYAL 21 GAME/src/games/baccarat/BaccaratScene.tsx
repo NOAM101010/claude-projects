@@ -15,6 +15,7 @@ import { useBaccaratRoom } from '@/stores/useBaccaratRoom';
 import { roomsService } from '@/services/roomsService';
 import { isOnline } from '@/services/supabase';
 import { useT } from '@/hooks/useT';
+import { useAppConfig } from '@/hooks/useAppConfig';
 import { audio } from '@/audio/AudioManager';
 import { haptic } from '@/lib/haptics';
 import { fmt } from '@/lib/format';
@@ -22,7 +23,7 @@ import { XP_REWARDS } from '@/data/economy';
 import { VIP_CHIP_EXTRA, isVipEligible } from '@/data/vip';
 import { newSeed } from '@/lib/random';
 import {
-  createState, reduce, handTotal, betCost, PAYTABLE, BACCARAT_BETS, outcomeLabel,
+  createState, reduce, handTotal, betCost, baccaratPaytable, BACCARAT_BETS, outcomeLabel,
 } from './engine';
 import { useBaccaratReveal } from './useBaccaratReveal';
 import { BaccaratSideBets } from './BaccaratSideBets';
@@ -52,7 +53,8 @@ function BaccaratSolo() {
   const toast = useUI((s) => s.toast);
   const showMoment = useUI((s) => s.showMoment);
 
-  const [state, setState] = useState<BaccaratState>(() => createState(newSeed()));
+  const bankerPayout = useAppConfig().baccaratBankerPayout;
+  const [state, setState] = useState<BaccaratState>(() => createState(newSeed(), bankerPayout));
   const [stake, setStake] = useState<number>(100);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
@@ -151,11 +153,11 @@ function BaccaratSolo() {
   const deal = () => {
     if (state.phase !== 'betting' || totalStaked <= 0) return;
     audio.play('cardFlip');
-    dispatch({ type: 'deal' });
+    dispatch({ type: 'deal', bankerPayout });
   };
 
   const newRound = () => {
-    dispatch({ type: 'newRound' });
+    dispatch({ type: 'newRound', bankerPayout });
   };
 
   const face = profile.equipped.cardFace;
@@ -302,7 +304,7 @@ function BaccaratSolo() {
               >
                 <div className="text-[13px] font-black" style={{ color: '#fff' }}>{t(labelKey)}</div>
                 <div className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,.7)' }}>
-                  {side === 'banker' ? '0.95:1' : '1:1'}
+                  {side === 'banker' ? `${state.bankerPayout}:1` : '1:1'}
                 </div>
                 {on > 0 && (
                   <div className="absolute -top-2 -end-2 rounded-full px-2 py-0.5 num text-[11px] font-black"
@@ -412,7 +414,7 @@ function BaccaratSolo() {
 
       <Modal open={payOpen} onClose={() => setPayOpen(false)} title={t('games.paytable')}>
         <div className="flex flex-col gap-1.5">
-          {PAYTABLE.map((row) => (
+          {baccaratPaytable(state.bankerPayout).map((row) => (
             <div key={row.key} className="flex items-center gap-3 px-3 py-2 rounded-[var(--r-xs)]"
               style={{ background: 'var(--glass)', border: '1px solid var(--glass-line)' }}>
               <b className="flex-1 text-[13px]">{t(`baccarat.${row.key}`)}</b>
@@ -445,6 +447,7 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
   const showMoment = useUI((s) => s.showMoment);
   const setLoading = useUI((s) => s.setLoading);
 
+  const bankerPayout = useAppConfig().baccaratBankerPayout;
   const { state, room, members, isHost, send, create, joinByCode, leave } = useBaccaratRoom();
   const [stake, setStake] = useState<number>(100);
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -551,7 +554,7 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
     }
     // Fresh nonce at deal time — betting is closed, so no client can precompute
     // the shoe from the published state and bet on it.
-    if (Date.now() > state.deadline) void send(profile.id, { type: 'deal', nonce: newSeed() });
+    if (Date.now() > state.deadline) void send(profile.id, { type: 'deal', nonce: newSeed(), bankerPayout });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHost, state?.phase, state?.deadline, state?.seats.map((s) => `${s.userId}:${betCost(s.bet)}`).join('|'), now]);
   const secondsLeft = state?.deadline ? Math.max(0, Math.ceil((state.deadline - now) / 1000)) : null;
@@ -602,7 +605,7 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
      plus the credit animation to finish before the hand is wiped. */
   useEffect(() => {
     if (!isHost || !state || state.phase !== 'settled') return;
-    const timer = setTimeout(() => void send(profile.id, { type: 'newRound' }), 10_000);
+    const timer = setTimeout(() => void send(profile.id, { type: 'newRound', bankerPayout }), 10_000);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHost, state?.phase, state?.round]);
@@ -727,7 +730,7 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
     if (!state || state.phase !== 'betting') return;
     const anyBet = state.seats.some((s) => s.bet.main || Object.keys(s.bet.sides).length > 0);
     if (!anyBet) return;
-    void send(profile.id, { type: 'deal', nonce: newSeed() });
+    void send(profile.id, { type: 'deal', nonce: newSeed(), bankerPayout });
   };
 
   const back = async () => {
@@ -919,7 +922,7 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
                 }}>
                 <div className="text-[13px] font-black" style={{ color: '#fff' }}>{t(labelKey)}</div>
                 <div className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,.7)' }}>
-                  {side === 'banker' ? '0.95:1' : '1:1'}
+                  {side === 'banker' ? `${state.bankerPayout}:1` : '1:1'}
                 </div>
                 {on > 0 && (
                   <div className="absolute -top-2 -end-2 rounded-full px-2 py-0.5 num text-[11px] font-black"
@@ -1028,7 +1031,7 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
 
       <Modal open={payOpen} onClose={() => setPayOpen(false)} title={t('games.paytable')}>
         <div className="flex flex-col gap-1.5">
-          {PAYTABLE.map((row) => (
+          {baccaratPaytable(state.bankerPayout).map((row) => (
             <div key={row.key} className="flex items-center gap-3 px-3 py-2 rounded-[var(--r-xs)]"
               style={{ background: 'var(--glass)', border: '1px solid var(--glass-line)' }}>
               <b className="flex-1 text-[13px]">{t(`baccarat.${row.key}`)}</b>

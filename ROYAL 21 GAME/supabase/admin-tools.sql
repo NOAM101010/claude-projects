@@ -1,7 +1,8 @@
 -- =============================================================================
 -- ADMIN TOOLS — player-support powers for the admin panel
 -- Run once in the Supabase SQL editor AFTER setup.sql + admin.sql + telemetry.sql
--- (+ app-config.sql). Idempotent — everything is create or replace.
+-- (+ app-config.sql + playtime.sql — admin_find_player returns playtime_seconds).
+-- Idempotent — everything is create or replace.
 --
 -- Every function re-checks public.is_admin() before it touches a row, exactly
 -- like the powers in admin.sql / admin-live.sql. Virtual chips only.
@@ -22,7 +23,7 @@ begin
     select
       p.id, p.username, p.tag, p.level, p.xp, p.chips,
       p.presence, p.current_game, p.last_seen, p.is_admin, p.is_guest,
-      p.created_at, p.ever_vip, p.daily_streak, p.onboarded_at,
+      p.created_at, p.ever_vip, p.daily_streak, p.onboarded_at, p.playtime_seconds,
       (select count(*) from public.user_items ui where ui.user_id = p.id)   as item_count,
       (select count(*) from public.friendships f where f.user_id = p.id)    as friend_count,
       (select count(*) from public.referrals r where r.referrer_id = p.id)  as referral_count

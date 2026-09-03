@@ -74,6 +74,7 @@ export interface AdminPlayer {
   ever_vip: boolean;
   daily_streak: number;
   onboarded_at: string | null;
+  playtime_seconds: number;
   item_count: number;
   friend_count: number;
   referral_count: number;

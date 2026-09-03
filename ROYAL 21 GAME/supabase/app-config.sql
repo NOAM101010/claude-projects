@@ -15,6 +15,7 @@
 --   mission_all_done_bonus 5000                       MISSION_ALL_DONE_BONUS
 --   max_mission_reward     20000                      MAX_MISSION_REWARD
 --   referrer_tiers         [3000, 7000, 15000]        REFERRER_TIERS
+--   baccarat_banker_payout 0.95  (0..1)               DEFAULT_BANKER_PAYOUT
 -- =============================================================================
 
 create table if not exists public.app_config (
@@ -41,7 +42,8 @@ insert into public.app_config (key, value) values
   ('weekly_podium',          '[5000,2500,1000]'::jsonb),
   ('mission_all_done_bonus', to_jsonb(5000)),
   ('max_mission_reward',     to_jsonb(20000)),
-  ('referrer_tiers',         '[3000,7000,15000]'::jsonb)
+  ('referrer_tiers',         '[3000,7000,15000]'::jsonb),
+  ('baccarat_banker_payout', to_jsonb(0.95))
 on conflict (key) do nothing;
 
 -- --- admin_set_config(key, value) -----------------------------------------
@@ -64,6 +66,12 @@ begin
     case p_key
       when 'gift_daily_limit', 'mission_all_done_bonus', 'max_mission_reward' then
         if jsonb_typeof(p_value) <> 'number' or (p_value::text::numeric) < 0 then
+          raise exception 'bad';
+        end if;
+
+      when 'baccarat_banker_payout' then
+        if jsonb_typeof(p_value) <> 'number'
+           or (p_value::text::numeric) < 0 or (p_value::text::numeric) > 1 then
           raise exception 'bad';
         end if;
 

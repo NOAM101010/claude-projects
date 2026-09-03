@@ -9,6 +9,7 @@ import { usePlayer } from '@/stores/usePlayer';
 import { useUI } from '@/stores/useUI';
 import { useT } from '@/hooks/useT';
 import { fmt, shortDate } from '@/lib/format';
+import { formatPlaytime } from '@/services/playtimeService';
 import { ITEMS } from '@/data/items';
 import {
   adminService, type AdminOverview, type AdminRoom, type HealthCheck, type AdminActivePlayer,
@@ -438,6 +439,7 @@ export default function AdminScene() {
                 <span>Referrals <b>{picked.referral_count}</b></span>
                 <span>{picked.is_guest ? 'guest' : 'account'}{picked.is_admin ? ' · ADMIN' : ''}{picked.ever_vip ? ' · VIP' : ''}</span>
                 <span>{picked.presence}{picked.current_game ? ` · ${picked.current_game}` : ''}</span>
+                <span>{t('admin.playtime')} <b>{formatPlaytime(picked.playtime_seconds)}</b></span>
                 <span>Joined {shortDate(picked.created_at, lang)}</span>
                 <span>Seen {picked.last_seen ? shortDate(picked.last_seen, lang) : '—'}</span>
               </div>

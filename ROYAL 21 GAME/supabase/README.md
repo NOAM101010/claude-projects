@@ -41,7 +41,8 @@ Each file's own header says "run after X"; this is the full dependency-sorted li
 | 22 | `weekly-podium.sql` | `profiles.weekly_prize_claimed_week`, `claim_weekly_prize` **v2 (live)** — ranks off the snapshot, now reads `app_config.weekly_podium` | weekly-snapshot, app-config |
 | 23 | `notifications-cleanup.sql` | owner-only DELETE policy on `notifications` + realtime DELETE payloads | setup |
 | 24 | **`app-config.sql`** | `app_config` table + `admin_set_config` / `get_app_config` / `config_num` | setup, admin |
-| 25 | **`admin-tools.sql`** | player-support RPCs: `admin_find_player`, `admin_reset_player`, `admin_grant_item` / `admin_revoke_item`, `admin_set_level(uuid,int)`, `admin_list_bugs`, `admin_resolve_bug` | setup, admin, telemetry |
+| 25 | **`admin-tools.sql`** | player-support RPCs: `admin_find_player`, `admin_reset_player`, `admin_grant_item` / `admin_revoke_item`, `admin_set_level(uuid,int)`, `admin_list_bugs`, `admin_resolve_bug` | setup, admin, telemetry, playtime |
+| 26 | **`playtime.sql`** | `profiles.playtime_seconds` + `add_playtime(int)` — lifetime foreground seconds, clamped 1h/call | setup |
 
 `app-config.sql` and `admin-tools.sql` must come **after** `admin.sql`; put them
 after the `#17–19` files so the economy RPCs pick up `config_num()`. Re-running

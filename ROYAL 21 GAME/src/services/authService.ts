@@ -309,5 +309,6 @@ export function rowToProfile(row: any): Profile {
     missionClaims: row.mission_claims ?? {},
     referrerTier: row.referrer_tier ?? 0,
     onboardedAt: row.onboarded_at ?? null,
+    playtimeSeconds: row.playtime_seconds ?? 0,
   };
 }

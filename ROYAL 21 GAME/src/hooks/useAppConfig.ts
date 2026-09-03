@@ -25,9 +25,14 @@ export interface AppConfig {
   maxMissionReward: number;
   weeklyPodium: readonly number[];
   referrerTiers: readonly number[];
+  /** Baccarat Banker win multiplier (profit paid on a winning Banker bet).
+   *  0.95 = classic 5% commission; 1.0 = no commission. Clamped to 0..1. */
+  baccaratBankerPayout: number;
   /** Reward for a given streak day — reads the live ladder, else STREAK_REWARD. */
   streakReward: (day: number) => number;
 }
+
+const DEFAULT_BANKER_PAYOUT = 0.95;
 
 const FALLBACK: AppConfig = {
   giftDailyLimit: GIFT_DAILY_LIMIT,
@@ -35,8 +40,11 @@ const FALLBACK: AppConfig = {
   maxMissionReward: MAX_MISSION_REWARD,
   weeklyPodium: WEEKLY_PODIUM,
   referrerTiers: REFERRER_TIERS,
+  baccaratBankerPayout: DEFAULT_BANKER_PAYOUT,
   streakReward: STREAK_REWARD,
 };
+
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
 let cache: AppConfig | null = null;
 let inflight: Promise<AppConfig> | null = null;
@@ -55,6 +63,7 @@ function build(raw: Record<string, unknown>): AppConfig {
     maxMissionReward: num(raw.max_mission_reward, FALLBACK.maxMissionReward),
     weeklyPodium: arr(raw.weekly_podium, FALLBACK.weeklyPodium),
     referrerTiers: arr(raw.referrer_tiers, FALLBACK.referrerTiers),
+    baccaratBankerPayout: clamp01(num(raw.baccarat_banker_payout, FALLBACK.baccaratBankerPayout)),
     streakReward: (day: number) => {
       if (!ladder) return STREAK_REWARD(day);
       const key =

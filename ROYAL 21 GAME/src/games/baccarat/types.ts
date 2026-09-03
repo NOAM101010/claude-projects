@@ -49,6 +49,10 @@ export interface BaccaratState {
   version: number;
   seed: number;
   cursor: number;
+  /** Banker win multiplier in effect for this table (default 0.95 = 5%
+   *  commission). Host-authoritative: set on the shared state so every client
+   *  settles Banker bets identically. */
+  bankerPayout: number;
   round: number;
   phase: BaccaratPhase;
   player: Card[];
@@ -81,7 +85,7 @@ export type BaccaratAction =
    *  already closed). The engine seeds the shoe from it instead of the published
    *  seed/cursor, so no client can precompute the hand and bet on it. Absent in
    *  solo/tests → the existing deterministic shoe is used. */
-  | { type: 'deal'; nonce?: number }
-  | { type: 'newRound' }
+  | { type: 'deal'; nonce?: number; bankerPayout?: number }
+  | { type: 'newRound'; bankerPayout?: number }
   | { type: 'join'; userId: string; username: string; avatar: import('@/types').AvatarConfig; level: number }
   | { type: 'leave'; userId: string };

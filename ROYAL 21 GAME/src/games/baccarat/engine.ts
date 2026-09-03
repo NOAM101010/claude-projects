@@ -25,6 +25,11 @@ import type {
  *   Small ........ 1.5:1  (only 4 cards were dealt)
  */
 
+/** Banker win multiplier — the profit paid on a winning Banker bet. 0.95 is the
+ *  classic 5% commission; an admin can retune it via app_config
+ *  (`baccarat_banker_payout`), 1.0 meaning no commission. */
+export const DEFAULT_BANKER_PAYOUT = 0.95;
+
 const SUITS: Suit[] = ['S', 'H', 'D', 'C'];
 const RANKS: Rank[] = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 
@@ -49,11 +54,12 @@ function next(state: BaccaratState): Card {
   return { r, s };
 }
 
-export function createState(seed: number): BaccaratState {
+export function createState(seed: number, bankerPayout: number = DEFAULT_BANKER_PAYOUT): BaccaratState {
   return {
     version: 0,
     seed,
     cursor: seed,
+    bankerPayout,
     round: 0,
     phase: 'betting',
     player: [],
@@ -125,7 +131,13 @@ function playHand(state: BaccaratState): void {
 }
 
 /** Compute the payout for a single BaccaratBet against the resolved hand. */
-export function settleOne(bet: BaccaratBet, outcome: BaccaratOutcome, player: Card[], banker: Card[]): {
+export function settleOne(
+  bet: BaccaratBet,
+  outcome: BaccaratOutcome,
+  player: Card[],
+  banker: Card[],
+  bankerPayout: number = DEFAULT_BANKER_PAYOUT,
+): {
   net: number; sideResults: Partial<Record<BaccaratSide, number>>;
 } {
   let net = 0;
@@ -134,7 +146,7 @@ export function settleOne(bet: BaccaratBet, outcome: BaccaratOutcome, player: Ca
   if (bet.main) {
     const { side, amount } = bet.main;
     if (side === outcome) {
-      net += side === 'banker' ? Math.round(amount * 0.95) : amount;
+      net += side === 'banker' ? Math.round(amount * bankerPayout) : amount;
     } else if (outcome === 'tie') {
       net += 0; // a tie pushes any Player/Banker bet — stake returned
     } else {
@@ -163,7 +175,10 @@ export function settleOne(bet: BaccaratBet, outcome: BaccaratOutcome, player: Ca
 
 /** Apply all payouts and return the net chip delta for the SOLO player. */
 function settlePayouts(state: BaccaratState): number {
-  const { net, sideResults } = settleOne(state.bet, state.outcome as BaccaratOutcome, state.player, state.banker);
+  const { net, sideResults } = settleOne(
+    state.bet, state.outcome as BaccaratOutcome, state.player, state.banker,
+    state.bankerPayout ?? DEFAULT_BANKER_PAYOUT,
+  );
   state.sideResults = sideResults;
   return net;
 }
@@ -174,16 +189,23 @@ export function betCost(bet: BaccaratBet): number {
   return (bet.main?.amount ?? 0) + sideTotal;
 }
 
-/** Paytable rows for the rulebook / paytable modal. */
-export const PAYTABLE = [
-  { key: 'player', payout: '1 : 1' },
-  { key: 'banker', payout: '1 : 0.95 (5% commission)' },
-  { key: 'playerPair', payout: '11 : 1' },
-  { key: 'bankerPair', payout: '11 : 1' },
-  { key: 'perfectPair', payout: '25 : 1' },
-  { key: 'big', payout: '0.54 : 1' },
-  { key: 'small', payout: '1.5 : 1' },
-] as const;
+/** Paytable rows for the rulebook / paytable modal. The Banker row reflects the
+ *  live commission (`bankerPayout`): 0.95 → "1 : 0.95 (5% commission)", 1 → "1 : 1". */
+export function baccaratPaytable(bankerPayout: number = DEFAULT_BANKER_PAYOUT): { key: string; payout: string }[] {
+  const commission = Math.round((1 - bankerPayout) * 100);
+  return [
+    { key: 'player', payout: '1 : 1' },
+    { key: 'banker', payout: commission > 0 ? `1 : ${bankerPayout} (${commission}% commission)` : '1 : 1' },
+    { key: 'playerPair', payout: '11 : 1' },
+    { key: 'bankerPair', payout: '11 : 1' },
+    { key: 'perfectPair', payout: '25 : 1' },
+    { key: 'big', payout: '0.54 : 1' },
+    { key: 'small', payout: '1.5 : 1' },
+  ];
+}
+
+/** Static paytable at the default commission — kept for non-reactive callers. */
+export const PAYTABLE = baccaratPaytable();
 
 /** Baccarat reducer — handles solo (bet lives on state.bet) and multiplayer
  *  (bet lives per-seat, cards shared). Same shape as the other games so the
@@ -203,6 +225,13 @@ export function reduce(prev: BaccaratState, action: BaccaratAction): BaccaratSta
   const isMulti = state.seats.length > 0 || action.type === 'join';
   const seatOf = (userId: string | undefined) =>
     userId ? state.seats.find((s) => s.userId === userId) : null;
+
+  // The banker commission is host-authoritative in multiplayer: it rides in on
+  // `deal`/`newRound` and is then baked into the shared state, so every client
+  // settles Banker bets against the exact same multiplier.
+  if ((action.type === 'deal' || action.type === 'newRound') && typeof action.bankerPayout === 'number') {
+    state.bankerPayout = action.bankerPayout;
+  }
 
   switch (action.type) {
     case 'join': {
@@ -306,7 +335,10 @@ export function reduce(prev: BaccaratState, action: BaccaratAction): BaccaratSta
       if (isMulti) {
         // Compute per-seat net from the shared hand.
         state.seats.forEach((seat) => {
-          const res = settleOne(seat.bet, state.outcome as BaccaratOutcome, state.player, state.banker);
+          const res = settleOne(
+            seat.bet, state.outcome as BaccaratOutcome, state.player, state.banker,
+            state.bankerPayout ?? DEFAULT_BANKER_PAYOUT,
+          );
           seat.net = res.net;
           seat.sideResults = res.sideResults;
         });

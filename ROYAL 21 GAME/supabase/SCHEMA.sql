@@ -45,7 +45,7 @@ alter table public.app_config enable row level security;
 --                       current_game, favorite_game, is_guest, is_admin,
 --                       ever_vip, daily_last_claim, daily_streak, achievements,
 --                       mission_claims, referrer_tier, onboarded_at,
---                       last_seen, created_at, updated_at
+--                       playtime_seconds, last_seen, created_at, updated_at
 --   player_stats        user_id + ~20 counters (games/wins/bj_hands/…)
 --   friendships         (user_id, friend_id)              [bidirectional pair rows]
 --   friend_requests     id, from_id, to_id, status

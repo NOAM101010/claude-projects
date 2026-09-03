@@ -16,6 +16,7 @@ import { MILESTONE_EVERY } from '@/data/economy';
 import { VIP_MIN_LEVEL, VIP_MIN_CHIPS, isVipEligible, vipProgress } from '@/data/vip';
 import { roomBackgroundOf } from '@/data/roomThemes';
 import { profileService, rankOf, xpForLevel } from '@/services/profileService';
+import { formatPlaytime } from '@/services/playtimeService';
 import { chipGlyphOf } from '@/components/game/CoinFace';
 import { fmt, fmtSigned, pct, shortDate } from '@/lib/format';
 import type { GameKey, Profile, Stats } from '@/types';
@@ -81,6 +82,9 @@ export default function MyRoomScene() {
       ? { ...me, id: friend.id, username: friend.username, avatar: friend.avatar, level: friend.level, chips: friend.chips }
       : me));
   const view = isMe ? stats : ({ ...stats, ...(remote.stats ?? {}) } as Stats);
+  const playtimeSeconds = isMe
+    ? (me.playtimeSeconds ?? 0)
+    : ((remote.profile as { playtime_seconds?: number } | null)?.playtime_seconds ?? 0);
 
   /* Trophies on the shelf, graded bronze → platinum. The last id in
      `achievements` is the freshest unlock. */
@@ -176,6 +180,11 @@ export default function MyRoomScene() {
               <p className="text-[12.5px] num" style={{ color: 'var(--muted)' }}>
                 {profile.tag} · {t('profile.joined')} {shortDate(profile.joinedAt ?? new Date().toISOString(), lang)}
               </p>
+              {playtimeSeconds > 0 && (
+                <p className="text-[12px] num mt-0.5" style={{ color: 'var(--muted)' }}>
+                  {t('profile.totalPlaytime')}: {formatPlaytime(playtimeSeconds, lang)}
+                </p>
+              )}
             </div>
             <div className="min-w-[190px] flex-1">
               <div className="flex justify-between text-[12px] mb-1">

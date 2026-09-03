@@ -72,6 +72,9 @@ export interface Profile {
   referrerTier?: number;
   /** When the player finished onboarding, or null if they never have. */
   onboardedAt?: string | null;
+  /** Lifetime seconds spent in the game (foreground only), server-owned.
+   *  Accumulated by add_playtime(); display only on the client. */
+  playtimeSeconds?: number;
 }
 
 export interface Stats {

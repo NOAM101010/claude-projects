@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, MotionConfig } from 'framer-motion';
 import { AppRoutes } from './routes';
@@ -23,6 +23,8 @@ import { audio } from '@/audio/AudioManager';
 import { profileService } from '@/services/profileService';
 import { authService } from '@/services/authService';
 import { analytics } from '@/services/analyticsService';
+import { playtimeService } from '@/services/playtimeService';
+import { db, isRemoteId } from '@/services/supabase';
 import { captureRefFromUrl, referralService } from '@/services/referralService';
 import { fmt } from '@/lib/format';
 import { useT } from '@/hooks/useT';
@@ -159,6 +161,50 @@ export function App() {
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [profile.id]);
+
+  /* Lifetime play-time. Count only foreground seconds (paused while the tab is
+     hidden) and flush the tally to the server every minute, plus once more when
+     the tab is backgrounded or closed. add_playtime() clamps each call to an
+     hour, so a dropped flush is a rounding error. Signed-in accounts only. */
+  const playtimePending = useRef(0);
+  const accessToken = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isRemoteId(profile.id)) return;
+    const uid = profile.id;
+    void db()?.auth.getSession().then(({ data }) => { accessToken.current = data.session?.access_token ?? null; });
+
+    const flush = () => {
+      const secs = playtimePending.current;
+      if (secs <= 0) return;
+      playtimePending.current = 0;
+      void playtimeService.flush(uid, secs);
+    };
+    const beacon = () => {
+      const secs = playtimePending.current;
+      if (secs <= 0) return;
+      playtimePending.current = 0;
+      playtimeService.flushBeacon(uid, secs, accessToken.current);
+    };
+
+    const tick = setInterval(() => {
+      if (document.visibilityState === 'visible') playtimePending.current += 1;
+    }, 1000);
+    const minute = setInterval(() => {
+      void db()?.auth.getSession().then(({ data }) => { accessToken.current = data.session?.access_token ?? null; });
+      flush();
+    }, 60_000);
+    const onHide = () => { if (document.visibilityState === 'hidden') beacon(); };
+    document.addEventListener('visibilitychange', onHide);
+    window.addEventListener('pagehide', beacon);
+
+    return () => {
+      clearInterval(tick);
+      clearInterval(minute);
+      document.removeEventListener('visibilitychange', onHide);
+      window.removeEventListener('pagehide', beacon);
+      flush();
+    };
   }, [profile.id]);
 
   useEffect(() => {
