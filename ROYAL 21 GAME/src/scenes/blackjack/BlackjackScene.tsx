@@ -228,6 +228,13 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
     const sideStaked = solo ? Object.values(mySeat.sideBets ?? {}).reduce((s, v) => s + (v ?? 0), 0) : 0;
     const sideNet = solo ? Object.values(mySeat.sideResults ?? {}).reduce((s, v) => s + (v ?? 0), 0) : 0;
     const sidePayout = sideStaked + sideNet;
+    // A side bet that paid 10x its stake or more — an event trophy.
+    if (solo && mySeat.sideResults && mySeat.sideBets) {
+      for (const [side, res] of Object.entries(mySeat.sideResults)) {
+        const stake = mySeat.sideBets[side as keyof typeof mySeat.sideBets] ?? 0;
+        if (stake > 0 && (res ?? 0) >= stake * 10) usePlayer.getState().grantEvent('ev_side_bet_10x');
+      }
+    }
     const net = payout - staked + sideNet;
     netRef.current[profile.id] = (netRef.current[profile.id] ?? 0) + net;
 
@@ -352,6 +359,7 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
     if (duel.winner === profile.id) {
       addChips(pot);
       duelPaidOut.current = true;
+      usePlayer.getState().grantEvent('ev_duel_victor');
       addXp(XP_REWARDS.duelWon);
       bumpStat({ duelWins: stats.duelWins + 1 });
       audio.duck(1800);

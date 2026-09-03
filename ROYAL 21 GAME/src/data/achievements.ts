@@ -58,6 +58,20 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'royal_flush', tier: 'platinum', trophy: '👑', name: { he: 'רויאל פלאש', en: 'Royal Flush' }, desc: { he: 'קבל רויאל פלאש בפוקר', en: 'Make a royal flush at poker' }, stat: 'royalFlushes', goal: 1, reward: 5000 },
   { id: 'poker_millionaire', tier: 'platinum', trophy: '💵', name: { he: 'מיליונר פוקר', en: 'Poker Millionaire' }, desc: { he: 'זכה במיליון צ׳יפים בפוקר, במצטבר', en: 'Win 1,000,000 chips at poker, lifetime' }, stat: 'pokerChipsWon', goal: 1_000_000, reward: 8000 },
   { id: 'sng_champion', tier: 'gold', trophy: '🥇', social: true, name: { he: 'אלוף הטורניר המהיר', en: 'Sit & Go Champion' }, desc: { he: 'נצח 5 טורנירי Sit & Go ברצף', en: 'Win 5 Sit & Go tournaments in a row' }, stat: 'sngWinStreak', goal: 5, reward: 2000 },
+
+  /* ------------------------------- event trophies ----------------------- *
+   * Not tied to a stat counter — granted the instant they happen, through
+   * usePlayer.grantEvent(). See the wiring in the scenes/hooks noted below.  */
+  { id: 'ev_sng_win', kind: 'event', tier: 'gold', trophy: '🏆', social: true, name: { he: 'ניצחון בטורניר', en: 'Tournament win' }, desc: { he: 'נצח בטורניר Sit & Go', en: 'Win a Sit & Go tournament' }, reward: 2500 },
+  { id: 'ev_jackpot', kind: 'event', tier: 'platinum', trophy: '💰', name: { he: "פיצוץ הג'קפוט", en: 'Jackpot!' }, desc: { he: "זכה בקופת הג'קפוט המצטברת", en: 'Hit a progressive jackpot pool' }, reward: 5000 },
+  { id: 'ev_streak30', kind: 'event', tier: 'platinum', trophy: '📅', name: { he: 'חודש ברצף', en: 'A month straight' }, desc: { he: 'שמור על רצף כניסה של 30 יום', en: 'Keep a 30-day login streak alive' }, reward: 5000 },
+  { id: 'ev_duel_victor', kind: 'event', tier: 'gold', trophy: '⚔️', social: true, name: { he: 'מנצח הדואל', en: 'Duel victor' }, desc: { he: 'נצח בדואל בלאק׳ג׳ק מול חבר', en: 'Win a blackjack duel against a friend' }, reward: 2500 },
+  { id: 'ev_night_champion', kind: 'event', tier: 'gold', trophy: '🎉', social: true, name: { he: 'אלוף הערב', en: 'Night champion' }, desc: { he: 'סיים ערב חברה במקום הראשון', en: 'Finish a game night in first place' }, reward: 2500 },
+  { id: 'ev_side_bet_10x', kind: 'event', tier: 'gold', trophy: '🎯', name: { he: 'פי-10 בצד', en: '10x on the side' }, desc: { he: 'זכה פי-10 או יותר בהימור צד בבלאק׳ג׳ק', en: 'Win 10x or more on a blackjack side bet' }, reward: 2500 },
+  { id: 'ev_weekly_winner', kind: 'event', tier: 'gold', trophy: '🏅', social: true, name: { he: 'מוביל השבוע', en: 'Top of the week' }, desc: { he: 'זכה בפרס השבועי של החברים', en: 'Claim the weekly friends prize' }, reward: 2500 },
+  { id: 'ev_first_referral', kind: 'event', tier: 'gold', trophy: '🎁', social: true, name: { he: 'הבאת חבר', en: 'Brought a friend' }, desc: { he: 'חבר ראשון הצטרף דרך הקישור שלך', en: 'Your first friend joins through your invite link' }, reward: 2500 },
+  { id: 'ev_vip', kind: 'event', tier: 'platinum', trophy: '👑', name: { he: 'חבר VIP', en: 'VIP member' }, desc: { he: 'הגע למעמד VIP', en: 'Reach VIP status' }, reward: 5000 },
+  { id: 'ev_royal_flush', kind: 'event', tier: 'platinum', trophy: '🃏', name: { he: 'רויאל פלאש חי', en: 'Royal, live' }, desc: { he: 'צור רויאל פלאש בזמן אמת', en: 'Make a royal flush at the table' }, reward: 5000 },
 ];
 
 /** Plating for each tier — used by the shelf and the achievement list. */

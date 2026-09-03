@@ -180,6 +180,7 @@ export default function NightScene() {
     if (rows.length < 2 || rows[0]?.userId !== profile.id || rows[0].points <= 0) return;
     claimedNight.current = true;
     bumpStat({ nightWins: stats.nightWins + 1 });
+    usePlayer.getState().grantEvent('ev_night_champion');
     audio.play('bigWin');
   }, [podium, rows, profile.id, bumpStat, stats.nightWins]);
 

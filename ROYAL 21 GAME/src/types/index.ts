@@ -129,8 +129,13 @@ export interface Achievement {
   id: string;
   name: { he: string; en: string };
   desc: { he: string; en: string };
-  stat: keyof Stats | 'level' | 'itemCount' | 'friendCount';
-  goal: number;
+  /** `stat` (the default) trophies are earned automatically when a `Stats`
+   *  counter reaches `goal` (checkAchievements). `event` trophies are granted
+   *  explicitly at the moment they happen via `usePlayer.grantEvent(id)` — they
+   *  carry no `stat` / `goal`. */
+  kind?: 'stat' | 'event';
+  stat?: keyof Stats | 'level' | 'itemCount' | 'friendCount';
+  goal?: number;
   reward: number;
   /** How hard it is, and how the trophy is plated on the shelf. */
   tier: TrophyTier;

@@ -13,6 +13,7 @@ import {
   MISSIONS, WEEKLY_MISSIONS, MAX_MISSION_REWARD, dailyMissions, weeklyMission,
   weekKeyFor, shiftDateKey, missionValue, missionComplete,
 } from '@/data/missions';
+import { ACHIEVEMENTS, achievementById } from '@/data/achievements';
 
 let failures = 0;
 const check = (name: string, condition: boolean, detail = '') => {
@@ -154,6 +155,21 @@ console.log('\nMissions — rotation + progress');
   check('gamesVariety counts distinct games', missionValue(gamesM, { counts: {}, games: ['blackjack', 'roulette', 'slots'] }) === 3);
   const pokerM = MISSIONS.find((m) => m.id === 'poker1')!;
   check('pokerAny sums poker + sng', missionValue(pokerM, { counts: { poker: 0, sng: 1 }, games: [] }) === 1);
+}
+
+console.log('\nEvent trophies');
+{
+  const stat = ACHIEVEMENTS.filter((a) => a.kind !== 'event');
+  const event = ACHIEVEMENTS.filter((a) => a.kind === 'event');
+  check('stat trophies all carry a stat + goal', stat.every((a) => a.stat != null && a.goal != null));
+  check('event trophies carry no stat + no goal', event.every((a) => a.stat == null && a.goal == null));
+  check('there are ~10 event trophies', event.length >= 8 && event.length <= 12);
+  check('every event trophy has a tier + a trophy glyph + a reward',
+    event.every((a) => a.tier && a.trophy && a.reward > 0));
+  check('event trophy ids are unique + resolvable', event.every((a) => achievementById(a.id) === a));
+  // checkAchievements iterates ACHIEVEMENTS and skips `kind === 'event' || !stat || goal === undefined`
+  const skipped = ACHIEVEMENTS.filter((a) => a.kind === 'event' || !a.stat || a.goal === undefined);
+  check('the auto-check would skip exactly the event trophies', skipped.length === event.length);
 }
 
 console.log(failures ? `\n${failures} failing check(s)\n` : '\nall social checks passed\n');

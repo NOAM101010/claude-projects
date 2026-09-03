@@ -41,7 +41,11 @@ export function FriendsPanel() {
   // Refresh referral stats when the Add tab opens
   useEffect(() => {
     if (tab !== 'add' || !isRemoteId(profile.id)) return;
-    void referralService.stats(profile.id).then(setRefStats);
+    void referralService.stats(profile.id).then((s) => {
+      setRefStats(s);
+      // Someone joined through the link at least once → event trophy.
+      if (s.count >= 1) usePlayer.getState().grantEvent('ev_first_referral');
+    });
   }, [tab, profile.id]);
 
   const inviteLink = isRemoteId(profile.id) ? referralService.inviteLink(profile.id) : '';
@@ -73,6 +77,7 @@ export function FriendsPanel() {
     void friendsService.claimWeeklyPrize(profile.id).then((result) => {
       if (result.claimed && result.chips) {
         addChips(result.chips, { silent: true });
+        usePlayer.getState().grantEvent('ev_weekly_winner');
         toast(t('friends.weeklyPrizeWon', { amount: fmt(result.chips) }), 'good', '🏆');
       }
     });

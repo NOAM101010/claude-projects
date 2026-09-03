@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { ACHIEVEMENTS } from '@/data/achievements';
+import { ACHIEVEMENTS, achievementById } from '@/data/achievements';
 import { itemById } from '@/data/items';
 import {
   STREAK_REWARD, discountedPrice, nextStreakDay, COMEBACK_THRESHOLD_DAYS, COMEBACK_BONUS, daysSince,
@@ -54,6 +54,9 @@ interface PlayerState extends SaveData {
   /** Claim a completed daily/weekly mission (or the 'all_done' bonus) — atomic
    *  server RPC + guest mirror, delta-corrected like claimDaily. */
   claimMission: (missionId: string) => void;
+  /** Grant an `event` trophy the moment it happens (idempotent — safe to call
+   *  repeatedly; the RPC + local guard refuse a second grant). */
+  grantEvent: (id: string) => void;
   /** Grants any level milestones (every 5 levels) reached but not yet claimed. */
   claimMilestones: () => Promise<void>;
   markWheelSpin: () => void;
@@ -399,17 +402,19 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   },
 
   addChips: (delta, opts) => {
+    let becameVip = false;
     set((s) => {
       const chips = Math.max(0, Math.round(s.profile.chips + delta));
       const nextProfile = withAdminFloor({ ...s.profile, chips });
       // Sticky VIP: the moment both thresholds are met, flip everVip on and
       // keep it there. Loses no chips or level to demote them later.
-      if (shouldMarkEverVip(nextProfile)) nextProfile.everVip = true;
+      if (shouldMarkEverVip(nextProfile)) { nextProfile.everVip = true; becameVip = true; }
       return {
         profile: nextProfile,
         stats: delta > 0 ? { ...s.stats, chipsWon: s.stats.chipsWon + delta } : s.stats,
       };
     });
+    if (becameVip) get().grantEvent('ev_vip');
     if (delta > 0 && !opts?.silent) {
       audio.play('chip');
       haptic('chip');
@@ -430,6 +435,11 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
     const s = get();
     const { level, xp, levelsGained } = applyXp(s.profile.level, s.profile.xp, gain);
     set({ profile: { ...s.profile, level, xp } });
+    // A level-up can be the thing that crosses the VIP bar (chips already high).
+    if (levelsGained > 0 && shouldMarkEverVip(get().profile)) {
+      set((st) => ({ profile: { ...st.profile, everVip: true } }));
+      get().grantEvent('ev_vip');
+    }
     if (levelsGained > 0) {
       const reward = 400 + level * 60;
       set((state) => ({ profile: { ...state.profile, chips: state.profile.chips + reward } }));
@@ -703,6 +713,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
       });
       lastSyncedChips[s.profile.id] = s.profile.chips + chips;
       get().persist();
+      if (day >= 30) get().grantEvent('ev_streak30');
       return { chips, day, comeback };
     }
 
@@ -715,6 +726,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
       profile: { ...s.profile, chips: s.profile.chips + chips },
     });
     get().persist();
+    if (day >= 30) get().grantEvent('ev_streak30');
     return { chips, day, comeback };
   },
 
@@ -793,6 +805,8 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
     audio.play('win');
   },
 
+  grantEvent: (id) => grantEventTrophy(get, set, id),
+
   markWheelSpin: () => {
     set({ wheel: { lastSpin: todayKey() } });
     get().persist();
@@ -870,6 +884,8 @@ export function checkAchievements(get: Getter, set: Setter, friendCount = 0) {
 
   ACHIEVEMENTS.forEach((achievement) => {
     if (alreadyLocal.has(achievement.id)) return;
+    // Event trophies carry no stat/goal — they're granted via grantEvent().
+    if (achievement.kind === 'event' || !achievement.stat || achievement.goal === undefined) return;
     const value = achievement.stat === 'friendCount' ? friendCount : statValue(state, achievement.stat);
     if (value >= achievement.goal) newlyEarned.push(achievement);
   });
@@ -926,4 +942,46 @@ export function checkAchievements(get: Getter, set: Setter, friendCount = 0) {
   // checkAchievements this same tick doesn't double-fire RPCs.
   set({ achievements: [...state.achievements, ...newlyEarned.map((a) => a.id)] });
   newlyEarned.forEach((a) => void grantOne(a));
+}
+
+/**
+ * Grant one event trophy the instant it happens (tournament win, jackpot,
+ * 30-day streak, …). Same atomic pattern as checkAchievements' grantOne —
+ * optimistic stamp, then claim_achievement RPC (signed-in) / local grant
+ * (guest), with a delta correction so an in-flight bet/payout is never stomped.
+ */
+export function grantEventTrophy(get: Getter, set: Setter, id: string) {
+  const state = get();
+  if (state.achievements.includes(id)) return;
+  const ach = achievementById(id);
+  if (!ach) return;
+  const lang = useSettings.getState().lang;
+  const celebrate = () => {
+    useUI.getState().toast(`${ach.name[lang]} · +${ach.reward}`, 'good', '🏆');
+    useUI.getState().showMoment({ kind: 'rareItem', title: 'moments.trophy', subtitle: ach.name[lang], icon: ach.trophy, duration: 2400 });
+    audio.play('win');
+  };
+
+  if (!isRemoteId(state.profile.id)) {
+    set({
+      achievements: [...state.achievements, id],
+      profile: { ...state.profile, chips: state.profile.chips + ach.reward },
+    });
+    celebrate();
+    get().persist();
+    return;
+  }
+
+  set({ achievements: [...state.achievements, id] }); // optimistic stamp
+  void profileService.claimAchievement(id, ach.reward).then((balance) => {
+    const s = get();
+    if (s.profile.id !== state.profile.id) return;
+    if (balance === null) { get().persist(); return; } // already claimed server-side — keep the id
+    const known = lastSyncedChips[s.profile.id];
+    const drift = known === undefined ? 0 : balance - (known + ach.reward);
+    lastSyncedChips[s.profile.id] = balance;
+    set({ profile: { ...s.profile, chips: Math.max(0, Math.round(s.profile.chips + ach.reward + drift)) } });
+    celebrate();
+    get().persist();
+  });
 }

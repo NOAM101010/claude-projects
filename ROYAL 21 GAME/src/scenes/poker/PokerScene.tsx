@@ -250,10 +250,12 @@ export default function PokerScene() {
       const myShowdown = state.showdown?.find((e) => e.userId === profile.id);
       if (myShowdown?.category === 'royalFlush') {
         patch.royalFlushes = s.royalFlushes + 1;
+        usePlayer.getState().grantEvent('ev_royal_flush');
         // JACKPOT: royal flush wins the whole progressive pot
         void jackpotService.claim('poker').then((res) => {
           if (res.ok && res.amount) {
             addChips(res.amount);
+            usePlayer.getState().grantEvent('ev_jackpot');
             setJackpotWinAmount(res.amount);
           }
         });

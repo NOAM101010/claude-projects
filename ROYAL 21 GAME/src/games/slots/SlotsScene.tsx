@@ -195,6 +195,7 @@ export default function SlotsScene() {
           void jackpotService.claim('slots').then((res) => {
             if (res.ok && res.amount) {
               addChips(res.amount);
+              usePlayer.getState().grantEvent('ev_jackpot');
               haptic('win');
               // Full-screen celebration takes over; the standard moment
               // toast would be redundant on top of it.

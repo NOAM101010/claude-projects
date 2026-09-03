@@ -178,6 +178,7 @@ export default function SitAndGoScene() {
     addXp(XP_REWARDS.handPlayed + (iWon ? XP_REWARDS.gameWon : 0));
     if (iWon) {
       addChips(pool);
+      usePlayer.getState().grantEvent('ev_sng_win');
       const s = usePlayer.getState().stats;
       bumpStat({ sngWinStreak: s.sngWinStreak + 1 });
       recordResult('sng', 'win', pool - tournament.buyIn, {});

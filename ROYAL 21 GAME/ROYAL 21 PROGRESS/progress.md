@@ -94,6 +94,14 @@
 - **SQL להרצה על prod (3 קבצים, אידמפוטנטיים):** `supabase/notifications-cleanup.sql` · `supabase/streak-rewards-v2.sql` · `supabase/referral-bonus-5k.sql`.
 - אימות: tsc נקי · vite build נקי · test:all ירוק (engine 96, poker 44, social כולל מדרגות+guard) · i18n he/en 878/878.
 
+### STAGE 2 (משימות יומיות) — מומש, **לא נבדק חי** (SQL: `supabase/missions.sql`)
+`src/data/missions.ts` — 17 משימות (8 quantity + 9 variety) + 5 שבועיות, רוטציה דטרמיניסטית מ-seed תאריך (חיקוי `shopOffers`), 3/יום distinct + mix + לא-כמו-אתמול. `missionProgress` (day/week counts, מתגלגל UTC) ב-`SaveData` + `localStore`, מתעדכן ב-`recordResult` (`bumpMissions`). `claimMission` — RPC `claim_mission` (`{granted,new_balance}`, cap 20K, prune מפתחות ישנים) + guest mirror `missionClaims`, delta-correction כמו `claimDaily`. בונוס "כל ה-3" (`all_done`, 5K). `MissionsPanel` (Modal, panel `'missions'`) + widget ב-hub section 03.
+
+### STAGE 3b (גביעי אירוע) — מומש, **לא נבדק חי** (SQL: `supabase/event-trophies.sql`)
+`Achievement.kind?: 'stat'|'event'` (`types/index.ts`). 10 גביעי `kind:'event'` ב-`achievements.ts` (בלי stat/goal): `ev_sng_win`/`ev_jackpot`/`ev_streak30`/`ev_duel_victor`/`ev_night_champion`/`ev_side_bet_10x`/`ev_weekly_winner`/`ev_first_referral`/`ev_vip`/`ev_royal_flush`. `usePlayer.grantEvent(id)` — אטומי (`claim_achievement` RPC / guest), delta-correction, toast+moment `moments.trophy`. `checkAchievements` מדלג על event. חיווט: SnG tournament-win · slots/poker jackpot · poker royal flush · `claimDaily` day≥30 · night podium · duel winner · blackjack side bet ≥10× · weekly prize · referral stats ≥1 · VIP crossing (`addChips`/`addXp`). `MyRoomScene` — event trophies מוצגים במדף + תג "אירוע" ברשימה, מונה `X/41`. `scripts/gen-seed.ts` — עמודות `tier`/`trophy`/`kind`.
+SQL: `event-trophies.sql` — `achievements` מקבל `tier`/`trophy`/`kind` + `stat`/`goal` nullable + upsert 10 שורות.
+אימות (STAGE 2+3b): tsc נקי · vite build נקי · test:all ירוק (social כולל missions+event trophies) · i18n he/en 904/904.
+
 **מגבלה ידועה (1d, לא בסקופ):** קיפאון עם מוות-host עדיין ~5-25ש (`reassign_room_host` חלון 20ש stale). שיפור עתידי: לקצר `HOST_HEARTBEAT_MS` או ש-host מקודם יעשה abort+restart לסיבוב.
 
 ### הבא בתור: רה-ארכיטקטורה של המולטיפלייר — **תוכנית מלאה ומאושרת:**

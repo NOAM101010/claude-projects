@@ -85,9 +85,12 @@ export default function MyRoomScene() {
   );
   const newestTrophyId = achievements[achievements.length - 1] ?? null;
 
-  /* The closest one still missing, as a nudge under the shelf. */
+  /* The closest one still missing, as a nudge under the shelf. Event trophies
+     (no stat/goal) can't be "progressed toward", so they're never the nudge. */
   const nextTrophy = useMemo(() => {
-    const locked = ACHIEVEMENTS.filter((entry) => !achievements.includes(entry.id));
+    const locked = ACHIEVEMENTS.filter(
+      (entry) => !achievements.includes(entry.id) && entry.kind !== 'event' && entry.stat && entry.goal,
+    );
     const progress = (entry: (typeof ACHIEVEMENTS)[number]) => {
       const value = entry.stat === 'level'
         ? me.level
@@ -95,8 +98,8 @@ export default function MyRoomScene() {
           ? owned.length
           : entry.stat === 'friendCount'
             ? friends.length
-            : ((stats as unknown as Record<string, number>)[entry.stat] ?? 0);
-      return value / entry.goal;
+            : ((stats as unknown as Record<string, number>)[entry.stat as string] ?? 0);
+      return value / (entry.goal ?? 1);
     };
     return locked.sort((a, b) => progress(b) - progress(a))[0] ?? null;
   }, [achievements, me.level, owned.length, friends.length, stats]);
@@ -388,19 +391,23 @@ export default function MyRoomScene() {
                 <div className="grid gap-2.5 mt-3" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))' }}>
                   {ACHIEVEMENTS.map((achievement) => {
                     const unlocked = achievements.includes(achievement.id);
+                    const isEvent = achievement.kind === 'event' || !achievement.stat || !achievement.goal;
                     const value = achievement.stat === 'level' ? me.level
                       : achievement.stat === 'itemCount' ? owned.length
                         : achievement.stat === 'friendCount' ? friends.length
-                          : (stats as unknown as Record<string, number>)[achievement.stat] ?? 0;
+                          : (stats as unknown as Record<string, number>)[achievement.stat as string] ?? 0;
                     return (
                       <div key={achievement.id} className="p-3 rounded-[var(--r-sm)]"
                         style={{ background: unlocked ? 'rgba(227,178,60,.08)' : 'rgba(255,255,255,.025)', border: '1px solid var(--glass-line)' }}>
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[16px]">{unlocked ? '🎖️' : '🔒'}</span>
+                          <span className="text-[16px]">{unlocked ? achievement.trophy : isEvent ? '✨' : '🔒'}</span>
                           <b className="text-[13px]">{achievement.name[lang]}</b>
+                          {isEvent && <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ color: 'var(--gold-hi)', border: '1px solid var(--gold-line)' }}>{t('profile.eventTag')}</span>}
                         </div>
                         <p className="text-[11.5px] mb-2" style={{ color: 'var(--muted)' }}>{achievement.desc[lang]}</p>
-                        <Meter value={Math.min(value, achievement.goal)} max={achievement.goal} height={5} tone={unlocked ? 'gold' : 'jade'} />
+                        {isEvent
+                          ? <div className="text-[11px]" style={{ color: unlocked ? 'var(--jade-hi)' : 'var(--dim)' }}>{unlocked ? `✅ ${t('profile.eventEarned')}` : t('profile.eventLocked')}</div>
+                          : <Meter value={Math.min(value, achievement.goal ?? 1)} max={achievement.goal ?? 1} height={5} tone={unlocked ? 'gold' : 'jade'} />}
                       </div>
                     );
                   })}
