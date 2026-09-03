@@ -74,6 +74,13 @@ function startTicker(ms: number, onTick: () => void): () => void {
 
 export const roomsService = {
   /**
+   * A throttle-resistant repeating timer (Blob Worker, falls back to
+   * setInterval). Shared by the host heartbeat and the global presence
+   * heartbeat — a plain setInterval is clamped to ~1/min in a background tab.
+   */
+  startTicker,
+
+  /**
    * Device-local players cannot host.
    *
    * A `guest_…` id is not a uuid, so inserting it as `host_id` is rejected by

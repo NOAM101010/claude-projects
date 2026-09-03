@@ -10,6 +10,7 @@ const toFriend = (row: any): Friend => ({
   level: row.level ?? 1,
   chips: row.chips ?? 0,
   presence: row.presence ?? 'offline',
+  lastSeen: row.last_seen ?? null,
   currentGame: row.current_game ?? null,
 });
 
@@ -107,12 +108,20 @@ export const friendsService = {
   subscribe(userId: string, onChange: () => void) {
     const client = db();
     if (!client || !isRemoteId(userId)) return () => {};
+    // Every online friend's 25s presence heartbeat is a `profiles` UPDATE, so
+    // without coalescing this fires a full friend-list refetch many times a
+    // minute (and the list visibly flickers). Debounce the burst into one.
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const ping = () => {
+      if (timer) return;
+      timer = setTimeout(() => { timer = null; onChange(); }, 1500);
+    };
     const channel = client
       .channel(`friends:${userId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'friendships', filter: `user_id=eq.${userId}` }, onChange)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'friend_requests', filter: `to_id=eq.${userId}` }, onChange)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, onChange)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'friendships', filter: `user_id=eq.${userId}` }, ping)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'friend_requests', filter: `to_id=eq.${userId}` }, ping)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, ping)
       .subscribe();
-    return () => { void client.removeChannel(channel); };
+    return () => { if (timer) clearTimeout(timer); void client.removeChannel(channel); };
   },
 };

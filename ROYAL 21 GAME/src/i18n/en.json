@@ -976,6 +976,16 @@
     "send": "Send",
     "empty": "No messages yet. Say hello."
   },
+  "dm": {
+    "title": "Chat",
+    "button": "Chat",
+    "placeholder": "Message {name}…",
+    "send": "Send",
+    "empty": "No messages yet. Say hi 👋",
+    "back": "Back",
+    "offline": "Not online",
+    "inGame": "In a game"
+  },
   "slots": {
     "eyebrow": "Lucky corner",
     "idle": "Pick a stake and pull",

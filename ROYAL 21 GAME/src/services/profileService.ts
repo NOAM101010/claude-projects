@@ -1,4 +1,5 @@
-import { db, isRemoteId } from './supabase';
+import { db, isOnline, isRemoteId } from './supabase';
+import { env } from '@/lib/env';
 import { localStore, type SaveData } from './localStore';
 import { MILESTONE_EVERY, milestoneReward } from '@/data/economy';
 import { ITEMS } from '@/data/items';
@@ -154,6 +155,33 @@ export const profileService = {
     const client = db();
     if (!client || !isRemoteId(userId)) return;
     await client.from('profiles').update({ presence, current_game: game, last_seen: new Date().toISOString() }).eq('id', userId);
+  },
+
+  /**
+   * Best-effort "I'm gone" write for `pagehide` / `visibilitychange → hidden`,
+   * when an awaited request would be killed by navigation. Keepalive PATCH
+   * straight to PostgREST with the live session token — mirrors
+   * playtimeService.flushBeacon. Without this, closing a tab leaves the row
+   * reading `presence != 'offline'` forever (the freshness gate then covers it
+   * after 60s, but this makes friends see you drop immediately).
+   */
+  offlineBeacon(userId: string | null | undefined, accessToken: string | null): void {
+    if (!isOnline() || !isRemoteId(userId) || !accessToken) return;
+    try {
+      void fetch(`${env.supabaseUrl}/rest/v1/profiles?id=eq.${userId}`, {
+        method: 'PATCH',
+        keepalive: true,
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: env.supabaseAnonKey,
+          Authorization: `Bearer ${accessToken}`,
+          Prefer: 'return=minimal',
+        },
+        body: JSON.stringify({ presence: 'offline', last_seen: new Date().toISOString() }),
+      });
+    } catch {
+      /* nothing more we can do on the way out */
+    }
   },
 
   async equip(userId: string, equipped: Equipped) {

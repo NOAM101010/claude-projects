@@ -52,6 +52,15 @@ BlackjackScene לא היה לו unmount cleanup (בניגוד ל-PokerScene). ע
 - **המשתמש צריך להריץ ב-Supabase לפי הסדר:** `weekly-snapshot.sql` ואז `weekly-podium.sql`.
 - אימות: tsc נקי, build ✓, test:all ✓ (social + כל השאר ירוקים).
 
+## שלב F — נוכחות אמיתית + צ'אט 1:1 (2026-09-03)
+- **Heartbeat נוכחות** (`App.tsx`): `roomsService.startTicker(25s)` (Worker, נחשף עכשיו ב-roomsService) קורא `profileService.setPresence`. `pagehide`/`visibilitychange→hidden` → `profileService.offlineBeacon` (keepalive PATCH ל-PostgREST עם access token). `visible` → beat מיידי. רק `isRemoteId` + `showPresence`.
+- **שער טריות** `src/lib/presence.ts` → `isFriendOnline(p)` = presence!=offline && lastSeen && <60s. (בחרתי בשם `isFriendOnline` ולא `isOnline` כדי לא להתנגש ב-`supabase.isOnline` שבשימוש ב-6+ קבצים.) `friendsService.list` מחזיר `lastSeen`; `Friend.lastSeen` נוסף. הוחלף `f.presence !== 'offline'` בכל הסצנות (FriendsPanel/Hub/Room/CoinFlip/HighCard/Poker/SnG/Night) — בסצנות המשחק הפילטר גם מסנן `!currentGame`.
+- **גדר הזמנות**: כפתור "הזמן" ב-FriendsPanel disabled + tooltip כש-`!isFriendOnline || currentGame`. שאר הסצנות מסתירות.
+- **צ'אט 1:1**: `supabase/direct-messages.sql` (טבלה `direct_messages` + RLS friends-only/block-aware + `mark_dm_read` + trigger rate-limit + realtime). `src/services/dmService.ts`. `useSocial` הורחב: `dmThreads/dmUnread/dmOpen` + `openDM/closeDM/sendDM` + subscribe ב-listen (מנגן `notify`). UI: `DmThread.tsx` בתוך FriendsPanel (כפתור 💬 לכל חבר + badge), badge מאוחד ב-HUD + SideNav (requests+DM). i18n `dm.*` he+en parity 937/937.
+- **המשתמש צריך להריץ**: `supabase/RUN-THIS-NEXT.sql` (הוחלף — מכיל רק את direct-messages.sql).
+- אימות: tsc נקי, build ✓, test:all ✓ (הוספו בדיקות isFriendOnline + DM unread ל-social.test).
+- בדיקה חיה 2 דפדפנים: (א) A סוגר טאב → B רואה אותו לא-מחובר תוך ~ש' (beacon) או ≤60s (gate). (ב) A ב-Blackjack → כפתור הזמן של A אצל B disabled "באמצע משחק". (ג) A שולח DM ל-B כשפאנל B סגור → צליל + badge; B פותח → נקרא, badge מתאפס. (ד) rate-limit: 16 הודעות ברצף — ה-16 נדחית.
+
 ## נשאר (המשתמש)
 - **אימות מולטיפלייר 2 דפדפנים** — `MP_VERIFICATION_GUIDE.md`. באגים 2/3/4 + host handoff + קלפי hole ב-devtools. סצנות שלא נבדקו סולו (פוקר/SnG/ערב חברה) — כאן. זה הפריט האחרון הפתוח.
 

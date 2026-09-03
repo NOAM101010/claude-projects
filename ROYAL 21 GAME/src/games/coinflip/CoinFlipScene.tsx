@@ -22,6 +22,7 @@ import { useGhostSeatCleanup } from '@/hooks/useGhostSeatCleanup';
 import { useNightReturn } from '@/hooks/useNightReturn';
 import { useNightScoring } from '@/hooks/useNightScoring';
 import { isOnline } from '@/services/supabase';
+import { isFriendOnline } from '@/lib/presence';
 import { roomsService } from '@/services/roomsService';
 import { STAKES, XP_REWARDS } from '@/data/economy';
 import { VIP_CHIP_EXTRA, isVipEligible } from '@/data/vip';
@@ -593,9 +594,9 @@ function CoinFlipRoom({ roomCode }: { roomCode: string }) {
           </AnimatePresence>
         </div>
 
-        {friends.filter((f) => f.presence !== 'offline').length > 0 && (
+        {friends.filter((f) => isFriendOnline(f) && !f.currentGame).length > 0 && (
           <div className="flex flex-wrap gap-2 px-1">
-            {friends.filter((f) => f.presence !== 'offline').slice(0, 6).map((friend) => (
+            {friends.filter((f) => isFriendOnline(f) && !f.currentGame).slice(0, 6).map((friend) => (
               <GameButton key={friend.id} size="sm" tone="ghost" onClick={async () => {
                 await notificationService.invite(profile.id, friend.id, room.code, 'coinflip');
                 toast(t('friends.requestSent', { name: friend.username }), 'good', '🎮');

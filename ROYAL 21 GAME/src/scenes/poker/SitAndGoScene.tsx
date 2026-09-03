@@ -15,6 +15,7 @@ import { presenceService, type RoomPresenceMeta } from '@/services/presenceServi
 import { useT } from '@/hooks/useT';
 import { useGhostSeatCleanup } from '@/hooks/useGhostSeatCleanup';
 import { isOnline } from '@/services/supabase';
+import { isFriendOnline } from '@/lib/presence';
 import { roomsService } from '@/services/roomsService';
 import { audio } from '@/audio/AudioManager';
 import { chipGlyphOf } from '@/components/game/CoinFace';
@@ -362,7 +363,7 @@ export default function SitAndGoScene() {
 
         {!started && (
           <div className="flex flex-wrap gap-2 px-1">
-            {useSocial.getState().friends.filter((f) => f.presence !== 'offline').slice(0, 6).map((friend) => (
+            {useSocial.getState().friends.filter((f) => isFriendOnline(f) && !f.currentGame).slice(0, 6).map((friend) => (
               <GameButton
                 key={friend.id}
                 size="sm"

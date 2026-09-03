@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { friendsService } from '@/services/friendsService';
+import { dmService } from '@/services/dmService';
 import { notificationService } from '@/services/notificationService';
 import { roomsService } from '@/services/roomsService';
 import { isOnline } from '@/services/supabase';
@@ -9,7 +10,7 @@ import { useUI } from './useUI';
 import { useSettings } from './useSettings';
 import { translate } from '@/i18n';
 import { fmt } from '@/lib/format';
-import type { AppNotification, Friend, FriendRequest } from '@/types';
+import type { AppNotification, DirectMessage, Friend, FriendRequest } from '@/types';
 
 interface SocialState {
   friends: Friend[];
@@ -20,6 +21,13 @@ interface SocialState {
   /** Set by the realtime feed; the HUD shows it as a full-screen invite.
    *  `id` is the notification row id so an expired one can be deleted on click. */
   pendingInvite: { from: Friend | null; code: string; game: string; id: string } | null;
+  /** 1:1 chat, keyed by the friend's id. */
+  dmThreads: Record<string, DirectMessage[]>;
+  dmUnread: Record<string, number>;
+  dmOpen: string | null;
+  openDM: (friendId: string) => Promise<void>;
+  closeDM: () => void;
+  sendDM: (friendId: string, body: string) => Promise<void>;
   refresh: (userId: string) => Promise<void>;
   search: (term: string, selfId: string) => Promise<void>;
   clearSearch: () => void;
@@ -46,15 +54,37 @@ export const useSocial = create<SocialState>()((set, get) => ({
   searchResults: [],
   searching: false,
   pendingInvite: null,
+  dmThreads: {},
+  dmUnread: {},
+  dmOpen: null,
+
+  openDM: async (friendId) => {
+    set({ dmOpen: friendId });
+    const me = usePlayer.getState().profile.id;
+    const history = await dmService.history(me, friendId);
+    set((state) => ({
+      dmThreads: { ...state.dmThreads, [friendId]: history },
+      dmUnread: { ...state.dmUnread, [friendId]: 0 },
+    }));
+    await dmService.markRead(me, friendId);
+  },
+
+  closeDM: () => set({ dmOpen: null }),
+
+  sendDM: async (friendId, body) => {
+    const me = usePlayer.getState().profile.id;
+    await dmService.send(me, friendId, body);
+  },
 
   refresh: async (userId) => {
     if (!isOnline()) return;
-    const [friends, requests, notifications] = await Promise.all([
+    const [friends, requests, notifications, dmUnread] = await Promise.all([
       friendsService.list(userId),
       friendsService.requests(userId),
       notificationService.list(userId),
+      dmService.unreadCounts(userId),
     ]);
-    set({ friends, requests, notifications });
+    set({ friends, requests, notifications, dmUnread });
     // Prune old room invites — but only the ones whose room is *confirmed* dead.
     // isLive() returns true on any check failure, so a blip never nukes a real
     // invite; and we never guess from age alone.
@@ -123,6 +153,23 @@ export const useSocial = create<SocialState>()((set, get) => ({
   listen: (userId) => {
     if (!isOnline()) return () => {};
     const offFriends = friendsService.subscribe(userId, () => void get().refresh(userId));
+    const offDM = dmService.subscribe(userId, (msg) => {
+      const otherId = msg.senderId === userId ? msg.recipientId : msg.senderId;
+      const incoming = msg.senderId !== userId;
+      const isOpen = get().dmOpen === otherId;
+      set((state) => {
+        const thread = state.dmThreads[otherId] ?? [];
+        if (thread.some((m) => m.id === msg.id)) return state;
+        return {
+          dmThreads: { ...state.dmThreads, [otherId]: [...thread, msg].slice(-120) },
+          dmUnread: incoming && !isOpen
+            ? { ...state.dmUnread, [otherId]: (state.dmUnread[otherId] ?? 0) + 1 }
+            : state.dmUnread,
+        };
+      });
+      if (incoming && !isOpen) audio.play('notify');
+      if (incoming && isOpen) void dmService.markRead(userId, otherId);
+    });
     const offNotifications = notificationService.subscribe(userId, (notification) => {  // onInsert
       set((state) => ({ notifications: [notification, ...state.notifications] }));
       audio.play('notify');
@@ -164,6 +211,7 @@ export const useSocial = create<SocialState>()((set, get) => ({
     return () => {
       offFriends();
       offNotifications();
+      offDM();
     };
   },
 }));

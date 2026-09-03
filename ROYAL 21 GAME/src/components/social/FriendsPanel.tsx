@@ -7,6 +7,8 @@ import { Tabs } from '@/components/ui/Tabs';
 import { PlayerBadge } from './PlayerBadge';
 import { Avatar } from './Avatar';
 import { GiftModal } from './GiftModal';
+import { DmThread } from './DmThread';
+import { isFriendOnline } from '@/lib/presence';
 import { useSocial } from '@/stores/useSocial';
 import { usePlayer } from '@/stores/usePlayer';
 import { useUI } from '@/stores/useUI';
@@ -33,6 +35,11 @@ export function FriendsPanel() {
   const profile = usePlayer((s) => s.profile);
   const addChips = usePlayer((s) => s.addChips);
   const { friends, requests, searchResults, refresh, search, sendRequest, respond, remove, clearSearch } = useSocial();
+  const dmOpen = useSocial((s) => s.dmOpen);
+  const dmUnread = useSocial((s) => s.dmUnread);
+  const openDM = useSocial((s) => s.openDM);
+  const closeDM = useSocial((s) => s.closeDM);
+  const dmFriend = friends.find((f) => f.id === dmOpen) ?? null;
   const [tab, setTab] = useState<Tab>('online');
   const [term, setTerm] = useState('');
   const [giftTarget, setGiftTarget] = useState<Friend | null>(null);
@@ -98,6 +105,9 @@ export function FriendsPanel() {
     if (open && profile.id) void refresh(profile.id);
   }, [open, profile.id, refresh]);
 
+  // A closed panel should not keep a conversation "open" underneath it.
+  useEffect(() => { if (!open) closeDM(); }, [open, closeDM]);
+
   useEffect(() => {
     if (!open || !isRemoteId(profile.id)) return;
     void friendsService.claimWeeklyPrize(profile.id).then((result) => {
@@ -112,7 +122,7 @@ export function FriendsPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, profile.id]);
 
-  const online = friends.filter((f) => f.presence !== 'offline');
+  const online = friends.filter(isFriendOnline);
   const list = tab === 'online' ? online : friends;
 
   const invite = async (friend: Friend) => {
@@ -153,6 +163,10 @@ export function FriendsPanel() {
                 <button className="w-9 h-9 rounded-[var(--r-xs)] border border-white/10" onClick={() => openPanel(null)}>✕</button>
               </div>
 
+              {dmFriend ? (
+                <DmThread friend={dmFriend} />
+              ) : (
+              <>
               <Tabs<Tab>
                 value={tab}
                 onChange={setTab}
@@ -291,15 +305,40 @@ export function FriendsPanel() {
                           {isRemoteId(profile.id) && (
                             <GameButton size="sm" tone="metal" onClick={() => setGiftTarget(friend)}>🎁</GameButton>
                           )}
-                          {friend.presence !== 'offline' && (
-                            <GameButton size="sm" tone="gold" onClick={() => invite(friend)}>{t('friends.invite')}</GameButton>
+                          {isRemoteId(profile.id) && (
+                            <GameButton size="sm" tone="ghost" className="relative" onClick={() => openDM(friend.id)}>
+                              💬
+                              {!!dmUnread[friend.id] && (
+                                <span
+                                  className="absolute -top-1 -end-1 grid place-items-center rounded-full text-[8px] font-black"
+                                  style={{ minWidth: 14, height: 14, padding: '0 3px', background: 'var(--crimson)', color: '#fff' }}
+                                >
+                                  {dmUnread[friend.id] > 9 ? '9+' : dmUnread[friend.id]}
+                                </span>
+                              )}
+                            </GameButton>
                           )}
+                          <GameButton
+                            size="sm"
+                            tone="gold"
+                            disabled={!isFriendOnline(friend) || friend.currentGame != null}
+                            title={
+                              friend.currentGame != null ? t('dm.inGame')
+                                : !isFriendOnline(friend) ? t('dm.offline')
+                                : undefined
+                            }
+                            onClick={() => invite(friend)}
+                          >
+                            {t('friends.invite')}
+                          </GameButton>
                           <GameButton size="sm" tone="ghost" onClick={() => remove(profile.id, friend.id)}>✕</GameButton>
                         </div>
                       }
                     />
                   ))}
                 </div>
+              )}
+              </>
               )}
             </GlassPanel>
           </motion.div>

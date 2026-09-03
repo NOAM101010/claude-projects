@@ -168,7 +168,18 @@ export interface Friend {
   level: number;
   chips: number;
   presence: Presence;
+  /** ISO timestamp of the last presence write — freshness gate, see lib/presence.ts */
+  lastSeen?: string | null;
   currentGame: GameKey | null;
+}
+
+export interface DirectMessage {
+  id: number;
+  senderId: string;
+  recipientId: string;
+  body: string;
+  createdAt: string;
+  readAt: string | null;
 }
 
 export interface FriendRequest {

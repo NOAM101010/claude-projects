@@ -21,6 +21,7 @@ import { useSocial } from '@/stores/useSocial';
 import { useUI } from '@/stores/useUI';
 import { audio } from '@/audio/AudioManager';
 import { profileService } from '@/services/profileService';
+import { roomsService } from '@/services/roomsService';
 import { authService } from '@/services/authService';
 import { analytics } from '@/services/analyticsService';
 import { playtimeService } from '@/services/playtimeService';
@@ -207,12 +208,51 @@ export function App() {
     };
   }, [profile.id]);
 
+  /* Presence heartbeat. The route-change write below sets presence once; without
+     a repeat, a tab that closes without the pagehide beacon landing shows
+     "online" to friends forever. A Worker-backed ticker keeps beating even when
+     the tab is backgrounded (setInterval is throttled to ~1/min there). The
+     freshness gate (lib/presence.ts) is the real safety net at 60s; this keeps
+     an active player looking active, and drops them the moment they leave. */
+  useEffect(() => {
+    if (!isRemoteId(profile.id)) return;
+    const uid = profile.id;
+    let token: string | null = null;
+    void db()?.auth.getSession().then(({ data }) => { token = data.session?.access_token ?? null; });
+
+    const beat = () => {
+      // Keep the token warm so a later pagehide beacon can authenticate even if
+      // the tab closes seconds after load.
+      if (!token) void db()?.auth.getSession().then(({ data }) => { token = data.session?.access_token ?? null; });
+      const { presence, game } = zoneOf(window.location.pathname);
+      const visible = useSettings.getState().showPresence;
+      void profileService.setPresence(uid, visible ? presence : 'offline', visible ? game : null);
+    };
+    const goOffline = () => profileService.offlineBeacon(uid, token);
+
+    const stop = roomsService.startTicker(25_000, beat);
+    beat();
+
+    const onHide = () => {
+      if (document.visibilityState === 'hidden') goOffline();
+      else beat();
+    };
+    document.addEventListener('visibilitychange', onHide);
+    window.addEventListener('pagehide', goOffline);
+
+    return () => {
+      stop();
+      document.removeEventListener('visibilitychange', onHide);
+      window.removeEventListener('pagehide', goOffline);
+    };
+  }, [profile.id]);
+
   useEffect(() => {
     if (!profile.id) return;
     const { presence, game, zone } = zoneOf(location.pathname);
     audio.setZone(zone);
     const visible = useSettings.getState().showPresence;
-    void profileService.setPresence(profile.id, visible ? presence : 'offline', game);
+    void profileService.setPresence(profile.id, visible ? presence : 'offline', visible ? game : null);
     analytics.track('page_view', { path: location.pathname, zone });
   }, [location.pathname, profile.id]);
 

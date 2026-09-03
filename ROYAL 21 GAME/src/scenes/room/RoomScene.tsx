@@ -15,6 +15,7 @@ import { useSocial } from '@/stores/useSocial';
 import { useUI } from '@/stores/useUI';
 import { useT } from '@/hooks/useT';
 import { isOnline } from '@/services/supabase';
+import { isFriendOnline } from '@/lib/presence';
 import { notificationService } from '@/services/notificationService';
 import { presenceService } from '@/services/presenceService';
 import { blackjackService } from '@/services/blackjackService';
@@ -200,9 +201,9 @@ export default function RoomScene() {
             )}
           </div>
 
-          {friends.filter((friend) => friend.presence !== 'offline').length > 0 && (
+          {friends.filter((friend) => isFriendOnline(friend) && !friend.currentGame).length > 0 && (
             <div className="flex flex-wrap gap-2 mt-3">
-              {friends.filter((friend) => friend.presence !== 'offline').slice(0, 4).map((friend) => (
+              {friends.filter((friend) => isFriendOnline(friend) && !friend.currentGame).slice(0, 4).map((friend) => (
                 <GameButton
                   key={friend.id}
                   size="sm"

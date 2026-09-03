@@ -18,6 +18,7 @@ import { presenceService, type RoomPresenceMeta } from '@/services/presenceServi
 import { useT } from '@/hooks/useT';
 import { useGhostSeatCleanup } from '@/hooks/useGhostSeatCleanup';
 import { isOnline } from '@/services/supabase';
+import { isFriendOnline } from '@/lib/presence';
 import { roomsService } from '@/services/roomsService';
 import { audio } from '@/audio/AudioManager';
 import { chipGlyphOf } from '@/components/game/CoinFace';
@@ -556,9 +557,9 @@ export default function PokerScene() {
           ))}
         </GlassPanel>
 
-        {friends.filter((f) => f.presence !== 'offline').length > 0 && (
+        {friends.filter((f) => isFriendOnline(f) && !f.currentGame).length > 0 && (
           <div className="flex flex-wrap gap-2 px-1">
-            {friends.filter((f) => f.presence !== 'offline').slice(0, 6).map((friend) => (
+            {friends.filter((f) => isFriendOnline(f) && !f.currentGame).slice(0, 6).map((friend) => (
               <GameButton
                 key={friend.id}
                 size="sm"

@@ -17,6 +17,7 @@ import { useUI } from '@/stores/useUI';
 import { useT } from '@/hooks/useT';
 import { useGhostSeatCleanup } from '@/hooks/useGhostSeatCleanup';
 import { isOnline } from '@/services/supabase';
+import { isFriendOnline } from '@/lib/presence';
 import { roomsService } from '@/services/roomsService';
 import { scoreboard, nightStarted, POINTS } from '@/games/night/night';
 import { fmt } from '@/lib/format';
@@ -186,7 +187,9 @@ export default function NightScene() {
 
   /* Friends who are not already at the table. */
   const invitable = useMemo(
-    () => friends.filter((friend) => !members.some((member) => member.userId === friend.id)),
+    () => friends.filter((friend) =>
+      isFriendOnline(friend) && !friend.currentGame
+      && !members.some((member) => member.userId === friend.id)),
     [friends, members],
   );
 

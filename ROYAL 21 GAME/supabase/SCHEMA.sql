@@ -57,6 +57,8 @@ alter table public.app_config enable row level security;
 --   room_members        room_id, user_id, seat (0-5), is_spectator
 --   room_actions        room_id, user_id, action payloads
 --   room_messages       room_id, user_id, body, created_at
+--   direct_messages     id (bigserial), sender_id, recipient_id, body,
+--                       created_at, read_at   (1:1 friend chat, direct-messages.sql)
 --   game_sessions /
 --   game_players        historical results
 --   blackjack_hands /

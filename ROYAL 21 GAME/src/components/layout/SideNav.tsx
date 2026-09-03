@@ -61,6 +61,8 @@ export function SideNav() {
   const setNavOpen = useUI((s) => s.setNavOpen);
   const openPanel = useUI((s) => s.openPanel);
   const requests = useSocial((s) => s.requests.length);
+  const dmUnread = useSocial((s) => Object.values(s.dmUnread).reduce((sum, n) => sum + n, 0));
+  const friendsBadge = requests + dmUnread;
   const [hovered, setHovered] = useState(false);
 
   /* A route change closes the drawer; leaving it open over the new scene reads
@@ -113,12 +115,12 @@ export function SideNav() {
               aria-current={active ? 'page' : undefined}
             >
               <span className="grid place-items-center text-[17px] shrink-0" style={{ width: 26 }}>{entry.icon}</span>
-              {entry.panel === 'friends' && !!requests && (
+              {entry.panel === 'friends' && !!friendsBadge && (
                 <span
                   className="absolute top-1 grid place-items-center rounded-full text-[9px] font-black"
                   style={{ insetInlineStart: 24, width: 15, height: 15, background: 'var(--crimson)', color: '#fff' }}
                 >
-                  {requests}
+                  {friendsBadge > 9 ? '9+' : friendsBadge}
                 </span>
               )}
               <AnimatePresence initial={false}>

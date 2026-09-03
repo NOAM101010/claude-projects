@@ -14,6 +14,7 @@ import {
   weekKeyFor, shiftDateKey, missionValue, missionComplete,
 } from '@/data/missions';
 import { ACHIEVEMENTS, achievementById } from '@/data/achievements';
+import { isFriendOnline } from '@/lib/presence';
 
 let failures = 0;
 const check = (name: string, condition: boolean, detail = '') => {
@@ -155,6 +156,26 @@ console.log('\nMissions — rotation + progress');
   check('gamesVariety counts distinct games', missionValue(gamesM, { counts: {}, games: ['blackjack', 'roulette', 'slots'] }) === 3);
   const pokerM = MISSIONS.find((m) => m.id === 'poker1')!;
   check('pokerAny sums poker + sng', missionValue(pokerM, { counts: { poker: 0, sng: 1 }, games: [] }) === 1);
+}
+
+console.log('\nPresence freshness gate (isFriendOnline)');
+{
+  const now = new Date().toISOString();
+  const stale = new Date(Date.now() - 90_000).toISOString();
+  check('fresh + non-offline presence is online', isFriendOnline({ presence: 'hub', lastSeen: now }) === true);
+  check('non-offline but stale last_seen is NOT online', isFriendOnline({ presence: 'hub', lastSeen: stale }) === false);
+  check('offline presence is never online, even if just seen', isFriendOnline({ presence: 'offline', lastSeen: now }) === false);
+  check('missing last_seen is not online', isFriendOnline({ presence: 'hub', lastSeen: null }) === false);
+  check('missing presence is not online', isFriendOnline({ lastSeen: now }) === false);
+}
+
+console.log('\nDM unread tally (mirrors dmService.unreadCounts reducer)');
+{
+  const rows = [{ sender_id: 'a' }, { sender_id: 'a' }, { sender_id: 'b' }];
+  const counts: Record<string, number> = {};
+  for (const r of rows) counts[r.sender_id] = (counts[r.sender_id] ?? 0) + 1;
+  check('two from a, one from b', counts.a === 2 && counts.b === 1);
+  check('total unread is 3', Object.values(counts).reduce((s, n) => s + n, 0) === 3);
 }
 
 console.log('\nEvent trophies');

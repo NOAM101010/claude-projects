@@ -32,6 +32,8 @@ export const LIMITS: Record<string, Limit> = {
   roomCreate: { max: 5, windowMs: 60_000 },
   // Chat messages — 15/min prevents spam
   chat: { max: 15, windowMs: 60_000 },
+  // Direct (1:1) messages — same budget as room chat
+  dm: { max: 15, windowMs: 60_000 },
   // Friend requests — 20/min
   social: { max: 20, windowMs: 60_000 },
   // Bug reports — 3/min

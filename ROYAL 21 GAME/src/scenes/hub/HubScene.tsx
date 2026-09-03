@@ -17,6 +17,7 @@ import { useSocial } from '@/stores/useSocial';
 import { useUI } from '@/stores/useUI';
 import { useT } from '@/hooks/useT';
 import { todayKey, fmt } from '@/lib/format';
+import { isFriendOnline } from '@/lib/presence';
 import { audio } from '@/audio/AudioManager';
 import { STREAK_REWARD, STREAK_MILESTONES, isStreakMilestone, nextStreakDay, REFERRAL_BONUS, WEEKLY_PODIUM } from '@/data/economy';
 import { dailyMissions, weeklyMission, weekKeyFor, missionComplete } from '@/data/missions';
@@ -57,7 +58,7 @@ export default function HubScene() {
   const claimDaily = usePlayer((s) => s.claimDaily);
   const addXp = usePlayer((s) => s.addXp);
   const allFriends = useSocial((s) => s.friends);
-  const friends = useMemo(() => allFriends.filter((f) => f.presence !== 'offline'), [allFriends]);
+  const friends = useMemo(() => allFriends.filter(isFriendOnline), [allFriends]);
   const toast = useUI((s) => s.toast);
   const showMoment = useUI((s) => s.showMoment);
   const [giftOpen, setGiftOpen] = useState(() => new URLSearchParams(window.location.search).get('gift') === '1');

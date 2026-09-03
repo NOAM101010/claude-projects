@@ -43,6 +43,7 @@ Each file's own header says "run after X"; this is the full dependency-sorted li
 | 24 | **`app-config.sql`** | `app_config` table + `admin_set_config` / `get_app_config` / `config_num` | setup, admin |
 | 25 | **`admin-tools.sql`** | player-support RPCs: `admin_find_player`, `admin_reset_player`, `admin_grant_item` / `admin_revoke_item`, `admin_set_level(uuid,int)`, `admin_list_bugs`, `admin_resolve_bug` | setup, admin, telemetry, playtime |
 | 26 | **`playtime.sql`** | `profiles.playtime_seconds` + `add_playtime(int)` — lifetime foreground seconds, clamped 1h/call | setup |
+| 27 | **`direct-messages.sql`** | `direct_messages` table + RLS (friends-only, block-aware) + `mark_dm_read(uuid)` + rate-limit trigger + realtime — 1:1 friend chat (Stage F) | setup |
 
 `app-config.sql` and `admin-tools.sql` must come **after** `admin.sql`; put them
 after the `#17–19` files so the economy RPCs pick up `config_num()`. Re-running
@@ -88,6 +89,7 @@ after `app-config.sql` is harmless and gets you the config-aware bodies.
 | Achievements catalogue | `src/data/achievements.ts` + `event-trophies.sql` | — |
 | Who is an admin | `admin.sql` `admin_emails()` | — |
 | Room seat caps per game | `enforce_room_capacity()` — **live copy in `miniGames.sql`** | — |
+| Friend chat (1:1 DMs) | `direct-messages.sql` (`direct_messages`, RLS, `mark_dm_read`) + `src/services/dmService.ts` | DM rate limit: trigger in `direct-messages.sql` + `src/lib/rateLimit.ts` `dm` |
 
 The client mirror is `src/hooks/useAppConfig.ts` — reads `app_config` once per
 session, falls back to the `economy.ts` constants when the table/key is missing

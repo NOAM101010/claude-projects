@@ -1,10 +1,11 @@
 -- =============================================================================
--- ROYAL 21 — הרץ פעם אחת ב-SQL Editor — צ'אט חברים (שלב F)
+-- ROYAL 21 — Direct messages (Stage F): 1:1 friend chat
 --
--- זה התוכן המלא של supabase/direct-messages.sql. הקבצים הקודמים שהיו כאן
--- (app-config / playtime / admin-tools) כבר רצו — הוחלפו בקובץ הזה.
+-- Run AFTER setup.sql / upgrade.sql, in Supabase Dashboard -> SQL Editor.
+-- Safe to re-run: IF NOT EXISTS / CREATE OR REPLACE / DROP+CREATE for policies.
+-- Never drops a table, never deletes a row.
 --
--- הכל idempotent — בטוח להריץ שוב. Select All → Paste → Run.
+-- Virtual chips only — nothing money-related here.
 -- =============================================================================
 
 -- --- 1. Table --------------------------------------------------------------
@@ -26,10 +27,13 @@ alter table public.direct_messages enable row level security;
 alter table public.direct_messages replica identity full;
 
 -- --- 2. RLS ---------------------------------------------------------------
+-- Read: either end of the conversation.
 drop policy if exists direct_messages_read on public.direct_messages;
 create policy direct_messages_read on public.direct_messages for select
   using (auth.uid() in (sender_id, recipient_id));
 
+-- Insert: only as yourself, only to a confirmed friend, and only if neither
+-- side has blocked the other.
 drop policy if exists direct_messages_insert on public.direct_messages;
 create policy direct_messages_insert on public.direct_messages for insert
   with check (
@@ -45,12 +49,16 @@ create policy direct_messages_insert on public.direct_messages for insert
     )
   );
 
+-- Update: only the recipient, only to stamp read_at.
 drop policy if exists direct_messages_mark_read on public.direct_messages;
 create policy direct_messages_mark_read on public.direct_messages for update
   using (auth.uid() = recipient_id)
   with check (auth.uid() = recipient_id);
 
+-- No delete policy — messages are not retractable.
+
 -- --- 3. Flood brake -----------------------------------------------------
+-- At most 15 messages per sender per 60s — mirrors the client rate limiter.
 create or replace function public.direct_messages_rate_limit()
 returns trigger
 language plpgsql
@@ -95,4 +103,5 @@ begin
   end;
 end $$;
 
--- ============================ סוף — הכל רץ ✓ ================================
+-- ============================ done — verify in Table Editor ================
+-- `direct_messages` exists, RLS on, and it is in the supabase_realtime publication.

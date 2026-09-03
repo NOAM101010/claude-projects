@@ -28,6 +28,8 @@ export function HUD({ compact }: { compact?: boolean }) {
   const toggleNav = useUI((s) => s.toggleNav);
   const unread = useSocial((s) => s.notifications.filter((n) => !n.read).length);
   const requests = useSocial((s) => s.requests.length);
+  const dmUnread = useSocial((s) => Object.values(s.dmUnread).reduce((sum, n) => sum + n, 0));
+  const friendsBadge = requests + dmUnread;
   const chips = useCountUp(profile.chips);
 
   if (!profile.id) return null;
@@ -108,9 +110,9 @@ export function HUD({ compact }: { compact?: boolean }) {
         <Tooltip label={t('friends.title')} hint={t('nav.friendsHint')} side="bottom">
           <GameButton size="sm" tone="ghost" onClick={() => openPanel('friends')} className="relative">
             👥
-            {!!requests && (
+            {!!friendsBadge && (
               <span className="absolute -top-1 -end-1 w-4 h-4 grid place-items-center rounded-full text-[9px] font-black"
-                style={{ background: 'var(--crimson)', color: '#fff' }}>{requests}</span>
+                style={{ background: 'var(--crimson)', color: '#fff' }}>{friendsBadge > 9 ? '9+' : friendsBadge}</span>
             )}
           </GameButton>
         </Tooltip>
