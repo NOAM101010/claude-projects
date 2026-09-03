@@ -142,7 +142,9 @@ export default function SitAndGoScene() {
     if (tournament && !revealing) prevEliminated.current = tournament.eliminated;
   }, [tournament?.eliminated, revealing]);
   const displayEliminated = revealing ? prevEliminated.current : (tournament?.eliminated ?? []);
-  const alive = state?.seats.filter((s) => !displayEliminated.includes(s.userId) && (displayStacks[s.userId] ?? s.stack) > 0) ?? [];
+  // Purely off the eliminated list — an all-in seat sits at 0 chips mid-runout
+  // yet is still very much in the hand, so a stack check here would drop it early.
+  const alive = state?.seats.filter((s) => !displayEliminated.includes(s.userId)) ?? [];
 
   const winnerIds = useMemo(() => {
     if (!state || state.street !== 'waiting' || revealing) return new Set<string>();
