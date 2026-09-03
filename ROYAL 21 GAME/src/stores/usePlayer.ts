@@ -6,7 +6,7 @@ import {
   MISSION_ALL_DONE_BONUS, MAX_MISSION_REWARD,
 } from '@/data/economy';
 import {
-  dailyMissions, weeklyMission, weekKeyFor, missionById, missionComplete,
+  dailyMissions, weeklyMission, weekKeyFor, missionComplete,
   ALL_DONE_MISSION_ID, type Mission,
 } from '@/data/missions';
 import { audio } from '@/audio/AudioManager';
@@ -742,7 +742,10 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
         periodKey = week;
         counters = { counts: mp.weekCounts, games: mp.weekGames };
       } else {
-        mission = dailyMissions(today).find((m) => m.id === missionId) ?? missionById(missionId);
+        // Only today's assigned three are claimable — no reaching into the
+        // pool for a mission that was rotated out (or is scheduled for a
+        // future day). The weekly is handled in the branch above.
+        mission = dailyMissions(today).find((m) => m.id === missionId);
         counters = { counts: mp.counts, games: mp.games };
       }
       if (!mission || !missionComplete(mission, counters)) return;
