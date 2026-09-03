@@ -351,3 +351,15 @@ export function GiftArt({ ready }: { ready: boolean }) {
     </motion.div>
   );
 }
+
+export function InviteArt({ ready }: { ready: boolean }) {
+  return (
+    <motion.div
+      animate={ready ? { y: [0, -9, 0], x: [0, 6, 0], rotate: [-8, 4, -8] } : {}}
+      transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+      style={{ fontSize: 'clamp(28px, 4vw, 44px)', filter: ready ? 'drop-shadow(0 0 16px var(--glow-gold))' : 'grayscale(.7) opacity(.6)' }}
+    >
+      ✈️
+    </motion.div>
+  );
+}

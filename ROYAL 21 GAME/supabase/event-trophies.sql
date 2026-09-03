@@ -26,7 +26,6 @@ insert into public.achievements (id, name, descr, stat, goal, reward, tier, trop
   ('ev_duel_victor',    '{"he":"מנצח הדואל","en":"Duel victor"}'::jsonb,                 '{"he":"נצח בדואל בלאק׳ג׳ק מול חבר","en":"Win a blackjack duel against a friend"}'::jsonb, null, null, 2500, 'gold',     '⚔️', 'event'),
   ('ev_night_champion', '{"he":"אלוף הערב","en":"Night champion"}'::jsonb,               '{"he":"סיים ערב חברה במקום הראשון","en":"Finish a game night in first place"}'::jsonb,   null, null, 2500, 'gold',     '🎉', 'event'),
   ('ev_side_bet_10x',   '{"he":"פי-10 בצד","en":"10x on the side"}'::jsonb,              '{"he":"זכה פי-10 או יותר בהימור צד בבלאק׳ג׳ק","en":"Win 10x or more on a blackjack side bet"}'::jsonb, null, null, 2500, 'gold', '🎯', 'event'),
-  ('ev_weekly_winner',  '{"he":"מוביל השבוע","en":"Top of the week"}'::jsonb,            '{"he":"זכה בפרס השבועי של החברים","en":"Claim the weekly friends prize"}'::jsonb,        null, null, 2500, 'gold',     '🏅', 'event'),
   ('ev_first_referral', '{"he":"הבאת חבר","en":"Brought a friend"}'::jsonb,              '{"he":"חבר ראשון הצטרף דרך הקישור שלך","en":"Your first friend joins through your invite link"}'::jsonb, null, null, 2500, 'gold', '🎁', 'event'),
   ('ev_vip',            '{"he":"חבר VIP","en":"VIP member"}'::jsonb,                     '{"he":"הגע למעמד VIP","en":"Reach VIP status"}'::jsonb,                                    null, null, 5000, 'platinum', '👑', 'event'),
   ('ev_royal_flush',    '{"he":"רויאל פלאש חי","en":"Royal, live"}'::jsonb,              '{"he":"צור רויאל פלאש בזמן אמת","en":"Make a royal flush at the table"}'::jsonb,          null, null, 5000, 'platinum', '🃏', 'event')
@@ -36,4 +35,7 @@ on conflict (id) do update set
 
 -- Retired: the 30-day-streak event trophy was dropped (STAGE 4b room rework).
 delete from public.achievements where id = 'ev_streak30';
+-- Retired: the weekly-podium event trophy was dropped (STAGE K HUB rework) —
+-- the podium's chip prize stays, only the trophy is gone.
+delete from public.achievements where id = 'ev_weekly_winner';
 

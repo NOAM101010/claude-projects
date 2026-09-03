@@ -834,6 +834,8 @@
     "switchUser": "Switch user",
     "replayTour": "Show the intro tour again",
     "replayTourAction": "Show",
+    "quickTitle": "Quick settings",
+    "fullSettings": "Full settings",
     "audio": "Sound",
     "muteAll": "Mute all",
     "unmuteAll": "Unmute",

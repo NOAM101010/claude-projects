@@ -125,7 +125,7 @@ export function HUD({ compact }: { compact?: boolean }) {
           </GameButton>
         </Tooltip>
         <Tooltip label={t('settings.title')} hint={t('nav.settingsHint')} side="bottom">
-          <GameButton size="sm" tone="ghost" onClick={() => navigate('/settings')}>⚙️</GameButton>
+          <GameButton size="sm" tone="ghost" onClick={() => openPanel('settings')}>⚙️</GameButton>
         </Tooltip>
       </div>
     </header>

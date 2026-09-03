@@ -13,6 +13,7 @@ import { WeeklyPodiumPanel } from '@/components/social/WeeklyPodiumPanel';
 import { MissionsPanel } from '@/components/social/MissionsPanel';
 import { InviteOverlay } from '@/components/social/InviteOverlay';
 import { ChipsPanel } from '@/components/layout/ChipsPanel';
+import { SettingsPanel } from '@/components/layout/SettingsPanel';
 import { ConnectionBanner } from '@/components/layout/ConnectionBanner';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { usePlayer } from '@/stores/usePlayer';
@@ -284,6 +285,7 @@ export function App() {
       <WeeklyPodiumPanel />
       <MissionsPanel />
       <ChipsPanel />
+      <SettingsPanel />
       <InviteOverlay />
       <MomentLayer />
       <ConfirmModal />

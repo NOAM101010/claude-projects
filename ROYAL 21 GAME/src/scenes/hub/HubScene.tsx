@@ -5,7 +5,7 @@ import { SceneShell } from '@/components/layout/SceneShell';
 import { HubCard } from './HubCard';
 import { Leaderboard } from './Leaderboard';
 import {
-  BlackjackTableArt, CoinStandArt, DuelTableArt, GameNightArt, GiftArt, HighCardArt,
+  BlackjackTableArt, CoinStandArt, DuelTableArt, GameNightArt, GiftArt, HighCardArt, InviteArt,
   LoungeArt, MyRoomDoorArt, PokerTableArt, RouletteTableArt, ScratchCounterArt, SlotMachineArt, VaultDoorArt,
 } from './hubObjects';
 import { GameButton } from '@/components/ui/GameButton';
@@ -348,10 +348,10 @@ export default function HubScene() {
             blurb={t('hub.inviteFriendBlurb', { chips: fmt(REFERRAL_BONUS) })}
             hoverSound="notify"
             glow="rgba(227,178,60,.24)"
-            badge="🎁"
+            badge="✈️"
             onEnter={() => useUI.getState().openFriendsAdd()}
           >
-            {(focused) => <GiftArt ready={focused} />}
+            {(focused) => <InviteArt ready={focused} />}
           </HubCard>
 
           <HubCard

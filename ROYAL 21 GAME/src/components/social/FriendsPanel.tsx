@@ -113,7 +113,6 @@ export function FriendsPanel() {
     void friendsService.claimWeeklyPrize(profile.id).then((result) => {
       if (result.claimed && result.chips) {
         addChips(result.chips, { silent: true });
-        usePlayer.getState().grantEvent('ev_weekly_winner');
         toast(t('friends.weeklyPodium', { rank: result.rank ?? 1, amount: fmt(result.chips) }), 'good', '🏆');
         analytics.track('weekly_prize', { rank: result.rank ?? 1, chips: result.chips });
       }
