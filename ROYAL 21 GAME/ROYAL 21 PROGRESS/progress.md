@@ -5,6 +5,12 @@
 משחק קזינו חברתי פרטי (~15 חברים, צ'יפים וירטואליים בלבד — אין כסף אמיתי). Vite + React + TS + Supabase.
 תיקייה: `C:\CLAUDE AI\ROYAL 21 GAME`. חי: https://royal21.vercel.app (מתפרס אוטומטית מ-`origin/main`).
 
+## Roadmap חדש (2026-09-03) — 8 שלבים A–H
+
+תוכנית מלאה: `C:\Users\noam7\.claude\plans\swift-snuggling-harp.md`. סדר: A→C→D→B→F→E→G→H.
+- **STAGE A — איפוס מלא ✅ נדחף** (`a0c269a`). `reset-all.sql` הורחב (עמודת `ever_vip`, איפוסה, `truncate friendships`); `localStore` bump `royal21.save.v1`→`v2` + `migrateToV2()` שמנקה save ישן + `daily.v1.*` + `ref`; `rowToProfile` ממפה `ever_vip`→`everVip`. **המשתמש צריך להריץ `supabase/reset-all.sql`.** tsc/build/test ירוקים.
+- STAGE C — מסך פתיחה · STAGE D — פודיום כטבלה+הודעות · STAGE B — Supabase+אדמין · STAGE F — presence+צ'אט · STAGE E — אודיו · STAGE G — חנות · STAGE H — (אופ') כניסה+דמות.
+
 ## Current status
 
 **כל הפיתוח שתוכנן הושלם, אומת (tsc/build/test:all/i18n ירוקים לכל שלב), נבדק ב-reviewer, ונדחף ל-`origin/main`.**
