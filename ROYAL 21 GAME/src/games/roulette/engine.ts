@@ -205,8 +205,12 @@ export function reduce(prev: RouletteState, action: RouletteAction): RouletteSta
       return state;
     }
     case 'ready': {
+      // "Done betting" — the player is finished for this round (they can still
+      // un-ready by placing or clearing a bet, which both reset the flag). A
+      // seat with no bets may still declare ready to sit the round out; the
+      // round can't actually spin unless *someone* bet (see `spin`/`lockBets`).
       const seat = seatOf(action.userId);
-      if (!seat || state.phase !== 'betting' || !seat.bets.length) return prev;
+      if (!seat || state.phase !== 'betting' || seat.spectator) return prev;
       seat.ready = true;
       return state;
     }

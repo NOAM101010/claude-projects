@@ -11,6 +11,7 @@ as $$
 declare
   sent_today bigint;
   balance    bigint;
+  recip_bal  bigint;
   v_limit    bigint := public.config_num('gift_daily_limit', 50000);
 begin
   if p_to_id = auth.uid() then raise exception 'cannot gift yourself'; end if;
@@ -27,11 +28,17 @@ begin
 
   update public.profiles set chips = chips - p_amount, updated_at = now() where id = auth.uid()
   returning chips into balance;
-  update public.profiles set chips = chips + p_amount, updated_at = now() where id = p_to_id;
+  update public.profiles set chips = chips + p_amount, updated_at = now() where id = p_to_id
+  returning chips into recip_bal;
 
   insert into public.chip_gifts (from_id, to_id, amount, message) values (auth.uid(), p_to_id, p_amount, p_message);
+  -- `new_balance` = the recipient's authoritative balance AFTER the credit, so
+  -- the client can adopt it directly (no delta add — that would double the
+  -- gift once persist() pushed it back). There is no realtime subscription on
+  -- the recipient's own profiles row, so the notification carries the figure.
   insert into public.notifications (user_id, kind, actor_id, title, body, payload)
-  values (p_to_id, 'gift', auth.uid(), 'gift_received', p_message, jsonb_build_object('amount', p_amount));
+  values (p_to_id, 'gift', auth.uid(), 'gift_received', p_message,
+          jsonb_build_object('amount', p_amount, 'new_balance', recip_bal));
 
   return balance;
 end;

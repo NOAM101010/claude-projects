@@ -1,130 +1,148 @@
 -- =============================================================================
--- ROYAL 21 — הרץ פעם אחת ב-SQL Editor — חבילות חנות (שלב G)
+-- ROYAL 21 — שלב J — תיקון payload מתנה + פודיום
 --
--- זה התוכן המלא של supabase/buy-pack.sql. הקובץ הקודם שהיה כאן
--- (direct-messages.sql) כבר רץ — הוחלף בקובץ הזה.
+-- הרץ פעם אחת ב-Supabase → SQL Editor. Select All → Paste → Run.
+-- הכל idempotent (create or replace) — בטוח להריץ שוב.
 --
--- הכל idempotent — בטוח להריץ שוב. Select All → Paste → Run.
+-- מה זה עושה: send_gift ו-claim_weekly_prize מוסיפים `new_balance` ל-payload של
+-- ההודעה — היתרה של המקבל/הזוכה אחרי הזיכוי. אין subscription בזמן אמת על שורת
+-- ה-profiles של השחקן עצמו, אז בלי זה הצ'יפים נראים רק אחרי refresh. הקליינט
+-- מאמץ את הערך ישירות (setChips) — בלי לזכות דלתא, שהיה גורם לכפילות.
+--
+-- סדר: (1) gift-limit-50k.sql המעודכן  (2) weekly-podium.sql המעודכן
+-- דרישות מוקדמות שכבר רצו: app-config.sql, weekly-snapshot.sql
 -- =============================================================================
 
--- --- 1. items — עמודות דגל (client-side display, נשמר גם ב-DB לעקביות) ------
-alter table public.items add column if not exists daily_rarity_only  boolean not null default false;
-alter table public.items add column if not exists rare_rotation_only boolean not null default false;
 
--- --- 2. bundles — קטלוג החבילות (מקור האמת לשחקן מחובר) --------------------
--- חייב להישאר מסונכרן עם PACKS ב-src/data/shopOffers.ts.
-create table if not exists public.bundles (
-  id        text primary key,
-  item_ids  text[] not null,
-  discount  numeric not null check (discount >= 0 and discount <= 0.6),
-  updated_at timestamptz not null default now()
-);
+-- ===== 1/2 — supabase/gift-limit-50k.sql ====================================
+-- chip-gift daily limit (default 50,000/day). קורא את `gift_daily_limit` מ-
+-- app_config; בלי המפתח נופל ל-50,000.
 
-alter table public.bundles enable row level security;
+create or replace function public.send_gift(p_to_id uuid, p_amount bigint, p_message text default null)
+returns bigint
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  sent_today bigint;
+  balance    bigint;
+  recip_bal  bigint;
+  v_limit    bigint := public.config_num('gift_daily_limit', 50000);
+begin
+  if p_to_id = auth.uid() then raise exception 'cannot gift yourself'; end if;
+  if not exists (select 1 from public.profiles where id = p_to_id) then raise exception 'unknown recipient'; end if;
+  if p_amount <= 0 or p_amount > v_limit then raise exception 'invalid amount'; end if;
 
-drop policy if exists bundles_read on public.bundles;
-create policy bundles_read on public.bundles for select to authenticated using (true);
+  select coalesce(sum(amount), 0) into sent_today
+  from public.chip_gifts
+  where from_id = auth.uid() and created_at >= date_trunc('day', now());
+  if sent_today + p_amount > v_limit then raise exception 'daily gift limit exceeded'; end if;
 
-grant select on public.bundles to authenticated;
+  select chips into balance from public.profiles where id = auth.uid() for update;
+  if balance < p_amount then raise exception 'insufficient chips'; end if;
 
-insert into public.bundles (id, item_ids, discount) values
-  ('pack_starter',     array['cf_noir','ch_gold','tb_noir'],                 0.35),
-  ('pack_style',       array['cl_gold','wt_gold','cn_gold'],                 0.30),
-  ('pack_luxury',      array['cf_gold','ch_ivory','tb_gold','cl_royal'],     0.40),
-  ('pack_royal_table', array['tb_royal','cf_royal','bk_royal'],              0.35),
-  ('pack_jade',        array['tb_jade','cf_jade','fr_jade'],                 0.30),
-  ('pack_celebration', array['vc_fireworks','vc_stars','fr_rose'],           0.25)
-on conflict (id) do update set
-  item_ids = excluded.item_ids, discount = excluded.discount, updated_at = now();
+  update public.profiles set chips = chips - p_amount, updated_at = now() where id = auth.uid()
+  returning chips into balance;
+  update public.profiles set chips = chips + p_amount, updated_at = now() where id = p_to_id
+  returning chips into recip_bal;
 
--- --- 3. buy_pack(pack_id) -------------------------------------------------
--- SECURITY DEFINER: עוקף את הטריגר protect_chip_column בדיוק כמו buy_item().
--- כל הקלט חוץ מ-p_pack_id נקרא מ-bundles/items בשרת. המחיר מחושב מחדש,
--- ורק פריטים שעוד לא בבעלות נגבים. הנחת החבילה מחליפה את הנחת ה-VIP (לא מצטברת).
-drop function if exists public.buy_pack(text, text[], numeric);
+  insert into public.chip_gifts (from_id, to_id, amount, message) values (auth.uid(), p_to_id, p_amount, p_message);
+  -- `new_balance` = the recipient's authoritative balance AFTER the credit, so
+  -- the client can adopt it directly (no delta add — that would double the
+  -- gift once persist() pushed it back). There is no realtime subscription on
+  -- the recipient's own profiles row, so the notification carries the figure.
+  insert into public.notifications (user_id, kind, actor_id, title, body, payload)
+  values (p_to_id, 'gift', auth.uid(), 'gift_received', p_message,
+          jsonb_build_object('amount', p_amount, 'new_balance', recip_bal));
 
-create or replace function public.buy_pack(p_pack_id text)
+  return balance;
+end;
+$$;
+
+
+-- ===== 2/2 — supabase/weekly-podium.sql ====================================
+-- claim_weekly_prize משלם #1/#2/#3 בין חברים לפי weekly_chip_snapshot הקפוא.
+
+alter table public.profiles
+  add column if not exists weekly_prize_claimed_week text;
+
+create or replace function public.claim_weekly_prize()
 returns jsonb
 language plpgsql
 security definer set search_path = public
 as $$
 declare
-  v_item_ids text[];
-  v_discount numeric;
-  v_full     bigint;
-  v_price    bigint;
-  v_balance  bigint;
-  v_granted  int;
+  v_week      text := to_char(now() - interval '7 days', 'IYYY-"W"IW');
+  claimed_wk  text;
+  my_chips    bigint;
+  snap_count  integer;
+  ahead_count integer;
+  my_rank     integer;
+  prize       bigint;
+  balance     bigint;
+  podium      bigint[] := public.config_bigint_array('weekly_podium', array[5000, 2500, 1000]);
 begin
-  if auth.uid() is null then raise exception 'not signed in'; end if;
+  select weekly_prize_claimed_week into claimed_wk
+  from public.profiles where id = auth.uid() for update;
 
-  select item_ids, discount into v_item_ids, v_discount
-  from public.bundles where id = p_pack_id;
-  if v_item_ids is null then raise exception 'unknown pack'; end if;
-
-  -- discount כבר מוגבל 0..0.6 ע"י ה-check על הטבלה; clamp דפנסיבי נוסף
-  v_discount := least(0.6, greatest(0, coalesce(v_discount, 0)));
-
-  -- מחיר = סכום הפריטים שעוד לא בבעלות, אחרי הנחה, מעוגל כלפי מטה
-  select coalesce(sum(i.price), 0) into v_full
-  from public.items i
-  where i.id = any(v_item_ids)
-    and not exists (
-      select 1 from public.user_items u
-      where u.user_id = auth.uid() and u.item_id = i.id
-    );
-
-  v_price := floor(v_full * (1 - v_discount));
-
-  select chips into v_balance from public.profiles where id = auth.uid() for update;
-  if v_balance < v_price then raise exception 'insufficient chips'; end if;
-
-  if v_price > 0 then
-    update public.profiles set chips = chips - v_price, updated_at = now()
-    where id = auth.uid()
-    returning chips into v_balance;
+  if claimed_wk is not null and claimed_wk = v_week then
+    return jsonb_build_object('claimed', false, 'reason', 'already');
   end if;
 
-  with ins as (
-    insert into public.user_items (user_id, item_id)
-    select auth.uid(), i.id
-    from public.items i
-    where i.id = any(v_item_ids)
-    on conflict do nothing
-    returning 1
-  )
-  select count(*) into v_granted from ins;
+  select count(*) into snap_count
+  from public.weekly_chip_snapshot where week_key = v_week;
 
-  return jsonb_build_object('ok', true, 'spent', v_price, 'granted', v_granted, 'chips', v_balance);
+  if snap_count = 0 then
+    return jsonb_build_object('claimed', false, 'reason', 'no_snapshot');
+  end if;
+
+  select chips into my_chips
+  from public.weekly_chip_snapshot
+  where week_key = v_week and user_id = auth.uid();
+
+  if my_chips is null then
+    update public.profiles set weekly_prize_claimed_week = v_week where id = auth.uid();
+    return jsonb_build_object('claimed', false, 'reason', 'no_snapshot');
+  end if;
+
+  select count(*) into ahead_count
+  from public.weekly_chip_snapshot s
+  where s.week_key = v_week
+    and s.chips > my_chips
+    and s.user_id in (
+      select friend_id from public.friendships where user_id = auth.uid()
+    );
+
+  my_rank := ahead_count + 1;
+
+  if my_rank > 3 then
+    update public.profiles set weekly_prize_claimed_week = v_week where id = auth.uid();
+    return jsonb_build_object('claimed', false, 'reason', 'off_podium');
+  end if;
+
+  prize := podium[my_rank];
+
+  update public.profiles
+    set chips = chips + prize,
+        weekly_prize_claimed_week = v_week,
+        weekly_prize_claimed_at = now(),
+        updated_at = now()
+  where id = auth.uid()
+  returning chips into balance;
+
+  -- `new_balance` lets the client adopt the post-credit figure directly — there
+  -- is no realtime subscription on the winner's own profiles row, so without it
+  -- the prize only shows after a manual refresh / visibility flip.
+  insert into public.notifications (user_id, kind, title, body, payload)
+  values (
+    auth.uid(), 'podium_prize', 'weekly_podium_won', null,
+    jsonb_build_object('amount', prize, 'rank', my_rank, 'week', v_week, 'claimed', true, 'new_balance', balance)
+  );
+
+  return jsonb_build_object('claimed', true, 'chips', prize, 'rank', my_rank, 'balance', balance);
 end;
 $$;
 
-revoke all on function public.buy_pack(text) from public;
-grant execute on function public.buy_pack(text) to authenticated;
-
--- --- 4. פריטי חנות חדשים (שלב G) ----------------------------------------
-insert into public.items (id, category, name, rarity, price, icon, payload, daily_rarity_only, rare_rotation_only) values
-  ('cf_royal',      'cards',   '{"he":"קלפים מלכותיים","en":"Royal Cards"}'::jsonb,   'legendary', 22000, '♛',  '{"cardFace":"cf-royal"}'::jsonb,        false, false),
-  ('cf_jade',       'cards',   '{"he":"קלפי אזמרגד","en":"Jade Cards"}'::jsonb,       'epic',       8000, '💚', '{"cardFace":"cf-jade"}'::jsonb,         false, false),
-  ('cf_blush',      'cards',   '{"he":"קלפי ורד","en":"Blush Cards"}'::jsonb,         'rare',       2000, '🌹', '{"cardFace":"cf-blush"}'::jsonb,        false, false),
-  ('bk_royal',      'backs',   '{"he":"גב מלכותי","en":"Royal Back"}'::jsonb,         'legendary', 22000, '♛',  '{"cardBack":"bk-royal"}'::jsonb,        false, false),
-  ('bk_jade',       'backs',   '{"he":"גב אזמרגד","en":"Jade Back"}'::jsonb,          'epic',       8000, '💚', '{"cardBack":"bk-jade"}'::jsonb,         false, false),
-  ('bk_wave',       'backs',   '{"he":"גב גלים","en":"Wave Back"}'::jsonb,            'rare',       2000, '🌊', '{"cardBack":"bk-wave"}'::jsonb,         false, false),
-  ('tb_royal',      'tables',  '{"he":"קטיפה מלכותית","en":"Royal Velvet"}'::jsonb,   'legendary', 22000, '👑', '{"table":"tb-royal"}'::jsonb,           false, false),
-  ('tb_jade',       'tables',  '{"he":"לבד אזמרגד","en":"Jade Felt"}'::jsonb,         'epic',       8000, '💚', '{"table":"tb-jade"}'::jsonb,            false, false),
-  ('fr_royal',      'frames',  '{"he":"מסגרת מלכותית","en":"Royal Frame"}'::jsonb,    'legendary', 22000, '👑', '{"frame":"fr-royal"}'::jsonb,           false, false),
-  ('fr_jade',       'frames',  '{"he":"מסגרת אזמרגד","en":"Jade Frame"}'::jsonb,      'epic',       8000, '💠', '{"frame":"fr-jade"}'::jsonb,            false, false),
-  ('fr_rose',       'frames',  '{"he":"מסגרת ורד","en":"Rose Frame"}'::jsonb,         'rare',       2000, '🌹', '{"frame":"fr-rose"}'::jsonb,            false, false),
-  ('vc_fireworks',  'victory', '{"he":"זיקוקים","en":"Fireworks"}'::jsonb,            'epic',       8000, '🎆', '{"victory":"vc-fireworks"}'::jsonb,     false, false),
-  ('vc_stars',      'victory', '{"he":"מטר כוכבים","en":"Star Shower"}'::jsonb,       'legendary', 22000, '🌟', '{"victory":"vc-stars"}'::jsonb,         false, false),
-  ('cn_gem',        'coins',   '{"he":"מטבע יהלום","en":"Gem Coin"}'::jsonb,          'legendary', 30000, '💎', '{"currencySkin":"cn-gem"}'::jsonb,      false, true),
-  ('cn_crown_cur',  'coins',   '{"he":"מטבע כתר","en":"Crown Coin"}'::jsonb,          'mythic',    75000, '👑', '{"currencySkin":"cn-crown"}'::jsonb,    false, true),
-  ('cn_nova',       'coins',   '{"he":"מטבע נובה","en":"Nova Coin"}'::jsonb,          'mythic',    75000, '✦',  '{"currencySkin":"cn-nova"}'::jsonb,     false, true),
-  ('cn_ancient',    'coins',   '{"he":"מטבע עתיק","en":"Ancient Coin"}'::jsonb,       'legendary', 30000, '⚜',  '{"currencySkin":"cn-ancient"}'::jsonb,  true,  false),
-  ('cn_casino',     'coins',   '{"he":"ז׳יטון קזינו","en":"Casino Token"}'::jsonb,    'epic',       8000, '♠',  '{"currencySkin":"cn-casino"}'::jsonb,   true,  false)
-on conflict (id) do update set
-  category = excluded.category, name = excluded.name, rarity = excluded.rarity,
-  price = excluded.price, icon = excluded.icon, payload = excluded.payload,
-  daily_rarity_only = excluded.daily_rarity_only, rare_rotation_only = excluded.rare_rotation_only;
+grant execute on function public.claim_weekly_prize() to authenticated;
 
 -- ============================ סוף — הכל רץ ✓ ================================

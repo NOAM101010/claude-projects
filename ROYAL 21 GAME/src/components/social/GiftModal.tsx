@@ -26,7 +26,6 @@ export function GiftModal({ friend, onClose }: { friend: Friend | null; onClose:
   const { t } = useT();
   const toast = useUI((s) => s.toast);
   const profile = usePlayer((s) => s.profile);
-  const addChips = usePlayer((s) => s.addChips);
   const [sentToday, setSentToday] = useState(0);
   const [amount, setAmount] = useState(500);
   const [message, setMessage] = useState('');
@@ -52,7 +51,18 @@ export function GiftModal({ friend, onClose }: { friend: Friend | null; onClose:
       toast(t(reasonKey[result.reason ?? 'server']), 'bad', '⚠');
       return;
     }
-    addChips(-amount, { silent: true });
+    // send_gift() already debited the sender server-side and handed back the
+    // real balance — adopt it instead of deducting again locally (which would
+    // double-charge once persist() pushed the delta). setChips stamps the
+    // server figure as the synced baseline, so no further push happens.
+    if (typeof result.balance === 'number') {
+      usePlayer.getState().setChips(result.balance);
+    } else {
+      // send_gift() should always return the sender's post-debit balance — if we
+      // land here the RPC returned a non-number, so log it and settle locally.
+      console.warn('[gift] send_gift returned no balance; deducting locally', result);
+      usePlayer.getState().addChips(-amount, { silent: true, localOnly: true });
+    }
     audio.play('vault');
     toast(t('friends.giftSent', { name: friend.username, amount: fmt(amount) }), 'good', '🎁');
     setSentToday((value) => value + amount);

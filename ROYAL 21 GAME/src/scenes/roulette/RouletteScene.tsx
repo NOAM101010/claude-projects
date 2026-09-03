@@ -29,8 +29,10 @@ import { haptic } from '@/lib/haptics';
 
 interface Props { mode: 'solo' | 'room'; roomCode?: string }
 
-/** How long a new betting window stays open before the host's client auto-spins. */
-const BETTING_WINDOW_MS = 10_000;
+/** Backup countdown: once the first player at the table hits "done betting",
+ *  everyone else has this long before the round locks and spins automatically —
+ *  so one idle player can't stall the table forever. */
+const READY_WINDOW_MS = 15_000;
 /* Head-start the host gives the published spin state to reach remote clients, so
    every table starts its wheel at roughly the same wall-clock instant and the
    number surfaces together (no host-first reveal). Solo play skips it. */
@@ -214,10 +216,18 @@ export default function RouletteScene({ mode, roomCode }: Props) {
     spinScheduledFor.current = -1;
   }, []);
 
-  /* Betting window countdown. A fresh round in a multi-seat room gets a fixed
-     10s window before the host's client spins automatically — without this,
-     a host who bets first and immediately hits "spin" can close out a round
-     before anyone else at the table gets a bet down. */
+  const seatedPlayers = state?.seats.filter((s) => !s.spectator) ?? [];
+  const realPlayerCount = seatedPlayers.length;
+  /* "Done betting" declarations — the round locks only once every seated
+     (non-spectator) player has pressed it (or the backup countdown runs out).
+     readyCount is a dependency of the host arm/lock effects so they re-run the
+     moment a declaration lands (phase/deadline/round don't change on a `ready`). */
+  const readyCount = seatedPlayers.filter((s) => s.ready).length;
+
+  /* Betting window countdown. Once someone declares "done betting" the host arms
+     a 15s backup window; when it (or the "everyone's done" gate) closes, the
+     host's client locks and spins. Without it a host who bets first could close
+     a round before anyone else got a bet down. */
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!state || state.phase !== 'betting' || !state.deadline) return;
@@ -233,21 +243,21 @@ export default function RouletteScene({ mode, roomCode }: Props) {
   useEffect(() => {
     if (!isHost || !state || state.phase !== 'betting' || !state.deadline) return;
     if (lockedRound.current === state.round) return;
-    if (Date.now() >= state.deadline) {
+    const inPlay = state.seats.filter((s) => !s.spectator);
+    const everyoneReady = inPlay.length >= 2 && inPlay.every((s) => s.ready);
+    const hasBets = state.seats.some((s) => s.bets.length > 0);
+    // Lock as soon as everyone's declared done — or when the backup window runs
+    // out. lockBets is a no-op on an empty table, so a table nobody bet into
+    // stays open (the arm effect re-arms it) instead of stranding in `locked`.
+    if ((everyoneReady && hasBets) || Date.now() >= state.deadline) {
       lockedRound.current = state.round;
       void send(profile.id, { type: 'lockBets' });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isHost, state?.phase, state?.deadline, state?.round, now]);
+  }, [isHost, state?.phase, state?.deadline, state?.round, readyCount, now]);
   const bettingSecondsLeft = state?.phase === 'betting' && state?.deadline
     ? Math.max(0, Math.ceil((state.deadline - now) / 1000))
     : null;
-  const seatedPlayers = state?.seats.filter((s) => !s.spectator) ?? [];
-  const realPlayerCount = seatedPlayers.length;
-  const bettingWindowOpen = bettingSecondsLeft !== null && bettingSecondsLeft > 0 && realPlayerCount > 1;
-  /* Every seated (non-spectator) player has at least one bet down — the roulette
-     equivalent of "everyone's ready". Lets the host short-circuit the countdown. */
-  const allSeatedBetIn = realPlayerCount >= 2 && seatedPlayers.every((s) => s.bets.length > 0);
 
   /* Host arms the betting window on any multi-seat round that opened without one
      (the very first spin, or a second player joining mid-single-player). Also
@@ -260,22 +270,22 @@ export default function RouletteScene({ mode, roomCode }: Props) {
     if (mode !== 'room' || !isHost || !state) return;
     if (state.phase !== 'betting' || realPlayerCount <= 1) return;
     const hasBets = state.seats.some((s) => s.bets.length > 0);
-    // "All ready" gate: the last-chance betting window only arms once every
-    // seated (non-spectator) player has at least one bet down. Until then the
-    // round waits — the host can still short-circuit with "spin now".
-    const allBetIn = state.seats.filter((s) => !s.spectator).every((s) => s.bets.length > 0);
+    // The backup countdown only starts once at least one seated player has
+    // pressed "done betting" — until then the round waits indefinitely for the
+    // table (there is no host short-circuit any more).
+    const anyReady = state.seats.some((s) => !s.spectator && s.ready);
     if (!state.deadline) {
-      if (!allBetIn || armedRound.current === state.round) return;
+      if (!anyReady || armedRound.current === state.round) return;
       armedRound.current = state.round;
-      void send(profile.id, { type: 'armWindow', deadline: Date.now() + BETTING_WINDOW_MS });
+      void send(profile.id, { type: 'armWindow', deadline: Date.now() + READY_WINDOW_MS });
       return;
     }
     if (!hasBets && Date.now() >= state.deadline && Date.now() - lastRearm.current > 1500) {
       lastRearm.current = Date.now();
-      void send(profile.id, { type: 'armWindow', deadline: Date.now() + BETTING_WINDOW_MS });
+      void send(profile.id, { type: 'armWindow', deadline: Date.now() + READY_WINDOW_MS });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, isHost, state?.phase, state?.deadline, state?.round, realPlayerCount, now]);
+  }, [mode, isHost, state?.phase, state?.deadline, state?.round, realPlayerCount, readyCount, now]);
 
   /* Once the window is locked, the host spins after a short beat so the
      "bets locked" flash is visible. Guarded per round. */
@@ -471,6 +481,17 @@ export default function RouletteScene({ mode, roomCode }: Props) {
     void send(profile.id, { type: 'spin', nonce: newSeed() });
   };
 
+  /* "Done betting" — declare this seat finished for the round. The host starts
+     the wheel once every seated player has declared (or the 15s backup window,
+     armed on the first declaration, runs out). Placing or clearing a bet after
+     this un-declares the seat (the engine resets `ready`). */
+  const handleDoneBetting = () => {
+    if (!state || !mySeat || mySeat.spectator || !mySeat.bets.length || mySeat.ready) return;
+    audio.play('click');
+    haptic('chip');
+    void send(profile.id, { type: 'ready', userId: profile.id });
+  };
+
   const handleNewRound = () => {
     // Open with no deadline: the "all players bet in" gate arms the window.
     void send(profile.id, { type: 'openBetting', deadline: null });
@@ -641,32 +662,42 @@ export default function RouletteScene({ mode, roomCode }: Props) {
               🔁 {t('blackjack.lastBet')}
             </GameButton>
             {(phase === 'betting' || phase === 'locked') ? (
-              <GameButton
-                tone="gold"
-                block
-                disabled={
-                  mode === 'room'
-                    ? (!isHost || phase === 'locked' || !anyBets || !(allSeatedBetIn || bettingWindowOpen))
-                    : !anyBets
-                }
-                onClick={handleSpin}
-              >
-                {phase === 'locked'
-                  ? t('roulette.betsLocked')
-                  : bettingWindowOpen
-                    ? t('roulette.spinIn', { s: bettingSecondsLeft })
-                    : t('roulette.spin')}
-              </GameButton>
+              mode === 'room' ? (
+                <GameButton
+                  tone="gold"
+                  block
+                  disabled={phase === 'locked' || !mySeat || mySeat.spectator || !mySeat.bets.length || mySeat.ready}
+                  onClick={handleDoneBetting}
+                >
+                  {phase === 'locked'
+                    ? t('roulette.betsLocked')
+                    : mySeat?.ready
+                      ? (bettingSecondsLeft !== null
+                          ? t('roulette.spinIn', { s: bettingSecondsLeft })
+                          : t('roulette.waitingOthers'))
+                      : t('roulette.doneBetting')}
+                </GameButton>
+              ) : (
+                <GameButton tone="gold" block disabled={!anyBets} onClick={handleSpin}>
+                  {t('roulette.spin')}
+                </GameButton>
+              )
             ) : (
               <GameButton tone="gold" block disabled={wheelSpinning || !(mode === 'solo' || isHost)} onClick={handleNewRound}>
                 {t('roulette.newRound')}
               </GameButton>
             )}
           </div>
-          {phase === 'betting' && bettingSecondsLeft !== null && realPlayerCount > 1 && (
-            <p className="text-center mt-2 text-[12px] num" style={{ color: bettingSecondsLeft <= 3 ? 'var(--crimson-hi)' : 'var(--gold-hi)' }}>
-              {t('roulette.placeBetsWindow', { s: bettingSecondsLeft })}
-            </p>
+          {phase === 'betting' && realPlayerCount > 1 && (
+            bettingSecondsLeft !== null ? (
+              <p className="text-center mt-2 text-[12px] num" style={{ color: bettingSecondsLeft <= 3 ? 'var(--crimson-hi)' : 'var(--gold-hi)' }}>
+                {t('roulette.spinCountdown', { s: bettingSecondsLeft })} · {readyCount}/{realPlayerCount}
+              </p>
+            ) : readyCount > 0 ? (
+              <p className="text-center mt-2 text-[12px]" style={{ color: 'var(--muted)' }}>
+                {t('roulette.doneCount', { n: readyCount, total: realPlayerCount })}
+              </p>
+            ) : null
           )}
           {phase === 'locked' && (
             <p className="text-center mt-2 text-[12px] num" style={{ color: 'var(--crimson-hi)' }}>

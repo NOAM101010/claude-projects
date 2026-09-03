@@ -181,8 +181,13 @@ export const useSocial = create<SocialState>()((set, get) => ({
       if (notification.kind === 'friend_request') void get().refresh(userId);
       if (notification.kind === 'podium_prize') {
         // The RPC already credited the chips server-side; this is the receipt.
+        // Adopt the post-credit balance it carries (no realtime sub on our own
+        // profiles row) — setChips stamps it as the synced baseline so persist()
+        // never pushes it again. Fall back to a server pull for pre-migration rows.
         audio.play('bigWin');
-        const payload = notification.payload as { amount?: number } | undefined;
+        const payload = notification.payload as { amount?: number; new_balance?: number } | undefined;
+        if (typeof payload?.new_balance === 'number') usePlayer.getState().setChips(payload.new_balance);
+        else void usePlayer.getState().refreshFromServer();
         const lang = useSettings.getState().lang;
         useUI.getState().toast(
           translate(lang, 'friends.weeklyPrizeWon', { amount: fmt(payload?.amount ?? 0) }),
@@ -190,10 +195,16 @@ export const useSocial = create<SocialState>()((set, get) => ({
         );
       }
       if (notification.kind === 'gift') {
-        const payload = notification.payload as { amount?: number } | undefined;
+        // send_gift() already credited the chips server-side; this is only the
+        // receipt (same as podium_prize above). Adopt the post-credit balance it
+        // carries — crediting a delta here would let persist() push it back up
+        // and double the gift. Fall back to a server pull for pre-migration rows.
+        const payload = notification.payload as { amount?: number; new_balance?: number } | undefined;
         const amount = payload?.amount ?? 0;
         if (amount > 0) {
-          usePlayer.getState().addChips(amount, { silent: true });
+          audio.play('coin');
+          if (typeof payload?.new_balance === 'number') usePlayer.getState().setChips(payload.new_balance);
+          else void usePlayer.getState().refreshFromServer();
           const from = get().friends.find((f) => f.id === notification.actorId);
           const lang = useSettings.getState().lang;
           useUI.getState().toast(

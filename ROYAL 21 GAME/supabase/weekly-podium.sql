@@ -81,10 +81,13 @@ begin
   where id = auth.uid()
   returning chips into balance;
 
+  -- `new_balance` lets the client adopt the post-credit figure directly — there
+  -- is no realtime subscription on the winner's own profiles row, so without it
+  -- the prize only shows after a manual refresh / visibility flip.
   insert into public.notifications (user_id, kind, title, body, payload)
   values (
     auth.uid(), 'podium_prize', 'weekly_podium_won', null,
-    jsonb_build_object('amount', prize, 'rank', my_rank, 'week', v_week, 'claimed', true)
+    jsonb_build_object('amount', prize, 'rank', my_rank, 'week', v_week, 'claimed', true, 'new_balance', balance)
   );
 
   return jsonb_build_object('claimed', true, 'chips', prize, 'rank', my_rank, 'balance', balance);
