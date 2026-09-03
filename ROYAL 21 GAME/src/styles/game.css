@@ -814,3 +814,78 @@ html[data-motion='reduced'] .app-backdrop * { animation: none !important; }
 @keyframes authSwap { from { transform: translateY(7px); } to { transform: none; } }
 html[data-motion='reduced'] .auth-swap { animation: none; }
 @media (prefers-reduced-motion: reduce) { .auth-swap { animation: none; } }
+
+/* ============================================================================
+   INTRO — the name revealed over the same gold-framed room as sign-in, then
+   the scene hands off on its own. No framer-motion: opacity/transform-only
+   @keyframes so a stalled animation can never hide content (see AppBackdrop).
+   Timeline (long): frame 0-0.4s · logo 0.25-0.9s · tagline 0.55-1.0s ·
+   deco cards 0.2-0.85s. JS advances at ~1.3s. data-short trims to ~0.3s.
+   ========================================================================== */
+.intro-root {
+  position: relative;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 20px;
+}
+.intro-bg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 110%, #143024, #0b1410 48%, #08090b 78%);
+}
+.intro-card {
+  position: relative;
+  z-index: 1;
+  width: min(420px, 100%);
+  animation: introFrame 0.4s var(--ease-out) both;
+}
+.intro-panel {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 34px 28px 38px;
+  text-align: center;
+}
+.intro-title {
+  font-size: clamp(44px, 12vw, 84px);
+  line-height: 0.94;
+  letter-spacing: 0.02em;
+  background: linear-gradient(180deg, #fff6dc, var(--gold) 58%, #9a781f);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 10px 34px rgba(227, 178, 60, 0.4));
+  animation: introTitle 0.65s var(--ease-out) 0.25s both;
+}
+.intro-panel .eyebrow { animation: introFade 0.45s var(--ease-out) 0.55s both; }
+.intro-card .auth-deco-card.d0 { animation: introDeckL 0.65s var(--ease-out) 0.2s both; }
+.intro-card .auth-deco-card.d1 { animation: introDeckR 0.65s var(--ease-out) 0.28s both; }
+.intro-skip {
+  position: absolute;
+  inset-inline-end: 22px;
+  inset-block-end: 22px;
+  z-index: 2;
+  font-size: 12px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+@keyframes introFrame { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes introFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes introTitle { from { opacity: 0; letter-spacing: 0.5em; } to { opacity: 1; letter-spacing: 0.02em; } }
+@keyframes introDeckL { from { opacity: 0; transform: translateX(-40px) rotate(-15deg); } to { opacity: 1; transform: translateX(0) rotate(-15deg); } }
+@keyframes introDeckR { from { opacity: 0; transform: translateX(40px) rotate(13deg); } to { opacity: 1; transform: translateX(0) rotate(13deg); } }
+
+.intro-root[data-short] .intro-card,
+.intro-root[data-short] .intro-title,
+.intro-root[data-short] .intro-panel .eyebrow,
+.intro-root[data-short] .auth-deco-card { animation-duration: 0.25s; animation-delay: 0s; }
+
+html[data-motion='reduced'] .intro-card,
+html[data-motion='reduced'] .intro-card * { animation: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .intro-card, .intro-card * { animation: none !important; }
+}
