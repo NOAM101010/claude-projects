@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import { SceneShell } from '@/components/layout/SceneShell';
 import { ChatPanel } from '@/components/social/ChatPanel';
 import { roomsService } from '@/services/roomsService';
+import { useFollowHost } from '@/hooks/useFollowHost';
+import { roomCapacity } from '@/lib/roomCapacity';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GameButton } from '@/components/ui/GameButton';
 import { Avatar } from '@/components/social/Avatar';
@@ -96,9 +98,12 @@ export default function RoomScene() {
     window.open(`https://wa.me/?text=${encodeURIComponent(`${text} ${link}`)}`, '_blank');
   };
 
+  /* Blackjack and "vs friends" share this same room (no separate blackjack
+     room) — the URL is always the same room code. Publishing `active_game`
+     instead of navigating directly is what pulls every member in, not just
+     whoever clicked "start" (see useFollowHost below). */
   const startGame = async () => {
     if (!room) return;
-    audio.play('door');
     if (isDuel) {
       const config: DuelConfig = { format, target, buyIn };
       const seatIds = members.map((member) => member.userId);
@@ -110,8 +115,13 @@ export default function RoomScene() {
       useRoom.setState({ fullState: next, state: redactBjState(next) });
       await blackjackService.publish(room.id, next);
     }
-    navigate(`/blackjack/room/${room.code}`);
+    await roomsService.setActiveGame(room.id, { game: 'blackjack', code: room.code, by: profile.id });
   };
+
+  /* Pulls every member (host included) into the game the moment `startGame`
+   * publishes the pointer — this is the fix for "only the host who clicked
+   * start actually enters the game". */
+  useFollowHost(room?.id, room?.code, (amg) => (amg.game ? `/blackjack/room/${room?.code}` : null), room?.activeGame);
 
   /* No credentials, or a device-local player with no uuid to host with. Say
      which, instead of leaving a lobby that can never fill. */
@@ -174,7 +184,7 @@ export default function RoomScene() {
         <GlassPanel className="p-4">
           <div className="flex items-center justify-between mb-3">
             <span className="eyebrow">{t('rooms.members')}</span>
-            <span className="text-[12px]" style={{ color: 'var(--muted)' }}>{members.length}/4</span>
+            <span className="text-[12px]" style={{ color: 'var(--muted)' }}>{members.length}/{roomCapacity('blackjack')}</span>
           </div>
           <div className="flex flex-wrap gap-3">
             {members.map((member) => (
@@ -194,7 +204,7 @@ export default function RoomScene() {
                 </span>
               </motion.div>
             ))}
-            {members.length < 4 && (
+            {members.length < roomCapacity('blackjack') && (
               <div className="flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-[var(--r-sm)] border border-dashed"
                 style={{ borderColor: 'var(--glass-line)', minWidth: 96, color: 'var(--dim)' }}>
                 <div className="text-[22px] ambient-breathe">＋</div>

@@ -137,6 +137,7 @@ create table if not exists public.rooms (
   host_id    uuid not null references public.profiles(id) on delete cascade,
   game       text not null default 'blackjack',
   state      jsonb,
+  active_game jsonb,
   is_private boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -650,7 +651,7 @@ begin
   end if;
   select updated_at into last_update from public.rooms where id = p_room_id;
   if last_update is null then raise exception 'room not found'; end if;
-  if last_update > now() - interval '20 seconds' then
+  if last_update > now() - interval '15 seconds' then
     raise exception 'room is still active';
   end if;
   update public.rooms set host_id = new_host where id = p_room_id;

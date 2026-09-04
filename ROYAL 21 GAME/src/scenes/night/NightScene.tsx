@@ -17,12 +17,14 @@ import { notificationService } from '@/services/notificationService';
 import { useUI } from '@/stores/useUI';
 import { useT } from '@/hooks/useT';
 import { useGhostSeatCleanup } from '@/hooks/useGhostSeatCleanup';
+import { useFollowHost } from '@/hooks/useFollowHost';
 import { isOnline } from '@/services/supabase';
 import { isFriendOnline } from '@/lib/presence';
 import { roomsService } from '@/services/roomsService';
 import { scoreboard, nightStarted, POINTS } from '@/games/night/night';
 import { fmt } from '@/lib/format';
 import { audio } from '@/audio/AudioManager';
+import type { ActiveGame } from '@/types';
 
 interface NightGame {
   key: string;
@@ -77,25 +79,28 @@ export default function NightScene() {
   const friends = useSocial((s) => s.friends);
 
   /* Only the room host picks the next game, and the pick pulls EVERY player in
-     the room into it. The host publishes `activeMiniGame` (game + which room);
-     every client — host included — watches that field and auto-navigates in.
-     High card needs its own `rooms` row (a different game shape);
+     the room into it. The host publishes `rooms.active_game` (game + which
+     room); every client — host included — watches that field and
+     auto-navigates in (`useFollowHost`, shared with RoomScene). High card /
+     high-low / roulette need their own `rooms` row (a different game shape);
      everything else rides the night room's own code. */
-  const gameUrl = (amg: { game: string; code: string }): string | null => {
+  const gameUrl = (amg: ActiveGame): string | null => {
     const mp = MP_GAME_URL[amg.game];
     if (mp) return mp(amg.code, roomCode);
     const def = GAMES.find((g) => g.key === amg.game);
     return def ? def.to(roomCode) : null;
   };
 
+  const { activeGame } = useFollowHost(room?.id, roomCode, gameUrl, room?.activeGame);
+
   const pickGame = async (game: NightGame) => {
-    if (!isHost || openingGame) return;
+    if (!isHost || !room || openingGame) return;
     audio.play('click');
     setOpeningGame(game.key);
     try {
       let code = roomCode;
       if (game.multiplayer) {
-        const existing = state?.activeMiniGame;
+        const existing = activeGame;
         if (existing?.game === game.key && existing.code) {
           code = existing.code;
         } else {
@@ -108,46 +113,30 @@ export default function NightScene() {
           code = created.code;
         }
       }
-      await send(profile.id, { type: 'setActiveMiniGame', userId: profile.id, game: game.key, code });
+      await roomsService.setActiveGame(room.id, { game: game.key, code, by: profile.id });
     } finally {
       setOpeningGame(null);
     }
   };
 
-  /* Auto-navigate every client into the game the host picked. `sessionStorage`
-     (per-tab) remembers the pointer we already acted on, so a player who
-     returns to the lobby while the pointer is still live isn't bounced back in. */
-  const handledMiniGame = useRef<string | null>(null);
-  const nightActiveKey = `night-active:${roomCode}`;
-  useEffect(() => {
-    const amg = state?.activeMiniGame;
-    if (!amg?.game) return;
-    const key = `${amg.game}:${amg.code}`;
-    if (handledMiniGame.current === key || sessionStorage.getItem(nightActiveKey) === key) return;
-    handledMiniGame.current = key;
-    sessionStorage.setItem(nightActiveKey, key);
-    const url = gameUrl(amg);
-    if (url) { audio.play('door'); navigate(url); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state?.activeMiniGame?.game, state?.activeMiniGame?.code]);
-
   /* Host clears a stale pointer: the picker has been through this game and is
      back in the lobby (sessionStorage marker matches), or the player who picked
      has dropped out of the room. */
+  const nightActiveKey = `follow-host:${roomCode}`;
   useEffect(() => {
-    if (!isHost) return;
-    const amg = state?.activeMiniGame;
+    if (!isHost || !room) return;
+    const amg = activeGame;
     if (!amg?.game) return;
     const key = `${amg.game}:${amg.code}`;
     const creatorGone = amg.by ? !members.some((m) => m.userId === amg.by) : false;
     if (!creatorGone && sessionStorage.getItem(nightActiveKey) !== key) return;
     const timer = setTimeout(() => {
-      void send(profile.id, { type: 'setActiveMiniGame', userId: profile.id, game: '', code: '' });
+      void roomsService.clearActiveGame(room.id);
       sessionStorage.removeItem(nightActiveKey);
     }, creatorGone ? 0 : 2500);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isHost, state?.activeMiniGame?.game, state?.activeMiniGame?.code, members.map((m) => m.userId).join('|')]);
+  }, [isHost, room?.id, activeGame?.game, activeGame?.code, members.map((m) => m.userId).join('|')]);
 
   /* create or join, depending on how you arrived */
   /* StrictMode fires this effect twice on mount before either async call

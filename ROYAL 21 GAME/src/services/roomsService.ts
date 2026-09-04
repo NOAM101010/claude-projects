@@ -1,7 +1,7 @@
 import { db, isRemoteId } from './supabase';
 import { checkLimit } from '@/lib/rateLimit';
 import { roomCode as makeCode } from '@/lib/random';
-import type { GameKey, Room, RoomConfig, RoomMember } from '@/types';
+import type { ActiveGame, GameKey, Room, RoomConfig, RoomMember } from '@/types';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const toMember = (row: any): RoomMember => ({
@@ -36,11 +36,11 @@ export async function hashPassword(password: string): Promise<string> {
 
 /**
  * The server-side reaper (`reassign_room_host`) hands the room to a new host
- * once `rooms.updated_at` has been still for 20s. An alive host that simply
+ * once `rooms.updated_at` has been still for 10s. An alive host that simply
  * isn't publishing right now (between hands, or its tab is backgrounded so the
  * round-advance timers are throttled) must therefore keep nudging that column
  * or it gets falsely replaced and two hosts start fighting over the state.
- * 8s stays comfortably under the 20s window even after one missed beat.
+ * 8s stays comfortably under the 10s window even after one missed beat.
  */
 const HOST_HEARTBEAT_MS = 8000;
 
@@ -122,6 +122,7 @@ export const roomsService = {
     return {
       id: data.id, code: data.code, hostId: data.host_id, game: data.game,
       createdAt: data.created_at, members: [], config: data.config ?? undefined,
+      activeGame: data.active_game ?? null,
     };
   },
 
@@ -133,7 +134,45 @@ export const roomsService = {
     return {
       id: data.id, code: data.code, hostId: data.host_id, game: data.game,
       createdAt: data.created_at, members: [], config: data.config ?? undefined,
+      activeGame: data.active_game ?? null,
     };
+  },
+
+  /**
+   * Publish which game (and which room) this room's members should all be
+   * playing right now — a generic pointer any room can set, not just a
+   * blackjack-shaped one. `useFollowHost` watches it and auto-navigates
+   * every client in, including the one that set it (so the host doesn't
+   * need its own separate `navigate()` call).
+   */
+  async setActiveGame(roomId: string, activeGame: ActiveGame): Promise<void> {
+    const client = db();
+    if (!client) return;
+    await client.from('rooms').update({ active_game: activeGame }).eq('id', roomId);
+  },
+
+  async clearActiveGame(roomId: string): Promise<void> {
+    const client = db();
+    if (!client) return;
+    await client.from('rooms').update({ active_game: null }).eq('id', roomId);
+  },
+
+  /** Every client watches this room's `active_game` pointer. */
+  subscribeActiveGame(roomId: string, onChange: (activeGame: ActiveGame | null) => void) {
+    const client = db();
+    if (!client) return () => {};
+    const channel = client
+      .channel(`room-active-game:${roomId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` },
+        (payload) => {
+          const row = payload.new as { active_game: ActiveGame | null };
+          onChange(row.active_game ?? null);
+        },
+      )
+      .subscribe();
+    return () => { void client.removeChannel(channel); };
   },
 
   /** True when a room with this code still exists AND has at least one member.
@@ -196,7 +235,7 @@ export const roomsService = {
 
   /**
    * Tries to take over as host. Only succeeds if `reassign_room_host` (SQL)
-   * finds the room has gone quiet for 20s+ — the signal that the old host's
+   * finds the room has gone quiet for 10s+ — the signal that the old host's
    * loop has stopped publishing, which only happens once that tab is gone.
    */
   async claimHostIfStale(roomId: string, userId: string): Promise<boolean> {
@@ -214,14 +253,15 @@ export const roomsService = {
    * safe to run from every seated client at once.
    */
   watchHostLiveness(roomId: string, userId: string, isCurrentlyHost: () => boolean, onTakeover: () => void) {
-    // Was 15s. The server-side `reassign_room_host` refuses unless the room
-    // has been quiet for 20s+ anyway, so shortening the client-side poll only
-    // reduces the "how quickly can we notice a dead host" latency — worst-case
-    // freeze time is now ~5-25s instead of ~15-35s. Cheap RPC either way.
+    // Was 5s / a 20s server window. The server-side `reassign_room_host`
+    // refuses unless the room has been quiet for 10s+ anyway, so shortening
+    // the client-side poll only reduces the "how quickly can we notice a dead
+    // host" latency — worst-case freeze time is now ~2-12s instead of ~5-25s.
+    // Cheap RPC either way.
     const interval = setInterval(() => {
       if (isCurrentlyHost()) return;
       void this.claimHostIfStale(roomId, userId).then((claimed) => { if (claimed) onTakeover(); });
-    }, 5000);
+    }, 2000);
     return () => clearInterval(interval);
   },
 

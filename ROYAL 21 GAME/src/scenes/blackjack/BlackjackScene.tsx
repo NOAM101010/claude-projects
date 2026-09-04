@@ -172,7 +172,17 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
   /* Multiplayer hand start: the host deals the instant every seat with a bet
      down has readied (and at least one has). There is no countdown any more —
      the "all ready" gate IS the wait. A seat with no bet is dealt out as a
-     spectator by the deal reducer, exactly as before. */
+     spectator by the deal reducer, exactly as before.
+     Cash rooms with 2+ *room members* (not yet 2+ seated bettors) get a short
+     grace window before dealing on just one: a friend's `join` seat action is
+     still in flight when the first bettor readies up, and without this they'd
+     miss the deal entirely and sit out the whole hand as a spectator. Duel
+     already waits for both seats (`gate.length < 2`) — this extends the same
+     idea to cash, scoped to when it's actually plausible more players are
+     still arriving. */
+  const cashWaitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cashWaitRound = useRef(-1);
+  useEffect(() => () => { if (cashWaitTimer.current) clearTimeout(cashWaitTimer.current); }, []);
   useEffect(() => {
     if (!state || solo || !isHost || state.phase !== 'betting') return;
     // Duel: every non-spectator seat must be ready (a duel seat can't ready
@@ -184,10 +194,23 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
       ? state.seats.filter((seat) => !seat.spectator)
       : state.seats.filter((seat) => seat.bet > 0);
     if (inDuel && state.duel?.winner) return;
-    if (gate.length < (inDuel ? 2 : 1) || !gate.every((seat) => seat.ready)) return;
+    if (gate.length < (inDuel ? 2 : 1) || !gate.every((seat) => seat.ready)) {
+      if (cashWaitTimer.current) { clearTimeout(cashWaitTimer.current); cashWaitTimer.current = null; }
+      return;
+    }
+    if (!inDuel && members.length >= 2 && gate.length < 2) {
+      // A second member is in the room but hasn't landed a bet yet — give
+      // them up to 4s to catch up instead of dealing them out immediately.
+      if (cashWaitRound.current !== state.round) {
+        cashWaitRound.current = state.round;
+        cashWaitTimer.current = setTimeout(() => void send(profile.id, { type: 'deal' }), 4000);
+      }
+      return;
+    }
+    if (cashWaitTimer.current) { clearTimeout(cashWaitTimer.current); cashWaitTimer.current = null; }
     void send(profile.id, { type: 'deal' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state?.phase, solo, isHost, Boolean(state?.duel),
+  }, [state?.phase, solo, isHost, Boolean(state?.duel), members.length,
       state?.seats.map((s) => `${s.userId}:${s.bet}:${s.ready}:${s.spectator}`).join('|')]);
 
   /* After a hand settles the host auto-opens the next betting window (which

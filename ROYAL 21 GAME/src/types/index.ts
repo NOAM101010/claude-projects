@@ -261,6 +261,15 @@ export interface RoomConfig {
   bgSkin?: string;
 }
 
+/** The game the room's members are currently playing, published by the host so
+ *  everyone else auto-navigates in (`useFollowHost`). `by` is who set it, so a
+ *  pointer can be cleared if its setter drops out of the room. */
+export interface ActiveGame {
+  game: string;
+  code: string;
+  by?: string;
+}
+
 export interface Room {
   id: string;
   code: string;
@@ -269,6 +278,7 @@ export interface Room {
   createdAt: string;
   members: RoomMember[];
   config?: RoomConfig;
+  activeGame?: ActiveGame | null;
 }
 
 /** Rivalry / head-to-head record between two players. */
