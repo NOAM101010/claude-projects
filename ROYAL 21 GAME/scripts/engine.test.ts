@@ -248,6 +248,15 @@ console.log('\nSide bets — engine flow + settle');
     reopened.seats[0].sideBets === undefined && reopened.seats[0].sideResults === undefined);
 }
 
+console.log('\nSide bets — refused in duel (pot economy, no side stake)');
+{
+  let sd = createState(3);
+  sd = reduce(sd, { type: 'join', userId: 'a', username: 'A', avatar, level: 1 });
+  sd = { ...sd, duel: { config: { format: 'race', target: 3, buyIn: 500 }, scores: { points: { a: 0 }, rounds: { a: 0 }, round: 1 } } };
+  const attempted = reduce(sd, { type: 'sideBet', userId: 'a', side: 'pairs', amount: 25 });
+  ok('a sideBet action in duel is a no-op', attempted.seats[0].sideBets === undefined);
+}
+
 if (fail > 0) process.exit(1);
 
 /* ---------------------------------------------------------------- duel ---- */

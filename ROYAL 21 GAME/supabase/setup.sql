@@ -512,6 +512,7 @@ declare
   seat       jsonb;
   hand       jsonb;
   total_net  bigint := 0;
+  side_net   bigint := 0;
   balance    bigint;
 begin
   if not exists (select 1 from public.room_members where room_id = p_room_id and user_id = auth.uid()) then
@@ -546,6 +547,16 @@ begin
     )
     on conflict do nothing;
   end loop;
+
+  -- Perfect Pairs / 21+3, resolved at deal time into `sideResults` (signed:
+  -- win +amount*mult, loss -amount). Folded into the same settle payout as
+  -- the main hand so a room player's side stake actually moves real chips —
+  -- without this the client could compute a win but never get paid it.
+  if seat ? 'sideResults' then
+    select coalesce(sum((value)::bigint), 0) into side_net
+    from jsonb_each_text(seat->'sideResults');
+    total_net := total_net + side_net;
+  end if;
 
   insert into public.blackjack_payouts (room_id, round, user_id, net)
   values (p_room_id, p_round, auth.uid(), total_net);

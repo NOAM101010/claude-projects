@@ -224,14 +224,16 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
 
     const payout = mySeat.hands.reduce((sum, hand) => sum + (hand.payout ?? 0), 0);
     const staked = mySeat.hands.reduce((sum, hand) => sum + hand.bet, 0);
-    // Solo companion wagers — resolved at deal time, credited here alongside the
-    // main hand. `sideResults` is signed (win +amount*mult, loss -amount) so the
-    // returned amount is `stake + result` (0 on a loss).
-    const sideStaked = solo ? Object.values(mySeat.sideBets ?? {}).reduce((s, v) => s + (v ?? 0), 0) : 0;
-    const sideNet = solo ? Object.values(mySeat.sideResults ?? {}).reduce((s, v) => s + (v ?? 0), 0) : 0;
+    // Companion wagers (solo or room, never duel) — resolved at deal time,
+    // credited here alongside the main hand. `sideResults` is signed (win
+    // +amount*mult, loss -amount) so the returned amount is `stake + result`
+    // (0 on a loss). In room mode the server-authoritative credit comes from
+    // `claim_blackjack_payout`, which folds `sideResults` into its net too.
+    const sideStaked = !duel ? Object.values(mySeat.sideBets ?? {}).reduce((s, v) => s + (v ?? 0), 0) : 0;
+    const sideNet = !duel ? Object.values(mySeat.sideResults ?? {}).reduce((s, v) => s + (v ?? 0), 0) : 0;
     const sidePayout = sideStaked + sideNet;
     // A side bet that paid 10x its stake or more — an event trophy.
-    if (solo && mySeat.sideResults && mySeat.sideBets) {
+    if (!duel && mySeat.sideResults && mySeat.sideBets) {
       for (const [side, res] of Object.entries(mySeat.sideResults)) {
         const stake = mySeat.sideBets[side as keyof typeof mySeat.sideBets] ?? 0;
         if (stake > 0 && (res ?? 0) >= stake * 10) usePlayer.getState().grantEvent('ev_side_bet_10x');
@@ -457,21 +459,24 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.phase, state?.round]);
 
-  /* Solo companion wagers (Perfect Pairs / 21+3) — optimistic debit, then the
-     local reducer records the stake. Solo `send` is a synchronous local reduce
-     so there's no round-trip to roll back. */
+  /* Companion wagers (Perfect Pairs / 21+3) — optimistic debit, then the
+     reducer records the stake against your own seat. Solo `send` is a
+     synchronous local reduce so there's no round-trip to roll back; a room
+     debit is `localOnly` (mirrors `addBet`) since the server-authoritative
+     balance lands once at settle via `claimPayout`. Not offered in duel — its
+     buy-in-locked pot economy was never designed to carry a side stake. */
   const placeSide = useCallback((side: BjSide, amount: number) => {
-    if (!solo || !state || state.phase !== 'betting' || amount <= 0) return;
+    if (duel || !state || state.phase !== 'betting' || amount <= 0) return;
     if (profile.chips < amount) { audio.play('error'); toast(t('blackjack.notEnough'), 'bad', '⚠'); return; }
-    addChips(-amount, { silent: true });
+    addChips(-amount, solo ? { silent: true } : { silent: true, localOnly: true });
     void send(profile.id, { type: 'sideBet', userId: profile.id, side, amount });
-  }, [solo, state, profile.chips, profile.id, addChips, send, toast, t]);
+  }, [duel, solo, state, profile.chips, profile.id, addChips, send, toast, t]);
 
   const sideStakeOf = (seat: BjSeat | undefined) =>
     Object.values(seat?.sideBets ?? {}).reduce((sum, v) => sum + (v ?? 0), 0);
 
   const clearBet = () => {
-    const sideTotal = solo ? sideStakeOf(mySeat) : 0;
+    const sideTotal = !duel ? sideStakeOf(mySeat) : 0;
     if (!mySeat?.bet && !sideTotal) return;
     const refunded = mySeat?.bet ?? 0;
     if (!duel) addChips(refunded + sideTotal, solo ? { silent: true } : { silent: true, localOnly: true });
@@ -488,7 +493,7 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
     const target = state?.lastBet ?? 0;
     const need = target - (mySeat?.bet ?? 0);
     if (need > 0 && profile.chips >= need) addBet(need);
-    if (solo) {
+    if (!duel) {
       for (const [side, amount] of Object.entries(lastSideBets.current) as [BjSide, number][]) {
         const delta = (amount ?? 0) - (mySeat?.sideBets?.[side] ?? 0);
         if (delta > 0 && profile.chips >= delta) placeSide(side, delta);
@@ -499,8 +504,8 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
   const readyUp = () => {
     // Duel has no bet — readiness alone seats you.
     if (!duel && !mySeat?.bet) return;
-    // Snapshot the solo side bets so "Last bet" can restore them next round.
-    if (solo) lastSideBets.current = { ...(mySeat?.sideBets ?? {}) };
+    // Snapshot the side bets so "Last bet" can restore them next round.
+    if (!duel) lastSideBets.current = { ...(mySeat?.sideBets ?? {}) };
     audio.play('chipStack');
     if (solo && !duel) void send(profile.id, { type: 'deal' });
     else void send(profile.id, { type: 'ready', userId: profile.id });
@@ -635,8 +640,9 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
             </div>
           )}
 
-          {/* Solo: Perfect Pairs + 21+3 panels pinned to the sides of the felt. */}
-          {solo && (
+          {/* Perfect Pairs + 21+3 panels pinned to the sides of the felt — my own
+              seat only, solo or room. Never offered in duel (pot economy). */}
+          {!duel && (
             <FeltBets
               chipSkin={profile.equipped.chipSkin}
               lastChip={lastChip}

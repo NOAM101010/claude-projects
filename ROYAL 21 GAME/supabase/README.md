@@ -46,6 +46,7 @@ Each file's own header says "run after X"; this is the full dependency-sorted li
 | 27 | **`direct-messages.sql`** | `direct_messages` table + RLS (friends-only, block-aware) + `mark_dm_read(uuid)` + rate-limit trigger + realtime — 1:1 friend chat (Stage F) | setup |
 | 28 | **`buy-pack.sql`** | `public.bundles` (server-side pack catalogue, RLS select) + `buy_pack(text)` — atomic bundle purchase that reads item list + discount from `bundles` and actually charges the pack discount (replaces the old per-item loop) + `items.daily_rarity_only` / `items.rare_rotation_only` flag columns + Stage G item seed | setup |
 | 29 | **`RUN-THIS-NEXT.sql`** | Stage P — `items.unlocked_by text` (achievement id that unlocks a title for free; ownership derived client-side) + seed for bought titles, name colours, and glasses/watches/chains/dealers fill. Adds `title` / `nameColor` categories. `rooms.config` gains `tableSkin` / `bgSkin` — no DDL (jsonb), stamped by `roomsService.create`. | setup, buy-pack |
+| 30 | **`blackjack-sidebet-payout.sql`** | `claim_blackjack_payout` **(live)** — folds `seat.sideResults` (Perfect Pairs / 21+3) into the settle payout so a room side-bet win actually pays real chips, not just the local hand net | setup |
 
 `app-config.sql` and `admin-tools.sql` must come **after** `admin.sql`; put them
 after the `#17–19` files so the economy RPCs pick up `config_num()`. Re-running
@@ -116,6 +117,7 @@ production bodies:
 | `send_gift(uuid,bigint,text)` | `gift-limit-50k.sql` | `setup.sql` |
 | `claim_mission(text,bigint,text)` | `missions.sql` | — (single def, but body changed by app-config wiring) |
 | `admin_set_level` | two overloads coexist: `admin.sql` (`int`, self) + `admin-tools.sql` (`uuid,int`, target) | — |
+| `claim_blackjack_payout(uuid,int)` | `blackjack-sidebet-payout.sql` | `setup.sql` |
 
 Everything else is defined exactly once.
 

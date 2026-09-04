@@ -22,9 +22,11 @@ const ROWS: Record<BjSide, readonly (readonly [string, string])[]> = {
 };
 
 /**
- * Solo side-bet panels pinned to the left and right of the felt — each carries a
+ * Side-bet panels pinned to the left and right of the felt — each carries a
  * readable paytable for its wager and the chips staked on it. Tap a chip on the
- * rail, then tap a panel to drop it. Never rendered in a room or duel.
+ * rail, then tap a panel to drop it. Always your own seat's stake, solo or
+ * room; never rendered in duel (its buy-in pot economy doesn't carry a side
+ * stake).
  */
 export function FeltBets({ chipSkin, lastChip, sideBets, sideResults, phase, compact, onSide }: Props) {
   const { t } = useT();

@@ -293,7 +293,9 @@ export function reduce(prev: BjState, action: BjAction): BjState {
     }
     case 'sideBet': {
       const seat = seatOf(action.userId);
-      if (!seat || state.phase !== 'betting') return prev;
+      // Not offered in duel — its buy-in-locked pot economy never carries a
+      // side stake (the client also never renders the panels there).
+      if (!seat || state.phase !== 'betting' || state.duel) return prev;
       const bets: Partial<Record<BjSide, number>> = { ...(seat.sideBets ?? {}) };
       if (action.amount <= 0) delete bets[action.side];
       else bets[action.side] = (bets[action.side] ?? 0) + action.amount;
@@ -376,7 +378,8 @@ export function reduce(prev: BjState, action: BjAction): BjState {
         state.dealer.cards.push(draw(state));
       }
       // Side bets resolve the instant the opening cards + dealer up card are out
-      // (solo only — no seat carries sideBets in cash/duel).
+      // (solo and cash tables — the `sideBet` action itself is refused while
+      // `state.duel` is set, so no duel seat ever carries one).
       for (const seat of state.seats) settleSideBets(seat, state.dealer.cards[0]);
       // Dealer natural blackjack ends the hand right here — nobody gets to act.
       // settle() already pays it out correctly (players lose, or push on their

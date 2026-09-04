@@ -5,7 +5,7 @@ import { Avatar } from '@/components/social/Avatar';
 import { PlayerName } from '@/components/social/PlayerName';
 import { FloatingEmote } from '@/components/social/FloatingEmote';
 import { handValue, isBlackjack } from '@/games/blackjack/engine';
-import type { BjSeat } from '@/games/blackjack/types';
+import type { BjSeat, BjSide } from '@/games/blackjack/types';
 import { useT } from '@/hooks/useT';
 import { fmt } from '@/lib/format';
 
@@ -62,6 +62,22 @@ export function SeatView({ seat, hero, active, activeHand = 0, cardFace, cardBac
           style={{ background: 'rgba(123,91,214,.16)', border: '1px solid rgba(123,91,214,.5)', color: '#c3aeff' }}>
           👁 {t('blackjack.spectating')}
         </span>
+      )}
+
+      {/* Room table with multiple side-bettors: without this tag nobody but the
+          bettor can tell whose Perfect Pairs / 21+3 chips those are. One line
+          per active side, shown only while there's a stake on it this round. */}
+      {seat.sideBets && Object.entries(seat.sideBets).some(([, amount]) => (amount ?? 0) > 0) && (
+        <div className="flex flex-col items-center gap-0.5">
+          {(Object.entries(seat.sideBets) as [BjSide, number][])
+            .filter(([, amount]) => (amount ?? 0) > 0)
+            .map(([side, amount]) => (
+              <span key={side} className="text-[10px] font-bold num px-1.5 py-0.5 rounded-full"
+                style={{ background: 'rgba(227,178,60,.12)', border: '1px solid var(--gold-line)', color: 'var(--gold-hi)' }}>
+                🎲 {fmt(amount)} · {side === 'pairs' ? t('blackjack.pairs') : '21+3'}
+              </span>
+            ))}
+        </div>
       )}
 
       {seat.hands.length > 0 ? (
