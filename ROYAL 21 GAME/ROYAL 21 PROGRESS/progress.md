@@ -30,7 +30,11 @@
   - reviewer: חוסם `ttl_rookie` starter-grant תוקן. **הרצה: `RUN-THIS-NEXT.sql` (עמודת `unlocked_by` + seed 28 פריטים + backfill טירון).**
   - **park:** אנימציית חלוקה/זריקת ז'יטונים. **דילג:** `tableSkin` ברולטה/coinflip/highcard (אין felt skin-able).
 - **STAGE O — VIP rework ✅ נדחף** (`c3b968b`). זכאות = רמה 5 בלבד (בלי סף צ'יפים / everVip). סולם `vipTier(level)` — ברונזה 5 / כסף 12 / זהב 22 / יהלום 35. `vipTierOf`→`shopDiscountTier` (rename — היה overload). `supabase/vip.sql`: `claim_vip_daily` (בונוס דרגה 24ש), `claim_vip_cashback` (% הפסד נטו מול `weekly_chip_snapshot`, כסף+, שבועי), `claim_vip_stipend` (קצבה, זהב+, שבועי), `fetch_vip_state`. סכומים מ-`app_config`. 14 פריטי VIP בלעדיים (price 0, בעלות נגזרת מדרגה). שורת צ'יפים גבוהים גם ב-slots. `VipScene` שוכתב (כרטיס דרגה + 3 כפתורי claim + מדף קוסמטיקה). reviewer: תוקן type של `fetchVipState` + cashback no_snapshot cooldown. **הרצה: `RUN-THIS-NEXT.sql` (3 חלקים בקובץ אחד: item seed + app-config מלא + vip.sql).**
-- STAGE M — תשתית חדרים · N — ערב חברה + משחקים חדשים.
+- **STAGE N1 (ערב חברה) — בעבודה.**
+  - `51afe29` — roster: הוסרו slots/coinflip/scratch. `sessionStorage` keyed לחדר.
+  - `0a94616` — **רולטה נוספה** (`useNightReturn`+`useNightScoring`, double-report guarded). **הייקארד ב-Night = ante אחיד** (מארח בוחר 500/1k/2.5k/5k, כולם משלמים, מנצח לוקח את הקופה; `nightAnte` action + `anteMode`). ניקוד `pointsFor(game,outcome)`. reviewer נקי. **אין SQL.**
+  - **נשאר ל-N:** דואל ב-Night (דורש החלטת ארכיטקטורה) · BJ MP הימורי-צד + תגית מושב (נוגע כסף) · N2 משחקי מסיבה חדשים (גבוה/נמוך הישרדות + עוד).
+- STAGE M — תשתית חדרים (בסוף, לבקשת המשתמש).
 - *doc drift ידוע:* `SCHEMA.sql`/`README.md` לא עודכנו ל-`items.vip_tier` + `profiles.vip_*_claimed` + RPCs של VIP — לסדר בשלב ניקוי.
 
 ## Roadmap חדש (2026-09-03) — 8 שלבים A–H
