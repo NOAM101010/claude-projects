@@ -1,40 +1,78 @@
--- =============================================================================
--- ROYAL 21 — משחק חדש: גבוה/נמוך הישרדות (High / Low Survival)
+-- Run after: setup.sql
 --
--- הרץ פעם אחת ב-Supabase → SQL Editor. Select All → Paste → Run. Idempotent.
--- דרישה מוקדמת שכבר רצה: setup.sql, roulette.sql, miniGames.sql.
+-- Perfect Pairs / 21+3 side bets were solo-only: the reducer already computed
+-- `seat.sideResults` for any seat (room included), but `claim_blackjack_payout`
+-- never read it — a room player's side-bet win would show on screen and then
+-- never actually land in their real chip balance. This redefines the RPC to
+-- fold `sideResults` into the same settle payout as the main hand.
 --
--- מה זה עושה:
---   1. room_members.seat — מרחיב את ה-check ל-0..7 (עד 8 מושבים).
---   2. enforce_room_capacity() — מוסיף ענף 'highlow' עם תקרת 8 מושבים.
---      כל שאר הענפים (poker/sng=6, roulette/coinflip/highcard=5, ברירת מחדל=4) נשארים.
--- =============================================================================
+-- Safe to re-run. No new tables/columns — `sideResults` already rides inside
+-- `rooms.state` (jsonb), same as `hands`.
 
-alter table public.room_members drop constraint if exists room_members_seat_check;
-alter table public.room_members add constraint room_members_seat_check check (seat between 0 and 7);
-
-create or replace function public.enforce_room_capacity()
-returns trigger
+create or replace function public.claim_blackjack_payout(p_room_id uuid, p_round integer)
+returns bigint
 language plpgsql
+security definer set search_path = public
 as $$
 declare
-  room_game text;
-  seat_limit int;
+  game_state jsonb;
+  seat       jsonb;
+  hand       jsonb;
+  total_net  bigint := 0;
+  side_net   bigint := 0;
+  balance    bigint;
 begin
-  select game into room_game from public.rooms where id = new.room_id;
-  seat_limit := case
-    when room_game = 'highlow' then 8
-    when room_game in ('poker', 'sng') then 6
-    when room_game in ('roulette', 'coinflip', 'highcard') then 5
-    else 4
-  end;
-  if (select count(*) from public.room_members where room_id = new.room_id) >= seat_limit then
-    raise exception 'room is full';
+  if not exists (select 1 from public.room_members where room_id = p_room_id and user_id = auth.uid()) then
+    raise exception 'not a member of this room';
   end if;
-  return new;
+
+  if exists (select 1 from public.blackjack_payouts where room_id = p_room_id and round = p_round and user_id = auth.uid()) then
+    select chips into balance from public.profiles where id = auth.uid();
+    return balance;
+  end if;
+
+  select state into game_state from public.rooms where id = p_room_id;
+  if game_state is null then raise exception 'no game state'; end if;
+  if (game_state->>'phase') <> 'settled' then raise exception 'round not settled'; end if;
+  if (game_state->>'round')::int <> p_round then raise exception 'round mismatch'; end if;
+
+  select value into seat
+  from jsonb_array_elements(game_state->'seats')
+  where value->>'userId' = auth.uid()::text
+  limit 1;
+  if seat is null then return (select chips from public.profiles where id = auth.uid()); end if;
+
+  for hand in select value from jsonb_array_elements(seat->'hands') loop
+    total_net := total_net + coalesce((hand->>'payout')::bigint, 0) - coalesce((hand->>'bet')::bigint, 0);
+    insert into public.blackjack_hands (room_id, round, user_id, hand_index, cards, bet, outcome, net)
+    values (
+      p_room_id, p_round, auth.uid(),
+      coalesce((select count(*)::int from public.blackjack_hands where room_id = p_room_id and round = p_round and user_id = auth.uid()), 0),
+      hand->'cards', coalesce((hand->>'bet')::bigint, 0),
+      coalesce(hand->>'outcome', 'lose'),
+      coalesce((hand->>'payout')::bigint, 0) - coalesce((hand->>'bet')::bigint, 0)
+    )
+    on conflict do nothing;
+  end loop;
+
+  -- Perfect Pairs / 21+3, resolved at deal time into `sideResults` (signed:
+  -- win +amount*mult, loss -amount). Folded into the same settle payout as
+  -- the main hand so a room player's side stake actually moves real chips —
+  -- without this the client could compute a win but never get paid it.
+  if seat ? 'sideResults' then
+    select coalesce(sum((value)::bigint), 0) into side_net
+    from jsonb_each_text(seat->'sideResults');
+    total_net := total_net + side_net;
+  end if;
+
+  insert into public.blackjack_payouts (room_id, round, user_id, net)
+  values (p_room_id, p_round, auth.uid(), total_net);
+
+  update public.profiles
+     set chips = greatest(0, chips + total_net), updated_at = now()
+   where id = auth.uid()
+  returning chips into balance;
+
+  return balance;
 end;
 $$;
-
--- הטריגר room_capacity (מ-setup.sql) כבר מצביע על הפונקציה לפי שם — אין צורך ליצור אותו מחדש.
-
--- ============================ סוף — הכל רץ ✓ ================================
