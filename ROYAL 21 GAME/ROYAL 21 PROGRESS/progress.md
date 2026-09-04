@@ -16,7 +16,20 @@
 
 - **תיקון המשך (`1431c48`)** — all-in חשף מנצח מוקדם **גם בפוקר cash** (לא רק SnG). השורש היה ב-`useReveal.ts` עצמו: "cold" client (non-host שפספס את שלב ההימורים) קיבל showdown מסודר כפריים ראשון → דילג על staging. תוקן: cold all-in showdown מריץ runout מ-0; `displayStacks` נגזר מ-`stack - showdown.won`.
 
-**סבב 2 הושלם (J·I·K·L·H). הבא: תוכנית ה-reworks הגדולים — ערב חברה + VIP + חנות + BJ-עם-חברים. חקירת קוד בוצעה — סיכום בהמשך.**
+**סבב 2 הושלם (J·I·K·L·H).**
+
+## סבב 3 — reworks גדולים (2026-09-04). תוכנית: `swift-snuggling-harp.md` "סבב 3". סדר: P→O→M→N.
+- **STAGE P ✅ נדחף** (`16dec5b`, `cb3b9b9`, `3e8ea8e`).
+  - P0: "בלעדי היום"+"נדיר היום" אוחדו לסלוט "✨ מיוחד היום" אחד שמסתובב על כל הפול.
+  - P0b: אדמין — כפתור "תן הכל" (קיים) + גלריית קטלוג "📦 כל הפריטים".
+  - P1: שולחן/רקע של המארח נכתב ל-`rooms.config` (`tableSkin`/`bgSkin`); BJ/פוקר/SnG/באקרה בחדר מרנדרים אותו.
+  - P2: טייטלים (`equipped.title`) — 7 נקנים + 4 נפתחים בהישג (בעלות נגזרת מ-`profiles.achievements`). `ttl_rookie` = starter. רכיב `PlayerName`.
+  - P3: צבע שם (`equipped.nameColor`) — פלטה של 10.
+  - P4: +4 משקפיים, +3 שעונים, +3 שרשראות, +2 דילרים.
+  - טייטל+צבע מרונדרים במושבי פוקר/BJ, צ'אט, לוח מנהיגים, פאנל חברים.
+  - reviewer: חוסם `ttl_rookie` starter-grant תוקן. **הרצה: `RUN-THIS-NEXT.sql` (עמודת `unlocked_by` + seed 28 פריטים + backfill טירון).**
+  - **park:** אנימציית חלוקה/זריקת ז'יטונים. **דילג:** `tableSkin` ברולטה/coinflip/highcard (אין felt skin-able).
+- STAGE O — VIP · M — תשתית חדרים · N — ערב חברה + משחקים חדשים.
 
 ## Roadmap חדש (2026-09-03) — 8 שלבים A–H
 
