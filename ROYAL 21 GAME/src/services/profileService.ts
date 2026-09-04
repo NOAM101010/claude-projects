@@ -210,7 +210,7 @@ export const profileService = {
     if (kind === 'chips' || kind === 'level') {
       const { data } = await client
         .from('profiles')
-        .select('id, username, tag, avatar, level, chips')
+        .select('id, username, tag, avatar, level, chips, equipped')
         .order(kind === 'chips' ? 'chips' : 'level', { ascending: false })
         .limit(limit);
       return data ?? [];

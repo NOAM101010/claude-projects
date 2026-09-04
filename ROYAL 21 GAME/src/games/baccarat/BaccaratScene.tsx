@@ -823,8 +823,8 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
           </div>
         )}
 
-        {/* felt: two hands + totals */}
-        <GlassPanel gold className="w-full p-4 flex flex-col gap-4">
+        {/* felt: two hands + totals — dressed from the host's table skin in a private room */}
+        <GlassPanel gold className={`w-full p-4 flex flex-col gap-4${room.config?.tableSkin ? ` table-felt ${room.config.tableSkin}` : ''}`}>
           <div className="grid grid-cols-2 gap-3">
             {(['player', 'banker'] as const).map((side) => {
               const cards = state[side];

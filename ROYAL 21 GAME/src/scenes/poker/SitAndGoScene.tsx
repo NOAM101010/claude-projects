@@ -276,7 +276,7 @@ export default function SitAndGoScene() {
     const buyIn = tournament.buyIn;
     addChips(-buyIn, { silent: true });
     audio.play('chip');
-    await send(profile.id, { type: 'join', userId: profile.id, username: profile.username, avatar: profile.avatar, level: profile.level, buyIn: 0 });
+    await send(profile.id, { type: 'join', userId: profile.id, username: profile.username, avatar: profile.avatar, level: profile.level, buyIn: 0, title: profile.equipped.title, nameColor: profile.equipped.nameColor });
     /* Refund ONLY if we're still not seated once the full window has elapsed.
        A bumped state.version is not proof our join was rejected — any other
        player's action advances it too, and firing the refund then handed out
@@ -369,7 +369,11 @@ export default function SitAndGoScene() {
 
         {/* --------------------------- the felt --------------------------- */}
         <GlassPanel gold className="relative p-3" style={{ aspectRatio: '1.5', minHeight: 340 }}>
-          <div className="absolute inset-4 rounded-[50%]" style={{ background: 'radial-gradient(ellipse at 50% 35%, #3a2812, #1c1409 75%)', border: '2px solid rgba(227,178,60,.35)' }} />
+          {room.config?.tableSkin ? (
+            <div className={`absolute inset-4 rounded-[50%] table-felt ${room.config.tableSkin}`} />
+          ) : (
+            <div className="absolute inset-4 rounded-[50%]" style={{ background: 'radial-gradient(ellipse at 50% 35%, #3a2812, #1c1409 75%)', border: '2px solid rgba(227,178,60,.35)' }} />
+          )}
 
           <div className="absolute inset-x-0 top-[30%] flex flex-col items-center gap-2 z-10">
             <div className="px-3 py-1 rounded-full text-[12px] num" style={{ background: 'rgba(0,0,0,.4)', color: 'var(--gold-hi)', border: '1px solid var(--gold-line)' }}>

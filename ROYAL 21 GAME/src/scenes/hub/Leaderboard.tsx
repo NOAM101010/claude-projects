@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Avatar } from '@/components/social/Avatar';
+import { PlayerName } from '@/components/social/PlayerName';
 import { chipGlyphOf } from '@/components/game/CoinFace';
 import { Modal } from '@/components/ui/Modal';
 import { Tabs } from '@/components/ui/Tabs';
@@ -40,6 +41,8 @@ export interface LbRow {
   avatar: AvatarConfig;
   level: number;
   value: number;
+  title?: string | null;
+  nameColor?: string | null;
   isYou?: boolean;
 }
 
@@ -144,6 +147,8 @@ function useLeaderboardData(scope: LbScope, category: LbCategory) {
             avatar: r.avatar,
             level: r.level ?? 0,
             value: valueOfRaw(category, r),
+            title: r.equipped?.title ?? null,
+            nameColor: r.equipped?.nameColor ?? null,
           }));
         setRemote(mapped);
       } catch {
@@ -169,6 +174,8 @@ function useLeaderboardData(scope: LbScope, category: LbCategory) {
         tag: f.tag || `#${1000 + (i * 137) % 8999}`,
         avatar: f.avatar,
         level: f.level,
+        title: f.title ?? null,
+        nameColor: f.nameColor ?? null,
         value:
           category === 'chips' ? f.chips
           : category === 'level' ? f.level
@@ -207,6 +214,8 @@ function useLeaderboardData(scope: LbScope, category: LbCategory) {
       avatar: profile.avatar,
       level: profile.level,
       value: myValue[category],
+      title: profile.equipped.title,
+      nameColor: profile.equipped.nameColor,
       isYou: true,
     };
 
@@ -285,7 +294,9 @@ function ValueRow({
       </span>
       <Avatar config={row.avatar} size={mini ? 28 : 30} level={row.level} id={`lb-${row.id}`} />
       <span className="lb-row-name">
-        {row.isYou ? t('leaderboard.you') : row.username}{' '}
+        {row.isYou
+          ? t('leaderboard.you')
+          : <PlayerName username={row.username} title={row.title} nameColor={row.nameColor} size={mini ? 12 : 13} inline />}{' '}
         {!mini && <span className="lb-row-tag">{row.tag}</span>}
       </span>
       <span className="lb-row-val">{formatValue(category, row.value, glyph, t)}</span>
@@ -397,7 +408,11 @@ function LeaderboardFull({
                     level={row.level}
                     id={`lbp-${row.id}`}
                   />
-                  <span className="lb-name">{row.isYou ? t('leaderboard.you') : row.username}</span>
+                  <span className="lb-name">
+                    {row.isYou
+                      ? t('leaderboard.you')
+                      : <PlayerName username={row.username} title={row.title} nameColor={row.nameColor} size={12} inline />}
+                  </span>
                   <span className="lb-val">{formatValue(category, row.value, glyph, t)}</span>
                 </div>
               );

@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { PlayingCard } from '@/components/game/PlayingCard';
 import { ChipStack } from '@/components/game/ChipStack';
 import { Avatar } from '@/components/social/Avatar';
+import { PlayerName } from '@/components/social/PlayerName';
 import { FloatingEmote } from '@/components/social/FloatingEmote';
 import { handValue, isBlackjack } from '@/games/blackjack/engine';
 import type { BjSeat } from '@/games/blackjack/types';
@@ -45,9 +46,10 @@ export function SeatView({ seat, hero, active, activeHand = 0, cardFace, cardBac
       <div className="flex items-center gap-2">
         <Avatar config={seat.avatar} size={hero ? 46 : 34} level={seat.level} id={`seat-${seat.userId}`} />
         <div className="text-start">
-          <b className="block text-[12.5px]" style={{ fontFamily: 'var(--font-display)' }}>
-            {seat.username}{hero ? ` · ${t('common.you')}` : ''}
-          </b>
+          <span className="flex items-baseline gap-1">
+            <PlayerName username={seat.username} title={seat.title} nameColor={seat.nameColor} size={12.5} inline />
+            {hero && <span className="text-[12.5px]" style={{ color: 'var(--muted)' }}>· {t('common.you')}</span>}
+          </span>
           <span className="text-[10.5px] num" style={{ color: 'var(--muted)' }}>
             {t('common.level')} {seat.level}
             {points !== undefined && ` · ${points} ${t('duel.points')}`}

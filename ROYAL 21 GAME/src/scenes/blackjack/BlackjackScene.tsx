@@ -130,6 +130,7 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
     void send(profile.id, {
       type: 'join', userId: profile.id, username: profile.username,
       avatar: profile.avatar, level: profile.level,
+      title: profile.equipped.title, nameColor: profile.equipped.nameColor,
     });
   }, [state, mySeat, send, profile]);
 

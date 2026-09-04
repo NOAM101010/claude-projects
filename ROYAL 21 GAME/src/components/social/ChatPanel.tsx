@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { GameButton } from '@/components/ui/GameButton';
 import { Avatar } from '@/components/social/Avatar';
+import { PlayerName } from '@/components/social/PlayerName';
 import { chatService, MAX_MESSAGE } from '@/services/chatService';
 import { usePlayer } from '@/stores/usePlayer';
 import { useT } from '@/hooks/useT';
@@ -139,11 +140,20 @@ export function ChatPanel({ roomId, members }: Props) {
                       <Avatar config={message.avatar ?? profile.avatar} size={26} id={`chat-${message.userId}`} />
                     )}
                     <div className={`max-w-[76%] ${mine ? 'text-end' : ''}`}>
-                      {!mine && (
-                        <span className="block text-[10.5px] leading-tight" style={{ color: 'var(--gold)' }}>
-                          {message.username}
-                        </span>
-                      )}
+                      {!mine && (() => {
+                        const member = byId.get(message.userId);
+                        return (
+                          <span className="block leading-tight" style={member ? undefined : { color: 'var(--gold)' }}>
+                            <PlayerName
+                              username={message.username}
+                              title={member?.title}
+                              nameColor={member?.nameColor}
+                              size={10.5}
+                              inline
+                            />
+                          </span>
+                        );
+                      })()}
                       <div
                         className="inline-block px-2.5 py-1.5 text-[12.5px] leading-snug break-words"
                         style={{

@@ -14,6 +14,10 @@ export interface PokerSeat {
   avatar: AvatarConfig;
   level: number;
   seat: number;
+  /** Equipped cosmetic title tag (e.g. "ttl-shark"), mirrored from the joining profile. */
+  title?: string | null;
+  /** Equipped name colour from the fixed palette, mirrored from the joining profile. */
+  nameColor?: string | null;
   /** Chips in front of the player — bought in from their balance, cashed out on leave. */
   stack: number;
   hole: Card[];
@@ -105,7 +109,7 @@ export interface TournamentInfo {
 }
 
 export type PokerAction =
-  | { type: 'join'; userId: string; username: string; avatar: AvatarConfig; level: number; buyIn: number }
+  | { type: 'join'; userId: string; username: string; avatar: AvatarConfig; level: number; buyIn: number; title?: string | null; nameColor?: string | null }
   | { type: 'leave'; userId: string }
   | { type: 'topUp'; userId: string; amount: number }
   | { type: 'sitOut'; userId: string }

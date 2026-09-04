@@ -122,9 +122,9 @@ export function levelIndexFor(tournament: TournamentInfo, now = Date.now()): num
   return Math.min(tournament.levels.length - 1, Math.floor(elapsed / tournament.levelMs));
 }
 
-function makeSeat(userId: string, username: string, avatar: AvatarConfig, level: number, seat: number, stack: number): PokerSeat {
+function makeSeat(userId: string, username: string, avatar: AvatarConfig, level: number, seat: number, stack: number, title: string | null = null, nameColor: string | null = null): PokerSeat {
   return {
-    userId, username, avatar, level, seat, stack,
+    userId, username, avatar, level, seat, stack, title, nameColor,
     hole: [], folded: false, allIn: false, sittingOut: false,
     committed: 0, totalCommitted: 0, hasActed: false, lastAction: null, disconnected: false,
     timeBanksLeft: TIME_BANKS_PER_PLAYER,
@@ -460,7 +460,7 @@ export function reduce(prev: PokerState, action: PokerAction): PokerState {
       let seatNo = 0;
       while (taken.has(seatNo) && seatNo < MAX_SEATS) seatNo += 1;
       const buyIn = state.tournament ? state.tournament.startingStack : Math.max(0, Math.round(action.buyIn));
-      const seat = makeSeat(action.userId, action.username, action.avatar, action.level, seatNo, buyIn);
+      const seat = makeSeat(action.userId, action.username, action.avatar, action.level, seatNo, buyIn, action.title ?? null, action.nameColor ?? null);
       seat.sittingOut = state.street !== 'waiting';
       state.seats.push(seat);
       state.seats.sort((a, b) => a.seat - b.seat);

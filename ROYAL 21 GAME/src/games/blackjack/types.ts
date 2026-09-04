@@ -27,6 +27,10 @@ export interface BjSeat {
   username: string;
   avatar: AvatarConfig;
   level: number;
+  /** Equipped cosmetic title tag (e.g. "ttl-shark"), mirrored from the joining profile. */
+  title?: string | null;
+  /** Equipped name colour from the fixed palette, mirrored from the joining profile. */
+  nameColor?: string | null;
   /** Chips committed before the deal. */
   bet: number;
   ready: boolean;
@@ -72,7 +76,7 @@ export interface BjState {
 }
 
 export type BjAction =
-  | { type: 'join'; userId: string; username: string; avatar: AvatarConfig; level: number }
+  | { type: 'join'; userId: string; username: string; avatar: AvatarConfig; level: number; title?: string | null; nameColor?: string | null }
   | { type: 'leave'; userId: string }
   | { type: 'bet'; userId: string; amount: number }
   /** Solo companion wager (Perfect Pairs / 21+3). Additive; `amount <= 0` clears the side. */

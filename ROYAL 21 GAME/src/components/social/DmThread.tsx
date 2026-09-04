@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { GameButton } from '@/components/ui/GameButton';
 import { Avatar } from './Avatar';
+import { PlayerName } from './PlayerName';
 import { useSocial } from '@/stores/useSocial';
 import { usePlayer } from '@/stores/usePlayer';
 import { useT } from '@/hooks/useT';
@@ -61,7 +62,7 @@ export function DmThread({ friend }: { friend: Friend }) {
         <GameButton size="sm" tone="ghost" onClick={closeDM} aria-label={t('dm.back')}>‹</GameButton>
         <Avatar config={friend.avatar} size={32} level={friend.level} id={friend.id} />
         <div className="min-w-0">
-          <b className="block text-[13px] truncate" style={{ fontFamily: 'var(--font-display)' }}>{friend.username}</b>
+          <PlayerName username={friend.username} title={friend.title} nameColor={friend.nameColor} size={13} />
           <span className="block text-[10.5px] leading-tight" style={{ color: 'var(--dim)' }}>{status}</span>
         </div>
       </div>

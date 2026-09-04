@@ -6,6 +6,7 @@ import { ChatPanel } from '@/components/social/ChatPanel';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GameButton } from '@/components/ui/GameButton';
 import { Avatar } from '@/components/social/Avatar';
+import { PlayerName } from '@/components/social/PlayerName';
 import { PlayingCard } from '@/components/game/PlayingCard';
 import { Chip } from '@/components/game/Chip';
 import { LightPool } from '@/components/effects/LightPool';
@@ -396,7 +397,7 @@ export default function PokerScene() {
     if (wasSeated) {
       await send(profile.id, { type: 'topUp', userId: profile.id, amount });
     } else {
-      await send(profile.id, { type: 'join', userId: profile.id, username: profile.username, avatar: profile.avatar, level: profile.level, buyIn: amount });
+      await send(profile.id, { type: 'join', userId: profile.id, username: profile.username, avatar: profile.avatar, level: profile.level, buyIn: amount, title: profile.equipped.title, nameColor: profile.equipped.nameColor });
     }
     setBuyInOpen(false);
     audio.play('chip');
@@ -851,7 +852,13 @@ export function SeatCard({
           </motion.div>
         )}
       </div>
-      <b className="text-[10.5px] truncate max-w-[70px]" style={isWinner ? { color: 'var(--gold-hi)' } : undefined}>{seat.username}</b>
+      <PlayerName
+        username={seat.username}
+        title={seat.title}
+        nameColor={isWinner ? 'var(--gold-hi)' : seat.nameColor}
+        size={10.5}
+        className="max-w-[70px]"
+      />
       <span className="text-[10px] num" style={{ color: 'var(--gold)' }}>{fmt(stack)}</span>
       {seat.committed > 0 && street !== 'waiting' && (
         <div className="flex items-center gap-1"><Chip value={Math.max(10, seat.committed)} size={20} /><span className="text-[9px] num">{fmt(seat.committed)}</span></div>
