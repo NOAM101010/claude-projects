@@ -17,7 +17,7 @@ import type { GameKey } from '@/types';
 
 const GAME_ICON: Record<GameKey, string> = {
   roulette: '🎡', blackjack: '🃏', duel: '⚔️', poker: '♠️', sng: '🏆',
-  coinflip: '🪙', highcard: '🎴', scratch: '🎫', slots: '🎰', baccarat: '🎴',
+  coinflip: '🪙', highcard: '🎴', scratch: '🎫', slots: '🎰', baccarat: '🎴', highlow: '📈',
 };
 
 const GAME_LABEL_KEY: Partial<Record<GameKey, string>> = {

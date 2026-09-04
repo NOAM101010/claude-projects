@@ -24,6 +24,7 @@ export const POINTS: Record<Outcome, number> = {
  */
 const GAME_POINTS: Record<string, Partial<Record<Outcome, number>>> = {
   highcard: { win: 3, push: 1, lose: 0 },
+  highlow: { win: 3, push: 0, lose: 0 },
   roulette: { win: 2, push: 1, lose: 0 },
 };
 

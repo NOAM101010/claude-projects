@@ -10,6 +10,7 @@ import { LightPool } from '@/components/effects/LightPool';
 import { usePlayer } from '@/stores/usePlayer';
 import { useRoom } from '@/stores/useRoom';
 import { useHighcardRoom } from '@/stores/useHighcardRoom';
+import { useHighLowRoom } from '@/stores/useHighLowRoom';
 import { useRouletteRoom } from '@/stores/useRouletteRoom';
 import { useSocial } from '@/stores/useSocial';
 import { notificationService } from '@/services/notificationService';
@@ -37,6 +38,7 @@ interface NightGame {
 const GAMES: NightGame[] = [
   { key: 'blackjack', icon: '♠', labelKey: 'nav.blackjack', to: (code) => `/blackjack/room/${code}?night=${code}`, scored: true },
   { key: 'highcard', icon: '🂡', labelKey: 'nav.highcard', to: () => '', scored: true, multiplayer: true },
+  { key: 'highlow', icon: '📈', labelKey: 'nav.highlow', to: () => '', scored: true, multiplayer: true },
   { key: 'roulette', icon: '🎡', labelKey: 'nav.roulette', to: () => '', scored: true, multiplayer: true },
 ];
 
@@ -44,6 +46,7 @@ const GAMES: NightGame[] = [
    shape); the night room's own code only carries table games like Blackjack. */
 const MP_GAME_URL: Record<string, (code: string, night: string) => string> = {
   highcard: (code, night) => `/game/highcard/room/${code}?night=${night}`,
+  highlow: (code, night) => `/game/highlow/room/${code}?night=${night}`,
   roulette: (code, night) => `/game/roulette/room/${code}?night=${night}`,
 };
 
@@ -66,6 +69,7 @@ export default function NightScene() {
   const setLoading = useUI((s) => s.setLoading);
   const { room, members, state, isHost, create, joinByCode, send } = useRoom();
   const createHighcard = useHighcardRoom((s) => s.create);
+  const createHighlow = useHighLowRoom((s) => s.create);
   const createRoulette = useRouletteRoom((s) => s.create);
   const [podium, setPodium] = useState(false);
   const [invited, setInvited] = useState<string[]>([]);
@@ -97,7 +101,9 @@ export default function NightScene() {
         } else {
           const created = game.key === 'roulette'
             ? await createRoulette(profile.id)
-            : await createHighcard(profile.id);
+            : game.key === 'highlow'
+              ? await createHighlow(profile.id)
+              : await createHighcard(profile.id);
           if (!created) { toast(t('errors.generic'), 'bad', '⚠'); return; }
           code = created.code;
         }
@@ -370,7 +376,7 @@ export default function NightScene() {
                             <span className="text-[22px]">{game.icon}</span>
                             <b className="text-[12px]">{t(game.labelKey)}</b>
                             <span className="text-[9.5px]" style={{ color: game.scored ? 'var(--gold)' : 'var(--dim)' }}>
-                              {game.multiplayer ? t('night.upToFive') : game.scored ? t('night.scored') : t('night.justFun')}
+                              {game.multiplayer ? t(game.key === 'highlow' ? 'night.upToEight' : 'night.upToFive') : game.scored ? t('night.scored') : t('night.justFun')}
                             </span>
                           </button>
                         ))}

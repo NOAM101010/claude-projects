@@ -54,7 +54,7 @@ alter table public.app_config enable row level security;
 --   chip_gifts          id, from_id, to_id, amount, message, created_at
 --   referrals           id, referrer_id, referee_id, bonus_chips, stage2_claimed
 --   rooms               id, code, game, host_id, state, config, created/updated_at
---   room_members        room_id, user_id, seat (0-5), is_spectator
+--   room_members        room_id, user_id, seat (0-7), is_spectator
 --   room_actions        room_id, user_id, action payloads
 --   room_messages       room_id, user_id, body, created_at
 --   direct_messages     id (bigserial), sender_id, recipient_id, body,

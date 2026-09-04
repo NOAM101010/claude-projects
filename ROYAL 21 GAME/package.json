@@ -18,7 +18,8 @@
     "test:minigames": "esbuild scripts/minigames.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/minigames.test.mjs --log-level=error --alias:@=./src && node node_modules/.cache/minigames.test.mjs",
     "test:baccarat": "esbuild scripts/baccarat.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/baccarat.test.mjs --log-level=error --alias:@=./src && node node_modules/.cache/baccarat.test.mjs",
     "test:social": "esbuild scripts/social.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/social.test.mjs --log-level=error --alias:@=./src && node node_modules/.cache/social.test.mjs",
-    "test:all": "npm run test:engine && npm run test:slots && npm run test:audio && npm run test:poker && npm run test:roulette && npm run test:minigames && npm run test:baccarat && npm run test:social",
+    "test:highlow": "esbuild scripts/highlow.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/highlow.test.mjs --log-level=error --alias:@=./src && node node_modules/.cache/highlow.test.mjs",
+    "test:all": "npm run test:engine && npm run test:slots && npm run test:audio && npm run test:poker && npm run test:roulette && npm run test:minigames && npm run test:baccarat && npm run test:social && npm run test:highlow",
     "gen:seed": "node scripts/run-gen-seed.mjs"
   },
   "dependencies": {

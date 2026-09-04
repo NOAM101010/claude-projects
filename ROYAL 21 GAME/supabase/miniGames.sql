@@ -16,6 +16,7 @@ declare
 begin
   select game into room_game from public.rooms where id = new.room_id;
   seat_limit := case
+    when room_game = 'highlow' then 8
     when room_game in ('poker', 'sng') then 6
     when room_game in ('roulette', 'coinflip', 'highcard') then 5
     else 4

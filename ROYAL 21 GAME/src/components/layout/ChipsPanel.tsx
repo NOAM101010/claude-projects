@@ -16,6 +16,7 @@ const GAME_ICON: Record<GameKey, string> = {
   slots: '🎰',
   scratch: '🎫',
   highcard: '🂡',
+  highlow: '📈',
   poker: '♠️',
   sng: '🏆',
   roulette: '🎡',

@@ -1,18 +1,15 @@
 -- =============================================================================
--- ROYAL 21 — משחק חדש: גבוה/נמוך הישרדות (High / Low Survival)
---
--- הרץ פעם אחת ב-Supabase → SQL Editor. Select All → Paste → Run. Idempotent.
--- דרישה מוקדמת שכבר רצה: setup.sql, roulette.sql, miniGames.sql.
---
--- מה זה עושה:
---   1. room_members.seat — מרחיב את ה-check ל-0..7 (עד 8 מושבים).
---   2. enforce_room_capacity() — מוסיף ענף 'highlow' עם תקרת 8 מושבים.
---      כל שאר הענפים (poker/sng=6, roulette/coinflip/highcard=5, ברירת מחדל=4) נשארים.
+-- HIGH / LOW SURVIVAL — multiplayer party table, up to 8 players.
+-- Run once in the Supabase SQL editor, after setup.sql + roulette.sql + miniGames.sql.
+-- Idempotent — safe to re-run.
 -- =============================================================================
 
+-- 1. room_members.seat was capped at 0-5 (6 seats) by roulette.sql / poker.sql.
+--    High / Low seats up to 8, so widen the check to 0-7.
 alter table public.room_members drop constraint if exists room_members_seat_check;
 alter table public.room_members add constraint room_members_seat_check check (seat between 0 and 7);
 
+-- 2. Per-game capacity: add 'highlow' at 8. Keeps every existing branch intact.
 create or replace function public.enforce_room_capacity()
 returns trigger
 language plpgsql
@@ -35,6 +32,5 @@ begin
 end;
 $$;
 
--- הטריגר room_capacity (מ-setup.sql) כבר מצביע על הפונקציה לפי שם — אין צורך ליצור אותו מחדש.
-
--- ============================ סוף — הכל רץ ✓ ================================
+-- The `room_capacity` trigger created in setup.sql already points at this
+-- function by name, so replacing the body is enough.

@@ -100,6 +100,8 @@
     "coinflipHint": "Heads or tails",
     "highcard": "High card",
     "highcardHint": "Who draws higher",
+    "highlow": "High / Low",
+    "highlowHint": "Survive the guess",
     "roulette": "Roulette",
     "rouletteHint": "Spin the wheel",
     "baccarat": "Baccarat",
@@ -737,6 +739,21 @@
     "freeCard": "Free card",
     "tooPoor": "{amount} chips short"
   },
+  "highlow": {
+    "title": "High / Low Survival",
+    "nightOnly": "This one is a game-night table — start it from a game night.",
+    "turn": "Card {n}",
+    "baseCard": "Base card",
+    "lastCard": "Turned over",
+    "higher": "Higher",
+    "lower": "Lower",
+    "startRound": "Deal the round",
+    "youreOut": "You're out this round — sit tight for the next one.",
+    "spectating": "Watching this round",
+    "tookPot": "{name} took the whole pot",
+    "splitPot": "The last card wiped everyone — the pot is split",
+    "howto": "Everyone antes the same. Call the next card higher or lower before the timer runs out. Wrong call or no call and you're out. A tie carries the whole field through. Last one standing takes the pot."
+  },
   "vault": {
     "title": "The vault",
     "subtitle": "Everything you can wear, put on the table or deal a hand with",
@@ -1000,6 +1017,7 @@
     "scored": "Scored",
     "justFun": "Just for fun",
     "upToFive": "Scored · up to 5 players",
+    "upToEight": "Scored · up to 8 players",
     "fixedAnte": "Fixed ante",
     "scoredNote": "Every round at every table here counts towards the shared scoreboard.",
     "rules": "Win {win} points · Blackjack {bj} · Push {push}",
