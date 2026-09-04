@@ -95,8 +95,22 @@ export function reduce(prev: HcState, action: HcAction): HcState {
     }
     case 'ante': {
       const seat = seatOf(action.userId);
-      if (!seat || state.phase !== 'betting' || action.amount <= 0) return prev;
-      seat.stake = action.amount;
+      if (!seat || state.phase !== 'betting') return prev;
+      // Night mode: the personal amount is ignored — every seat pays the host's
+      // uniform ante, so the pot is just anteAmount × seats that anted in.
+      const amount = state.anteMode ? (state.anteAmount ?? 0) : action.amount;
+      if (amount <= 0) return prev;
+      seat.stake = amount;
+      return state;
+    }
+    case 'nightAnte': {
+      if (action.amount <= 0) return prev;
+      // Locked once betting is under way / a seat has committed, so a mid-round
+      // change can't desync what players already deducted client-side.
+      if (state.phase !== 'betting' && state.phase !== 'waiting') return prev;
+      if (state.seats.some((s) => s.stake > 0)) return prev;
+      state.anteMode = true;
+      state.anteAmount = action.amount;
       return state;
     }
     case 'clearAnte': {

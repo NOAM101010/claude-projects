@@ -10,6 +10,7 @@ import { LightPool } from '@/components/effects/LightPool';
 import { usePlayer } from '@/stores/usePlayer';
 import { useRoom } from '@/stores/useRoom';
 import { useHighcardRoom } from '@/stores/useHighcardRoom';
+import { useRouletteRoom } from '@/stores/useRouletteRoom';
 import { useSocial } from '@/stores/useSocial';
 import { notificationService } from '@/services/notificationService';
 import { useUI } from '@/stores/useUI';
@@ -36,7 +37,15 @@ interface NightGame {
 const GAMES: NightGame[] = [
   { key: 'blackjack', icon: '♠', labelKey: 'nav.blackjack', to: (code) => `/blackjack/room/${code}?night=${code}`, scored: true },
   { key: 'highcard', icon: '🂡', labelKey: 'nav.highcard', to: () => '', scored: true, multiplayer: true },
+  { key: 'roulette', icon: '🎡', labelKey: 'nav.roulette', to: () => '', scored: true, multiplayer: true },
 ];
+
+/* Multiplayer sub-games each live in their own `rooms` row (a different game
+   shape); the night room's own code only carries table games like Blackjack. */
+const MP_GAME_URL: Record<string, (code: string, night: string) => string> = {
+  highcard: (code, night) => `/game/highcard/room/${code}?night=${night}`,
+  roulette: (code, night) => `/game/roulette/room/${code}?night=${night}`,
+};
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 
@@ -57,6 +66,7 @@ export default function NightScene() {
   const setLoading = useUI((s) => s.setLoading);
   const { room, members, state, isHost, create, joinByCode, send } = useRoom();
   const createHighcard = useHighcardRoom((s) => s.create);
+  const createRoulette = useRouletteRoom((s) => s.create);
   const [podium, setPodium] = useState(false);
   const [invited, setInvited] = useState<string[]>([]);
   const [openingGame, setOpeningGame] = useState<string | null>(null);
@@ -68,9 +78,8 @@ export default function NightScene() {
      High card needs its own `rooms` row (a different game shape);
      everything else rides the night room's own code. */
   const gameUrl = (amg: { game: string; code: string }): string | null => {
-    if (amg.game === 'highcard') {
-      return `/game/${amg.game}/room/${amg.code}?night=${roomCode}`;
-    }
+    const mp = MP_GAME_URL[amg.game];
+    if (mp) return mp(amg.code, roomCode);
     const def = GAMES.find((g) => g.key === amg.game);
     return def ? def.to(roomCode) : null;
   };
@@ -86,7 +95,9 @@ export default function NightScene() {
         if (existing?.game === game.key && existing.code) {
           code = existing.code;
         } else {
-          const created = await createHighcard(profile.id);
+          const created = game.key === 'roulette'
+            ? await createRoulette(profile.id)
+            : await createHighcard(profile.id);
           if (!created) { toast(t('errors.generic'), 'bad', '⚠'); return; }
           code = created.code;
         }

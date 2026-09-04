@@ -35,6 +35,9 @@ import type { Card } from '@/games/blackjack/types';
 
 interface Props { mode: 'solo' | 'room'; roomCode?: string }
 
+/** Game-night uniform-ante tiers the host picks from. */
+const NIGHT_ANTES = [500, 1000, 2500, 5000];
+
 export default function HighCardScene({ mode, roomCode }: Props) {
   return mode === 'room' && roomCode ? <HighCardRoom roomCode={roomCode} /> : <HighCardSolo />;
 }
@@ -270,6 +273,7 @@ function HighCardRoom({ roomCode }: { roomCode: string }) {
   const friends = useSocial((s) => s.friends);
 
   const { room, members, state, isHost, create, joinByCode, send, leave } = useHighcardRoom();
+  const isNight = Boolean(nightReturn);
   const [stake, setStake] = useState(100);
   const [payTableOpen, setPayTableOpen] = useState(false);
   const settledRound = useRef(-1);
@@ -324,6 +328,13 @@ function HighCardRoom({ roomCode }: { roomCode: string }) {
 
   const mySeat = state?.seats.find((s) => s.userId === profile.id);
   const joinRetryRef = useRef<NodeJS.Timeout | null>(null);
+
+  /* Night mode: the host switches the table to the uniform-ante model on entry
+     (default 500) so every seat pays the same and the pot is just ante × N. */
+  useEffect(() => {
+    if (!isNight || !isHost || !state || state.anteMode) return;
+    void send(profile.id, { type: 'nightAnte', amount: NIGHT_ANTES[0] });
+  }, [isNight, isHost, state?.anteMode, send, profile.id, state]);
 
   /* Host removes any seat whose player dropped out of room membership. */
   useGhostSeatCleanup(isHost, state?.seats, members ?? [],
@@ -473,20 +484,23 @@ function HighCardRoom({ roomCode }: { roomCode: string }) {
     if (!state || state.phase !== 'betting') return;
     // Guard against a rapid double-tap racing the seat's ante update.
     if (mySeat?.stake) return;
-    if (profile.chips < stake) {
+    // Night mode: the host's uniform ante, not the personal stake selector.
+    const amount = state.anteMode ? (state.anteAmount ?? 0) : stake;
+    if (amount <= 0) return;
+    if (profile.chips < amount) {
       audio.play('error');
-      toast(t('games.tooPoor', { amount: fmt(stake - profile.chips) }), 'bad', '⚠');
+      toast(t('games.tooPoor', { amount: fmt(amount - profile.chips) }), 'bad', '⚠');
       return;
     }
     audio.play('chip');
     haptic('chip');
-    addChips(-stake, { silent: true });
-    addOutlay(state.round, stake);
-    void send(profile.id, { type: 'ante', userId: profile.id, amount: stake }).then((ok) => {
+    addChips(-amount, { silent: true });
+    addOutlay(state.round, amount);
+    void send(profile.id, { type: 'ante', userId: profile.id, amount }).then((ok) => {
       // Rate-limit / network drop: refund locally so the ante doesn't vanish.
       if (!ok) {
-        addChips(stake, { silent: true });
-        addOutlay(state.round, -stake);
+        addChips(amount, { silent: true });
+        addOutlay(state.round, -amount);
         toast(t('common.retry'), 'bad', '⚠');
       }
     });
@@ -621,10 +635,41 @@ function HighCardRoom({ roomCode }: { roomCode: string }) {
         <GlassPanel gold className="p-4 w-full">
           {phase === 'betting' ? (
             <>
-              <BetSelector stakes={STAKES} vipStakes={isVipEligible(profile) ? VIP_CHIP_EXTRA : undefined} value={stake} onChange={setStake} chipSkin={profile.equipped.chipSkin} disabled={!canAnte} chips={profile.chips} />
+              {isNight ? (
+                <div className="mb-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="eyebrow">{t('night.fixedAnte')}</span>
+                    <span className="num text-[12px]" style={{ color: 'var(--gold-hi)' }}>
+                      {t('games.pot')} {fmt((state.anteAmount ?? 0) * state.seats.filter((s) => s.stake > 0).length || (state.anteAmount ?? 0) * state.seats.length)}
+                    </span>
+                  </div>
+                  {isHost && (
+                    <div className="flex flex-wrap gap-2">
+                      {NIGHT_ANTES.map((amt) => (
+                        <button
+                          key={amt}
+                          onClick={() => { audio.play('click'); void send(profile.id, { type: 'nightAnte', amount: amt }); }}
+                          disabled={state.seats.some((s) => s.stake > 0)}
+                          className="px-3 py-1.5 rounded-[var(--r-xs)] text-[12px] num press"
+                          style={{
+                            background: state.anteAmount === amt ? 'var(--gold-line)' : 'var(--glass)',
+                            border: `1px solid ${state.anteAmount === amt ? 'var(--gold-hi)' : 'var(--glass-line)'}`,
+                          }}
+                        >
+                          {fmt(amt)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <BetSelector stakes={STAKES} vipStakes={isVipEligible(profile) ? VIP_CHIP_EXTRA : undefined} value={stake} onChange={setStake} chipSkin={profile.equipped.chipSkin} disabled={!canAnte} chips={profile.chips} />
+              )}
               <div className="flex gap-2">
                 <GameButton tone="ghost" block disabled={phase !== 'betting' || !mySeat?.stake} onClick={clearAnte}>{t('blackjack.clear')}</GameButton>
-                <GameButton tone="gold" block disabled={!canAnte} onClick={ante}>{t('games.draw')} · {fmt(stake)}</GameButton>
+                <GameButton tone="gold" block disabled={!canAnte || (isNight && !state.anteAmount)} onClick={ante}>
+                  {t('games.draw')} · {fmt(isNight ? (state.anteAmount ?? 0) : stake)}
+                </GameButton>
               </div>
               {isHost ? (
                 <GameButton tone="jade" block className="mt-2" disabled={ready.length < 2} onClick={handleDraw}>{t('games.draw')}</GameButton>

@@ -17,6 +17,8 @@ import { usePlayer } from '@/stores/usePlayer';
 import { useUI } from '@/stores/useUI';
 import { useT } from '@/hooks/useT';
 import { useGhostSeatCleanup } from '@/hooks/useGhostSeatCleanup';
+import { useNightReturn } from '@/hooks/useNightReturn';
+import { useNightScoring } from '@/hooks/useNightScoring';
 import { isOnline } from '@/services/supabase';
 import { roomsService } from '@/services/roomsService';
 import { presenceService } from '@/services/presenceService';
@@ -50,6 +52,8 @@ const PAYTABLE_ROWS: { kind: RouletteBetKind; labelKey: string }[] = [
 export default function RouletteScene({ mode, roomCode }: Props) {
   const navigate = useNavigate();
   const { t } = useT();
+  const nightReturn = useNightReturn();
+  const reportNight = useNightScoring('roulette');
   const profile = usePlayer((s) => s.profile);
   const addChips = usePlayer((s) => s.addChips);
   const addXp = usePlayer((s) => s.addXp);
@@ -115,7 +119,7 @@ export default function RouletteScene({ mode, roomCode }: Props) {
       setLoading('loading.generic');
       if (roomCode === 'new') {
         const created = await create(profile.id);
-        if (created) navigate(`/game/roulette/room/${created.code}`, { replace: true });
+        if (created) navigate(`/game/roulette/room/${created.code}${window.location.search}`, { replace: true });
       } else if (room?.code !== roomCode) {
         const joined = await joinByCode(roomCode, profile.id);
         if (!joined) toast(t('rooms.notFound'), 'bad', '⚠');
@@ -369,6 +373,7 @@ export default function RouletteScene({ mode, roomCode }: Props) {
       audio.play('lose');
     }
     recordResult('roulette', net > 0 ? 'win' : net === 0 ? 'push' : 'lose', net);
+    reportNight(net > 0 ? 'win' : net === 0 ? 'push' : 'lose', net);
     addXp(XP_REWARDS.handPlayed + (net > 0 ? XP_REWARDS.gameWon : 0));
   };
 
@@ -383,6 +388,7 @@ export default function RouletteScene({ mode, roomCode }: Props) {
       if (pendingPayout.current?.round !== snap.round) return;
       creditedRound.current = snap.round;
       if (snap.payout > 0) addChips(snap.payout);
+      reportNight(snap.net > 0 ? 'win' : snap.net === 0 ? 'push' : 'lose', snap.net);
       if (roundOutlay.current.round === snap.round) {
         const clearedBack = clearRefunded.current.round === snap.round ? clearRefunded.current.amount : 0;
         const rejected = roundOutlay.current.amount - (snap.payout - snap.net) - clearedBack;
@@ -734,8 +740,8 @@ export default function RouletteScene({ mode, roomCode }: Props) {
 
         <div className="flex gap-2">
           <GameButton tone="ghost" size="sm" onClick={() => setPayTableOpen(true)}>{t('games.paytable')}</GameButton>
-          <GameButton tone="ghost" size="sm" onClick={() => navigate('/hub')}>
-            {t('common.back')}
+          <GameButton tone="ghost" size="sm" onClick={() => navigate(nightReturn ?? '/hub')}>
+            {nightReturn ? t('night.backToNight') : t('common.back')}
           </GameButton>
         </div>
       </div>

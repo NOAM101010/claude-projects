@@ -127,6 +127,30 @@ console.log('\nHigh Card — payout math (winner takes the whole pot)');
   check('every non-winning ante lost exactly their stake', losers.every((l) => l.net === -l.stake));
 }
 
+console.log('\nHigh Card — game-night uniform ante (pot = ante × N, winner takes all)');
+{
+  let s = hcCreate(3);
+  for (const id of ['a', 'b', 'c', 'd']) s = hcReduce(s, { type: 'join', userId: id, username: id.toUpperCase(), avatar, level: 1 });
+  s = hcReduce(s, { type: 'nightAnte', amount: 500 });
+  check('nightAnte turns on the uniform-ante model', s.anteMode === true && s.anteAmount === 500);
+  // Personal amounts are ignored in ante mode — every seat pays the host's ante.
+  for (const id of ['a', 'b', 'c', 'd']) s = hcReduce(s, { type: 'ante', userId: id, amount: 999 });
+  check('every seat staked exactly the uniform ante', s.seats.every((seat) => seat.stake === 500));
+  const lockedTry = hcReduce(s, { type: 'nightAnte', amount: 1000 });
+  check('the ante is locked once a seat has committed', lockedTry === s);
+  let guard = 0;
+  while (s.phase !== 'settled' && guard < 10) { s = hcReduce(s, { type: 'draw' }); guard++; }
+  check('the round settles', s.phase === 'settled');
+  check('pot equals ante × seats that anted', s.pot === 500 * 4, `pot=${s.pot}`);
+  const winner = s.seats.find((seat) => seat.userId === s.winners[0])!;
+  check('the winner takes the whole pot', winner.net === s.pot - 500);
+  const losers = s.seats.filter((seat) => seat.userId !== s.winners[0]);
+  check('every other seat lost exactly the ante', losers.every((l) => l.net === -500));
+  check('net across the table is zero-sum', s.seats.reduce((sum, seat) => sum + seat.net, 0) === 0);
+  const reopened = hcReduce(s, { type: 'openBetting' });
+  check('ante mode persists across the next round', reopened.anteMode === true && reopened.anteAmount === 500);
+}
+
 console.log('\nHigh Card — a tie sends only the tied seats to war');
 {
   // Try seeds until we land a tie on the first draw, to exercise the war path directly.

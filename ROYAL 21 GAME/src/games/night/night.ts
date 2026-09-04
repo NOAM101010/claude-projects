@@ -17,6 +17,22 @@ export const POINTS: Record<Outcome, number> = {
   bust: 0,
 };
 
+/**
+ * Per-game point tables. Blackjack (and any untagged legacy entry) falls back to
+ * `POINTS`; other tables report `win`/`lose`/`push` and score differently — a
+ * roulette spin is a lighter touch than taking a whole High Card pot.
+ */
+const GAME_POINTS: Record<string, Partial<Record<Outcome, number>>> = {
+  highcard: { win: 3, push: 1, lose: 0 },
+  roulette: { win: 2, push: 1, lose: 0 },
+};
+
+/** Points for one settled result, keyed by which table produced it. */
+export function pointsFor(game: string | undefined, outcome: Outcome): number {
+  if (game && GAME_POINTS[game]) return GAME_POINTS[game][outcome] ?? 0;
+  return POINTS[outcome] ?? 0;
+}
+
 export interface NightRow {
   userId: string;
   username: string;
@@ -49,7 +65,7 @@ export function scoreboard(state: BjState | null, members: RoomMember[]): NightR
   for (const entry of state?.history ?? []) {
     const seat = state?.seats.find((s) => s.userId === entry.userId);
     const row = ensure(entry.userId, entry.username ?? seat?.username ?? 'Player');
-    row.points += POINTS[entry.outcome] ?? 0;
+    row.points += pointsFor(entry.game, entry.outcome);
     row.hands += 1;
     row.net += entry.net;
     if (entry.outcome === 'win' || entry.outcome === 'blackjack') row.wins += 1;
