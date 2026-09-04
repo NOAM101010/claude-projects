@@ -57,29 +57,19 @@ export function todaysDailyOffers(date = new Date()): { item: ShopItem; discount
 }
 
 /**
- * The "Daily Rarity" — one exclusive item per day that cannot be bought
- * anywhere else. Rotates deterministically by date across the pool of
- * `dailyRarityOnly` items, so every player worldwide sees the same one today.
+ * The "Special Today" — one exclusive item per day, drawn from the combined
+ * pool of `dailyRarityOnly` (mythic coin skins) and `rareRotationOnly`
+ * (holo coin flip, royal suite bundle) items. These never appear in the
+ * normal grid; the only way to get one is to catch it on its day. The pick is
+ * deterministic (today's date seed indexes the id-sorted pool) so every player
+ * worldwide sees the same one today and knows when to check back.
  */
-export function todaysRarityItem(date = new Date()): ShopItem | null {
-  const pool = ITEMS.filter((item) => item.dailyRarityOnly);
-  if (pool.length === 0) return null;
-  const index = dateSeed(date) % pool.length;
-  return pool[index];
-}
-
-/**
- * The "rare rotation": one `rareRotationOnly` item per weekday. These never
- * appear in the normal grid — the only way to buy one is to catch it on its
- * day. The pick is deterministic (weekday indexes the id-sorted pool) so a
- * player who wants a specific one knows exactly when to check back.
- */
-export function todaysRareRotation(date = new Date()): ShopItem | null {
+export function todaysSpecialItem(date = new Date()): ShopItem | null {
   const pool = ITEMS
-    .filter((item) => item.rareRotationOnly)
+    .filter((item) => item.dailyRarityOnly || item.rareRotationOnly)
     .sort((a, b) => a.id.localeCompare(b.id));
   if (pool.length === 0) return null;
-  return pool[date.getDay() % pool.length];
+  return pool[dateSeed(date) % pool.length];
 }
 
 /** How much time until the offers rotate (returns "23:12:04" etc). */

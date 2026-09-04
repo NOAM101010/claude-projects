@@ -10,7 +10,7 @@ import { LightPool } from '@/components/effects/LightPool';
 import { ItemPreview } from './ItemPreview';
 import { ITEMS, itemById, RARITY_ORDER } from '@/data/items';
 import { discountedPrice } from '@/data/economy';
-import { todaysDailyOffers, todaysRarityItem, todaysRareRotation, PACKS, packPricing, timeUntilNextRotation, DAILY_DISCOUNT } from '@/data/shopOffers';
+import { todaysDailyOffers, todaysSpecialItem, PACKS, packPricing, timeUntilNextRotation, DAILY_DISCOUNT } from '@/data/shopOffers';
 import { usePlayer } from '@/stores/usePlayer';
 import { useUI } from '@/stores/useUI';
 import { useT } from '@/hooks/useT';
@@ -60,8 +60,7 @@ export default function VaultScene() {
   }, [category]);
 
   const dailyOffers = useMemo(() => todaysDailyOffers(), []);
-  const rarityItem = useMemo(() => todaysRarityItem(), []);
-  const rareItem = useMemo(() => todaysRareRotation(), []);
+  const specialItem = useMemo(() => todaysSpecialItem(), []);
 
   const items = useMemo(
     () => {
@@ -81,9 +80,9 @@ export default function VaultScene() {
     [category],
   );
 
-  /** The Rare Rotation slot can surface a bundle handle (bundle_royal_suite)
+  /** The Special Today slot can surface a bundle handle (bundle_royal_suite)
    *  instead of a real item — that one opens the pack preview, not the item modal. */
-  const openRareRotation = (item: ShopItem) => {
+  const openSpecialItem = (item: ShopItem) => {
     if (item.payload.bundleHandle) {
       const pack = PACKS.find((p) => p.id === item.payload.bundleHandle);
       if (pack) { audio.play('click'); setPackPreview(pack); }
@@ -272,31 +271,17 @@ export default function VaultScene() {
               </b>
             </div>
 
-            {/* Daily Rarity — an exclusive item that only appears here, once per day */}
-            {rarityItem && (
+            {/* Special Today — one hidden collector's item surfaces per day */}
+            {specialItem && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-[22px]">🌟</span>
+                  <span className="text-[22px]">✨</span>
                   <div>
-                    <b className="text-[14px]">{t('vault.dailyRarity')}</b>
-                    <p className="text-[11px]" style={{ color: 'var(--muted)' }}>{t('vault.dailyRarityHint')}</p>
+                    <b className="text-[14px]">{t('vault.specialToday')}</b>
+                    <p className="text-[11px]" style={{ color: 'var(--muted)' }}>{t('vault.specialTodayHint')}</p>
                   </div>
                 </div>
-                <RareRotationCard item={rarityItem} onOpen={setSelected} owned={owned.includes(rarityItem.id)} lang={lang} t={t} equippedCoin={profile.equipped.currencySkin} exclusive />
-              </div>
-            )}
-
-            {/* Rare Rotation — one hidden collector's item surfaces per weekday */}
-            {rareItem && (
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-[22px]">💎</span>
-                  <div>
-                    <b className="text-[14px]">{t('vault.rareRotation')}</b>
-                    <p className="text-[11px]" style={{ color: 'var(--muted)' }}>{t('vault.rareRotationHint')}</p>
-                  </div>
-                </div>
-                <RareRotationCard item={rareItem} onOpen={openRareRotation} owned={owned.includes(rareItem.id)} lang={lang} t={t} equippedCoin={profile.equipped.currencySkin} />
+                <RareRotationCard item={specialItem} onOpen={openSpecialItem} owned={owned.includes(specialItem.id)} lang={lang} t={t} equippedCoin={profile.equipped.currencySkin} exclusive />
               </div>
             )}
 

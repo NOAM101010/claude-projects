@@ -50,6 +50,51 @@ function validateConfig(shape: ConfigShape, value: unknown): string | null {
   }
 }
 
+const RARITY_COLOR: Record<string, string> = {
+  common: 'var(--dim)',
+  rare: '#4aa8c8',
+  epic: '#a878f0',
+  legendary: 'var(--gold-hi)',
+  mythic: 'var(--crimson-hi)',
+};
+
+/** Read-only catalogue of every cosmetic in the game, grouped by category, so
+ *  the operator can see exactly what content exists. No RPC — pure client data. */
+function CatalogueGallery() {
+  const byCategory = ITEMS.reduce<Record<string, typeof ITEMS>>((acc, item) => {
+    (acc[item.category] ??= []).push(item);
+    return acc;
+  }, {});
+  return (
+    <div className="flex flex-col gap-3">
+      {Object.entries(byCategory).map(([category, list]) => (
+        <div key={category}>
+          <div className="text-[11.5px] mb-1.5" style={{ color: 'var(--gold-hi)' }}>
+            {category} · {list.length}
+          </div>
+          <div className="grid gap-1" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))' }}>
+            {list.map((item) => (
+              <div key={item.id} className="px-2 py-1.5 rounded-[var(--r-xs)] text-[11.5px]"
+                style={{ background: 'rgba(255,255,255,.035)', border: '1px solid var(--glass-line)' }}>
+                <div className="flex items-center gap-1.5">
+                  <span>{item.icon}</span>
+                  <b className="flex-1 truncate">{item.name.he}</b>
+                  <span style={{ color: RARITY_COLOR[item.rarity] ?? 'var(--muted)' }}>{item.rarity}</span>
+                </div>
+                <div className="text-[10px] mt-0.5" style={{ color: 'var(--dim)' }}>
+                  {item.id}
+                  {item.dailyRarityOnly ? ' · נדיר יומי' : ''}
+                  {item.rareRotationOnly ? ' · סבב נדיר' : ''}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Stat({ label, value, tone = 'gold' }: { label: string; value: string | number; tone?: 'gold' | 'jade' | 'crimson' }) {
   const color = tone === 'jade' ? 'var(--jade-hi)' : tone === 'crimson' ? 'var(--crimson-hi)' : 'var(--gold-hi)';
   return (
@@ -333,6 +378,12 @@ export default function AdminScene() {
             <GameButton tone="metal" size="sm" onClick={() => void bumpLevel(50)}>{t('admin.level')} 50</GameButton>
             <GameButton tone="ghost" size="sm" onClick={() => void bumpLevel(1)}>{t('admin.level')} 1</GameButton>
           </div>
+        </GlassPanel>
+
+        {/* ---------------------------- catalogue ---------------------------- */}
+        <GlassPanel className="p-4">
+          <div className="eyebrow mb-3">📦 כל הפריטים ({ITEMS.length})</div>
+          <CatalogueGallery />
         </GlassPanel>
 
         {/* ---------------------------- powers (others) ---------------------------- */}
