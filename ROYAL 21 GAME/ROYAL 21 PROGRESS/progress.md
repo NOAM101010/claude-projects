@@ -33,7 +33,8 @@
 - **STAGE N1 (ערב חברה) — בעבודה.**
   - `51afe29` — roster: הוסרו slots/coinflip/scratch. `sessionStorage` keyed לחדר.
   - `0a94616` — **רולטה נוספה** (`useNightReturn`+`useNightScoring`, double-report guarded). **הייקארד ב-Night = ante אחיד** (מארח בוחר 500/1k/2.5k/5k, כולם משלמים, מנצח לוקח את הקופה; `nightAnte` action + `anteMode`). ניקוד `pointsFor(game,outcome)`. reviewer נקי. **אין SQL.**
-  - **נשאר ל-N:** דואל ב-Night (דורש החלטת ארכיטקטורה) · BJ MP הימורי-צד + תגית מושב (נוגע כסף) · N2 משחקי מסיבה חדשים (גבוה/נמוך הישרדות + עוד).
+  - **N2 — "גבוה/נמוך הישרדות" ✅ נדחף** (`a50cb02`). משחק MP חדש מקצה לקצה: ante אחיד, קלף בסיס, ניחוש גבוה/נמוך בו-זמני (טיימר 8ש), טעות/timeout=הדחה, תיקו=push, אחרון לוקח קופה. `src/games/highlow/*` (engine+types+redact+scene) + `useHighLowRoom`+`highlowService` + מסלול/roster/ניקוד/8 מושבים. reviewer: 2 חוסמים תוקנו (חלוקת wipe לא הייתה zero-sum + חלוקה באפס כשאף אחד לא ניחש — עכשיו הסיבוב מבוטל). **הרצה: `RUN-THIS-NEXT.sql`** (seat check 0-7 + `enforce_room_capacity`).
+  - **נשאר ל-N:** דואל ב-Night (דורש החלטת ארכיטקטורה) · BJ MP הימורי-צד + תגית מושב (נוגע כסף) · עוד משחקי מסיבה (לפי רצון).
 - STAGE M — תשתית חדרים (בסוף, לבקשת המשתמש).
 - *doc drift ידוע:* `SCHEMA.sql`/`README.md` לא עודכנו ל-`items.vip_tier` + `profiles.vip_*_claimed` + RPCs של VIP — לסדר בשלב ניקוי.
 
