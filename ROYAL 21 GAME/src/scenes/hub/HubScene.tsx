@@ -21,7 +21,7 @@ import { isFriendOnline } from '@/lib/presence';
 import { audio } from '@/audio/AudioManager';
 import { STREAK_REWARD, STREAK_MILESTONES, isStreakMilestone, nextStreakDay, REFERRAL_BONUS, WEEKLY_PODIUM } from '@/data/economy';
 import { dailyMissions, weeklyMission, weekKeyFor, missionComplete } from '@/data/missions';
-import { isVipEligible, VIP_MIN_LEVEL, VIP_MIN_CHIPS } from '@/data/vip';
+import { isVipEligible, VIP_MIN_LEVEL } from '@/data/vip';
 import { SNG_BUYINS } from '@/games/poker/engine';
 
 function Section({
@@ -367,7 +367,7 @@ export default function HubScene() {
           <HubCard
             label={t('vip.title')}
             action={vipEligible ? t('vip.enter') : t('vip.locked')}
-            blurb={vipEligible ? t('vip.blurbUnlocked') : t('vip.blurbLocked', { level: VIP_MIN_LEVEL, chips: fmt(VIP_MIN_CHIPS) })}
+            blurb={vipEligible ? t('vip.blurbUnlocked') : t('vip.blurbLocked', { level: VIP_MIN_LEVEL })}
             hoverSound="vault"
             badge={vipEligible ? '👑' : undefined}
             glow="rgba(227,178,60,.28)"

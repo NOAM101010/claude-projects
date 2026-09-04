@@ -63,8 +63,9 @@ export interface Profile {
    * edits this in local storage gets a badge and nothing else.
    */
   isAdmin?: boolean;
-  /** Set once the player has qualified for VIP (level + chips at the same
-   *  time). Sticky: dropping chips later doesn't lose them the VIP room. */
+  /** Deprecated. Old schema set this; nothing updates it now and VIP
+   *  eligibility is level-only (isVipEligible). Admin panel still reads the
+   *  column. Do not gate on this. */
   everVip?: boolean;
   /* --- server-owned progression mirrors (read-only on the client) --------- */
   /** Consecutive-day login streak, server-authoritative (claim_daily_bonus). */
@@ -145,6 +146,10 @@ export interface ShopItem {
   /** Achievement id that unlocks this item for free. Ownership is then derived
    *  (`profile.achievements` includes it) — there is no purchase and no row. */
   unlockedBy?: string;
+  /** VIP-tier cosmetic. Ownership is derived — owned iff the player's VIP tier
+   *  (from level, see src/data/vip.ts) is >= this. Never bought, no `user_items`
+   *  row. Hidden from normal shop lists; surfaced on the VIP lounge shelf. */
+  vipTier?: 1 | 2 | 3 | 4;
   /** Only obtainable through the Daily Rarity slot — hidden from normal shop lists. */
   dailyRarityOnly?: boolean;
   /** Only obtainable through the weekday Rare Rotation slot — hidden from normal shop lists. */

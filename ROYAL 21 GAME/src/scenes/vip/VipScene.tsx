@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { SceneShell } from '@/components/layout/SceneShell';
@@ -6,61 +6,101 @@ import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GameButton } from '@/components/ui/GameButton';
 import { Modal } from '@/components/ui/Modal';
 import { LightPool } from '@/components/effects/LightPool';
+import { ItemPreview } from '@/scenes/vault/ItemPreview';
 import { PrivatePokerModal } from '@/components/game/PrivatePokerModal';
 import { usePlayer } from '@/stores/usePlayer';
 import { useUI } from '@/stores/useUI';
 import { useT } from '@/hooks/useT';
-import { fmt, todayKey } from '@/lib/format';
+import { useAppConfig } from '@/hooks/useAppConfig';
+import { fmt } from '@/lib/format';
+import { ITEMS } from '@/data/items';
 import {
-  VIP_DAILY_BONUS, VIP_TOURNAMENT_BUYINS,
-  vipProgress, isVipEligible,
+  VIP_TOURNAMENT_BUYINS, VIP_TIER_LEVELS,
+  vipProgress, isVipEligible, vipTier, vipTierName, nextVipTier, type VipTierId,
 } from '@/data/vip';
+import { profileService } from '@/services/profileService';
+import { isRemoteId } from '@/services/supabase';
 import { audio } from '@/audio/AudioManager';
 
-const VIP_BONUS_STORAGE_KEY = 'royal21.vip.lastBonusClaim';
+type ClaimKind = 'daily' | 'cashback' | 'stipend';
+
+interface VipState {
+  tier: number;
+  daily_ready: boolean;
+  daily_next_at: string | null;
+  cashback_ready: boolean;
+  stipend_ready: boolean;
+}
 
 /**
- * VIP Lounge — the private-tables tier for anyone at level 15+ with 50K chips.
+ * VIP Lounge — a level-only club (level 5+) with four tiers.
  *
- * Everything in here is either a shortcut into an already-existing scene
- * (High Roller poker uses the standard poker room with bigger blinds, VIP
- * SNG uses the standard SNG room with a bigger buy-in) or the private-table
- * modal opened in VIP mode. There is no new game engine here — just a
- * higher-stakes doorway to the ones that already exist.
+ * Every tier bumps the daily bonus and unlocks cashback / a weekly stipend /
+ * exclusive cosmetics. The three claims all go through level-gated server RPCs
+ * (supabase/vip.sql); the private-table and tournament doorways are unchanged.
  */
 export default function VipScene() {
   const navigate = useNavigate();
-  const { t } = useT();
+  const { t, lang } = useT();
+  const cfg = useAppConfig();
   const profile = usePlayer((s) => s.profile);
-  const addChips = usePlayer((s) => s.addChips);
+  const setChips = usePlayer((s) => s.setChips);
   const toast = useUI((s) => s.toast);
   const showMoment = useUI((s) => s.showMoment);
 
   const [privateOpen, setPrivateOpen] = useState(false);
   const [sngOpen, setSngOpen] = useState(false);
+  const [vipState, setVipState] = useState<VipState | null>(null);
+  const [busy, setBusy] = useState<ClaimKind | null>(null);
 
-  const progress = vipProgress(profile);
   const eligible = isVipEligible(profile);
+  const progress = vipProgress(profile);
+  const tier = vipTier(profile.level) as VipTierId;
+  const next = nextVipTier(profile.level);
+  const remote = isRemoteId(profile.id);
 
-  /* Daily VIP bonus — a flat top-up once per calendar day. Stored locally
-     alongside the standard save; server-side enforcement would be ideal
-     for real money but is overkill for virtual chips. */
-  const bonusReady = eligible && localStorage.getItem(VIP_BONUS_STORAGE_KEY) !== todayKey();
+  const refreshState = useCallback(async () => {
+    if (!remote || !eligible) return;
+    const s = await profileService.fetchVipState();
+    if (s) setVipState(s);
+  }, [remote, eligible]);
 
-  const claimBonus = () => {
-    if (!bonusReady) return;
-    localStorage.setItem(VIP_BONUS_STORAGE_KEY, todayKey());
-    addChips(VIP_DAILY_BONUS);
-    audio.duck(1500);
+  useEffect(() => { void refreshState(); }, [refreshState]);
+
+  const perks = tier >= 1 ? {
+    daily: cfg.vipDaily(tier as 1 | 2 | 3 | 4),
+    cashbackPct: cfg.vipCashbackPct(tier as 1 | 2 | 3 | 4),
+    stipend: cfg.vipStipend(tier as 1 | 2 | 3 | 4),
+  } : null;
+
+  const claim = async (kind: ClaimKind) => {
+    if (busy) return;
+    if (!remote) { toast(t('vip.signInToClaim'), 'neutral', '👑'); return; }
+    setBusy(kind);
+    const res = await profileService.claimVip(kind);
+    setBusy(null);
+    if (!res) { toast(t('vip.claimFailed'), 'bad', '⚠'); return; }
+    if (!res.granted) {
+      toast(res.reason === 'nothing' ? t('vip.nothingToClaim') : t('vip.alreadyClaimed'), 'neutral', '👑');
+      void refreshState();
+      return;
+    }
+    setChips(res.new_balance);
+    audio.duck(1400);
     audio.play('bigWin');
-    showMoment({
-      kind: 'bigWin',
-      title: t('vip.bonusTitle'),
-      subtitle: `+${fmt(VIP_DAILY_BONUS)}`,
-      icon: '👑',
-      duration: 2400,
-    });
+    showMoment({ kind: 'bigWin', title: t(`vip.${kind === 'daily' ? 'claimDaily' : kind === 'cashback' ? 'claimCashback' : 'claimStipend'}`), subtitle: `+${fmt(res.amount)}`, icon: '👑', duration: 2400 });
+    void refreshState();
   };
+
+  const countdown = (iso: string | null): string => {
+    if (!iso) return '';
+    const ms = new Date(iso).getTime() - Date.now();
+    if (ms <= 0) return '';
+    const h = Math.ceil(ms / 3_600_000);
+    return t('vip.availableIn', { time: h >= 24 ? `${Math.ceil(h / 24)}d` : `${h}h` });
+  };
+
+  const vipItems = ITEMS.filter((it) => it.vipTier);
 
   return (
     <SceneShell compactHud>
@@ -72,7 +112,7 @@ export default function VipScene() {
       </div>
 
       <div className="mx-auto px-4 py-3 flex flex-col gap-4" style={{ maxWidth: 720 }}>
-        {/* ------------------------- header ------------------------- */}
+        {/* header */}
         <div className="text-center">
           <span className="eyebrow" style={{ color: 'var(--gold-hi)' }}>{t('vip.eyebrow')}</span>
           <motion.h1
@@ -92,7 +132,7 @@ export default function VipScene() {
           <p className="mt-1 text-[13px]" style={{ color: 'var(--muted)' }}>{t('vip.subtitle')}</p>
         </div>
 
-        {/* -------------- gate: not-yet-eligible progress bars --------------- */}
+        {/* gate */}
         {!eligible && (
           <GlassPanel gold className="p-4">
             <div className="text-center mb-3">
@@ -100,76 +140,115 @@ export default function VipScene() {
               <b className="block mt-1">{t('vip.lockedTitle')}</b>
               <p className="text-[12px]" style={{ color: 'var(--muted)' }}>{t('vip.lockedSubtitle')}</p>
             </div>
-            <div className="flex flex-col gap-2.5">
-              <ProgressRow
-                label={t('vip.reqLevel')}
-                current={progress.level.current}
-                target={progress.level.target}
-                done={progress.level.done}
-                format={(n) => String(n)}
-              />
-              <ProgressRow
-                label={t('vip.reqChips')}
-                current={progress.chips.current}
-                target={progress.chips.target}
-                done={progress.chips.done}
-                format={fmt}
-              />
-            </div>
-            <p className="mt-4 text-[11px] text-center" style={{ color: 'var(--dim)' }}>
-              {t('vip.lockedHint')}
-            </p>
+            <ProgressRow
+              label={t('vip.reqLevel')}
+              current={progress.level.current}
+              target={progress.level.target}
+              done={progress.level.done}
+            />
+            <p className="mt-4 text-[11px] text-center" style={{ color: 'var(--dim)' }}>{t('vip.lockedHint')}</p>
           </GlassPanel>
         )}
 
-        {/* --------------- eligible: the actual VIP options ------------------ */}
         {eligible && (
           <>
-            {/* Daily bonus */}
+            {/* tier card */}
             <GlassPanel gold className="p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="eyebrow" style={{ color: 'var(--gold-hi)' }}>{t('vip.dailyBonus')}</div>
-                  <b className="num" style={{ fontSize: 22, color: 'var(--gold-hi)', fontFamily: 'var(--font-display)' }}>
-                    +{fmt(VIP_DAILY_BONUS)}
+              <div className="flex items-center gap-3">
+                <div className="text-[42px] leading-none">👑</div>
+                <div className="flex-1">
+                  <div className="eyebrow" style={{ color: 'var(--gold-hi)' }}>{t('vip.yourTier')}</div>
+                  <b className="text-[20px]" style={{ color: 'var(--gold-hi)', fontFamily: 'var(--font-display)' }}>
+                    {t(`vip.tier.${vipTierName(tier).toLowerCase()}`)}
                   </b>
                 </div>
-                <GameButton
-                  tone={bonusReady ? 'gold' : 'ghost'}
-                  onClick={bonusReady ? claimBonus : () => toast(t('vip.bonusTakenToday'), 'neutral', '👑')}
-                >
-                  {bonusReady ? t('vip.claim') : t('vip.claimed')}
-                </GameButton>
               </div>
+              {next ? (
+                <div className="mt-3">
+                  <div className="flex items-center justify-between text-[12px] mb-1">
+                    <span>{t('vip.tierNext', { name: t(`vip.tier.${vipTierName(next.tier).toLowerCase()}`), level: next.atLevel })}</span>
+                    <span className="num" style={{ color: 'var(--muted)' }}>{profile.level} / {next.atLevel}</span>
+                  </div>
+                  <TierBar current={profile.level} from={VIP_TIER_LEVELS[Math.max(0, next.tier - 2)]} to={next.atLevel} />
+                </div>
+              ) : (
+                <p className="mt-3 text-[12px]" style={{ color: 'var(--gold-hi)' }}>{t('vip.maxTier')}</p>
+              )}
             </GlassPanel>
 
-            {/* Grid of VIP options */}
+            {/* perks + claims */}
+            {perks && (
+              <GlassPanel gold className="p-4 flex flex-col gap-3">
+                <div className="eyebrow" style={{ color: 'var(--gold-hi)' }}>{t('vip.perksTitle')}</div>
+
+                <ClaimRow
+                  label={t('vip.claimDaily')}
+                  amount={`+${fmt(perks.daily)}`}
+                  ready={!!vipState?.daily_ready}
+                  hint={vipState?.daily_ready ? '' : countdown(vipState?.daily_next_at ?? null) || t('vip.claimedToday')}
+                  busy={busy === 'daily'}
+                  onClaim={() => claim('daily')}
+                />
+                <ClaimRow
+                  label={t('vip.claimCashback')}
+                  amount={perks.cashbackPct > 0 ? t('vip.cashbackOf', { pct: Math.round(perks.cashbackPct * 100) }) : t('vip.perkLocked')}
+                  ready={perks.cashbackPct > 0 && !!vipState?.cashback_ready}
+                  hint={perks.cashbackPct === 0 ? t('vip.tierPerkHint', { name: t('vip.tier.silver') }) : vipState?.cashback_ready ? '' : t('vip.availableNextWeek')}
+                  busy={busy === 'cashback'}
+                  onClaim={() => claim('cashback')}
+                />
+                <ClaimRow
+                  label={t('vip.claimStipend')}
+                  amount={perks.stipend > 0 ? `+${fmt(perks.stipend)}` : t('vip.perkLocked')}
+                  ready={perks.stipend > 0 && !!vipState?.stipend_ready}
+                  hint={perks.stipend === 0 ? t('vip.tierPerkHint', { name: t('vip.tier.gold') }) : vipState?.stipend_ready ? '' : t('vip.availableNextWeek')}
+                  busy={busy === 'stipend'}
+                  onClaim={() => claim('stipend')}
+                />
+                <p className="text-[11px]" style={{ color: 'var(--dim)' }}>{t('vip.highStakesPerk')}</p>
+              </GlassPanel>
+            )}
+
+            {/* VIP tables */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <VipCard
-                icon="💰"
-                title={t('vip.highRoller')}
-                subtitle={t('vip.highRollerSubtitle')}
-                onClick={() => setPrivateOpen(true)}
-              />
-              <VipCard
-                icon="🎪"
-                title={t('vip.exclusiveSng')}
-                subtitle={t('vip.exclusiveSngSubtitle')}
-                onClick={() => setSngOpen(true)}
-              />
-              <VipCard
-                icon="🪙"
-                title={t('vip.highCoinflip')}
-                subtitle={t('vip.highCoinflipSubtitle')}
-                onClick={() => navigate('/game/coinflip?vip=1')}
-              />
-              <VipCard
-                icon="🂡"
-                title={t('vip.highHighcard')}
-                subtitle={t('vip.highHighcardSubtitle')}
-                onClick={() => navigate('/game/highcard?vip=1')}
-              />
+              <VipCard icon="💰" title={t('vip.highRoller')} subtitle={t('vip.highRollerSubtitle')} onClick={() => setPrivateOpen(true)} />
+              <VipCard icon="🎪" title={t('vip.exclusiveSng')} subtitle={t('vip.exclusiveSngSubtitle')} onClick={() => setSngOpen(true)} />
+              <VipCard icon="🪙" title={t('vip.highCoinflip')} subtitle={t('vip.highCoinflipSubtitle')} onClick={() => navigate('/game/coinflip?vip=1')} />
+              <VipCard icon="🂡" title={t('vip.highHighcard')} subtitle={t('vip.highHighcardSubtitle')} onClick={() => navigate('/game/highcard?vip=1')} />
             </div>
+
+            {/* VIP cosmetics shelf */}
+            <GlassPanel className="p-4">
+              <div className="eyebrow mb-3" style={{ color: 'var(--gold-hi)' }}>{t('vip.shelfTitle')}</div>
+              {[1, 2, 3, 4].map((tt) => {
+                const group = vipItems.filter((it) => it.vipTier === tt);
+                if (!group.length) return null;
+                const unlocked = tier >= tt;
+                return (
+                  <div key={tt} className="mb-4 last:mb-0">
+                    <div className="flex items-center justify-between text-[12px] mb-2">
+                      <b style={{ color: unlocked ? 'var(--gold-hi)' : 'var(--muted)' }}>
+                        {t(`vip.tier.${vipTierName(tt as VipTierId).toLowerCase()}`)}
+                      </b>
+                      <span style={{ color: 'var(--dim)' }}>
+                        {unlocked ? t('vip.tierOwned') : t('vip.tierLockedUntil', { level: VIP_TIER_LEVELS[tt - 1] })}
+                      </span>
+                    </div>
+                    <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(96px,1fr))' }}>
+                      {group.map((it) => (
+                        <div key={it.id} className="rounded-[var(--r-xs)] p-2 text-center"
+                          style={{ background: 'rgba(0,0,0,.3)', opacity: unlocked ? 1 : 0.45 }}>
+                          <div className="h-[52px] grid place-items-center">
+                            <ItemPreview item={it} compact />
+                          </div>
+                          <div className="text-[10px] mt-1 truncate" style={{ color: 'var(--muted)' }}>{it.name[lang]}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </GlassPanel>
           </>
         )}
 
@@ -181,9 +260,7 @@ export default function VipScene() {
       <PrivatePokerModal open={privateOpen} onClose={() => setPrivateOpen(false)} vipOnly />
 
       <Modal open={sngOpen} onClose={() => setSngOpen(false)} title={t('vip.exclusiveSng')}>
-        <p className="text-center mb-4 text-[12.5px]" style={{ color: 'var(--muted)' }}>
-          {t('vip.pickBuyIn')}
-        </p>
+        <p className="text-center mb-4 text-[12.5px]" style={{ color: 'var(--muted)' }}>{t('vip.pickBuyIn')}</p>
         <div className="flex flex-col gap-2">
           {VIP_TOURNAMENT_BUYINS.map((amount) => (
             <GameButton
@@ -201,36 +278,53 @@ export default function VipScene() {
   );
 }
 
-function ProgressRow({
-  label, current, target, done, format,
-}: { label: string; current: number; target: number; done: boolean; format: (n: number) => string }) {
+function ProgressRow({ label, current, target, done }: { label: string; current: number; target: number; done: boolean }) {
   const pct = Math.max(0, Math.min(1, current / target));
   return (
     <div>
       <div className="flex items-center justify-between text-[12px] mb-1">
         <span>{done ? '✅' : '⏳'} {label}</span>
-        <span className="num" style={{ color: done ? 'var(--gold-hi)' : 'var(--muted)' }}>
-          {format(current)} / {format(target)}
-        </span>
+        <span className="num" style={{ color: done ? 'var(--gold-hi)' : 'var(--muted)' }}>{current} / {target}</span>
       </div>
       <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,.06)' }}>
-        <div
-          className="h-full transition-all"
-          style={{
-            width: `${pct * 100}%`,
-            background: done
-              ? 'linear-gradient(90deg, var(--gold), var(--gold-hi))'
-              : 'linear-gradient(90deg, var(--dim), var(--muted))',
-          }}
-        />
+        <div className="h-full transition-all" style={{
+          width: `${pct * 100}%`,
+          background: done ? 'linear-gradient(90deg, var(--gold), var(--gold-hi))' : 'linear-gradient(90deg, var(--dim), var(--muted))',
+        }} />
       </div>
     </div>
   );
 }
 
-function VipCard({
-  icon, title, subtitle, onClick,
-}: { icon: string; title: string; subtitle: string; onClick: () => void }) {
+function TierBar({ current, from, to }: { current: number; from: number; to: number }) {
+  const span = Math.max(1, to - from);
+  const pct = Math.max(0, Math.min(1, (current - from) / span));
+  return (
+    <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,.06)' }}>
+      <div className="h-full transition-all" style={{ width: `${pct * 100}%`, background: 'linear-gradient(90deg, var(--gold), var(--gold-hi))' }} />
+    </div>
+  );
+}
+
+function ClaimRow({
+  label, amount, ready, hint, busy, onClaim,
+}: { label: string; amount: string; ready: boolean; hint: string; busy: boolean; onClaim: () => void }) {
+  const { t } = useT();
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <div className="min-w-0">
+        <div className="text-[13px] font-black">{label}</div>
+        <div className="num text-[12px]" style={{ color: 'var(--gold-hi)' }}>{amount}</div>
+        {hint && <div className="text-[10.5px]" style={{ color: 'var(--dim)' }}>{hint}</div>}
+      </div>
+      <GameButton size="sm" tone={ready ? 'gold' : 'ghost'} disabled={!ready || busy} onClick={onClaim}>
+        {busy ? '…' : ready ? t('vip.claim') : t('vip.claimed')}
+      </GameButton>
+    </div>
+  );
+}
+
+function VipCard({ icon, title, subtitle, onClick }: { icon: string; title: string; subtitle: string; onClick: () => void }) {
   return (
     <button
       type="button"

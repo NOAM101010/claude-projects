@@ -15,6 +15,7 @@ import { useNightReturn } from '@/hooks/useNightReturn';
 import { useNightScoring } from '@/hooks/useNightScoring';
 import { XP_REWARDS } from '@/data/economy';
 import { SLOT_STAKES, symbolsForTheme, pull, spinReel, type SlotSymbol, type SpinOutcome } from '@/data/slots';
+import { VIP_CHIP_EXTRA, isVipEligible } from '@/data/vip';
 import { fmt } from '@/lib/format';
 import { audio } from '@/audio/AudioManager';
 import { haptic } from '@/lib/haptics';
@@ -319,6 +320,7 @@ export default function SlotsScene() {
         <GlassPanel className="p-4 w-full">
           <BetSelector
             stakes={SLOT_STAKES}
+            vipStakes={isVipEligible(profile) ? VIP_CHIP_EXTRA : undefined}
             value={stake}
             onChange={setStake}
             chipSkin={profile.equipped.chipSkin}

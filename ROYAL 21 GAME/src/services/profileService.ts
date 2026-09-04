@@ -143,6 +143,31 @@ export const profileService = {
     return data as { granted: boolean; chips: number; day: number; comeback: boolean; new_balance: number };
   },
 
+  /* --- VIP club claims (supabase/vip.sql). Each RPC is level-gated + atomic
+     and returns the authoritative post-credit balance as `new_balance` so the
+     client can setChips() it directly. `granted:false` carries a `reason`. --- */
+  async claimVip(which: 'daily' | 'cashback' | 'stipend'): Promise<
+    { granted: boolean; reason?: string; amount: number; new_balance: number; next_at?: string } | null
+  > {
+    const client = db();
+    if (!client) return null;
+    const fn = which === 'daily' ? 'claim_vip_daily' : which === 'cashback' ? 'claim_vip_cashback' : 'claim_vip_stipend';
+    const { data, error } = await client.rpc(fn);
+    if (error || !data) return null;
+    return data as { granted: boolean; reason?: string; amount: number; new_balance: number; next_at?: string };
+  },
+
+  /** VIP tier + the three claim-readiness flags in one round trip. */
+  async fetchVipState(): Promise<
+    { tier: number; daily_ready: boolean; daily_next_at: string | null; cashback_ready: boolean; stipend_ready: boolean } | null
+  > {
+    const client = db();
+    if (!client) return null;
+    const { data, error } = await client.rpc('fetch_vip_state');
+    if (error || !data) return null;
+    return data as { tier: number; daily_ready: boolean; daily_next_at: string | null; cashback_ready: boolean; stipend_ready: boolean };
+  },
+
   async fetchDailyState(): Promise<{ lastClaim: string | null; day: number } | null> {
     const client = db();
     if (!client) return null;

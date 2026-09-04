@@ -10,6 +10,7 @@ import { LightPool } from '@/components/effects/LightPool';
 import { ItemPreview } from './ItemPreview';
 import { ITEMS, itemById, RARITY_ORDER, isItemOwned } from '@/data/items';
 import { discountedPrice } from '@/data/economy';
+import { vipTier } from '@/data/vip';
 import { todaysDailyOffers, todaysSpecialItem, PACKS, packPricing, timeUntilNextRotation, DAILY_DISCOUNT } from '@/data/shopOffers';
 import { usePlayer } from '@/stores/usePlayer';
 import { useUI } from '@/stores/useUI';
@@ -38,6 +39,7 @@ export default function VaultScene() {
   const equip = usePlayer((s) => s.equip);
   const toast = useUI((s) => s.toast);
   const chip = chipGlyphOf(profile.equipped.currencySkin);
+  const playerVipTier = vipTier(profile.level);
   const [category, setCategory] = useState<Category>('deals');
   const [selected, setSelected] = useState<ShopItem | null>(null);
   const [packPreview, setPackPreview] = useState<Pack | null>(null);
@@ -67,7 +69,7 @@ export default function VaultScene() {
     () => {
       if (category === 'deals') return [];
       const list = ITEMS.filter(
-        (item) => (category === 'all' || item.category === category) && !item.dailyRarityOnly && !item.rareRotationOnly,
+        (item) => (category === 'all' || item.category === category) && !item.dailyRarityOnly && !item.rareRotationOnly && !item.vipTier,
       );
       if (category !== 'all') return list;
       // "All" tab: group by category (shop order), then by rarity within each.
@@ -144,7 +146,7 @@ export default function VaultScene() {
 
   /** One display case. Shared by the flat grid and the grouped "All" tab. */
   const renderItemCard = (item: ShopItem, index: number) => {
-    const has = isItemOwned(item, owned, achievements);
+    const has = isItemOwned(item, owned, achievements, playerVipTier);
     const worn = has && isEquipped(item);
     const lockedByAch = !!item.unlockedBy && !has;
     const price = discountedPrice(item.price, profile.level);
@@ -443,7 +445,7 @@ export default function VaultScene() {
             <div className="rounded-[var(--r-md)] p-4 mb-4 grid place-items-center" style={{ background: 'rgba(0,0,0,.35)', minHeight: 180 }}>
               <ItemPreview item={selected} />
             </div>
-            {isItemOwned(selected, owned, achievements) ? (
+            {isItemOwned(selected, owned, achievements, playerVipTier) ? (
               <GameButton tone={isEquipped(selected) ? 'ghost' : 'gold'} size="lg" block
                 disabled={isEquipped(selected)}
                 onClick={() => { equip(selected.id); setSelected(null); }}>
@@ -452,6 +454,10 @@ export default function VaultScene() {
             ) : selected.unlockedBy ? (
               <GameButton tone="ghost" size="lg" block disabled>
                 🔒 {t('vault.titleLocked')}
+              </GameButton>
+            ) : selected.vipTier ? (
+              <GameButton tone="ghost" size="lg" block disabled>
+                🔒 {t('vault.vipLocked')}
               </GameButton>
             ) : (
               <GameButton tone="gold" size="lg" block disabled={profile.chips < discountedPrice(selected.price, profile.level)}

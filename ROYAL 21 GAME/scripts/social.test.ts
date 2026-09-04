@@ -6,9 +6,13 @@
  * file is to catch the client-side copy drifting from the SQL original.
  */
 import {
-  STREAK_REWARD, VIP_TIERS, vipTierOf, discountedPrice, milestoneReward, GIFT_DAILY_LIMIT, MILESTONE_EVERY,
+  STREAK_REWARD, SHOP_DISCOUNT_TIERS, shopDiscountTier, discountedPrice, milestoneReward, GIFT_DAILY_LIMIT, MILESTONE_EVERY,
   nextStreakDay, daysSince, COMEBACK_THRESHOLD_DAYS, COMEBACK_BONUS,
 } from '@/data/economy';
+import { vipTier, vipTierName, nextVipTier, isVipEligible, VIP_MIN_LEVEL, VIP_TIER_PERKS } from '@/data/vip';
+import type { Profile } from '@/types';
+
+const asProfile = (level: number) => ({ level } as unknown as Profile);
 import {
   MISSIONS, WEEKLY_MISSIONS, MAX_MISSION_REWARD, dailyMissions, weeklyMission,
   weekKeyFor, shiftDateKey, missionValue, missionComplete,
@@ -72,19 +76,39 @@ console.log('\nlogin streak — double-claim guard (mirrors usePlayer.claimDaily
       && nextStreakDay({ lastClaim: yesterday, day: 5 }) === 6);
 }
 
-console.log('\nVIP tiers');
-check('level 1 is tier 1', vipTierOf(1).tier === 1);
-check('level 15 is still tier 1', vipTierOf(15).tier === 1);
-check('level 16 crosses into tier 2', vipTierOf(16).tier === 2);
-check('level 35 is still tier 2', vipTierOf(35).tier === 2);
-check('level 36 crosses into tier 3', vipTierOf(36).tier === 3);
-check('discounts rise with tier', VIP_TIERS.every((t, i, all) => i === 0 || all[i - 1].shopDiscount < t.shopDiscount));
+console.log('\nshop discount tiers');
+check('level 1 is tier 1', shopDiscountTier(1).tier === 1);
+check('level 15 is still tier 1', shopDiscountTier(15).tier === 1);
+check('level 16 crosses into tier 2', shopDiscountTier(16).tier === 2);
+check('level 35 is still tier 2', shopDiscountTier(35).tier === 2);
+check('level 36 crosses into tier 3', shopDiscountTier(36).tier === 3);
+check('discounts rise with tier', SHOP_DISCOUNT_TIERS.every((t, i, all) => i === 0 || all[i - 1].shopDiscount < t.shopDiscount));
 
-console.log('\nVIP — shop discount');
+console.log('\nshop discount — price');
 check('tier 1 discount matches buy_item()', discountedPrice(2000, 1) === Math.floor(2000 * 0.95), String(discountedPrice(2000, 1)));
 check('tier 2 discount matches buy_item()', discountedPrice(2000, 16) === Math.floor(2000 * 0.90), String(discountedPrice(2000, 16)));
 check('tier 3 discount matches buy_item()', discountedPrice(2000, 36) === Math.floor(2000 * 0.85), String(discountedPrice(2000, 36)));
 check('a free item stays free at every tier', discountedPrice(0, 40) === 0);
+
+console.log('\nVIP club — level-only tiers (mirror vip_tier_of() in supabase/vip.sql)');
+check('VIP_MIN_LEVEL is 5', VIP_MIN_LEVEL === 5);
+check('level 4 is not VIP', vipTier(4) === 0 && !isVipEligible(asProfile(4)));
+check('level 5 is Bronze', vipTier(5) === 1 && isVipEligible(asProfile(5)));
+check('level 11 is still Bronze', vipTier(11) === 1);
+check('level 12 is Silver', vipTier(12) === 2);
+check('level 21 is still Silver', vipTier(21) === 2);
+check('level 22 is Gold', vipTier(22) === 3);
+check('level 34 is still Gold', vipTier(34) === 3);
+check('level 35 is Diamond', vipTier(35) === 4);
+check('tier names', vipTierName(1) === 'Bronze' && vipTierName(4) === 'Diamond');
+check('nextVipTier at level 5 points to Silver@12', nextVipTier(5)?.tier === 2 && nextVipTier(5)?.atLevel === 12);
+check('nextVipTier at Diamond is null', nextVipTier(40) === null);
+check('daily bonus rises with tier',
+  VIP_TIER_PERKS[1].dailyBonus < VIP_TIER_PERKS[2].dailyBonus
+  && VIP_TIER_PERKS[2].dailyBonus < VIP_TIER_PERKS[3].dailyBonus
+  && VIP_TIER_PERKS[3].dailyBonus < VIP_TIER_PERKS[4].dailyBonus);
+check('cashback only from Silver up', VIP_TIER_PERKS[1].cashbackPct === 0 && VIP_TIER_PERKS[2].cashbackPct > 0);
+check('stipend only from Gold up', VIP_TIER_PERKS[2].weeklyStipend === 0 && VIP_TIER_PERKS[3].weeklyStipend > 0);
 
 console.log('\nVIP — level milestones');
 check('milestones land on multiples of 5', MILESTONE_EVERY === 5);

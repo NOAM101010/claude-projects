@@ -166,12 +166,40 @@ export const ITEMS: ShopItem[] = [
   { id: 'cn_diamond', category: 'chains', name: { he: 'שרשרת יהלום', en: 'Diamond Chain' }, rarity: 'legendary', price: 22000, icon: '💠', payload: { chain: 'diamond' } },
   { id: 'dl_jade', category: 'dealers', name: { he: 'דילר ירקן', en: 'Jade Dealer' }, rarity: 'epic', price: 8000, icon: '🟢', payload: { dealerSkin: 'dl-jade' } },
   { id: 'dl_crimson', category: 'dealers', name: { he: 'דילר ארגמן', en: 'Crimson Dealer' }, rarity: 'legendary', price: 22000, icon: '🍷', payload: { dealerSkin: 'dl-crimson' } },
+
+  // ==== Stage O — VIP tier-exclusive cosmetics ================================
+  // Never bought. Owned the moment the player's VIP tier (from level) reaches
+  // `vipTier`. price:0 is nominal — the shop never charges for these.
+  // ---- frames ----
+  { id: 'fr_vip_bronze', category: 'frames', name: { he: 'מסגרת VIP ברונזה', en: 'VIP Bronze Frame' }, rarity: 'epic', price: 0, icon: '🥉', payload: { frame: 'fr-vip-bronze' }, vipTier: 1 },
+  { id: 'fr_vip_silver', category: 'frames', name: { he: 'מסגרת VIP כסף', en: 'VIP Silver Frame' }, rarity: 'legendary', price: 0, icon: '🥈', payload: { frame: 'fr-vip-silver' }, vipTier: 2 },
+  { id: 'fr_vip_gold', category: 'frames', name: { he: 'מסגרת VIP זהב', en: 'VIP Gold Frame' }, rarity: 'legendary', price: 0, icon: '🥇', payload: { frame: 'fr-vip-gold' }, vipTier: 3 },
+  { id: 'fr_vip_diamond', category: 'frames', name: { he: 'מסגרת VIP יהלום', en: 'VIP Diamond Frame' }, rarity: 'mythic', price: 0, icon: '💎', payload: { frame: 'fr-vip-diamond' }, vipTier: 4 },
+  // ---- titles ----
+  { id: 'ttl_vip_bronze', category: 'title', name: { he: 'VIP ברונזה', en: 'VIP Bronze' }, rarity: 'epic', price: 0, icon: '🥉', payload: { title: 'ttl-vip-bronze' }, vipTier: 1 },
+  { id: 'ttl_vip_silver', category: 'title', name: { he: 'VIP כסף', en: 'VIP Silver' }, rarity: 'legendary', price: 0, icon: '🥈', payload: { title: 'ttl-vip-silver' }, vipTier: 2 },
+  { id: 'ttl_vip_gold', category: 'title', name: { he: 'VIP זהב', en: 'VIP Gold' }, rarity: 'legendary', price: 0, icon: '🥇', payload: { title: 'ttl-vip-gold' }, vipTier: 3 },
+  { id: 'ttl_vip_diamond', category: 'title', name: { he: 'VIP יהלום', en: 'VIP Diamond' }, rarity: 'mythic', price: 0, icon: '💎', payload: { title: 'ttl-vip-diamond' }, vipTier: 4 },
+  // ---- name colours ----
+  { id: 'nc_vip_bronze', category: 'nameColor', name: { he: 'שם VIP ברונזה', en: 'VIP Bronze Name' }, rarity: 'epic', price: 0, icon: '🥉', payload: { nameColor: '#cd8b5e' }, vipTier: 1 },
+  { id: 'nc_vip_silver', category: 'nameColor', name: { he: 'שם VIP כסף', en: 'VIP Silver Name' }, rarity: 'legendary', price: 0, icon: '🥈', payload: { nameColor: '#cfd8e3' }, vipTier: 2 },
+  { id: 'nc_vip_gold', category: 'nameColor', name: { he: 'שם VIP זהב', en: 'VIP Gold Name' }, rarity: 'legendary', price: 0, icon: '🥇', payload: { nameColor: '#f4cf6b' }, vipTier: 3 },
+  { id: 'nc_vip_diamond', category: 'nameColor', name: { he: 'שם VIP יהלום', en: 'VIP Diamond Name' }, rarity: 'mythic', price: 0, icon: '💎', payload: { nameColor: '#8fe3f0' }, vipTier: 4 },
+  // ---- Diamond-only legendary table + victory ----
+  { id: 'tb_vip_diamond', category: 'tables', name: { he: 'שולחן VIP יהלום', en: 'VIP Diamond Table' }, rarity: 'mythic', price: 0, icon: '💎', payload: { table: 'tb-vip-diamond' }, vipTier: 4 },
+  { id: 'vc_vip_diamond', category: 'victory', name: { he: 'ניצחון VIP יהלום', en: 'VIP Diamond Victory' }, rarity: 'mythic', price: 0, icon: '💎', payload: { victory: 'vc-vip-diamond' }, vipTier: 4 },
 ];
 
 /** Titles unlocked by an achievement are owned the moment that achievement is
  *  earned — no purchase, no `user_items` row. Everything else follows normal
  *  ownership. Bought titles still need to be in `owned`. */
-export const isItemOwned = (item: ShopItem, owned: string[], achievements: string[]): boolean => {
+export const isItemOwned = (
+  item: ShopItem,
+  owned: string[],
+  achievements: string[],
+  playerVipTier = 0,
+): boolean => {
+  if (item.vipTier) return playerVipTier >= item.vipTier;
   if (item.unlockedBy) return achievements.includes(item.unlockedBy) || owned.includes(item.id);
   return owned.includes(item.id);
 };

@@ -172,29 +172,31 @@ export const XP_REWARDS = {
 };
 
 /* -------------------------------------------------------------------------- */
-/* VIP tiers: built on the existing level/XP ladder, not a separate currency. */
-/* Every tier is a permanent shop discount; buy_item() re-derives the same    */
-/* thresholds server-side so the discount can never be spoofed client-side.   */
+/* Shop discount ladder: built on the existing level/XP ladder, not a separate */
+/* currency. Every level band is a permanent shop discount (every player gets  */
+/* >=5%); buy_item() re-derives the same thresholds server-side so the         */
+/* discount can never be spoofed client-side. This is NOT the VIP club — see   */
+/* src/data/vip.ts for VIP tiers/perks. */
 /* -------------------------------------------------------------------------- */
-export interface VipTier {
+export interface ShopDiscountTier {
   tier: 1 | 2 | 3;
   name: { he: string; en: string };
   minLevel: number;
   shopDiscount: number;
 }
 
-export const VIP_TIERS: VipTier[] = [
-  { tier: 1, name: { he: 'VIP ברונזה', en: 'VIP Bronze' }, minLevel: 1, shopDiscount: 0.05 },
-  { tier: 2, name: { he: 'VIP כסף', en: 'VIP Silver' }, minLevel: 16, shopDiscount: 0.10 },
-  { tier: 3, name: { he: 'VIP זהב', en: 'VIP Gold' }, minLevel: 36, shopDiscount: 0.15 },
+export const SHOP_DISCOUNT_TIERS: ShopDiscountTier[] = [
+  { tier: 1, name: { he: 'ברונזה', en: 'Bronze' }, minLevel: 1, shopDiscount: 0.05 },
+  { tier: 2, name: { he: 'כסף', en: 'Silver' }, minLevel: 16, shopDiscount: 0.10 },
+  { tier: 3, name: { he: 'זהב', en: 'Gold' }, minLevel: 36, shopDiscount: 0.15 },
 ];
 
-export const vipTierOf = (level: number): VipTier =>
-  [...VIP_TIERS].reverse().find((t) => level >= t.minLevel) ?? VIP_TIERS[0];
+export const shopDiscountTier = (level: number): ShopDiscountTier =>
+  [...SHOP_DISCOUNT_TIERS].reverse().find((t) => level >= t.minLevel) ?? SHOP_DISCOUNT_TIERS[0];
 
 /** Mirrors the discount buy_item() applies server-side — for display and affordability checks only. */
 export const discountedPrice = (price: number, level: number) =>
-  Math.floor(price * (1 - vipTierOf(level).shopDiscount));
+  Math.floor(price * (1 - shopDiscountTier(level).shopDiscount));
 
 /** Levels between one milestone reward and the next. */
 export const MILESTONE_EVERY = 5;
@@ -206,7 +208,7 @@ export const MILESTONE_EVERY = 5;
  * computes and grants the real thing.
  */
 export function milestoneReward(level: number) {
-  const tier = vipTierOf(level).tier;
+  const tier = shopDiscountTier(level).tier;
   const chips = level * 80;
   const cosmeticChance = tier === 1 ? 0.15 : tier === 2 ? 0.35 : 0.6;
   const rarityPool: Rarity[] = tier === 1 ? ['rare'] : tier === 2 ? ['rare', 'epic'] : ['epic', 'legendary'];

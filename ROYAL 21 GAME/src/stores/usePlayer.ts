@@ -24,7 +24,7 @@ import {
 } from '@/services/localStore';
 import { useUI } from './useUI';
 import { useSettings } from './useSettings';
-import { shouldMarkEverVip } from '@/data/vip';
+import { isVipEligible, vipTier } from '@/data/vip';
 import type { AvatarConfig, GameKey, Profile, Stats } from '@/types';
 
 interface PlayerState extends SaveData {
@@ -406,19 +406,13 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   },
 
   addChips: (delta, opts) => {
-    let becameVip = false;
     set((s) => {
       const chips = Math.max(0, Math.round(s.profile.chips + delta));
-      const nextProfile = withAdminFloor({ ...s.profile, chips });
-      // Sticky VIP: the moment both thresholds are met, flip everVip on and
-      // keep it there. Loses no chips or level to demote them later.
-      if (shouldMarkEverVip(nextProfile)) { nextProfile.everVip = true; becameVip = true; }
       return {
-        profile: nextProfile,
+        profile: withAdminFloor({ ...s.profile, chips }),
         stats: delta > 0 ? { ...s.stats, chipsWon: s.stats.chipsWon + delta } : s.stats,
       };
     });
-    if (becameVip) get().grantEvent('ev_vip');
     if (delta > 0 && !opts?.silent) {
       audio.play('chip');
       haptic('chip');
@@ -439,9 +433,8 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
     const s = get();
     const { level, xp, levelsGained } = applyXp(s.profile.level, s.profile.xp, gain);
     set({ profile: { ...s.profile, level, xp } });
-    // A level-up can be the thing that crosses the VIP bar (chips already high).
-    if (levelsGained > 0 && shouldMarkEverVip(get().profile)) {
-      set((st) => ({ profile: { ...st.profile, everVip: true } }));
+    // A level-up can be the thing that crosses the VIP bar (level 5).
+    if (levelsGained > 0 && isVipEligible(get().profile)) {
       get().grantEvent('ev_vip');
     }
     if (levelsGained > 0) {
@@ -582,6 +575,10 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
     const item = itemById(itemId);
     const s = get();
     if (!item) return { ok: false, reason: 'unknown-item' as const };
+    // VIP cosmetics are never bought — ownership is derived from the player's tier.
+    if (item.vipTier) {
+      return { ok: false, reason: vipTier(s.profile.level) >= item.vipTier ? 'owned' : 'vip-locked' };
+    }
     if (s.owned.includes(itemId)) return { ok: false, reason: 'owned' as const };
     const price = discountedPrice(item.price, s.profile.level);
     if (s.profile.chips < price) {
@@ -684,11 +681,13 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   equip: (itemId) => {
     const item = itemById(itemId);
     const s = get();
-    // A title can be unlocked by an achievement — owned without a `user_items`
-    // row. Everything else must actually be in `owned`.
-    const owns = item?.unlockedBy
-      ? (s.achievements.includes(item.unlockedBy) || s.owned.includes(itemId))
-      : s.owned.includes(itemId);
+    // Ownership can be derived: a title unlocked by an achievement, or a VIP
+    // cosmetic unlocked by reaching its tier. Everything else must be in `owned`.
+    const owns = item?.vipTier
+      ? vipTier(s.profile.level) >= item.vipTier
+      : item?.unlockedBy
+        ? (s.achievements.includes(item.unlockedBy) || s.owned.includes(itemId))
+        : s.owned.includes(itemId);
     if (!item || !owns) return;
     const { emote, decorId, ...rest } = item.payload;
     if (emote || decorId) return; // emotes live in the inventory; decor toggles via toggleDecor

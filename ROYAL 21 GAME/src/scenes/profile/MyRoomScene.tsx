@@ -14,7 +14,7 @@ import { useSocial } from '@/stores/useSocial';
 import { useT } from '@/hooks/useT';
 import { ACHIEVEMENTS, TIER_STYLE } from '@/data/achievements';
 import { MILESTONE_EVERY } from '@/data/economy';
-import { VIP_MIN_LEVEL, VIP_MIN_CHIPS, isVipEligible, vipProgress } from '@/data/vip';
+import { VIP_MIN_LEVEL, isVipEligible, vipProgress, vipTier, vipTierName, nextVipTier } from '@/data/vip';
 import { roomBackgroundOf } from '@/data/roomThemes';
 import { profileService, rankOf, xpForLevel } from '@/services/profileService';
 import { formatPlaytime } from '@/services/playtimeService';
@@ -140,6 +140,8 @@ export default function MyRoomScene() {
   const rank = rankOf(profile.level);
   const vip = isVipEligible(me);
   const vipProg = vipProgress(me);
+  const meVipTier = vipTier(me.level);
+  const meNextTier = nextVipTier(me.level);
   const nextMilestone = (Math.floor(me.lastMilestoneClaimed / MILESTONE_EVERY) + 1) * MILESTONE_EVERY;
 
   /* head-to-head, shown only for a friend's room (§86) — pulled from the real
@@ -229,7 +231,7 @@ export default function MyRoomScene() {
                     color: '#1a1206',
                   }}
                 >
-                  👑 VIP
+                  👑 {vipTierName(meVipTier)}
                 </span>
               )}
             </div>
@@ -239,11 +241,16 @@ export default function MyRoomScene() {
                 <div className="text-[42px] leading-none">👑</div>
                 <div className="flex-1">
                   <b className="block text-[14px]" style={{ color: 'var(--gold-hi)' }}>
-                    {t('profile.vipActive')}
+                    {t('profile.vipActive')} · {vipTierName(meVipTier)}
                   </b>
                   <p className="text-[11.5px] mt-0.5" style={{ color: 'var(--muted)' }}>
                     {t('profile.vipPerks')}
                   </p>
+                  {meNextTier && (
+                    <p className="text-[11px] mt-1" style={{ color: 'var(--dim)' }}>
+                      {t('vip.tierNext', { name: vipTierName(meNextTier.tier), level: meNextTier.atLevel })}
+                    </p>
+                  )}
                 </div>
               </div>
             ) : (
@@ -260,15 +267,6 @@ export default function MyRoomScene() {
                       </b>
                     </div>
                     <Meter value={me.level} max={VIP_MIN_LEVEL} />
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-[12px] mb-1">
-                      <span>{vipProg.chips.done ? '✅' : '⏳'} {t('vip.reqChips')}</span>
-                      <b className="num" style={{ color: vipProg.chips.done ? 'var(--gold-hi)' : 'var(--muted)' }}>
-                        {me.chips.toLocaleString()} / {VIP_MIN_CHIPS.toLocaleString()}
-                      </b>
-                    </div>
-                    <Meter value={me.chips} max={VIP_MIN_CHIPS} />
                   </div>
                 </div>
               </>

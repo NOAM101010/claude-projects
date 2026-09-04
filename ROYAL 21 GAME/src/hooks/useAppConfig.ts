@@ -8,6 +8,7 @@ import {
   REFERRER_TIERS,
   STREAK_REWARD,
 } from '@/data/economy';
+import { VIP_TIER_PERKS } from '@/data/vip';
 
 /**
  * Live economy constants (public.app_config), with the hard-coded values in
@@ -30,6 +31,12 @@ export interface AppConfig {
   baccaratBankerPayout: number;
   /** Reward for a given streak day — reads the live ladder, else STREAK_REWARD. */
   streakReward: (day: number) => number;
+  /** VIP daily bonus for a tier (1..4) — live `vip_daily`, else VIP_TIER_PERKS. */
+  vipDaily: (tier: 1 | 2 | 3 | 4) => number;
+  /** VIP weekly cashback fraction for a tier — live `vip_cashback_pct`, else perks. */
+  vipCashbackPct: (tier: 1 | 2 | 3 | 4) => number;
+  /** VIP weekly stipend for a tier — live `vip_stipend`, else VIP_TIER_PERKS. */
+  vipStipend: (tier: 1 | 2 | 3 | 4) => number;
 }
 
 const DEFAULT_BANKER_PAYOUT = 0.95;
@@ -42,6 +49,18 @@ const FALLBACK: AppConfig = {
   referrerTiers: REFERRER_TIERS,
   baccaratBankerPayout: DEFAULT_BANKER_PAYOUT,
   streakReward: STREAK_REWARD,
+  vipDaily: (tier) => VIP_TIER_PERKS[tier].dailyBonus,
+  vipCashbackPct: (tier) => VIP_TIER_PERKS[tier].cashbackPct,
+  vipStipend: (tier) => VIP_TIER_PERKS[tier].weeklyStipend,
+};
+
+/** Read one numeric field of an object-valued config key ({"1": 10000, ...}). */
+const objNum = (raw: unknown, key: string | number, fallback: number): number => {
+  if (raw && typeof raw === 'object') {
+    const v = (raw as Record<string, unknown>)[String(key)];
+    if (typeof v === 'number' && Number.isFinite(v)) return v;
+  }
+  return fallback;
 };
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
@@ -72,6 +91,9 @@ function build(raw: Record<string, unknown>): AppConfig {
       const v = ladder[key];
       return typeof v === 'number' ? v : STREAK_REWARD(day);
     },
+    vipDaily: (tier) => objNum(raw.vip_daily, tier, VIP_TIER_PERKS[tier].dailyBonus),
+    vipCashbackPct: (tier) => objNum(raw.vip_cashback_pct, tier, VIP_TIER_PERKS[tier].cashbackPct),
+    vipStipend: (tier) => objNum(raw.vip_stipend, tier, VIP_TIER_PERKS[tier].weeklyStipend),
   };
 }
 

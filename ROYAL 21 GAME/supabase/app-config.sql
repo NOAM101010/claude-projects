@@ -16,6 +16,9 @@
 --   max_mission_reward     20000                      MAX_MISSION_REWARD
 --   referrer_tiers         [3000, 7000, 15000]        REFERRER_TIERS
 --   baccarat_banker_payout 0.95  (0..1)               DEFAULT_BANKER_PAYOUT
+--   vip_daily              {"1":10000,...}            VIP_TIER_PERKS[].dailyBonus
+--   vip_cashback_pct       {"2":0.03,...}             VIP_TIER_PERKS[].cashbackPct
+--   vip_stipend            {"3":25000,"4":75000}      VIP_TIER_PERKS[].weeklyStipend
 -- =============================================================================
 
 create table if not exists public.app_config (
@@ -43,7 +46,10 @@ insert into public.app_config (key, value) values
   ('mission_all_done_bonus', to_jsonb(5000)),
   ('max_mission_reward',     to_jsonb(20000)),
   ('referrer_tiers',         '[3000,7000,15000]'::jsonb),
-  ('baccarat_banker_payout', to_jsonb(0.95))
+  ('baccarat_banker_payout', to_jsonb(0.95)),
+  ('vip_daily',              '{"1":10000,"2":20000,"3":40000,"4":80000}'::jsonb),
+  ('vip_cashback_pct',       '{"1":0,"2":0.03,"3":0.05,"4":0.10}'::jsonb),
+  ('vip_stipend',            '{"3":25000,"4":75000}'::jsonb)
 on conflict (key) do nothing;
 
 -- --- admin_set_config(key, value) -----------------------------------------
@@ -86,7 +92,7 @@ begin
           end if;
         end loop;
 
-      when 'streak_rewards' then
+      when 'streak_rewards', 'vip_daily', 'vip_cashback_pct', 'vip_stipend' then
         if jsonb_typeof(p_value) <> 'object' then raise exception 'bad'; end if;
         for v_field in select value as v from jsonb_each(p_value) loop
           if jsonb_typeof(v_field.v) <> 'number' or (v_field.v::text::numeric) < 0 then
