@@ -1,4 +1,5 @@
 import { Avatar } from './Avatar';
+import { PlayerName } from './PlayerName';
 import { useT } from '@/hooks/useT';
 import type { Friend, Presence } from '@/types';
 
@@ -24,7 +25,7 @@ export function PlayerBadge({ friend, size = 40, onClick, right }: {
       <button className="flex items-center gap-3 flex-1 text-start press" onClick={onClick}>
         <Avatar config={friend.avatar} size={size} level={friend.level} presence={friend.presence} id={friend.id} />
         <span className="min-w-0">
-          <b className="block truncate" style={{ fontFamily: 'var(--font-display)', fontSize: 14 }}>{friend.username}</b>
+          <PlayerName username={friend.username} title={friend.title} nameColor={friend.nameColor} size={14} />
           <span className="text-[11.5px]" style={{ color: 'var(--muted)' }}>
             {t('common.level')} {friend.level} · {label}
           </span>

@@ -552,10 +552,14 @@ export default function PokerScene() {
 
         {/* --------------------------- the felt --------------------------- */}
         <GlassPanel gold className="relative p-3" style={{ aspectRatio: '1.5', minHeight: 340 }}>
-          <div
-            className="absolute inset-4 rounded-[50%]"
-            style={{ background: TABLE_FELT[room.config?.tableColor ?? 'green'], border: '2px solid rgba(227,178,60,.35)' }}
-          />
+          {room.config?.tableSkin ? (
+            <div className={`absolute inset-4 rounded-[50%] table-felt ${room.config.tableSkin}`} />
+          ) : (
+            <div
+              className="absolute inset-4 rounded-[50%]"
+              style={{ background: TABLE_FELT[room.config?.tableColor ?? 'green'], border: '2px solid rgba(227,178,60,.35)' }}
+            />
+          )}
 
           {/* pot + community */}
           <div className="absolute inset-x-0 top-[30%] flex flex-col items-center gap-2 z-10">

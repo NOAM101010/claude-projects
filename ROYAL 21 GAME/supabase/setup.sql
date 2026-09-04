@@ -219,8 +219,12 @@ create table if not exists public.items (
   payload  jsonb not null default '{}'::jsonb,
   -- client-side display flags (mirrored from src/data/items.ts); see buy-pack.sql
   daily_rarity_only  boolean not null default false,
-  rare_rotation_only boolean not null default false
+  rare_rotation_only boolean not null default false,
+  -- Stage P: achievement id that unlocks this item for free (titles). Ownership
+  -- is then derived on the client from profiles.achievements — no user_items row.
+  unlocked_by text
 );
+alter table public.items add column if not exists unlocked_by text;
 
 create table if not exists public.user_items (
   user_id     uuid not null references public.profiles(id) on delete cascade,
@@ -300,7 +304,7 @@ begin
 
   insert into public.player_stats (user_id) values (new.id) on conflict do nothing;
 
-  foreach starter in array array['cf_classic','bk_crimson','ch_classic','tb_green','dl_house','em_laugh','em_cool','em_angry','em_shake','cn_classic','sl_classic','rb_default']
+  foreach starter in array array['cf_classic','bk_crimson','ch_classic','tb_green','dl_house','em_laugh','em_cool','em_angry','em_shake','cn_classic','sl_classic','rb_default','ttl_rookie']
   loop
     insert into public.user_items (user_id, item_id)
     select new.id, starter where exists (select 1 from public.items where id = starter)
@@ -844,6 +848,43 @@ insert into public.items (id, category, name, rarity, price, icon, payload) valu
   ('ch_crimson', 'chips', '{"he":"צ׳יפים ארגמניים","en":"Crimson Chips"}'::jsonb, 'epic', 8000, '🍷', '{"chipSkin":"ck-crimson"}'::jsonb),
   ('ch_frost', 'chips', '{"he":"צ׳יפי כפור","en":"Frost Chips"}'::jsonb, 'rare', 2000, '❄️', '{"chipSkin":"ck-frost"}'::jsonb),
   ('ch_rosegold', 'chips', '{"he":"צ׳יפי זהב ורוד","en":"Rose Gold Chips"}'::jsonb, 'rare', 2000, '🌹', '{"chipSkin":"ck-rosegold"}'::jsonb)
+on conflict (id) do update set
+  category = excluded.category, name = excluded.name, rarity = excluded.rarity,
+  price = excluded.price, icon = excluded.icon, payload = excluded.payload;
+
+-- Stage P — titles (bought), name colours, and sparse-category fill.
+-- Achievement-unlocked titles are NOT seeded: they are client-only, ownership
+-- derived from profiles.achievements. See supabase/RUN-THIS-NEXT.sql.
+insert into public.items (id, category, name, rarity, price, icon, payload) values
+  ('ttl_rookie', 'title', '{"he":"טירון","en":"Rookie"}'::jsonb, 'common', 0, '🃏', '{"title":"ttl-rookie"}'::jsonb),
+  ('ttl_regular', 'title', '{"he":"האורח הקבוע","en":"The Regular"}'::jsonb, 'rare', 2000, '🪑', '{"title":"ttl-regular"}'::jsonb),
+  ('ttl_lucky', 'title', '{"he":"בר מזל","en":"Lucky Charm"}'::jsonb, 'rare', 2000, '🍀', '{"title":"ttl-lucky"}'::jsonb),
+  ('ttl_shark', 'title', '{"he":"הכריש","en":"The Shark"}'::jsonb, 'epic', 8000, '🦈', '{"title":"ttl-shark"}'::jsonb),
+  ('ttl_allin', 'title', '{"he":"כל-אין","en":"All-In"}'::jsonb, 'epic', 8000, '💥', '{"title":"ttl-allin"}'::jsonb),
+  ('ttl_highroller', 'title', '{"he":"מהמר על","en":"High Roller"}'::jsonb, 'legendary', 22000, '💎', '{"title":"ttl-highroller"}'::jsonb),
+  ('ttl_legend', 'title', '{"he":"האגדה","en":"The Legend"}'::jsonb, 'mythic', 55000, '🌟', '{"title":"ttl-legend"}'::jsonb),
+  ('nc_gold', 'nameColor', '{"he":"שם זהב","en":"Gold Name"}'::jsonb, 'epic', 8000, '🟨', '{"nameColor":"#f8e3a8"}'::jsonb),
+  ('nc_jade', 'nameColor', '{"he":"שם ירקן","en":"Jade Name"}'::jsonb, 'rare', 2000, '🟩', '{"nameColor":"#4fd39a"}'::jsonb),
+  ('nc_crimson', 'nameColor', '{"he":"שם ארגמן","en":"Crimson Name"}'::jsonb, 'rare', 2000, '🟥', '{"nameColor":"#e8807d"}'::jsonb),
+  ('nc_sky', 'nameColor', '{"he":"שם תכלת","en":"Sky Name"}'::jsonb, 'rare', 2000, '🟦', '{"nameColor":"#7cc4f0"}'::jsonb),
+  ('nc_violet', 'nameColor', '{"he":"שם סגול","en":"Violet Name"}'::jsonb, 'epic', 8000, '🟪', '{"nameColor":"#b98cff"}'::jsonb),
+  ('nc_rosegold', 'nameColor', '{"he":"שם זהב-ורוד","en":"Rose Gold Name"}'::jsonb, 'epic', 8000, '🌷', '{"nameColor":"#f2b6c6"}'::jsonb),
+  ('nc_amber', 'nameColor', '{"he":"שם ענבר","en":"Amber Name"}'::jsonb, 'rare', 2000, '🟧', '{"nameColor":"#f0a94a"}'::jsonb),
+  ('nc_turquoise', 'nameColor', '{"he":"שם טורקיז","en":"Turquoise Name"}'::jsonb, 'rare', 2000, '🩵', '{"nameColor":"#45d8c8"}'::jsonb),
+  ('nc_cream', 'nameColor', '{"he":"שם שמנת","en":"Cream Name"}'::jsonb, 'rare', 2000, '🤍', '{"nameColor":"#efe7d0"}'::jsonb),
+  ('nc_neon', 'nameColor', '{"he":"שם ניאון","en":"Neon Name"}'::jsonb, 'epic', 8000, '💚', '{"nameColor":"#5ef2a0"}'::jsonb),
+  ('gl_aviator', 'glasses', '{"he":"אבירייטור","en":"Aviators"}'::jsonb, 'rare', 2000, '🕶️', '{"glasses":"aviator"}'::jsonb),
+  ('gl_rimless', 'glasses', '{"he":"ללא מסגרת","en":"Rimless"}'::jsonb, 'epic', 8000, '👓', '{"glasses":"rimless"}'::jsonb),
+  ('gl_visor', 'glasses', '{"he":"מגן שמש","en":"Sun Visor"}'::jsonb, 'rare', 2000, '🥽', '{"glasses":"visor"}'::jsonb),
+  ('gl_led', 'glasses', '{"he":"משקפי LED","en":"LED Shades"}'::jsonb, 'legendary', 22000, '💡', '{"glasses":"led"}'::jsonb),
+  ('wt_rose', 'watches', '{"he":"שעון זהב ורוד","en":"Rose Gold Watch"}'::jsonb, 'epic', 8000, '⌚', '{"watch":"rose"}'::jsonb),
+  ('wt_jade', 'watches', '{"he":"שעון ירקן","en":"Jade Watch"}'::jsonb, 'rare', 2000, '⌚', '{"watch":"jade"}'::jsonb),
+  ('wt_onyx', 'watches', '{"he":"שעון אוניקס","en":"Onyx Watch"}'::jsonb, 'legendary', 22000, '⌚', '{"watch":"onyx"}'::jsonb),
+  ('cn_rose', 'chains', '{"he":"שרשרת זהב ורוד","en":"Rose Gold Chain"}'::jsonb, 'epic', 8000, '📿', '{"chain":"rose"}'::jsonb),
+  ('cn_onyx', 'chains', '{"he":"שרשרת אוניקס","en":"Onyx Chain"}'::jsonb, 'rare', 2000, '🔗', '{"chain":"onyx"}'::jsonb),
+  ('cn_diamond', 'chains', '{"he":"שרשרת יהלום","en":"Diamond Chain"}'::jsonb, 'legendary', 22000, '💠', '{"chain":"diamond"}'::jsonb),
+  ('dl_jade', 'dealers', '{"he":"דילר ירקן","en":"Jade Dealer"}'::jsonb, 'epic', 8000, '🟢', '{"dealerSkin":"dl-jade"}'::jsonb),
+  ('dl_crimson', 'dealers', '{"he":"דילר ארגמן","en":"Crimson Dealer"}'::jsonb, 'legendary', 22000, '🍷', '{"dealerSkin":"dl-crimson"}'::jsonb)
 on conflict (id) do update set
   category = excluded.category, name = excluded.name, rarity = excluded.rarity,
   price = excluded.price, icon = excluded.icon, payload = excluded.payload;

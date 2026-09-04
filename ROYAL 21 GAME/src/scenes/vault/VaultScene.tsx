@@ -8,7 +8,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Tabs } from '@/components/ui/Tabs';
 import { LightPool } from '@/components/effects/LightPool';
 import { ItemPreview } from './ItemPreview';
-import { ITEMS, itemById, RARITY_ORDER } from '@/data/items';
+import { ITEMS, itemById, RARITY_ORDER, isItemOwned } from '@/data/items';
 import { discountedPrice } from '@/data/economy';
 import { todaysDailyOffers, todaysSpecialItem, PACKS, packPricing, timeUntilNextRotation, DAILY_DISCOUNT } from '@/data/shopOffers';
 import { usePlayer } from '@/stores/usePlayer';
@@ -20,7 +20,7 @@ import { chipGlyphOf } from '@/components/game/CoinFace';
 import type { ShopItem } from '@/types';
 import type { Pack } from '@/data/shopOffers';
 
-const CATEGORIES = ['deals', 'all', 'cards', 'backs', 'chips', 'tables', 'clothing', 'glasses', 'watches', 'chains', 'frames', 'emotes', 'victory', 'dealers', 'coins', 'reels', 'backgrounds'] as const;
+const CATEGORIES = ['deals', 'all', 'cards', 'backs', 'chips', 'tables', 'clothing', 'glasses', 'watches', 'chains', 'frames', 'emotes', 'victory', 'dealers', 'coins', 'reels', 'backgrounds', 'title', 'nameColor'] as const;
 type Category = (typeof CATEGORIES)[number];
 
 /** Real product categories, in shop order — used to group & sort the "All" tab. */
@@ -32,6 +32,7 @@ export default function VaultScene() {
   const { t, lang } = useT();
   const profile = usePlayer((s) => s.profile);
   const owned = usePlayer((s) => s.owned);
+  const achievements = usePlayer((s) => s.achievements);
   const buy = usePlayer((s) => s.buy);
   const buyPack = usePlayer((s) => s.buyPack);
   const equip = usePlayer((s) => s.equip);
@@ -143,8 +144,9 @@ export default function VaultScene() {
 
   /** One display case. Shared by the flat grid and the grouped "All" tab. */
   const renderItemCard = (item: ShopItem, index: number) => {
-    const has = owned.includes(item.id);
+    const has = isItemOwned(item, owned, achievements);
     const worn = has && isEquipped(item);
+    const lockedByAch = !!item.unlockedBy && !has;
     const price = discountedPrice(item.price, profile.level);
     const discounted = price < item.price;
     return (
@@ -173,9 +175,14 @@ export default function VaultScene() {
         {item.desc && (
           <p className="text-[10px] mt-1 opacity-70 min-h-5" style={{ lineHeight: 1.3 }}>{item.desc[lang]}</p>
         )}
+        {(item.category === 'tables' || item.category === 'backgrounds') && (
+          <p className="text-[9px] mt-1" style={{ color: 'var(--muted)' }}>{t('vault.shownWhenHost')}</p>
+        )}
         <div className="mt-1.5 text-[12px] num font-bold flex items-center justify-center gap-1.5" style={{ color: has ? 'var(--jade-hi)' : 'var(--gold-hi)' }}>
           {has ? (
             t('vault.owned')
+          ) : lockedByAch ? (
+            <span className="text-[10px] font-normal opacity-80" style={{ color: 'var(--muted)' }}>🔒 {t('vault.titleLocked')}</span>
           ) : item.price === 0 ? '—' : (
             <>
               {discounted && <span className="line-through opacity-50 font-normal">{fmt(item.price)}</span>}
@@ -436,11 +443,15 @@ export default function VaultScene() {
             <div className="rounded-[var(--r-md)] p-4 mb-4 grid place-items-center" style={{ background: 'rgba(0,0,0,.35)', minHeight: 180 }}>
               <ItemPreview item={selected} />
             </div>
-            {owned.includes(selected.id) ? (
+            {isItemOwned(selected, owned, achievements) ? (
               <GameButton tone={isEquipped(selected) ? 'ghost' : 'gold'} size="lg" block
                 disabled={isEquipped(selected)}
                 onClick={() => { equip(selected.id); setSelected(null); }}>
                 {isEquipped(selected) ? t('vault.equipped') : t('vault.equip')}
+              </GameButton>
+            ) : selected.unlockedBy ? (
+              <GameButton tone="ghost" size="lg" block disabled>
+                🔒 {t('vault.titleLocked')}
               </GameButton>
             ) : (
               <GameButton tone="gold" size="lg" block disabled={profile.chips < discountedPrice(selected.price, profile.level)}

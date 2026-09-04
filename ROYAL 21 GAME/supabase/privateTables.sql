@@ -12,11 +12,15 @@
 --     "maxSeats": 6,
 --     "actionSeconds": 20,
 --     "passwordHash": "..." | null,
---     "isVip": false
+--     "isVip": false,
+--     "tableSkin": "tb-gold" | null,   -- Stage P: the host's equipped felt skin
+--     "bgSkin": "rb-emerald" | null    -- Stage P: the host's equipped room backdrop
 --   }
 --
 -- Only the host writes config, and only at creation time — no policy needed
--- for updates because clients never patch it after that.
+-- for updates because clients never patch it after that. tableSkin / bgSkin are
+-- stamped by roomsService.create() from the host's profiles.equipped; no DDL
+-- (still the same jsonb column).
 -- =============================================================================
 
 alter table public.rooms

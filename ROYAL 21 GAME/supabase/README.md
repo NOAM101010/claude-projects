@@ -45,6 +45,7 @@ Each file's own header says "run after X"; this is the full dependency-sorted li
 | 26 | **`playtime.sql`** | `profiles.playtime_seconds` + `add_playtime(int)` — lifetime foreground seconds, clamped 1h/call | setup |
 | 27 | **`direct-messages.sql`** | `direct_messages` table + RLS (friends-only, block-aware) + `mark_dm_read(uuid)` + rate-limit trigger + realtime — 1:1 friend chat (Stage F) | setup |
 | 28 | **`buy-pack.sql`** | `public.bundles` (server-side pack catalogue, RLS select) + `buy_pack(text)` — atomic bundle purchase that reads item list + discount from `bundles` and actually charges the pack discount (replaces the old per-item loop) + `items.daily_rarity_only` / `items.rare_rotation_only` flag columns + Stage G item seed | setup |
+| 29 | **`RUN-THIS-NEXT.sql`** | Stage P — `items.unlocked_by text` (achievement id that unlocks a title for free; ownership derived client-side) + seed for bought titles, name colours, and glasses/watches/chains/dealers fill. Adds `title` / `nameColor` categories. `rooms.config` gains `tableSkin` / `bgSkin` — no DDL (jsonb), stamped by `roomsService.create`. | setup, buy-pack |
 
 `app-config.sql` and `admin-tools.sql` must come **after** `admin.sql`; put them
 after the `#17–19` files so the economy RPCs pick up `config_num()`. Re-running

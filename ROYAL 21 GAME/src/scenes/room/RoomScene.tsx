@@ -7,6 +7,7 @@ import { roomsService } from '@/services/roomsService';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GameButton } from '@/components/ui/GameButton';
 import { Avatar } from '@/components/social/Avatar';
+import { PlayerName } from '@/components/social/PlayerName';
 import { LightPool } from '@/components/effects/LightPool';
 import { Chip } from '@/components/game/Chip';
 import { useRoom } from '@/stores/useRoom';
@@ -186,7 +187,8 @@ export default function RoomScene() {
                 transition={{ type: 'spring', stiffness: 320, damping: 24 }}
               >
                 <Avatar config={member.avatar} size={44} level={member.level} presence={member.presence} id={`m-${member.userId}`} />
-                <b className="text-[12.5px]">{member.username}</b>
+                <PlayerName username={member.username} title={member.title} nameColor={member.nameColor} size={12.5} />
+
                 <span className="text-[10px]" style={{ color: member.isHost ? 'var(--gold)' : 'var(--dim)' }}>
                   {member.isHost ? t('rooms.host') : member.userId === profile.id ? t('rooms.you') : ''}
                 </span>

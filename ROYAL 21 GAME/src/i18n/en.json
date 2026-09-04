@@ -745,6 +745,8 @@
     "coinsHint": "Coin skins for the Coin Flip game — cosmetic only, they don't affect your odds.",
     "currencyCoinHint": "Game currency — swaps the chip symbol next to every balance, price and pot across the whole game (not in Coin Flip).",
     "chipsHint": "Chip stack skins — cosmetic only, seen on the table.",
+    "shownWhenHost": "Shown when you host a table",
+    "titleLocked": "Unlocked through an achievement",
     "categories": {
       "deals": "🔥 Deals",
       "all": "All",
@@ -763,7 +765,9 @@
       "coins": "Coins",
       "reels": "Slot machines",
       "backgrounds": "Backgrounds",
-      "decor": "Decor"
+      "decor": "Decor",
+      "title": "Titles",
+      "nameColor": "Name colour"
     },
     "rarity": {
       "common": "Common",

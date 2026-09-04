@@ -6,6 +6,8 @@ const SKINS: Record<string, { coat: string; tie: string; skin: string; hair: str
   'dl-house': { coat: '#20242e', tie: '#a8413e', skin: '#e0ab7f', hair: '#241a12' },
   'dl-noir': { coat: '#14161b', tie: '#8b8f98', skin: '#c78d5e', hair: '#1b1b1f' },
   'dl-royal': { coat: '#2c1d4a', tie: '#e3b23c', skin: '#f0c9a6', hair: '#4a3423' },
+  'dl-jade': { coat: '#123a2a', tie: '#4fd39a', skin: '#e0ab7f', hair: '#241a12' },
+  'dl-crimson': { coat: '#3d1220', tie: '#e8807d', skin: '#c78d5e', hair: '#1b1b1f' },
 };
 
 /**

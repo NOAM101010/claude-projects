@@ -14,7 +14,7 @@ import type { ShopItem } from '@/types';
 /** Every item is previewed as the thing it actually is (§92). */
 export function ItemPreview({ item, compact }: { item: ShopItem; compact?: boolean }) {
   const profile = usePlayer((s) => s.profile);
-  const { t } = useT();
+  const { t, lang } = useT();
   const size = compact ? 'sm' : 'md';
 
   switch (item.category) {
@@ -111,6 +111,27 @@ export function ItemPreview({ item, compact }: { item: ShopItem; compact?: boole
     case 'decor':
       // Room decor is icon-only in the shop; the icon carries all the identity.
       return <span style={{ fontSize: compact ? 44 : 72, lineHeight: 1 }}>{item.icon}</span>;
+    case 'title':
+      // Your name with this badge under it, exactly as it renders at the table.
+      return (
+        <div className="flex flex-col items-center leading-tight">
+          <b style={{ fontFamily: 'var(--font-display)', fontSize: compact ? 13 : 18, color: profile.equipped.nameColor ?? undefined }}>
+            {profile.username || 'ROYAL'}
+          </b>
+          <span style={{ fontSize: compact ? 9.5 : 13, color: 'var(--gold-hi)' }}>
+            {item.icon} {item.name[lang]}
+          </span>
+        </div>
+      );
+    case 'nameColor':
+      // Your name in this palette colour on the dark felt it will sit against.
+      return (
+        <div className="grid place-items-center rounded-[var(--r-xs)]" style={{ padding: compact ? '10px 14px' : '18px 26px', background: 'rgba(0,0,0,.4)' }}>
+          <b style={{ fontFamily: 'var(--font-display)', fontSize: compact ? 15 : 24, color: item.payload.nameColor ?? undefined }}>
+            {profile.username || 'ROYAL'}
+          </b>
+        </div>
+      );
     default:
       // clothing, glasses, watches, chains, frames — worn by your own avatar
       return (

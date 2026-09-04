@@ -125,7 +125,60 @@ export const ITEMS: ShopItem[] = [
   { id: 'ch_crimson', category: 'chips', name: { he: 'צ׳יפים ארגמניים', en: 'Crimson Chips' }, rarity: 'epic', price: 8000, icon: '🍷', payload: { chipSkin: 'ck-crimson' } },
   { id: 'ch_frost', category: 'chips', name: { he: 'צ׳יפי כפור', en: 'Frost Chips' }, rarity: 'rare', price: 2000, icon: '❄️', payload: { chipSkin: 'ck-frost' } },
   { id: 'ch_rosegold', category: 'chips', name: { he: 'צ׳יפי זהב ורוד', en: 'Rose Gold Chips' }, rarity: 'rare', price: 2000, icon: '🌹', payload: { chipSkin: 'ck-rosegold' } },
+
+  // ==== Stage P — titles ======================================================
+  // A short badge under your name. Some are bought; the last four unlock for free
+  // the moment their achievement is earned (ownership is derived — no row).
+  { id: 'ttl_rookie', category: 'title', name: { he: 'טירון', en: 'Rookie' }, rarity: 'common', price: 0, icon: '🃏', payload: { title: 'ttl-rookie' } },
+  { id: 'ttl_regular', category: 'title', name: { he: 'האורח הקבוע', en: 'The Regular' }, rarity: 'rare', price: 2000, icon: '🪑', payload: { title: 'ttl-regular' } },
+  { id: 'ttl_lucky', category: 'title', name: { he: 'בר מזל', en: 'Lucky Charm' }, rarity: 'rare', price: 2000, icon: '🍀', payload: { title: 'ttl-lucky' } },
+  { id: 'ttl_shark', category: 'title', name: { he: 'הכריש', en: 'The Shark' }, rarity: 'epic', price: 8000, icon: '🦈', payload: { title: 'ttl-shark' } },
+  { id: 'ttl_allin', category: 'title', name: { he: 'כל-אין', en: 'All-In' }, rarity: 'epic', price: 8000, icon: '💥', payload: { title: 'ttl-allin' } },
+  { id: 'ttl_highroller', category: 'title', name: { he: 'מהמר על', en: 'High Roller' }, rarity: 'legendary', price: 22000, icon: '💎', payload: { title: 'ttl-highroller' } },
+  { id: 'ttl_legend', category: 'title', name: { he: 'האגדה', en: 'The Legend' }, rarity: 'mythic', price: 55000, icon: '🌟', payload: { title: 'ttl-legend' } },
+  { id: 'ttl_bj_king', category: 'title', name: { he: "מלך הבלאק'ג'ק", en: 'Blackjack King' }, rarity: 'legendary', price: 0, icon: '👑', payload: { title: 'ttl-bj-king' }, unlockedBy: 'blackjack_master' },
+  { id: 'ttl_royal', category: 'title', name: { he: 'רויאל', en: 'Royal' }, rarity: 'mythic', price: 0, icon: '♛', payload: { title: 'ttl-royal' }, unlockedBy: 'royal_flush' },
+  { id: 'ttl_night_king', category: 'title', name: { he: 'מלך הלילות', en: 'King of Nights' }, rarity: 'legendary', price: 0, icon: '🌙', payload: { title: 'ttl-night-king' }, unlockedBy: 'king_of_night' },
+  { id: 'ttl_vip', category: 'title', name: { he: 'חבר מועדון', en: 'Club Member' }, rarity: 'mythic', price: 0, icon: '🎩', payload: { title: 'ttl-vip' }, unlockedBy: 'ev_vip' },
+
+  // ==== Stage P — name colours (fixed palette, never free-form hex) ============
+  { id: 'nc_gold', category: 'nameColor', name: { he: 'שם זהב', en: 'Gold Name' }, rarity: 'epic', price: 8000, icon: '🟨', payload: { nameColor: '#f8e3a8' } },
+  { id: 'nc_jade', category: 'nameColor', name: { he: 'שם ירקן', en: 'Jade Name' }, rarity: 'rare', price: 2000, icon: '🟩', payload: { nameColor: '#4fd39a' } },
+  { id: 'nc_crimson', category: 'nameColor', name: { he: 'שם ארגמן', en: 'Crimson Name' }, rarity: 'rare', price: 2000, icon: '🟥', payload: { nameColor: '#e8807d' } },
+  { id: 'nc_sky', category: 'nameColor', name: { he: 'שם תכלת', en: 'Sky Name' }, rarity: 'rare', price: 2000, icon: '🟦', payload: { nameColor: '#7cc4f0' } },
+  { id: 'nc_violet', category: 'nameColor', name: { he: 'שם סגול', en: 'Violet Name' }, rarity: 'epic', price: 8000, icon: '🟪', payload: { nameColor: '#b98cff' } },
+  { id: 'nc_rosegold', category: 'nameColor', name: { he: 'שם זהב-ורוד', en: 'Rose Gold Name' }, rarity: 'epic', price: 8000, icon: '🌷', payload: { nameColor: '#f2b6c6' } },
+  { id: 'nc_amber', category: 'nameColor', name: { he: 'שם ענבר', en: 'Amber Name' }, rarity: 'rare', price: 2000, icon: '🟧', payload: { nameColor: '#f0a94a' } },
+  { id: 'nc_turquoise', category: 'nameColor', name: { he: 'שם טורקיז', en: 'Turquoise Name' }, rarity: 'rare', price: 2000, icon: '🩵', payload: { nameColor: '#45d8c8' } },
+  { id: 'nc_cream', category: 'nameColor', name: { he: 'שם שמנת', en: 'Cream Name' }, rarity: 'rare', price: 2000, icon: '🤍', payload: { nameColor: '#efe7d0' } },
+  { id: 'nc_neon', category: 'nameColor', name: { he: 'שם ניאון', en: 'Neon Name' }, rarity: 'epic', price: 8000, icon: '💚', payload: { nameColor: '#5ef2a0' } },
+
+  // ==== Stage P — sparse-category fill ========================================
+  { id: 'gl_aviator', category: 'glasses', name: { he: 'אבירייטור', en: 'Aviators' }, rarity: 'rare', price: 2000, icon: '🕶️', payload: { glasses: 'aviator' } },
+  { id: 'gl_rimless', category: 'glasses', name: { he: 'ללא מסגרת', en: 'Rimless' }, rarity: 'epic', price: 8000, icon: '👓', payload: { glasses: 'rimless' } },
+  { id: 'gl_visor', category: 'glasses', name: { he: 'מגן שמש', en: 'Sun Visor' }, rarity: 'rare', price: 2000, icon: '🥽', payload: { glasses: 'visor' } },
+  { id: 'gl_led', category: 'glasses', name: { he: 'משקפי LED', en: 'LED Shades' }, rarity: 'legendary', price: 22000, icon: '💡', payload: { glasses: 'led' } },
+  { id: 'wt_rose', category: 'watches', name: { he: 'שעון זהב ורוד', en: 'Rose Gold Watch' }, rarity: 'epic', price: 8000, icon: '⌚', payload: { watch: 'rose' } },
+  { id: 'wt_jade', category: 'watches', name: { he: 'שעון ירקן', en: 'Jade Watch' }, rarity: 'rare', price: 2000, icon: '⌚', payload: { watch: 'jade' } },
+  { id: 'wt_onyx', category: 'watches', name: { he: 'שעון אוניקס', en: 'Onyx Watch' }, rarity: 'legendary', price: 22000, icon: '⌚', payload: { watch: 'onyx' } },
+  { id: 'cn_rose', category: 'chains', name: { he: 'שרשרת זהב ורוד', en: 'Rose Gold Chain' }, rarity: 'epic', price: 8000, icon: '📿', payload: { chain: 'rose' } },
+  { id: 'cn_onyx', category: 'chains', name: { he: 'שרשרת אוניקס', en: 'Onyx Chain' }, rarity: 'rare', price: 2000, icon: '🔗', payload: { chain: 'onyx' } },
+  { id: 'cn_diamond', category: 'chains', name: { he: 'שרשרת יהלום', en: 'Diamond Chain' }, rarity: 'legendary', price: 22000, icon: '💠', payload: { chain: 'diamond' } },
+  { id: 'dl_jade', category: 'dealers', name: { he: 'דילר ירקן', en: 'Jade Dealer' }, rarity: 'epic', price: 8000, icon: '🟢', payload: { dealerSkin: 'dl-jade' } },
+  { id: 'dl_crimson', category: 'dealers', name: { he: 'דילר ארגמן', en: 'Crimson Dealer' }, rarity: 'legendary', price: 22000, icon: '🍷', payload: { dealerSkin: 'dl-crimson' } },
 ];
+
+/** Titles unlocked by an achievement are owned the moment that achievement is
+ *  earned — no purchase, no `user_items` row. Everything else follows normal
+ *  ownership. Bought titles still need to be in `owned`. */
+export const isItemOwned = (item: ShopItem, owned: string[], achievements: string[]): boolean => {
+  if (item.unlockedBy) return achievements.includes(item.unlockedBy) || owned.includes(item.id);
+  return owned.includes(item.id);
+};
+
+/** The shop item behind an equipped `title` id (e.g. "ttl-shark"), or undefined. */
+export const titleItemByTag = (tag: string | null | undefined) =>
+  tag ? ITEMS.find((item) => item.category === 'title' && item.payload.title === tag) : undefined;
 
 export const priceOf = (rarity: string) => PRICE_BY_RARITY[rarity] ?? 0;
 
@@ -134,6 +187,7 @@ export const itemById = (id: string) => ITEMS.find((item) => item.id === id);
 export const DEFAULT_OWNED = [
   'cf_classic', 'bk_crimson', 'ch_classic', 'tb_green', 'dl_house',
   'em_laugh', 'em_cool', 'em_angry', 'em_shake', 'cn_classic', 'sl_classic', 'rb_default',
+  'ttl_rookie',
 ];
 
 export const RARITY_ORDER: Record<string, number> = {

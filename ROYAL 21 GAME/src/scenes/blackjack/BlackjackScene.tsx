@@ -34,6 +34,7 @@ import { haptic } from '@/lib/haptics';
 import { fmt } from '@/lib/format';
 import { XP_REWARDS } from '@/data/economy';
 import { isVipEligible } from '@/data/vip';
+import { roomBackgroundOf } from '@/data/roomThemes';
 import { isOnline } from '@/services/supabase';
 import type { BjSeat, BjSide } from '@/games/blackjack/types';
 
@@ -556,11 +557,16 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
 
   if (!state) return null;
 
+  /* In a private room the felt + backdrop follow the host's equipped skins
+     (stamped into rooms.config on create); solo keeps the local player's. */
+  const tableSkin = (!solo && room?.config?.tableSkin) || profile.equipped.table;
+  const roomBg = !solo && room?.config?.bgSkin ? roomBackgroundOf(room.config.bgSkin) : null;
+
   return (
     <SceneShell compactHud particles={false}>
       <div className="fixed inset-0 -z-10">
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 0%, #16241d, #0a1010 50%, #08090b 82%)' }} />
-        <LightPool x="50%" y="26%" size={880} color="rgba(227,178,60,.17)" />
+        <div className="absolute inset-0" style={{ background: roomBg?.gradient ?? 'radial-gradient(ellipse at 50% 0%, #16241d, #0a1010 50%, #08090b 82%)' }} />
+        <LightPool x="50%" y="26%" size={880} color={roomBg?.glowColor ?? 'rgba(227,178,60,.17)'} />
       </div>
 
       <div className="mx-auto px-3 pb-4 flex flex-col" style={{ maxWidth: 1180, minHeight: 'calc(100dvh - 62px)' }}>
@@ -570,7 +576,7 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
 
         {/* ---------------- the table ---------------- */}
         <div
-          className={`relative table-felt ${profile.equipped.table} flex-1 flex flex-col items-center justify-between`}
+          className={`relative table-felt ${tableSkin} flex-1 flex flex-col items-center justify-between`}
           style={{ borderRadius: 'clamp(20px,4vw,44px)', padding: compact ? '14px 10px' : '20px 24px', minHeight: compact ? 420 : 460 }}
         >
           <AnimatePresence>{victory && <VictoryEffect kind={profile.equipped.victory} />}</AnimatePresence>

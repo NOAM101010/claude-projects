@@ -83,7 +83,7 @@ begin
 
   insert into public.player_stats (user_id) values (new.id) on conflict do nothing;
 
-  foreach starter in array array['cf_classic','bk_crimson','ch_classic','tb_green','dl_house','em_laugh','em_cool','em_angry','em_shake']
+  foreach starter in array array['cf_classic','bk_crimson','ch_classic','tb_green','dl_house','em_laugh','em_cool','em_angry','em_shake','ttl_rookie']
   loop
     insert into public.user_items (user_id, item_id)
     select new.id, starter where exists (select 1 from public.items where id = starter)

@@ -684,10 +684,15 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   equip: (itemId) => {
     const item = itemById(itemId);
     const s = get();
-    if (!item || !s.owned.includes(itemId)) return;
+    // A title can be unlocked by an achievement — owned without a `user_items`
+    // row. Everything else must actually be in `owned`.
+    const owns = item?.unlockedBy
+      ? (s.achievements.includes(item.unlockedBy) || s.owned.includes(itemId))
+      : s.owned.includes(itemId);
+    if (!item || !owns) return;
     const { emote, decorId, ...rest } = item.payload;
     if (emote || decorId) return; // emotes live in the inventory; decor toggles via toggleDecor
-    const equippedKeys = ['cardFace', 'cardBack', 'chipSkin', 'table', 'frame', 'victory', 'dealerSkin', 'coinSkin', 'currencySkin', 'slotsTheme', 'roomBackground'] as const;
+    const equippedKeys = ['cardFace', 'cardBack', 'chipSkin', 'table', 'frame', 'victory', 'dealerSkin', 'coinSkin', 'currencySkin', 'slotsTheme', 'roomBackground', 'title', 'nameColor'] as const;
     const equipped = { ...s.profile.equipped };
     const avatar = { ...s.profile.avatar };
     Object.entries(rest).forEach(([key, value]) => {

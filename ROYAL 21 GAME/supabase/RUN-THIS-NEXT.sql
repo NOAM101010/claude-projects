@@ -1,177 +1,67 @@
 -- =============================================================================
--- ROYAL 21 — סבב 2: שלבים J + K + L  (הכל בקובץ אחד)
+-- ROYAL 21 — שלב P — תארים + צבע שם + מילוי קטגוריות
 --
 -- הרץ פעם אחת ב-Supabase → SQL Editor. Select All → Paste → Run. Idempotent.
--- דרישות מוקדמות שכבר רצו: app-config.sql, weekly-snapshot.sql, buy-pack.sql.
+-- דרישות מוקדמות שכבר רצו: setup.sql, buy-pack.sql.
 --
 -- מה זה עושה:
---   J1. send_gift — ההודעה נושאת new_balance (מתקן את המתנה שזוכתה פעמיים).
---   J2. claim_weekly_prize — אותו תיקון new_balance בהודעת הפודיום.
---   K.  מוחק את גביע הפודיום ev_weekly_winner.
---   L1. מוחק את 5 מטבעות ה-currencySkin מסבב G (+ ניקוי בעלות/ציוד).
---   L2. seed: קלפים הולוגרפיים + ידית חבילה + 5 ז׳יטונים + חבילת "ערכת שולחן מלכותית".
+--   1. items.unlocked_by — עמודה חדשה (תארים שנפתחים דרך הישג; הבעלות נגזרת
+--      בקליינט מ-profiles.achievements, אין user_items row).
+--   2. seed: תארים נקנים (6) + צבעי שם (10) + משקפיים (4) + שעונים (3) +
+--      שרשראות (3) + דילרים (2).  התארים שנפתחים דרך הישג לא נזרעים — הם
+--      client-only ונגזרים.
+--   3. rooms.config — אין DDL. שדות tableSkin / bgSkin מתווספים ל-jsonb הקיים
+--      ע"י roomsService.create (סקין השולחן + הרקע של המארח).
 -- =============================================================================
 
+-- --- 1. items.unlocked_by ----------------------------------------------------
+alter table public.items add column if not exists unlocked_by text;
 
--- #############################################################################
--- ## J1 — send_gift (payload נושא new_balance)
--- #############################################################################
-create or replace function public.send_gift(p_to_id uuid, p_amount bigint, p_message text default null)
-returns bigint
-language plpgsql
-security definer set search_path = public
-as $$
-declare
-  sent_today bigint;
-  balance    bigint;
-  recip_bal  bigint;
-  v_limit    bigint := public.config_num('gift_daily_limit', 50000);
-begin
-  if p_to_id = auth.uid() then raise exception 'cannot gift yourself'; end if;
-  if not exists (select 1 from public.profiles where id = p_to_id) then raise exception 'unknown recipient'; end if;
-  if p_amount <= 0 or p_amount > v_limit then raise exception 'invalid amount'; end if;
-
-  select coalesce(sum(amount), 0) into sent_today
-  from public.chip_gifts
-  where from_id = auth.uid() and created_at >= date_trunc('day', now());
-  if sent_today + p_amount > v_limit then raise exception 'daily gift limit exceeded'; end if;
-
-  select chips into balance from public.profiles where id = auth.uid() for update;
-  if balance < p_amount then raise exception 'insufficient chips'; end if;
-
-  update public.profiles set chips = chips - p_amount, updated_at = now() where id = auth.uid()
-  returning chips into balance;
-  update public.profiles set chips = chips + p_amount, updated_at = now() where id = p_to_id
-  returning chips into recip_bal;
-
-  insert into public.chip_gifts (from_id, to_id, amount, message) values (auth.uid(), p_to_id, p_amount, p_message);
-  insert into public.notifications (user_id, kind, actor_id, title, body, payload)
-  values (p_to_id, 'gift', auth.uid(), 'gift_received', p_message,
-          jsonb_build_object('amount', p_amount, 'new_balance', recip_bal));
-
-  return balance;
-end;
-$$;
-
-
--- #############################################################################
--- ## J2 — claim_weekly_prize (payload נושא new_balance)
--- #############################################################################
-alter table public.profiles
-  add column if not exists weekly_prize_claimed_week text;
-
-create or replace function public.claim_weekly_prize()
-returns jsonb
-language plpgsql
-security definer set search_path = public
-as $$
-declare
-  v_week      text := to_char(now() - interval '7 days', 'IYYY-"W"IW');
-  claimed_wk  text;
-  my_chips    bigint;
-  snap_count  integer;
-  ahead_count integer;
-  my_rank     integer;
-  prize       bigint;
-  balance     bigint;
-  podium      bigint[] := public.config_bigint_array('weekly_podium', array[5000, 2500, 1000]);
-begin
-  select weekly_prize_claimed_week into claimed_wk
-  from public.profiles where id = auth.uid() for update;
-
-  if claimed_wk is not null and claimed_wk = v_week then
-    return jsonb_build_object('claimed', false, 'reason', 'already');
-  end if;
-
-  select count(*) into snap_count
-  from public.weekly_chip_snapshot where week_key = v_week;
-  if snap_count = 0 then
-    return jsonb_build_object('claimed', false, 'reason', 'no_snapshot');
-  end if;
-
-  select chips into my_chips
-  from public.weekly_chip_snapshot
-  where week_key = v_week and user_id = auth.uid();
-  if my_chips is null then
-    update public.profiles set weekly_prize_claimed_week = v_week where id = auth.uid();
-    return jsonb_build_object('claimed', false, 'reason', 'no_snapshot');
-  end if;
-
-  select count(*) into ahead_count
-  from public.weekly_chip_snapshot s
-  where s.week_key = v_week
-    and s.chips > my_chips
-    and s.user_id in (select friend_id from public.friendships where user_id = auth.uid());
-
-  my_rank := ahead_count + 1;
-
-  if my_rank > 3 then
-    update public.profiles set weekly_prize_claimed_week = v_week where id = auth.uid();
-    return jsonb_build_object('claimed', false, 'reason', 'off_podium');
-  end if;
-
-  prize := podium[my_rank];
-
-  update public.profiles
-    set chips = chips + prize,
-        weekly_prize_claimed_week = v_week,
-        weekly_prize_claimed_at = now(),
-        updated_at = now()
-  where id = auth.uid()
-  returning chips into balance;
-
-  insert into public.notifications (user_id, kind, title, body, payload)
-  values (
-    auth.uid(), 'podium_prize', 'weekly_podium_won', null,
-    jsonb_build_object('amount', prize, 'rank', my_rank, 'week', v_week, 'claimed', true, 'new_balance', balance)
-  );
-
-  return jsonb_build_object('claimed', true, 'chips', prize, 'rank', my_rank, 'balance', balance);
-end;
-$$;
-
-grant execute on function public.claim_weekly_prize() to authenticated;
-
-
--- #############################################################################
--- ## K — הסרת גביע הפודיום
--- #############################################################################
-delete from public.achievements where id = 'ev_weekly_winner';
-
-
--- #############################################################################
--- ## L1 — הסרת מטבעות ה-currencySkin מסבב G
--- #############################################################################
-update public.profiles
-set equipped = jsonb_set(equipped, '{currencySkin}', 'null'::jsonb)
-where equipped->>'currencySkin' in ('cn-gem','cn-crown','cn-nova','cn-ancient','cn-casino');
-
-delete from public.user_items
-where item_id in ('cn_gem','cn_crown_cur','cn_nova','cn_ancient','cn_casino');
-
-delete from public.items
-where id in ('cn_gem','cn_crown_cur','cn_nova','cn_ancient','cn_casino');
-
-
--- #############################################################################
--- ## L2 — פריטים חדשים + חבילה
--- #############################################################################
-insert into public.items (id, category, name, rarity, price, icon, payload, daily_rarity_only, rare_rotation_only) values
-  ('cf_holo',            'cards',  '{"he":"קלפים הולוגרפיים","en":"Holographic Cards"}'::jsonb,   'mythic',    60000, '✨', '{"cardFace":"cf-holo"}'::jsonb,               false, true),
-  ('bundle_royal_suite', 'tables', '{"he":"ערכת שולחן מלכותית","en":"Royal Table Suite"}'::jsonb, 'legendary', 88000, '👑', '{"bundleHandle":"pack_royal_suite"}'::jsonb,  false, true),
-  ('ch_royal',           'chips',  '{"he":"צ׳יפים מלכותיים","en":"Royal Chips"}'::jsonb,          'legendary', 22000, '👑', '{"chipSkin":"ck-royal"}'::jsonb,              false, false),
-  ('ch_jade',            'chips',  '{"he":"צ׳יפי אזמרגד","en":"Jade Chips"}'::jsonb,              'epic',       8000, '💚', '{"chipSkin":"ck-jade"}'::jsonb,               false, false),
-  ('ch_crimson',         'chips',  '{"he":"צ׳יפים ארגמניים","en":"Crimson Chips"}'::jsonb,        'epic',       8000, '🍷', '{"chipSkin":"ck-crimson"}'::jsonb,            false, false),
-  ('ch_frost',           'chips',  '{"he":"צ׳יפי כפור","en":"Frost Chips"}'::jsonb,               'rare',       2000, '❄️', '{"chipSkin":"ck-frost"}'::jsonb,              false, false),
-  ('ch_rosegold',        'chips',  '{"he":"צ׳יפי זהב ורוד","en":"Rose Gold Chips"}'::jsonb,       'rare',       2000, '🌹', '{"chipSkin":"ck-rosegold"}'::jsonb,           false, false)
+-- --- 2. seed — פריטי שלב P --------------------------------------------------
+insert into public.items (id, category, name, rarity, price, icon, payload, unlocked_by) values
+  -- תארים נקנים
+  ('ttl_rookie',      'title',     '{"he":"טירון","en":"Rookie"}'::jsonb,                    'common',        0, '🃏', '{"title":"ttl-rookie"}'::jsonb,       null),
+  ('ttl_regular',     'title',     '{"he":"האורח הקבוע","en":"The Regular"}'::jsonb,          'rare',       2000, '🪑', '{"title":"ttl-regular"}'::jsonb,      null),
+  ('ttl_lucky',       'title',     '{"he":"בר מזל","en":"Lucky Charm"}'::jsonb,               'rare',       2000, '🍀', '{"title":"ttl-lucky"}'::jsonb,        null),
+  ('ttl_shark',       'title',     '{"he":"הכריש","en":"The Shark"}'::jsonb,                  'epic',       8000, '🦈', '{"title":"ttl-shark"}'::jsonb,        null),
+  ('ttl_allin',       'title',     '{"he":"כל-אין","en":"All-In"}'::jsonb,                    'epic',       8000, '💥', '{"title":"ttl-allin"}'::jsonb,        null),
+  ('ttl_highroller',  'title',     '{"he":"מהמר על","en":"High Roller"}'::jsonb,              'legendary', 22000, '💎', '{"title":"ttl-highroller"}'::jsonb,   null),
+  ('ttl_legend',      'title',     '{"he":"האגדה","en":"The Legend"}'::jsonb,                 'mythic',    55000, '🌟', '{"title":"ttl-legend"}'::jsonb,       null),
+  -- צבעי שם (פלטה קבועה)
+  ('nc_gold',         'nameColor', '{"he":"שם זהב","en":"Gold Name"}'::jsonb,                 'epic',       8000, '🟨', '{"nameColor":"#f8e3a8"}'::jsonb,      null),
+  ('nc_jade',         'nameColor', '{"he":"שם ירקן","en":"Jade Name"}'::jsonb,                'rare',       2000, '🟩', '{"nameColor":"#4fd39a"}'::jsonb,      null),
+  ('nc_crimson',      'nameColor', '{"he":"שם ארגמן","en":"Crimson Name"}'::jsonb,            'rare',       2000, '🟥', '{"nameColor":"#e8807d"}'::jsonb,      null),
+  ('nc_sky',          'nameColor', '{"he":"שם תכלת","en":"Sky Name"}'::jsonb,                 'rare',       2000, '🟦', '{"nameColor":"#7cc4f0"}'::jsonb,      null),
+  ('nc_violet',       'nameColor', '{"he":"שם סגול","en":"Violet Name"}'::jsonb,              'epic',       8000, '🟪', '{"nameColor":"#b98cff"}'::jsonb,      null),
+  ('nc_rosegold',     'nameColor', '{"he":"שם זהב-ורוד","en":"Rose Gold Name"}'::jsonb,       'epic',       8000, '🌷', '{"nameColor":"#f2b6c6"}'::jsonb,      null),
+  ('nc_amber',        'nameColor', '{"he":"שם ענבר","en":"Amber Name"}'::jsonb,               'rare',       2000, '🟧', '{"nameColor":"#f0a94a"}'::jsonb,      null),
+  ('nc_turquoise',    'nameColor', '{"he":"שם טורקיז","en":"Turquoise Name"}'::jsonb,         'rare',       2000, '🩵', '{"nameColor":"#45d8c8"}'::jsonb,      null),
+  ('nc_cream',        'nameColor', '{"he":"שם שמנת","en":"Cream Name"}'::jsonb,               'rare',       2000, '🤍', '{"nameColor":"#efe7d0"}'::jsonb,      null),
+  ('nc_neon',         'nameColor', '{"he":"שם ניאון","en":"Neon Name"}'::jsonb,               'epic',       8000, '💚', '{"nameColor":"#5ef2a0"}'::jsonb,      null),
+  -- משקפיים
+  ('gl_aviator',      'glasses',   '{"he":"אבירייטור","en":"Aviators"}'::jsonb,               'rare',       2000, '🕶️', '{"glasses":"aviator"}'::jsonb,        null),
+  ('gl_rimless',      'glasses',   '{"he":"ללא מסגרת","en":"Rimless"}'::jsonb,                'epic',       8000, '👓', '{"glasses":"rimless"}'::jsonb,        null),
+  ('gl_visor',        'glasses',   '{"he":"מגן שמש","en":"Sun Visor"}'::jsonb,                'rare',       2000, '🥽', '{"glasses":"visor"}'::jsonb,          null),
+  ('gl_led',          'glasses',   '{"he":"משקפי LED","en":"LED Shades"}'::jsonb,             'legendary', 22000, '💡', '{"glasses":"led"}'::jsonb,            null),
+  -- שעונים
+  ('wt_rose',         'watches',   '{"he":"שעון זהב ורוד","en":"Rose Gold Watch"}'::jsonb,    'epic',       8000, '⌚', '{"watch":"rose"}'::jsonb,             null),
+  ('wt_jade',         'watches',   '{"he":"שעון ירקן","en":"Jade Watch"}'::jsonb,             'rare',       2000, '⌚', '{"watch":"jade"}'::jsonb,             null),
+  ('wt_onyx',         'watches',   '{"he":"שעון אוניקס","en":"Onyx Watch"}'::jsonb,           'legendary', 22000, '⌚', '{"watch":"onyx"}'::jsonb,             null),
+  -- שרשראות
+  ('cn_rose',         'chains',    '{"he":"שרשרת זהב ורוד","en":"Rose Gold Chain"}'::jsonb,   'epic',       8000, '📿', '{"chain":"rose"}'::jsonb,             null),
+  ('cn_onyx',         'chains',    '{"he":"שרשרת אוניקס","en":"Onyx Chain"}'::jsonb,          'rare',       2000, '🔗', '{"chain":"onyx"}'::jsonb,             null),
+  ('cn_diamond',      'chains',    '{"he":"שרשרת יהלום","en":"Diamond Chain"}'::jsonb,        'legendary', 22000, '💠', '{"chain":"diamond"}'::jsonb,          null),
+  -- דילרים
+  ('dl_jade',         'dealers',   '{"he":"דילר ירקן","en":"Jade Dealer"}'::jsonb,            'epic',       8000, '🟢', '{"dealerSkin":"dl-jade"}'::jsonb,     null),
+  ('dl_crimson',      'dealers',   '{"he":"דילר ארגמן","en":"Crimson Dealer"}'::jsonb,        'legendary', 22000, '🍷', '{"dealerSkin":"dl-crimson"}'::jsonb,  null)
 on conflict (id) do update set
   category = excluded.category, name = excluded.name, rarity = excluded.rarity,
   price = excluded.price, icon = excluded.icon, payload = excluded.payload,
-  daily_rarity_only = excluded.daily_rarity_only, rare_rotation_only = excluded.rare_rotation_only;
+  unlocked_by = excluded.unlocked_by;
 
-insert into public.bundles (id, item_ids, discount) values
-  ('pack_royal_suite', array['tb_royal','bk_royal','cf_royal','vc_stars'], 0.40)
-on conflict (id) do update set
-  item_ids = excluded.item_ids, discount = excluded.discount, updated_at = now();
+-- --- 3. backfill: התואר ההתחלתי "טירון" לכל השחקנים הקיימים -----------------
+insert into public.user_items (user_id, item_id)
+select id, 'ttl_rookie' from public.profiles
+on conflict do nothing;
 
 -- ============================ סוף — הכל רץ ✓ ================================

@@ -13,9 +13,11 @@ const toMember = (row: any): RoomMember => ({
   isHost: row.is_host,
   presence: row.profile?.presence ?? 'online',
   joinedAt: row.joined_at,
+  title: row.profile?.equipped?.title ?? null,
+  nameColor: row.profile?.equipped?.nameColor ?? null,
 });
 
-const MEMBER_SELECT = 'user_id, seat, is_host, joined_at, profile:profiles!room_members_user_id_fkey(username, avatar, level, presence)';
+const MEMBER_SELECT = 'user_id, seat, is_host, joined_at, profile:profiles!room_members_user_id_fkey(username, avatar, level, presence, equipped)';
 
 /**
  * SHA-256 the password before it leaves the device.
@@ -97,9 +99,22 @@ export const roomsService = {
     if (!client || !isRemoteId(hostId)) return null;
     if (!checkLimit(hostId, 'roomCreate')) return null;
     const code = makeCode();
+    // Stamp the host's equipped table skin + room background onto the room so
+    // every seated client dresses the felt the same way (a private room should
+    // look like the host's table, not like each player's own vault).
+    let dressed: RoomConfig = config ?? {};
+    try {
+      const { data: host } = await client.from('profiles').select('equipped').eq('id', hostId).maybeSingle();
+      const eq = host?.equipped as { table?: string; roomBackground?: string } | undefined;
+      dressed = {
+        ...dressed,
+        ...(eq?.table ? { tableSkin: eq.table } : {}),
+        ...(eq?.roomBackground ? { bgSkin: eq.roomBackground } : {}),
+      };
+    } catch { /* keep config as-is if the lookup fails */ }
     const { data, error } = await client
       .from('rooms')
-      .insert({ code, host_id: hostId, game, state: null, config: config ?? null })
+      .insert({ code, host_id: hostId, game, state: null, config: dressed })
       .select('*')
       .single();
     if (error || !data) return null;

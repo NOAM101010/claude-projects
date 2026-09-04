@@ -10,9 +10,9 @@ export interface AvatarConfig {
   hair: number;
   shirt: 'base' | 'gold' | 'royal' | 'neon' | 'crimson' | 'white';
   hat?: 'cap' | 'fedora' | 'crown' | null;
-  glasses?: 'sun' | 'clear' | null;
-  chain?: 'gold' | 'silver' | null;
-  watch?: 'gold' | 'steel' | null;
+  glasses?: 'sun' | 'clear' | 'aviator' | 'rimless' | 'visor' | 'led' | null;
+  chain?: 'gold' | 'silver' | 'rose' | 'onyx' | 'diamond' | null;
+  watch?: 'gold' | 'steel' | 'rose' | 'jade' | 'onyx' | null;
 }
 
 export interface Equipped {
@@ -33,6 +33,12 @@ export interface Equipped {
   roomBackground: string | null;
   /** Up to MAX_ROOM_DECOR ids at once — a multi-slot field, unlike everything else here. */
   roomDecor: string[];
+  /** A short badge shown under the player's name everywhere (e.g. "ttl-shark").
+   *  null = no title. Some titles are bought; some unlock via an achievement. */
+  title: string | null;
+  /** A colour from a fixed palette applied to the player's name in chat, seats
+   *  and lists (e.g. "#e3b23c"). null = the default text colour. */
+  nameColor: string | null;
 }
 
 export interface Profile {
@@ -128,7 +134,7 @@ export interface ShopItem {
   category:
     | 'cards' | 'backs' | 'chips' | 'tables' | 'avatars' | 'clothing'
     | 'glasses' | 'watches' | 'chains' | 'frames' | 'emotes' | 'victory' | 'dealers'
-    | 'coins' | 'reels' | 'backgrounds' | 'decor';
+    | 'coins' | 'reels' | 'backgrounds' | 'decor' | 'title' | 'nameColor';
   name: { he: string; en: string };
   desc?: { he: string; en: string };
   rarity: Rarity;
@@ -136,6 +142,9 @@ export interface ShopItem {
   icon: string;
   /** what equipping this item changes on the profile */
   payload: Partial<Equipped> & Partial<AvatarConfig> & { emote?: string; decorId?: string; bundleHandle?: string };
+  /** Achievement id that unlocks this item for free. Ownership is then derived
+   *  (`profile.achievements` includes it) — there is no purchase and no row. */
+  unlockedBy?: string;
   /** Only obtainable through the Daily Rarity slot — hidden from normal shop lists. */
   dailyRarityOnly?: boolean;
   /** Only obtainable through the weekday Rare Rotation slot — hidden from normal shop lists. */
@@ -173,6 +182,9 @@ export interface Friend {
   /** ISO timestamp of the last presence write — freshness gate, see lib/presence.ts */
   lastSeen?: string | null;
   currentGame: GameKey | null;
+  /** Cosmetic name badge + colour, mirrored from the friend's `equipped`. */
+  title?: string | null;
+  nameColor?: string | null;
 }
 
 export interface DirectMessage {
@@ -220,6 +232,9 @@ export interface RoomMember {
   isHost: boolean;
   presence: Presence;
   joinedAt: string;
+  /** Cosmetic name badge + colour, mirrored from the member's `equipped`. */
+  title?: string | null;
+  nameColor?: string | null;
 }
 
 /** Colors a private table can be dressed in — cosmetic only. */
@@ -234,6 +249,11 @@ export interface RoomConfig {
   passwordHash?: string;
   /** VIP-only table. */
   isVip?: boolean;
+  /** The host's equipped table skin (`tb-*`) and room background (`rb-*`),
+   *  stamped at creation. Every seated client dresses the table from these so a
+   *  private room looks the same for everyone, not like each player's own vault. */
+  tableSkin?: string;
+  bgSkin?: string;
 }
 
 export interface Room {

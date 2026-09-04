@@ -12,6 +12,8 @@ const toFriend = (row: any): Friend => ({
   presence: row.presence ?? 'offline',
   lastSeen: row.last_seen ?? null,
   currentGame: row.current_game ?? null,
+  title: row.equipped?.title ?? null,
+  nameColor: row.equipped?.nameColor ?? null,
 });
 
 export const friendsService = {

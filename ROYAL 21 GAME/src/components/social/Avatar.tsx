@@ -34,6 +34,22 @@ export function Avatar({ config, size = 48, level = 1, frame, presence, id = 'a'
   const skin = SKIN[config.skin % SKIN.length];
   const hair = HAIR[config.hair % HAIR.length];
   const shirt = SHIRT[config.shirt] ?? SHIRT.base;
+
+  // Metal tone per accessory variant — keeps the SVG branches to one lookup.
+  const METAL: Record<string, { dark: string; light: string }> = {
+    gold: { dark: '#e3b23c', light: '#f8e3a8' },
+    silver: { dark: '#cfd6e0', light: '#eef3f8' },
+    steel: { dark: '#b9c0cb', light: '#eef3f8' },
+    rose: { dark: '#e6a6b0', light: '#f6d8de' },
+    jade: { dark: '#4fd39a', light: '#bff0da' },
+    onyx: { dark: '#4a4f5a', light: '#8b909c' },
+    diamond: { dark: '#8fd8ec', light: '#d8f4fb' },
+  };
+  const watchMetal = METAL[config.watch ?? 'steel'] ?? METAL.steel;
+  const chainMetal = METAL[config.chain ?? 'silver'] ?? METAL.silver;
+  const tintedLens = config.glasses === 'clear' || config.glasses === 'rimless';
+  const lensFill = tintedLens ? 'rgba(200,230,255,.28)' : config.glasses === 'led' ? '#0d1626' : '#15171d';
+  const lensStroke = config.glasses === 'led' ? '#5ef2d6' : tintedLens ? '#e3b23c' : config.glasses === 'visor' ? '#2a2f3a' : '#3a3f4a';
   const ring = frame ?? `rk-${rankOf(level).key}`;
   const clip = `clip-${id}`;
 
@@ -53,8 +69,8 @@ export function Avatar({ config, size = 48, level = 1, frame, presence, id = 'a'
           <path d="M24 44l8 9 8-9-8-4z" fill="rgba(255,255,255,.12)" />
           {config.chain && (
             <>
-              <path d="M25 44q7 11 14 0" stroke={config.chain === 'gold' ? '#e3b23c' : '#cfd6e0'} strokeWidth="2.4" fill="none" />
-              <circle cx="32" cy="50.5" r="2.6" fill={config.chain === 'gold' ? '#f8e3a8' : '#eef3f8'} />
+              <path d="M25 44q7 11 14 0" stroke={chainMetal.dark} strokeWidth="2.4" fill="none" />
+              <circle cx="32" cy="50.5" r="2.6" fill={chainMetal.light} />
             </>
           )}
           <ellipse cx="32" cy="26" rx="15" ry="16" fill={skin} />
@@ -62,15 +78,16 @@ export function Avatar({ config, size = 48, level = 1, frame, presence, id = 'a'
           <ellipse cx="26" cy="26" rx="1.9" ry="2.3" fill="#20232b" />
           <ellipse cx="38" cy="26" rx="1.9" ry="2.3" fill="#20232b" />
           <path d="M27 34q5 4 10 0" stroke="#20232b" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-          {config.glasses && (
+          {config.glasses && config.glasses === 'visor' && (
+            <path d="M17 21h30a3 3 0 0 1 3 3v3a4 4 0 0 1-4 4H18a4 4 0 0 1-4-4v-3a3 3 0 0 1 3-3z" fill="#15171d" stroke={lensStroke} strokeWidth="1.3" opacity="0.92" />
+          )}
+          {config.glasses && config.glasses !== 'visor' && (
             <g>
-              <rect x="19.5" y="22" width="11" height="8" rx="2.6"
-                fill={config.glasses === 'sun' ? '#15171d' : 'rgba(200,230,255,.28)'}
-                stroke={config.glasses === 'sun' ? '#3a3f4a' : '#e3b23c'} strokeWidth="1.3" />
-              <rect x="33.5" y="22" width="11" height="8" rx="2.6"
-                fill={config.glasses === 'sun' ? '#15171d' : 'rgba(200,230,255,.28)'}
-                stroke={config.glasses === 'sun' ? '#3a3f4a' : '#e3b23c'} strokeWidth="1.3" />
-              <path d="M30.5 26h3" stroke={config.glasses === 'sun' ? '#3a3f4a' : '#e3b23c'} strokeWidth="1.3" />
+              <rect x="19.5" y="22" width="11" height="8" rx={config.glasses === 'aviator' ? 4 : 2.6}
+                fill={lensFill} stroke={lensStroke} strokeWidth="1.3" />
+              <rect x="33.5" y="22" width="11" height="8" rx={config.glasses === 'aviator' ? 4 : 2.6}
+                fill={lensFill} stroke={lensStroke} strokeWidth="1.3" />
+              <path d="M30.5 26h3" stroke={lensStroke} strokeWidth="1.3" />
             </g>
           )}
           {config.hat === 'cap' && (
@@ -94,8 +111,8 @@ export function Avatar({ config, size = 48, level = 1, frame, presence, id = 'a'
           )}
           {config.watch && (
             <>
-              <circle cx="54" cy="55" r="7" fill="#15171d" stroke={config.watch === 'gold' ? '#e3b23c' : '#b9c0cb'} strokeWidth="2" />
-              <path d="M54 51v4l2.5 2" stroke={config.watch === 'gold' ? '#f8e3a8' : '#eef3f8'} strokeWidth="1.4" fill="none" strokeLinecap="round" />
+              <circle cx="54" cy="55" r="7" fill="#15171d" stroke={watchMetal.dark} strokeWidth="2" />
+              <path d="M54 51v4l2.5 2" stroke={watchMetal.light} strokeWidth="1.4" fill="none" strokeLinecap="round" />
             </>
           )}
         </g>

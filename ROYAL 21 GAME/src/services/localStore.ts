@@ -82,6 +82,8 @@ export const DEFAULT_EQUIPPED: Equipped = {
   slotsTheme: 'sl-classic',
   roomBackground: DEFAULT_ROOM_BACKGROUND,
   roomDecor: [],
+  title: null,
+  nameColor: null,
 };
 
 export const EMPTY_STATS: Stats = {

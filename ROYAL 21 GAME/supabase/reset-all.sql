@@ -82,7 +82,7 @@ from public.profiles p
 cross join (values
   ('cf_classic'),('bk_crimson'),('ch_classic'),('tb_green'),
   ('dl_house'),('em_laugh'),('em_cool'),('em_angry'),('em_shake'),
-  ('cn_classic'),('sl_classic'),('rb_default')
+  ('cn_classic'),('sl_classic'),('rb_default'),('ttl_rookie')
 ) as s(item_id)
 where not p.is_admin
   and exists (select 1 from public.items i where i.id = s.item_id)

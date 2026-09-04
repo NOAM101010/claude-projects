@@ -68,6 +68,9 @@ alter table public.app_config enable row level security;
 --   bj_hand_secret      server-only hole cards (poker-privacy.sql)
 --   items               shop catalogue (seeded from src/data/items.ts);
 --                       + daily_rarity_only / rare_rotation_only bool flags (buy-pack.sql)
+--                       + unlocked_by text — achievement id that grants a title
+--                         for free; ownership derived client-side (RUN-THIS-NEXT.sql,
+--                         Stage P). Also adds 'title' / 'nameColor' categories.
 --   user_items          (user_id, item_id) ownership
 --   bundles             id, item_ids text[], discount numeric(check 0..0.6)
 --                       — server-side source of truth for buy_pack(p_pack_id);
