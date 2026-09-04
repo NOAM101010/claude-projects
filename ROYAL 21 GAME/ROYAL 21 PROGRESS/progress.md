@@ -37,7 +37,10 @@
   - **BJ MP הימורי-צד ✅ נדחף** (`3e9f680`). Perfect Pairs/21+3 היו "solo-only" מהערה מיושנת בלבד — ה-state כבר תמך בזה גנרית. נפתח ב-room (חסום ב-duel), תגית מושב "🎲 500 · Perfect Pairs". **באג כסף אמיתי שנחשף:** `claim_blackjack_payout` מעולם לא כלל `sideResults` בחישוב — זכייה בהימור צד ב-room הייתה מוצגת אבל לא משלמת. תוקן. reviewer נקי. **הרצה: `RUN-THIS-NEXT.sql`.**
   - **דואל ב-Night:** דילגנו לבקשת המשתמש (לא כרגע).
   - **נשאר ל-N:** עוד משחקי מסיבה (לפי רצון).
-- STAGE M — תשתית חדרים (בסוף, לבקשת המשתמש).
+- **STAGE M ✅ נדחף** (`57724f5`) — **תיקון "BJ/דואל עם חברים לא מכניס שחקן שני".**
+  שורש (אושר): `RoomScene.startGame` ניווט רק את המארח; שום דבר לא שאב את שאר חברי החדר. `rooms.active_game` (jsonb, ברמת חדר — לא קבור ב-engine של בלאק'ג'ק) + hook `useFollowHost` שכל חבר חדר (כולל מארח) מאזין לו ומנווט. `NightScene` הועברה במלואה לאותו מנגנון (מאחד כפילות). דיל-גייט cash מחכה עד 4ש לשחקן שני. מות מארח: poll 5→2ש, חלון 20→15ש (reviewer תפס ש-10ש היה צר מדי מול heartbeat 8ש). `roomCapacity()` מקור יחיד. **M1 (איחוד 7 ה-room stores) דולג** — ריפקטור פנימי טהור בלי ערך משתמש חדש, סיכון גבוה מדי לכל ה-MP בבת אחת.
+  reviewer: false-positive אחד (roomCapacity הושווה לגרסה מיושנת של `enforce_room_capacity` ב-`setup.sql` במקום ההגדרה החיה ב-`highlow.sql`) + תיקון אמיתי (חלון host). **הרצה: `RUN-THIS-NEXT.sql`.**
+  **ממתין לבדיקה חיה 2-דפדפנים של המשתמש — זה השלב הכי מסוכן, הכי חשוב לאמת.**
 - *doc drift ידוע:* `SCHEMA.sql`/`README.md` לא עודכנו ל-`items.vip_tier` + `profiles.vip_*_claimed` + RPCs של VIP — לסדר בשלב ניקוי.
 
 ## Roadmap חדש (2026-09-03) — 8 שלבים A–H
