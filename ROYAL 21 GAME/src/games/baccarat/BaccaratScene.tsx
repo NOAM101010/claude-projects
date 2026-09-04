@@ -22,6 +22,8 @@ import { fmt } from '@/lib/format';
 import { XP_REWARDS } from '@/data/economy';
 import { VIP_CHIP_EXTRA, isVipEligible } from '@/data/vip';
 import { newSeed } from '@/lib/random';
+import { roomBackgroundOf } from '@/data/roomThemes';
+import { DEFAULT_TABLE_SKIN } from '@/data/items';
 import {
   createState, reduce, handTotal, betCost, baccaratPaytable, BACCARAT_BETS, outcomeLabel,
 } from './engine';
@@ -771,11 +773,17 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
   const back2 = profile.equipped.cardBack;
   const chipSkin = profile.equipped.chipSkin;
 
+  /* Private table follows the host's equipped felt + backdrop, same pattern
+     as Blackjack/Poker. */
+  const roomBg = room.config?.bgSkin ? roomBackgroundOf(room.config.bgSkin) : null;
+  const customTable = !!room.config?.tableSkin && room.config.tableSkin !== DEFAULT_TABLE_SKIN;
+  const hostName = members.find((m) => m.isHost)?.username;
+
   return (
     <SceneShell compactHud>
       <div className="fixed inset-0 -z-10">
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 0%, #221730, #100c17 55%, #08090b 85%)' }} />
-        <LightPool x="50%" y="18%" size={720} color="rgba(180,120,240,.16)" />
+        <div className="absolute inset-0" style={{ background: roomBg?.gradient ?? 'radial-gradient(ellipse at 50% 0%, #221730, #100c17 55%, #08090b 85%)' }} />
+        <LightPool x="50%" y="18%" size={720} color={roomBg?.glowColor ?? 'rgba(180,120,240,.16)'} />
       </div>
 
       <VictoryEffect kind={victory ? 'bigWin' : null} />
@@ -791,6 +799,14 @@ function BaccaratRoom({ roomCode }: { roomCode: string }) {
           <div className="flex items-center gap-2">
             <span className="eyebrow">{t('rooms.code')}</span>
             <b style={{ fontFamily: 'var(--font-display)', letterSpacing: '.2em', color: 'var(--gold-hi)' }}>{room.code}</b>
+            {customTable && hostName && (
+              <span
+                className="px-2 py-0.5 rounded-full text-[10.5px]"
+                style={{ background: 'rgba(227,178,60,.12)', color: 'var(--gold-hi)', border: '1px solid var(--gold-line)' }}
+              >
+                {t('rooms.customTable', { name: hostName })}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1.5">
             {state.seats.map((seat) => (

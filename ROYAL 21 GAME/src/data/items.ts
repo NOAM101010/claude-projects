@@ -1,6 +1,9 @@
 import type { ShopItem } from '@/types';
 import { PRICE_BY_RARITY } from './economy';
 
+/** Free starter table felt — every player has this equipped by default. */
+export const DEFAULT_TABLE_SKIN = 'tb-green';
+
 /** Seed catalogue. Mirrored into the `items` table by supabase/setup.sql. */
 export const ITEMS: ShopItem[] = [
   // ---- card faces ----
@@ -150,8 +153,8 @@ export const ITEMS: ShopItem[] = [
   { id: 'nc_rosegold', category: 'nameColor', name: { he: 'שם זהב-ורוד', en: 'Rose Gold Name' }, rarity: 'epic', price: 8000, icon: '🌷', payload: { nameColor: '#f2b6c6' } },
   { id: 'nc_amber', category: 'nameColor', name: { he: 'שם ענבר', en: 'Amber Name' }, rarity: 'rare', price: 2000, icon: '🟧', payload: { nameColor: '#f0a94a' } },
   { id: 'nc_turquoise', category: 'nameColor', name: { he: 'שם טורקיז', en: 'Turquoise Name' }, rarity: 'rare', price: 2000, icon: '🩵', payload: { nameColor: '#45d8c8' } },
-  { id: 'nc_cream', category: 'nameColor', name: { he: 'שם שמנת', en: 'Cream Name' }, rarity: 'rare', price: 2000, icon: '🤍', payload: { nameColor: '#efe7d0' } },
-  { id: 'nc_neon', category: 'nameColor', name: { he: 'שם ניאון', en: 'Neon Name' }, rarity: 'epic', price: 8000, icon: '💚', payload: { nameColor: '#5ef2a0' } },
+  { id: 'nc_cream', category: 'nameColor', name: { he: 'שם שמנת', en: 'Cream Name' }, rarity: 'rare', price: 2000, icon: '🤍', payload: { nameColor: '#e8dcc0' } },
+  { id: 'nc_neon', category: 'nameColor', name: { he: 'שם ניאון', en: 'Neon Name' }, rarity: 'epic', price: 8000, icon: '💚', payload: { nameColor: '#39ff8f' } },
 
   // ==== Stage P — sparse-category fill ========================================
   { id: 'gl_aviator', category: 'glasses', name: { he: 'אבירייטור', en: 'Aviators' }, rarity: 'rare', price: 2000, icon: '🕶️', payload: { glasses: 'aviator' } },

@@ -469,20 +469,6 @@ export function reduce(prev: BjState, action: BjAction): BjState {
       seat.emote = { id: action.emote, at: Date.now() };
       return state;
     }
-    case 'reportResult': {
-      state.history.push({
-        round: state.round, userId: action.userId, username: action.username,
-        game: action.game, outcome: action.outcome, net: action.net,
-      });
-      state.history = state.history.slice(-40);
-      return state;
-    }
-    case 'setActiveMiniGame': {
-      state.activeMiniGame = action.game
-        ? { game: action.game, code: action.code, by: action.userId }
-        : null;
-      return state;
-    }
     default:
       return prev;
   }

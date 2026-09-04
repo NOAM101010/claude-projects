@@ -20,7 +20,7 @@ export type MissionKind = 'quantity' | 'variety';
 export type MissionMetric =
   | 'hands' | 'wins' | 'chipsWon'                 // quantity
   | 'gamesVariety'                                // distinct games played
-  | 'blackjack' | 'roulette' | 'slots' | 'scratch' | 'coinflip' | 'highcard' | 'highlow' | 'baccarat' | 'pokerAny';
+  | 'blackjack' | 'roulette' | 'slots' | 'scratch' | 'coinflip' | 'highcard' | 'baccarat' | 'pokerAny';
 
 export interface Mission {
   id: string;

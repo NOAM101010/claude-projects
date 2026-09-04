@@ -268,44 +268,6 @@ export function SlotMachineArt({ focused }: { focused: boolean }) {
   );
 }
 
-export function GameNightArt({ focused }: { focused: boolean }) {
-  const seats = [
-    { x: 40, y: 52, tint: 'var(--gold)' },
-    { x: 100, y: 44, tint: 'var(--social)' },
-    { x: 160, y: 52, tint: 'var(--violet)' },
-    { x: 100, y: 96, tint: 'var(--jade-hi)' },
-  ];
-  return (
-    <svg viewBox="0 0 200 140" className="w-full" style={{ aspectRatio: '1.43' }}>
-      {/* round table with a scoreboard on it */}
-      <ellipse cx="100" cy="86" rx="78" ry="34" fill="#16302a" stroke="rgba(227,178,60,.34)" strokeWidth="2" />
-      <ellipse cx="100" cy="82" rx="62" ry="24" fill="none" stroke="rgba(255,255,255,.09)" />
-      <rect x="72" y="70" width="56" height="26" rx="5" fill="#0e1014" stroke="rgba(227,178,60,.3)" />
-      <text x="100" y="82" textAnchor="middle" fill="var(--gold-hi)" fontSize="8" fontWeight="900">SCORE</text>
-      <motion.text
-        x="100" y="92" textAnchor="middle" fill="var(--text)" fontSize="8" fontWeight="700"
-        animate={focused ? { opacity: [0.5, 1, 0.5] } : {}}
-        transition={{ duration: 1.4, repeat: focused ? Infinity : 0 }}
-      >
-        7 · 5 · 3
-      </motion.text>
-      {/* players around it */}
-      {seats.map((seat, index) => (
-        <motion.g
-          key={index}
-          animate={focused ? { y: [0, -4, 0] } : {}}
-          transition={{ duration: 1.8, repeat: focused ? Infinity : 0, delay: index * 0.2, ease: 'easeInOut' }}
-        >
-          <circle cx={seat.x} cy={seat.y} r="12" fill="#1b1f27" stroke={seat.tint} strokeWidth="1.6" />
-          <circle cx={seat.x} cy={seat.y - 3} r="4" fill={seat.tint} opacity=".85" />
-          <path d={`M${seat.x - 6} ${seat.y + 8} q6 -6 12 0`} fill={seat.tint} opacity=".7" />
-        </motion.g>
-      ))}
-      <ellipse cx="100" cy="126" rx="60" ry="8" fill="rgba(0,0,0,.5)" />
-    </svg>
-  );
-}
-
 export function RouletteTableArt({ focused }: { focused: boolean }) {
   const pockets = 14;
   return (

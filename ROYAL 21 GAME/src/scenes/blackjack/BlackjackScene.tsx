@@ -27,7 +27,6 @@ import { usePlayer } from '@/stores/usePlayer';
 import { useUI } from '@/stores/useUI';
 import { useT } from '@/hooks/useT';
 import { useIsCompact } from '@/hooks/useMediaQuery';
-import { useNightReturn } from '@/hooks/useNightReturn';
 import { useGhostSeatCleanup } from '@/hooks/useGhostSeatCleanup';
 import { audio } from '@/audio/AudioManager';
 import { haptic } from '@/lib/haptics';
@@ -46,7 +45,6 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
   const navigate = useNavigate();
   const { t } = useT();
   const compact = useIsCompact();
-  const nightReturn = useNightReturn();
   const profile = usePlayer((s) => s.profile);
   const addChips = usePlayer((s) => s.addChips);
   const setChips = usePlayer((s) => s.setChips);
@@ -762,8 +760,8 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
                 initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ opacity: 0 }}>
                 <GameButton tone="gold" size="lg" onClick={nextHand}>{t('blackjack.newRound')}</GameButton>
                 {duel && <GameButton tone="ghost" onClick={() => setSummaryOpen(true)}>{t('duel.scoreboard')}</GameButton>}
-                <GameButton tone="ghost" onClick={() => navigate(nightReturn ?? '/hub')}>
-                  {nightReturn ? t('night.backToNight') : t('common.back')}
+                <GameButton tone="ghost" onClick={() => navigate('/hub')}>
+                  {t('common.back')}
                 </GameButton>
               </motion.div>
             )}

@@ -29,7 +29,6 @@ const ENTRIES: Entry[] = [
   { icon: '🏠', labelKey: 'nav.hub', hintKey: 'nav.hubHint', to: '/hub' },
   { icon: '♠', labelKey: 'nav.blackjack', hintKey: 'nav.blackjackHint', to: '/blackjack/solo', divide: true },
   { icon: '⚔', labelKey: 'nav.duel', hintKey: 'nav.duelHint', to: '/room/new?game=duel' },
-  { icon: '🎉', labelKey: 'nav.gameNight', hintKey: 'nav.gameNightHint', to: '/night/new' },
   { icon: '🎰', labelKey: 'nav.slots', hintKey: 'nav.slotsHint', to: '/game/slots', divide: true },
   { icon: '🪙', labelKey: 'nav.coinflip', hintKey: 'nav.coinflipHint', to: '/game/coinflip' },
   { icon: '🂡', labelKey: 'nav.highcard', hintKey: 'nav.highcardHint', to: '/game/highcard' },

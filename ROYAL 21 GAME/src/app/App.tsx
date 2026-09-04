@@ -37,7 +37,6 @@ function zoneOf(pathname: string): { presence: Presence; game: GameKey | null; z
   if (pathname.startsWith('/blackjack')) return { presence: 'blackjack', game: 'blackjack', zone: 'blackjack' };
   if (pathname.startsWith('/poker/sng')) return { presence: 'blackjack', game: 'sng', zone: 'blackjack' };
   if (pathname.startsWith('/poker')) return { presence: 'blackjack', game: 'poker', zone: 'blackjack' };
-  if (pathname.startsWith('/game/highlow')) return { presence: 'roulette', game: 'highlow', zone: 'blackjack' };
   if (pathname.startsWith('/game/highcard')) return { presence: 'roulette', game: 'highcard', zone: 'blackjack' };
   if (pathname.startsWith('/vault')) return { presence: 'hub', game: null, zone: 'vault' };
   return { presence: 'hub', game: null, zone: 'hub' };

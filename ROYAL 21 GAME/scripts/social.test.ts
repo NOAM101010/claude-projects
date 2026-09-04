@@ -208,7 +208,7 @@ console.log('\nEvent trophies');
   const event = ACHIEVEMENTS.filter((a) => a.kind === 'event');
   check('stat trophies all carry a stat + goal', stat.every((a) => a.stat != null && a.goal != null));
   check('event trophies carry no stat + no goal', event.every((a) => a.stat == null && a.goal == null));
-  check('there are ~10 event trophies', event.length >= 8 && event.length <= 12);
+  check('there are ~10 event trophies', event.length >= 7 && event.length <= 12);
   check('every event trophy has a tier + a trophy glyph + a reward',
     event.every((a) => a.tier && a.trophy && a.reward > 0));
   check('event trophy ids are unique + resolvable', event.every((a) => achievementById(a.id) === a));

@@ -1,154 +1,102 @@
 # ROYAL 21 — Progress
 
-**Last updated:** 2026-09-03
+**Last updated:** 2026-09-04
 
-משחק קזינו חברתי פרטי (~15 חברים, צ'יפים וירטואליים בלבד — אין כסף אמיתי). Vite + React + TS + Supabase.
+משחק קזינו חברתי פרטי (~15 חברים, צ'יפים וירטואליים בלבד — אין כסף אמיתי). Vite + React + TS + Supabase (ref `ylhqwzokrfiwobfurkfx`).
 תיקייה: `C:\CLAUDE AI\ROYAL 21 GAME`. חי: https://royal21.vercel.app (מתפרס אוטומטית מ-`origin/main`).
-
-## סבב 2 (2026-09-04) — תיקונים + ליטושים
-
-תוכנית: `swift-snuggling-harp.md` "סבב 2". סדר: J→I→K→L→H → תוכנית reworks גדולים (ערב חברה + VIP).
-- **STAGE J ✅ נדחף** (`d6f21a7`). J1: מתנת צ'יפים זיכתה פעמיים (RPC + client both) — ההודעה עכשיו receipt-only, נושאת `new_balance`, הקליינט `setChips`. J2: רולטה MP — כפתור "סיימתי להמר" (action `ready` שכבר היה ב-engine) + countdown 15ש, הגלגל ננעל רק כש-`every(ready)`, הוסר כפתור "סובב עכשיו" של המארח. reviewer: חוסם realtime-visibility תוקן. **המשתמש צריך להריץ `RUN-THIS-NEXT.sql` (send_gift + claim_weekly_prize מעודכנים).**
-- **STAGE I ✅ נדחף** (`56638f3`). פוקר/SnG: badge פעולה + ז'יטון לקופה (מ-`seat.lastAction` שכבר היה ב-state); `showCards` action + `revealed[]` + `HandOverBar` (countdown 6ש, `NEXT_HAND_DELAY_MS`); תווית `bestHand` מתחת לקלפים; `showMoment` למנצח יד + knockout/placement ב-SnG; **תיקון all-in שחשף מנצח מוקדם** — `displayStacks` מוקפא ב-`useReveal`, log/alive/moments גדורים על `!revealing`, river all-in כופה חלון reveal. reviewer נקי. אין SQL. **ממתין לבדיקה חיה 2-דפדפנים.**
-- **STAGE K ✅ נדחף** (`e87f41a`). K1: הוסר גביע `ev_weekly_winner` (הפרס הכספי נשאר). K2: `StreakBadge` עוצב מחדש — צבע tier (ברונזה/כסף/זהב) + להבה מונפשת CSS. K3: כרטיס "הזמן חבר" קיבל `InviteArt` ✈️ (היה 🎁 כפול). K4: `SettingsPanel` — גלגל השיניים ב-HUD פותח פאנל אודיו מהיר במקום לנווט (מונע teardown של משחק חי). **הרצה: `RUN-THIS-NEXT.sql` = `delete ... ev_weekly_winner`.**
-- **STAGE L ✅ נדחף** (`69b4805`). הוסרו 5 מטבעות ה-currencySkin מסבב G (+ migration שמנקה equipped/user_items). נוסף `cf_holo` (mythic, shimmer CSS) + חבילת "ערכת שולחן מלכותית" (`pack_royal_suite`, -40%, נדירה). טאב "הכל" ממוין ומקובץ לפי קטגוריה+נדירות עם כותרות. 5 ז'יטונים חדשים (`ck-royal/jade/crimson/frost/rosegold`). reviewer: חוסם seed תוקן. **הרצה: `RUN-THIS-NEXT.sql` (מחיקת מטבעות + seed פריטים חדשים).**
-- **STAGE H ✅ נדחף** (`01a4f50`). H1: toast "חבר נכנס למשחק" + צליל כשחבר עובר offline→online (debounce 10 דק', מדלג על refresh ראשון, מכבד showPresence, לא יוצר notification). H2: `AvatarEditor` מודל (skin/hair, תצוגה חיה) מ-`MyRoomScene` — נשמר דרך `setAvatar`→`syncProfile`; פריטי חנות לא נגעו. אין SQL.
-
-- **תיקון המשך (`1431c48`)** — all-in חשף מנצח מוקדם **גם בפוקר cash** (לא רק SnG). השורש היה ב-`useReveal.ts` עצמו: "cold" client (non-host שפספס את שלב ההימורים) קיבל showdown מסודר כפריים ראשון → דילג על staging. תוקן: cold all-in showdown מריץ runout מ-0; `displayStacks` נגזר מ-`stack - showdown.won`.
-
-**סבב 2 הושלם (J·I·K·L·H).**
-
-## סבב 3 — reworks גדולים (2026-09-04). תוכנית: `swift-snuggling-harp.md` "סבב 3". סדר: P→O→M→N.
-- **STAGE P ✅ נדחף** (`16dec5b`, `cb3b9b9`, `3e8ea8e`).
-  - P0: "בלעדי היום"+"נדיר היום" אוחדו לסלוט "✨ מיוחד היום" אחד שמסתובב על כל הפול.
-  - P0b: אדמין — כפתור "תן הכל" (קיים) + גלריית קטלוג "📦 כל הפריטים".
-  - P1: שולחן/רקע של המארח נכתב ל-`rooms.config` (`tableSkin`/`bgSkin`); BJ/פוקר/SnG/באקרה בחדר מרנדרים אותו.
-  - P2: טייטלים (`equipped.title`) — 7 נקנים + 4 נפתחים בהישג (בעלות נגזרת מ-`profiles.achievements`). `ttl_rookie` = starter. רכיב `PlayerName`.
-  - P3: צבע שם (`equipped.nameColor`) — פלטה של 10.
-  - P4: +4 משקפיים, +3 שעונים, +3 שרשראות, +2 דילרים.
-  - טייטל+צבע מרונדרים במושבי פוקר/BJ, צ'אט, לוח מנהיגים, פאנל חברים.
-  - reviewer: חוסם `ttl_rookie` starter-grant תוקן. **הרצה: `RUN-THIS-NEXT.sql` (עמודת `unlocked_by` + seed 28 פריטים + backfill טירון).**
-  - **park:** אנימציית חלוקה/זריקת ז'יטונים. **דילג:** `tableSkin` ברולטה/coinflip/highcard (אין felt skin-able).
-- **STAGE O — VIP rework ✅ נדחף** (`c3b968b`). זכאות = רמה 5 בלבד (בלי סף צ'יפים / everVip). סולם `vipTier(level)` — ברונזה 5 / כסף 12 / זהב 22 / יהלום 35. `vipTierOf`→`shopDiscountTier` (rename — היה overload). `supabase/vip.sql`: `claim_vip_daily` (בונוס דרגה 24ש), `claim_vip_cashback` (% הפסד נטו מול `weekly_chip_snapshot`, כסף+, שבועי), `claim_vip_stipend` (קצבה, זהב+, שבועי), `fetch_vip_state`. סכומים מ-`app_config`. 14 פריטי VIP בלעדיים (price 0, בעלות נגזרת מדרגה). שורת צ'יפים גבוהים גם ב-slots. `VipScene` שוכתב (כרטיס דרגה + 3 כפתורי claim + מדף קוסמטיקה). reviewer: תוקן type של `fetchVipState` + cashback no_snapshot cooldown. **הרצה: `RUN-THIS-NEXT.sql` (3 חלקים בקובץ אחד: item seed + app-config מלא + vip.sql).**
-- **STAGE N1 (ערב חברה) — בעבודה.**
-  - `51afe29` — roster: הוסרו slots/coinflip/scratch. `sessionStorage` keyed לחדר.
-  - `0a94616` — **רולטה נוספה** (`useNightReturn`+`useNightScoring`, double-report guarded). **הייקארד ב-Night = ante אחיד** (מארח בוחר 500/1k/2.5k/5k, כולם משלמים, מנצח לוקח את הקופה; `nightAnte` action + `anteMode`). ניקוד `pointsFor(game,outcome)`. reviewer נקי. **אין SQL.**
-  - **N2 — "גבוה/נמוך הישרדות" ✅ נדחף** (`a50cb02`). משחק MP חדש מקצה לקצה: ante אחיד, קלף בסיס, ניחוש גבוה/נמוך בו-זמני (טיימר 8ש), טעות/timeout=הדחה, תיקו=push, אחרון לוקח קופה. `src/games/highlow/*` (engine+types+redact+scene) + `useHighLowRoom`+`highlowService` + מסלול/roster/ניקוד/8 מושבים. reviewer: 2 חוסמים תוקנו (חלוקת wipe לא הייתה zero-sum + חלוקה באפס כשאף אחד לא ניחש — עכשיו הסיבוב מבוטל). **הרצה: `RUN-THIS-NEXT.sql`** (seat check 0-7 + `enforce_room_capacity`).
-  - **BJ MP הימורי-צד ✅ נדחף** (`3e9f680`). Perfect Pairs/21+3 היו "solo-only" מהערה מיושנת בלבד — ה-state כבר תמך בזה גנרית. נפתח ב-room (חסום ב-duel), תגית מושב "🎲 500 · Perfect Pairs". **באג כסף אמיתי שנחשף:** `claim_blackjack_payout` מעולם לא כלל `sideResults` בחישוב — זכייה בהימור צד ב-room הייתה מוצגת אבל לא משלמת. תוקן. reviewer נקי. **הרצה: `RUN-THIS-NEXT.sql`.**
-  - **דואל ב-Night:** דילגנו לבקשת המשתמש (לא כרגע).
-  - **נשאר ל-N:** עוד משחקי מסיבה (לפי רצון).
-- **STAGE M ✅ נדחף** (`57724f5`) — **תיקון "BJ/דואל עם חברים לא מכניס שחקן שני".**
-  שורש (אושר): `RoomScene.startGame` ניווט רק את המארח; שום דבר לא שאב את שאר חברי החדר. `rooms.active_game` (jsonb, ברמת חדר — לא קבור ב-engine של בלאק'ג'ק) + hook `useFollowHost` שכל חבר חדר (כולל מארח) מאזין לו ומנווט. `NightScene` הועברה במלואה לאותו מנגנון (מאחד כפילות). דיל-גייט cash מחכה עד 4ש לשחקן שני. מות מארח: poll 5→2ש, חלון 20→15ש (reviewer תפס ש-10ש היה צר מדי מול heartbeat 8ש). `roomCapacity()` מקור יחיד. **M1 (איחוד 7 ה-room stores) דולג** — ריפקטור פנימי טהור בלי ערך משתמש חדש, סיכון גבוה מדי לכל ה-MP בבת אחת.
-  reviewer: false-positive אחד (roomCapacity הושווה לגרסה מיושנת של `enforce_room_capacity` ב-`setup.sql` במקום ההגדרה החיה ב-`highlow.sql`) + תיקון אמיתי (חלון host). **הרצה: `RUN-THIS-NEXT.sql`.**
-  **ממתין לבדיקה חיה 2-דפדפנים של המשתמש — זה השלב הכי מסוכן, הכי חשוב לאמת.**
-- *doc drift ידוע:* `SCHEMA.sql`/`README.md` לא עודכנו ל-`items.vip_tier` + `profiles.vip_*_claimed` + RPCs של VIP — לסדר בשלב ניקוי.
-
-## Roadmap חדש (2026-09-03) — 8 שלבים A–H
-
-### ביניים (2026-09-03, `3969ecf`) — ניקוי .js + באקרה + playtime
-- **170 קבצי `.js` מקומפלים חזרו ל-`src/`** (הצללו tsx ב-Vite). שורש: `package.json` script `typecheck` היה `tsc -b --noEmit false` — פלט JS. תוקן ל-`tsc --noEmit`; `build` → `tsc --noEmit && vite build`. **אם עריכה "לא מופיעה": `find src -name '*.js' -delete` קודם. אל תריץ `npm run typecheck` הישן.**
-- **באקרה — אין באג אמיתי ב-TS** (מה שהמשתמש ראה = `engine.js` ישן). עמלת בנקאי הפכה מתכווננת: `app_config.baccarat_banker_payout` (0.95 default, 1.0 = בלי עמלה) → `settleOne`/`BaccaratState`, host-authoritative ב-MP. טסט `scripts/baccarat.test.ts` (16) ב-`test:all`.
-- **playtime מצטבר:** `profiles.playtime_seconds` + `add_playtime(sec)` RPC (clamp 0..3600). accumulator ב-`App.tsx` (flush /60ש + pagehide). תצוגה: MyRoomScene + כרטיס אדמין.
-- **הרצה ב-Supabase:** `app-config.sql` (חוזר) → `playtime.sql` (חדש) → `admin-tools.sql` (חוזר).
-
-
-תוכנית מלאה: `C:\Users\noam7\.claude\plans\swift-snuggling-harp.md`. סדר: A→C→D→B→F→E→G→H.
-- **STAGE A — איפוס מלא ✅ נדחף** (`a0c269a`). `reset-all.sql` הורחב (עמודת `ever_vip`, איפוסה, `truncate friendships`); `localStore` bump `royal21.save.v1`→`v2` + `migrateToV2()` שמנקה save ישן + `daily.v1.*` + `ref`; `rowToProfile` ממפה `ever_vip`→`everVip`. **המשתמש צריך להריץ `supabase/reset-all.sql`.** tsc/build/test ירוקים.
-- **STAGE C — מסך פתיחה ✅ נדחף** (`45a600e`). `IntroScene` שוכתב מאפס — אפס framer-motion, אנימציית CSS keyframes בלבד (opacity/transform) בסגנון `AuthScene` (מסגרת זהב + רקע ירוק), לוגו "ROYAL 21" נחשף, כפתור "דלג" תמיד גלוי שמנווט החוצה מיד. ~1.3ש auto-advance (~0.38ש לחוזר/reduced-motion). keyframes ב-`game.css` בלוק INTRO. tsc/build/test ירוקים. **ממתין לאישור ויזואלי של המשתמש.**
-- **STAGE D — פודיום כטבלה + הודעות ✅ נדחף** (`15fe06b`). `WeeklyPodiumPanel` חדש (טבלה חיה: אתה + חברים לפי chips, מדליות top-3, דירוג, טיימר). `weekly_chip_snapshot` + `capture_weekly_snapshot()` (ISO week שהסתיים). `claim_weekly_prize()` שוכתב — דירוג מול snapshot, מזכה + הודעת `podium_prize`. מחיקת הודעות (✕ לכל שורה). reviewer נקי. **המשתמש צריך להריץ `supabase/weekly-snapshot.sql` ואז `supabase/weekly-podium.sql`.**
-- **STAGE B — Supabase + אדמין ✅ נדחף** (`575372f`). `supabase/README.md` (סדר הרצה + מפת "איפה משנים X" + הגדרה חיה לכל פונקציה כפולה); `SCHEMA.sql` reference. `app-config.sql` — טבלת `app_config` + `admin_set_config` (ולידציה per-key) + readers exception-safe (`config_num`/`config_num_from_obj`/`config_bigint_array`); `send_gift`/`claim_daily_bonus`/`claim_weekly_prize`/`claim_mission` קוראים config עם fallback קשיח. `admin-tools.sql` — `admin_find_player`/`reset_player`/`grant_item`/`revoke_item`/`set_level(target)`/`list_bugs`/`resolve_bug`. `AdminScene` — סקשנים: עזרה לשחקן / דוחות באג / כוונון כלכלה. `RequireAdmin` על `/admin`. reviewer מצא 4 חוסמי cast-crash → תוקנו. **הרצה ב-Supabase בסדר: `app-config.sql` → `streak-rewards-v2.sql` → `gift-limit-50k.sql` → `missions.sql` → `weekly-podium.sql` → `admin-tools.sql`.**
-- **STAGE F — presence + צ'אט חברים ✅ נדחף** (`c8e462b`). Heartbeat 25s (Worker ticker) → `last_seen`/presence/game; pagehide → offline beacon. `lib/presence.isFriendOnline` (presence≠offline && last_seen<60s) בכל מקום. הזמנה חסומה למי שלא-מחובר או באמצע משחק. `direct_messages` (RLS: רק חברים, block-aware, throttle 15/60s) + `dmService` + `DmThread` בתוך FriendsPanel + badges. `subscribe` עם debounce 1.5s (מונע flicker מ-heartbeat). reviewer: 1 חוסם (game leak) תוקן. **המשתמש צריך להריץ `RUN-THIS-NEXT.sql` (= `direct-messages.sql`).**
-- **STAGE E — אודיו + הגדרות ✅ נדחף** (`32cfc4e`). מוזיקה: 8 אקורדים (ii-V-i lounge, היה 4) + בס עם תווי מעבר + שכבת pad + וריאציה כל 8 תיבות + zone shaping. SFX: win/bigWin ארפג'יו+shimmer, blackjack ייחודי, chip/card מחודדים, lose/bust רכים. הגדרות: toggle "השתק הכל" (שומר+משחזר, persisted) + preview. אין SQL. **ממתין לאימות שמיעה של המשתמש.**
-- **STAGE G — חנות ✅ נדחף** (`126fb28`). `bundles` table (מקור אמת בשרת) + `buy_pack(p_pack_id)` אטומי — סוף-סוף גובה את הנחת החבילה (הלולאה הישנה קנתה במחיר מלא). `todaysRareRotation` (היה dead code) → סקשן "נדיר היום" + עמודות דגל `rare_rotation_only`/`daily_rarity_only`. 18 פריטים חדשים (cards/backs/tables/frames/victory/currencySkin) + 3 חבילות נושאיות. reviewer: חוסם pack-forgery → תוקן. **המשתמש צריך להריץ `RUN-THIS-NEXT.sql` (= `buy-pack.sql`).**
-- STAGE H — (אופ') כניסה+דמות.
-
-**נותר לבדיקה חיה של המשתמש:** מסך פתיחה (C), אודיו (E), פודיום 2-דפדפנים (D), presence+צ'אט 2-דפדפנים (F), קניית חבילה + סבב נדיר (G). + בדיקת MP הכללית מ-`MP_VERIFICATION_GUIDE.md`.
 
 ## Current status
 
-**כל הפיתוח שתוכנן הושלם, אומת (tsc/build/test:all/i18n ירוקים לכל שלב), נבדק ב-reviewer, ונדחף ל-`origin/main`.**
-הסינגל-פלייר, שכבת המולטיפלייר, ומערכות הצמיחה/retention — כולם באוויר.
+**סבבים 1-3 הושלמו, אומתו (tsc/build/test:all ירוקים לכל שלב), עברו reviewer, נדחפו ל-`origin/main`.** כל הסינגל-פלייר, שכבת המולטיפלייר, מערכות הצמיחה/retention, פאנל אדמין, VIP, וחנות מורחבת — הכל באוויר.
 
-**מה שנשאר: בדיקת מולטיפלייר חיה עם 2 דפדפנים אמיתיים** (רק המשתמש יכול — Claude לא יכול להריץ 2 שחקנים בו-זמנית). זה הצעד הבא היחיד.
+**סבב 4 — Q1-Q4 בוצעו ואומתו (tsc/build/test:all ירוקים לכל שלב), עדיין לא נדחפו ל-`origin/main`.** נעצר לפני Q5 לפי בקשת המשתמש (רצה SQL אם צריך + אישור להמשיך). Q5-Q7 עדיין מחכים. התוכנית המלאה שמורה ב-`C:\Users\noam7\.claude\plans\swift-snuggling-harp.md`.
 
-### ⚠️ מצב git — חשוב לצ'אט הבא
-`main` הלוקאלי מזוהם ב-7 קומיטים יתומים של פרויקט "AI TOWER" (סשן אחר עשה `git add -A` מהשורש של המונו-רפו וסחף פנימה קבצים). **העבודה של ROYAL 21 נמצאת על branch `royal21` = `origin/main`.**
+### ⚠️ מצב git — קריטי לצ'אט הבא
+`main` הלוקאלי (של המונו-רפו `C:\CLAUDE AI`) מזוהם בקומיטים יתומים מפרויקטים אחרים (היה "AI TOWER", ייתכן שיש עוד). **העבודה של ROYAL 21 נמצאת על branch `royal21` = `origin/main` (מרוחק).**
 - לפני עבודה: `cd "C:\CLAUDE AI" && git checkout royal21` (או `git fetch && git checkout -B royal21 origin/main`).
 - commit על `royal21`, דחיפה: `git push origin royal21:main`.
-- **תמיד `git add "ROYAL 21 GAME/..."` בנתיבים מפורשים — לעולם לא `git add -A` מהשורש** (מונו-רפו עם סשנים במקביל).
-- כשהיתומים של AI TOWER יטופלו אפשר `git checkout -B main origin/main`.
-- קומיט אחרון: `f99c27a`. שרשרת: `8abee17..f99c27a`.
+- **תמיד `git add "ROYAL 21 GAME/..."` בנתיבים מפורשים — לעולם לא `git add -A` מהשורש** (מונו-רפו עם סשנים אחרים במקביל, לפעמים גם על `TRAIDING/`).
+- commit מסתיים ב-`Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>`.
+- קומיט אחרון בסבב 3: `57724f5` (Stage M). לפניו: `a02b334`→`3e9f680` (BJ side-bets fix).
 
 ## What's done
 
-### שלב 1 — סינגל-פלייר + באגים + Hub redesign (הושלם בצ'אטים קודמים)
-- כל המשחקים סולו עובדים, כלכלה מדויקת, קלפי-hole מוסתרים (redaction + RPCs).
-- Hub עוצב מחדש (רצפת קזינו, `AppBackdrop` CSS-only), לוח מנהיגים גלובלי+חברים.
-- באגים שנסגרו: ציפים bet/clear (3 שכבות), host heartbeat (Web Worker), עזיבת שולחן BJ, כספת נתקעת, "עוד יד" 2 לחיצות.
+### סבב 1 (2026-09-03) — 8 שלבים A–H
+תוכנית ה-context המקורית של הסבב הזה **נמחקה** מקובץ ה-plan (רק סבב 4 נשאר שם, כדי לא לגרור טוקנים) — הסיכום כאן הוא המקור היחיד מעתה.
+- **A — איפוס מלא:** `reset-all.sql` מרחיב (`ever_vip`, `truncate friendships`), `localStore` bump ל-v2 מנקה state ישן, `everVip` נגזר מה-DB.
+- **B — Supabase מסודר + אדמין:** `supabase/README.md` (סדר הרצה + "איפה משנים X" + הגדרה חיה לכל פונקציה כפולה), `SCHEMA.sql` reference. `app_config` table + `admin_set_config` + readers exception-safe (`config_num`/`config_num_from_obj`/`config_bigint_array`) — קבועי כלכלה נשלטים מהאדמין עם fallback קשיח. `admin-tools.sql` (חיפוש/איפוס/מתן-פריט/דוחות-באג). `RequireAdmin` על `/admin`.
+- **C — מסך פתיחה:** `IntroScene` שוכתב — אפס framer-motion (רק CSS keyframes), דילוג אמיתי.
+- **D — פודיום שבועי כטבלה:** `WeeklyPodiumPanel`, `weekly_chip_snapshot`+`capture_weekly_snapshot()`, `claim_weekly_prize()` מדרג מול snapshot + הודעה `podium_prize`. מחיקת הודעות.
+- **E — אודיו:** מוזיקה עשירה יותר (8 אקורדים, בס+pad), SFX מחודדים, toggle "השתק הכל".
+- **F — presence + צ'אט חברים:** heartbeat 25s, `isFriendOnline` (presence+last_seen<60s) בכל מקום, `direct_messages` + `DmThread`.
+- **G — חנות (סבב ראשון):** `bundles` table + `buy_pack()` אטומי (ההנחה סוף-סוף נגבית), `todaysRareRotation` חובר, 18 פריטים חדשים.
+- **H — הודעת כניסה + עיצוב דמות:** toast "חבר נכנס", `AvatarEditor` (skin/hair).
+- **ביניים חשוב:** 170 קבצי `.js` מקומפלים חזרו והצלילו את ה-tsx — שורש: `package.json` script `typecheck` היה `tsc -b --noEmit false` (פולט JS!). תוקן ל-`tsc --noEmit`. **כלל קבוע: לעולם לא להריץ `npm run typecheck` — רק `npx tsc --noEmit`.** אם עריכה "לא מופיעה": `find src -name '*.js' -not -path '*/node_modules/*' -delete` קודם.
+- באקרה: אין באג אמיתי ב-TS (מה שהמשתמש ראה = `engine.js` ישן שהוצל). עמלת בנקאי הפכה מתכווננת (`app_config.baccarat_banker_payout`).
+- playtime מצטבר: `profiles.playtime_seconds` + `add_playtime()`.
 
-### שלב 2 — רה-ארכיטקטורת מולטיפלייר (4 שלבים, נדחף, reviewer אישר)
-- **Stage 1** (`0d949a9`) — gate "כל היושבים מוכנים → התחלה מיידית" (bj/duel/poker-cash/coinflip/highcard); פוקר cash auto-start כמו SnG (הוסר Ready ידני); coinflip/highcard auto-flip/draw כשכולם נתנו ante; hook משותף `useGhostSeatCleanup` ב-7 סצנות; phase `'waiting'` + abort-round ב-roulette/coinflip/highcard; refund על עזיבה באמצע סיבוב.
-- **Stage 2** (`bcc4f35`) — רולטה MP: תיקון הגלגל שלא הסתובב אצל non-host (רגרסיית spinAt); כפתור "סובב" עובד עם 2 שחקנים; joiner נכנס כשחקן לסיבוב הבא; auto-continue אחרי settle.
-- **Stage 3** (`5dc058d` + `37ed6a0`) — דואל = נקודות בלבד, אין betting UI (כפתור "מוכן" בלבד), `duel.pot` קפוא לפי מספר שחקנים ב-start, עוזב → הנותר לוקח את הקופה. הוסר "BLACKJACK PAYS 3 TO 2" (המתמטיקה 3:2 נשארה). Double מוסתר בדואל; **Split נשאר בדואל** (מוסיף נקודות, לא גובה ז'יטונים).
-- **Stage 4** (`6922ec2`) — ערב חברה: רק המארח בוחר משחק והבחירה שואבת את כולם פנימה (`activeMiniGame` + auto-navigate); leaver מסומן "עזב" בלוח. SnG + cash poker: effect ה-settle גודר על `!revealing` — "ניצחת בטורניר" לא מקדים את חשיפת הקלפים.
-- **מגבלה ידועה:** host-death freeze עדיין ~5-25ש (`reassign_room_host` חלון 20ש). לא בסקופ.
+### סבב 2 (2026-09-04) — תיקונים + ליטושים (J·I·K·L·H)
+- **J — באגי MP:** מתנת צ'יפים זיכתה **פעמיים** (RPC + client) — תוקן, ההודעה receipt-only נושאת `new_balance`. רולטה MP — כפתור "סיימתי להמר" (action `ready` שכבר היה ב-engine, לא בשימוש) + countdown 15ש, בוטל כפתור "סובב עכשיו" של המארח.
+- **I — פוקר/SnG:** badge פעולה + ז'יטון לקופה, `showCards`/"הצג קלפים" + `HandOverBar` (6ש), תווית `bestHand`, `showMoment` למנצח, **תיקון all-in שחשף מנצח מוקדם** (`displayStacks` מוקפא ב-`useReveal`, גם ב-cash וגם ב-SnG, כולל תרחיש "cold client").
+- **K — HUB/קוסמטי:** הוסר גביע `ev_weekly_winner`, `StreakBadge` עוצב מחדש, כרטיס "הזמן חבר" קיבל אייקון נפרד, `SettingsPanel` מהיר (לא מנווט מחוץ למשחק).
+- **L — חנות:** הוסרו 5 מטבעות currencySkin בעייתיים, נוסף `cf_holo` + "ערכת שולחן מלכותית", טאב "הכל" ממוין, 5 ז'יטונים חדשים.
+- **H — המשך:** toast כניסה + `AvatarEditor`.
 
-### שלב 3 — כוונונים אחרי משוב המשתמש (נדחפו)
-- **כניסת אורח הוסרה** (`d8d7d36`) — רק הרשמה/כניסה עם חשבון (התקדמות נשמרת לחברים שמשחקים פעם בחודש).
-- **מתנת צ'יפים 500 → 50,000/יום** (`d8d7d36` + `gift-limit-50k.sql` הורץ).
-- **166 קבצי `.js` מקומפלים** שהצלילו את ה-`.tsx` ב-Vite — נמחקו + `.gitignore` guard (`365765c`, `dcd7704`). אם עריכה "לא מופיעה" אחרי restart+cache-clear — `find src -name '*.js'` קודם.
-- **אינטרו** — הוחזר למקורי (הטיסה הקולנועית ירדה). **מסך התחברות** — רקע ישן + מסגרת זהב וקלפים דקורטיביים חדשים (`22dd456`, `1d6cbd3`).
-- **פוקר/SnG:** טיימר פעולה קבוע **60ש** (הבורר הוסר מהמודל); בליינדים ב-SnG כל **2 דקות** (`3882d48`).
-- **באקרה:** הימור **תיקו הוסר** (`'tie'` נשאר תוצאה → push); **חשיפת squeeze** — כל הקלפים הפוכים, נחשפים אחד-אחד בסדר חלוקה, התוצאה/הזיכוי מוקפאים עד הסוף (`10d81eb`); `PlayingCard` flip תוקן (חסר `perspective`).
-- **פיצול אסים** → קלף אחד לכל יד, אין לקיחת קלף נוסף (`dcc6263`).
-- **רייל ז'יטונים אחיד:** `[25, 100, 250, 500, 1000, 2500, 5000, 10000]` לכולם; VIP מקבל קטע נפרד **"💎 VIP HIGH STAKES"** עם `[25000, 50000, 100000, 250000]` (בלאק'ג'ק/רולטה/באקרה/קוינפליפ/הייקארד — **לא בסלוטס**) (`21e9b39`, `eaac3bd`).
-- **בלאק'ג'ק סולו — הימורי צד:** Perfect Pairs + 21+3, שני פאנלים בצדי השולחן עם טבלת תשלומים + "הימרת: X" + הבהוב זכייה. **סולו בלבד**. דילר עם 21 → סיום מיידי (`343226d`).
-- **קלפי גירוד:** טבלת פרסים גלויה (סמל×3 → סכום) + פויל/רקע/סמלים נושאיים לכל רמה (בית/פליז/כסף/זהב/אובסידיאן) (`00982a8`).
+### סבב 3 (2026-09-04) — reworks גדולים (P·O·N·M)
+- **P — חנות מורחבת:** "מיוחד היום" מאוחד (סלוט אחד מסתובב), אדמין תן/ראה-הכל, **שולחן אישי** (`rooms.config.tableSkin/bgSkin` מהמארח — BJ/פוקר/SnG/באקרה בלבד, חלקי!), **טייטלים** (`equipped.title`, 7 נקנים+4 בהישג), **צבע שם** (`equipped.nameColor`, פלטה של 10), +12 פריטי לבוש. טייטל+צבע חוברו למושבי פוקר/BJ, צ'אט, לוח.
+- **O — VIP rework:** זכאות = **רמה 5 בלבד**. סולם `vipTier(level)`: ברונזה 5 / כסף 12 / זהב 22 / יהלום 35. `vipTierOf`→`shopDiscountTier` (rename, היה overload). `supabase/vip.sql`: `claim_vip_daily`/`claim_vip_cashback`/`claim_vip_stipend`/`fetch_vip_state`, סכומים מ-`app_config`. 14 פריטי VIP בלעדיים (בעלות נגזרת מדרגה — **5 מהם התבררו מתים לגמרי, ראה "ידוע" למטה**). `VipScene` שוכתב.
+- **N — ערב חברה (רוב הרוב, ראה סבב 4 להמשך/מחיקה!):** roster צומצם, רולטה נוספה, הייקארד קיבל מודל ante-אחיד, **משחק חדש "גבוה/נמוך הישרדות"** (`src/games/highlow/*`) מקצה לקצה, **BJ MP הימורי-צד** נפתחו (וחשפו/תיקנו באג כסף אמיתי — `claim_blackjack_payout` לא כלל `sideResults`). דואל ב-Night דולג.
+- **M — תשתית חדרים:** **תיקן את "BJ/דואל עם חברים לא מכניס שחקן שני"** — `rooms.active_game` (jsonb ברמת חדר) + hook `useFollowHost` גנרי ש-RoomScene+NightScene שניהם משתמשים בו. דיל-גייט cash מחכה לשחקן שני. מות מארח מהיר יותר (poll 2s, חלון 15s). `roomCapacity()` מקור יחיד. **טרם אומת חי ב-2 דפדפנים.**
 
-### שלב 4 — מערכות צמיחה / retention (5 sub-stages, נדחפו, reviewer אישר)
-- **STAGE 1** (`fe3803b`) — באג זוהר הימור-צד (`.sb-won` CSS keyframes); היגיינת התראות (הזמנת חדר מת → נמחקת, `roomsService.isLive`, RLS delete); פרסי רצף גדולים (יום 7: 5,000 · יום 30: 50,000); בונוס הפניה 500 → 5,000.
-- **STAGE 3a → re-model** (`8abee17` → `f99c27a`) — **מדף גביעים = רק 9 גביעי אירוע** (real-trophy + הפרס מתחת לכל אחד); **הישגים = סקשן נפרד collapsible** עם הפרס לכל אחד ("בחר מה לרדוף"); כרטיס **"השיא שלי"**; **סטטיסטיקות לפי משחק** (בלי סלוטס/גירוד, בלי נתונים מומצאים).
-- **STAGE 2** (`dd38bf1`, `b8fd712`) — **משימות יומיות מתחלפות:** מאגר 16, `dailyMissions(dateKey)` דטרמיניסטי (3/יום distinct, לא-כמו-אתמול, כמות+גיוון) + משימה שבועית. `missionProgress` מקומי (roll ב-UTC midnight), מתעדכן ב-`recordResult`. `claim_mission` RPC אטומי (cap 20K) + guest mirror. widget ב-hub + `MissionsPanel`. בונוס "כל ה-3" +5,000.
-- **STAGE 3b** (`84779a5` → `f99c27a`) — **9 גביעי אירוע:** `ev_sng_win`/`ev_jackpot`/`ev_duel_victor`/`ev_night_champion`/`ev_side_bet_10x`/`ev_weekly_winner`/`ev_first_referral`/`ev_vip`/`ev_royal_flush` (gold 2,500 / platinum 5,000). `usePlayer.grantEvent(id)` אטומי, מחווט ל-10 hooks. (`ev_streak30` נבנה ואז הוסר לבקשת המשתמש.)
-- **STAGE 4** (`6e92b90`) — **הפניות מדורגות:** שלב-שני +10,000 ברמה 5; בונוס מזמין `[3000, 7000, 15000]` ל-3 חברים ראשונים; חלון anti-abuse 24→72ש. **Web Share** (`navigator.share`) + copy fallback; כפתור "הזמן חבר" ב-hub. **פרס שבועי → פודיום** (5,000/2,500/1,000 ל-3 העשירים בין החברים) + כרטיס ב-hub שמראה את הדירוג. אנליטיקס: `invite_shared`, `referral_stage2`, `mission_claimed`, `notification_click`.
-- **Round 30 — תיקוני משוב** (`f99c27a`) — **באג קריטי:** פאנל החברים (+ `Modal` המשותף + `InviteOverlay`/`SideNav`/`Onboarding`) השאיר overlay שקוף `pointer-events:auto` אחרי סגירה וחסם את כל המסך (אנימציית `exit` של framer נתקעת — אותה בעיה כמו הכספת). תוקן: רינדור מותנה `{open && …}` / `if (!open) return null`, entrance-only, סגירה = unmount מיידי. **אימת חי.**
+### סבב 4 (2026-09-04) — Q1-Q4 בוצעו, לא נדחפו עדיין
+- **Q1 — מחיקת "ערב חברה" + "גבוה/נמוך הישרדות" לגמרי.** NightScene/useNightReturn/useNightScoring/night.ts + כל `src/games/highlow/*`+service+store+test נמחקו. Routes `/night/:roomCode`+`/game/highlow/room/:roomCode` הוסרו. אינטגרציות Night הוסרו מרולטה/coinflip/slots/scratch/highcard/BJ (`activeMiniGame`/`reportResult`/`setActiveMiniGame` הוסרו — היו dead-in-practice). הייקארד: `nightAnte`/`anteMode`/`NIGHT_ANTES` הוסרו לגמרי (היו תלויים אך ורק ב-`?night=`). `'highlow'` הוסר מ-`GameKey`. Hub card הוסר. `ev_night_champion` הוסר מ-`achievements.ts` + DELETE נוסף ל-`event-trophies.sql`. i18n `night.*`/`highlow.*` נוקה. **⚠️ נשארו dead:** `king_of_night`/`legend_of_night` (achievements) תלויים ב-`stats.nightWins` שקפוא לצמיתות — לא נמחקו (לא התבקש במפורש), החלטה פתוחה למשתמש.
+- **Q2 — 3 תיקונים קטנים:** (a) `nc_cream`→`#e8dcc0`, `nc_neon`→`#39ff8f` ב-`items.ts` **וגם** ב-`supabase/setup.sql` (seed עם `on conflict do update` היה דורס בחזרה לצבעים הישנים אם לא מתעדכן שם). (b) כרטיס "ערכת שולחן מלכותית" — תג "חבילה" + מחיר מוזל (52,800) עם קו על המקורי (88,000), ב-`VaultScene.tsx`. (c) `displayPot` נוסף ל-`useReveal.ts` (אותו דפוס כמו `displayStacks`) — `PokerScene.tsx`+`SitAndGoScene.tsx` קוראים ממנו במקום `state.pot` הגולמי.
+- **Q3 — השלמת שולחן אישי:** bgSkin נוסף ל-`PokerScene`/`SitAndGoScene`/`BaccaratScene` (tableSkin כבר היה). tableSkin+bgSkin נוספו מאפס ל-`RouletteScene`/`CoinFlipScene`/`HighCardScene` (room mode בלבד, סולו לא נגע). תג "השולחן של X" (`rooms.customTable` i18n) — מוצג רק כש-tableSkin ≠ ברירת המחדל `tb-green`. **⚠️ לא נוסף ל-BlackjackScene** (היחיד שכבר עבד נכון קודם) — פער עקביות קטן, לשקול ב-Q7.
+- **Q4 — VIP אמיתי:** 4 מסגרות CSS מדורגות (`fr-vip-bronze/silver/gold/diamond` ב-`game.css`) — ברונזה פשוטה→יהלום עם `@keyframes` פעימה. שולחן יהלום (`tb-vip-diamond`) עם מרקם+shimmer ייחודי. אפקט ניצחון יהלום (`vc-vip-diamond`) ב-`VictoryEffect.tsx` — case ייעודי, יותר חלקיקים/משך מכל אפקט אחר. **הוחלט לא להוסיף** victory effects לברונזה/כסף/זהב — אין להן payload `victory` בכלל ב-`items.ts` (שינוי מודל נתונים גדול יותר מהמשימה).
+- **טרם בוצע:** commit+push, SQL ל-ev_night_champion (המשתמש צריך להריץ), בדיקה חיה של Q1-Q4 (רק tsc/build/test — לא דפדפן).
 
-### SQL שהורץ בפרודקשן ע"י המשתמש (מצטבר)
-`poker-privacy.sql` · `reset-users.sql` · `achievements-daily.sql` · `gift-limit-50k.sql` · `notifications-cleanup.sql` · `streak-rewards-v2.sql` · `referral-bonus-5k.sql` · `missions.sql` · `event-trophies.sql` (המעודכן, עם מחיקת `ev_streak30`) · `referral-growth.sql` · `weekly-podium.sql`.
-*(המשתמש אישר "DONE" אחרי שכל הקבצים נשלחו — אם משהו לא עובד בפרודקשן, לוודא שהקובץ המתאים רץ.)*
+### SQL — הצטבר, ככל הנראה כולו רץ עד Stage M (לוודא בצ'אט הבא)
+כל שלב שלח `RUN-THIS-NEXT.sql` מרוכז (הקובץ מוחלף בכל שלב, לא מצטבר — המשתמש רץ ברצף). האחרון שנשלח = Stage M (`rooms.active_game` + `reassign_room_host` window). **אם משהו "לא עובד" בפרודקשן — לבדוק קודם אם קובץ SQL כלשהו לא רץ.**
 
 ## What's left / next steps
 
-1. **בדיקת מולטיפלייר חיה — 2 דפדפנים אמיתיים** (הצעד היחיד שנשאר, רק המשתמש). מדריך: `ROYAL 21 GAME/MP_VERIFICATION_GUIDE.md`. לבדוק:
-   - **MP:** דואל (שני "מוכן" → יד מיד, מנצח מקבל buyIn×2, עוזב מפסיד), רולטה (גלגל מסתובב בשני המסכים יחד, joiner יכול להמר בסיבוב הבא), פוקר (יד הבאה אוטומטית), ערב חברה (מארח בוחר → כולם נכנסים), SnG (רגע הזכייה מחכה ללוח).
-   - **חברתי:** הזמנת חבר → שניכם +5,000; הזמנה לחדר → קבלה/פג-תוקף; פודיום שבועי.
-   - **retention:** רצף כניסה (פעם ביום — כבר server-enforced למחובר), משימות יומיות (התקדמות + איסוף + בונוס "כל ה-3"), גביעי אירוע (נצח טורניר → toast+moment).
-2. **לתקן מה שהבדיקה החיה תמצא.**
-3. אחרי שהכל ירוק — **סקירה מקיפה סופית** + **חשבון טוקנים/זמן** של כל הפרויקט.
+**סבב 4 — תוכנית מלאה ב-`C:\Users\noam7\.claude\plans\swift-snuggling-harp.md` (Q1-Q7). לא בוצע. מחכה ל"תתחיל" מהמשתמש.**
 
-### רעיונות עתידיים (לא בסקופ, לא הובטחו)
-- **QR code** ללינק הזמנה — דורש הוספת `qrcode` ל-npm (מחולל QR מלא inline גדול/מסוכן מדי).
-- גביע **"חודש משימות מלא"** (`mission_month`) — נדחה, מורכב.
-- **מערכת קישוט חדר** — `roomDecor`/`category:'decor'` קיימים כשלד מת, שום דבר לא מחווט. ~10-15 פריטי decor + קטגוריה ב-Vault/Inventory + רינדור ב-`MyRoomScene`.
-- **איפוס רצף לפי אזור-זמן מקומי** (כרגע UTC — שחקן בישראל רואה את היום מתחלף ב-02:00/03:00).
-- ה"נאדג' לגביע הבא" ב-`MyRoomScene` מציג הישג-stat מעומעם מתחת למדף הגביעים — אם המשתמש רוצה מדף נקי לגמרי, להסיר.
+בדיקה חיה + חקירת קוד (3 סוכנים) אחרי סבב 3 העלו 9 דברים, סודרו קל→קשה:
+1. **Q1 — למחוק את "ערב חברה" לגמרי**, כולל המשחק "גבוה/נמוך הישרדות" (אין לו נגישות מחוץ ל-Night, נמחק יחד). מפשט את Q6.
+2. **Q2 — 3 תיקונים קטנים:** (a) צבעי שם כפולים בחנות (`nc_cream`≈ברירת מחדל, `nc_neon`≈`nc_jade`) — להחליף לגוונים מובחנים. (b) כרטיס "ערכת שולחן מלכותית" מטעה (מציג מחיר מלא 88,000 כאילו פריט בודד; המחיר האמיתי אחרי הנחה 52,800) — להוסיף תג "חבילה" + מחיר מוזל. (c) **פוקר all-in — הקופה בראש המסך** (`state.pot`) נקראת גולמית ולא דרך ה-staging, מתאפסת מוקדם מדי — להוסיף `displayPot` ב-`useReveal.ts` (אותו דפוס כמו `displayStacks`).
+3. **Q3 — השלמת שולחן אישי:** כרגע רק BJ מלא (felt+רקע); פוקר/SnG/באקרה = felt בלבד; רולטה/coinflip/highcard = כלום. להשלים + להוסיף אינדיקציה גלויה "השולחן של X".
+4. **Q4 — VIP אמיתי:** 5 מתוך 14 הפריטים **מתים לגמרי** (4 מסגרות בכל הדרגות + שולחן יהלום — אין להם CSS בכלל). אפקט ניצחון יהלום נופל ל-fallback גנרי. המשתמש: כל 4 הדרגות מקבלות עיצוב אמיתי ומדורג (ברונזה עדינה → יהלום מרהיב).
+5. **Q5 — דליפת קוסמטיקה במולטיפלייר (הכי גדול, הכי חמור).** שורש מדויק: `BjSeat`/פוקר `Seat` מעולם לא קיבלו שדות `chipSkin`/`cardFace`/`cardBack` per-seat (בניגוד ל-`title`/`nameColor` שכן נעשו נכון). כל רינדור מושב-יריב קורא בטעות מ-`profile.equipped.*` **המקומי** — כל שחקן רואה את **הסקין של עצמו** על שני המושבים. לתקן ב-בלאק'ג'ק + פוקר/SnG (באקרה לא בסקופ הפעם) בדיוק לפי הדפוס שעבד ל-title/nameColor.
+6. **Q6 — מסך סיום BJ-עם-חברים:** להסיר כפתור "עוד יד" + auto-advance-לאותה-סצנה. חדש: להחזיק תוצאה גלויה ~4-5ש → לנווט את כולם אוטומטית חזרה ל-`/room/:code` (לובי, אותם חברים).
+7. **Q7 — סבב QA/ליטוש כללי** (בסוף, אחרי שהכל יציב) — מעבר שיטתי: קונסול, מצבי ריק/שגיאה, i18n, עקביות עיצובית, מובייל, קוד מת.
+
+**לא באג (רק להסביר למשתמש כשעולה):** פיצול אסים ב-BJ עובד תקין בכל מצב — שתי הידיים ננעלות עם קלף אחד אחרי הפיצול, זה כלל קזינו סטנדרטי, לא הבדל solo/room.
+
+**רעיון עתידי (לא בתוכנית):** משחקי ארקייד — המשתמש הזכיר כרעיון, לדחות לשיחת תכנון נפרדת.
+
+**בדיקה חיה שעדיין חסרה מהמשתמש (מסבבים קודמים, לא דחוף אבל פתוח):** Stage M (BJ/דואל עם חברים) ב-2 דפדפנים — השלב הכי מסוכן, לא אומת חי עדיין.
 
 ## Key decisions & context
 
-- **הסוכנים:** הסשן הראשי = מנהל-הפרויקט. מאציל ל-`builder` (חוסם), `reviewer` רק לכסף/אימות/MP/גדול, `designer` רק ל-UI אמיתי. מוגדר ב-`C:\CLAUDE AI\CLAUDE.md`. **סוכן builder נפל פעם על session rate-limit** (מתאפס 5am Asia/Jerusalem) — העבודה שרדה (הייתה staged), חילצתי ל-commit נקי.
-- **dev server:** `cd "C:\CLAUDE AI\ROYAL 21 GAME" && PORT=5199 npm run dev`. אם תיקון "לא מופיע" — `taskkill //F //IM node.exe` + `rm -rf node_modules/.vite` + restart + hard reload. `tsc`/`build`/`test:all` הם הסמכות, לא הקונסול.
-- **בדיקת דפדפן:** guest נבדק ישירות ע"י הזרקת `royal21.save.v1` ל-localStorage עם profile `guest_*` (כניסת אורח הוסרה מה-UI). ה-Browser pane של Claude **לא אמין ל-QA ויזואלי** — מקפיא אנימציות framer/CSS one-shot, מרנדר סצנות כהות/מטושטש לא-עקבי. בדיקות DOM/JS דרך `javascript_tool` אמינות; צילומי מסך של סצנות עם blur/gradient — לא. **המשתמש הוא המאמת הויזואלי בדפדפן אמיתי.**
-- **framer-motion:** אנימציות `animate` של framer + **אנימציות `exit` של `AnimatePresence`** לא מסתיימות אמין (נתקעות → overlay חוסם). לרקע/overlay — CSS `@keyframes` בלבד, ורינדור מותנה `{open && …}` בלי `exit`.
-- **כלכלה:** מתועדת ב-`src/data/economy.ts`. `-30%` בכספת = `DAILY_DISCOUNT`. VIP tier (הנחה, רמה 1+) ≠ VIP Lounge (`isVipEligible` = `everVip || level≥5 && chips≥150K`). קבועים מרכזיים: `STREAK_REWARD`, `REFERRAL_BONUS`/`REFERRAL_STAGE2_BONUS`/`REFERRER_TIERS`, `WEEKLY_PODIUM`, `MISSION_ALL_DONE_BONUS`/`MAX_MISSION_REWARD`, `GIFT_DAILY_LIMIT`.
-- **הישגים:** `ACHIEVEMENTS` ב-`src/data/achievements.ts` — 31 `kind:'stat'` (סף סטטיסטיקה) + 9 `kind:'event'` (רגע מיוחד). כולם מזכים צ'יפים. `claim_achievement` RPC כותב רק `profiles.achievements text[]` — לא קורא את הקטלוג.
-- **המשתמש:** עברית · השתקת **כל** האודיו לפני בדיקה · batch של תיקונים · החלטה-ופעולה במקום סקירת אופציות · רגיש לעלות טוקנים (שמור סוכן חי דרך SendMessage במקום respawn).
-- **git:** ראה "מצב git" למעלה. commit מסתיים ב-`Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>`.
-- **admin:** email `noamshay1010@gmail.com`. session-injection login trick + כל פרטי הסבבים — בזיכרון `royal21_bugfix_loop.md`.
+- **הסוכנים:** הסשן הראשי = מנהל-הפרויקט (לא מפעיל "מנהל" כסוכן נפרד). מאציל ל-`builder` (חוסם, `run_in_background:false`), `reviewer` רק לכסף/MP/redaction/גדול, `designer` רק ל-UI אמיתי (לא נעשה בו שימוש בפועל השלבים האחרונים — רוב הוויזואל נעשה ע"י builder + CSS). מוגדר ב-`C:\CLAUDE AI\CLAUDE.md`.
+- **תבנית עבודה שהתבססה:** בנאי מקבל batch של כל התיקונים בשלב אחת, מאבחן+מתקן+מאמת (tsc+build+test:all), מדווח diff. אם כסף/MP/redaction → reviewer עם prompt ממוקד לחוסמים אפשריים. תיקוני reviewer קטנים — לפעמים אני (הסשן הראשי) מתקן ישירות בלי סבב בנאי נוסף, לפעמים שולח בחזרה לבנאי. אחרי אימות — commit מפורש בנתיבים + push + `RUN-THIS-NEXT.sql` מרוכז אם יש SQL + `SendUserFile` + עדכון progress.md.
+- **`RUN-THIS-NEXT.sql`:** קובץ יחיד שמוחלף (לא מצטבר) בכל שלב שדורש SQL — מרכז את כל מה שהמשתמש צריך להריץ מאותו שלב, גם אם זה כמה קבצי מקור. נשלח תמיד עם `SendUserFile` + כותרת שאומרת מה זה.
+- **dev/build:** `PORT=5199 npm run dev`. **לעולם לא `npm run typecheck`** (script שבור בעבר — פלט JS; תוקן, אבל להיזהר). תמיד `npx tsc --noEmit` + `npm run build` + `npm run test:all`. אם עריכה "לא מופיעה" — `find src -name '*.js' -not -path '*/node_modules/*'` קודם, למחוק אם יש.
+- **בדיקת דפדפן:** ה-Browser pane של Claude **לא אמין לQA ויזואלי** (מקפיא אנימציות, מרנדר לא-עקבי) — שימושי לבדיקות DOM/JS בלבד. **המשתמש הוא המאמת הויזואלי וה-2-דפדפנים תמיד.**
+- **framer-motion:** אסור לרקעים/overlays — `animate`/`AnimatePresence`/`exit` נתקעים ומשאירים overlay חוסם. רק CSS `@keyframes` + רינדור מותנה `{open && …}`.
+- **git:** ראה "מצב git" למעלה — branch `royal21`, נתיבים מפורשים תמיד.
+- **admin:** email `noamshay1010@gmail.com`.
+- **המשתמש:** עברית · השתקת **כל** האודיו לפני בדיקה · batch של תיקונים · החלטה-ופעולה במקום סקירת אופציות · רגיש לעלות טוקנים (**קובץ ה-plan מכיל רק את הסבב הנוכחי, לא היסטוריה — טרימו אותו ב-2026-09-04 כי ExitPlanMode מציג את כל הקובץ**) · אוהב שאלות ממוקדות (AskUserQuestion) לפני תוכניות גדולות, לא שאלות טקסט חופשי · ביקש במפורש "אל תתחיל לבנות עד שאני אומר 'תתחיל'" — לכבד את זה תמיד.
+- **תוכנית פעילה:** `C:\Users\noam7\.claude\plans\swift-snuggling-harp.md` — מכיל רק את סבב 4 (Q1-Q7). לקרוא בתחילת הצ'אט הבא.
 
 ## Known issues / open questions
 
-- **בדיקת MP חיה 2-דפדפנים לא בוצעה** — כל שכבת ה-MP + החברתי + retention נבנתה ואומתה בקוד, אבל סנכרון בו-זמני אמיתי / גלגל בשני מסכים / host handoff / הזמנות בין חשבונות — רק המשתמש יכול לאמת.
-- host-death freeze ~5-25ש — לא בסקופ.
-- `activeMiniGame` stale מסשן שקרס — לקוח טרי ב-`/night/CODE` עם pointer ישן עלול להישאב פנימה לרגע.
-- אורח על מכשיר חדש יכול לתבוע רצף/הפניה שוב (אין שרת) — לא רלוונטי לשחקן מחובר.
-- דחיפה ל-`origin` איטית — ~125MB קבצי BLACKJACK 3D ישנים מקומיטים קודמים.
+- **סבב 4 לא בוצע** — 9 דברים מחכים לבנייה (ראה "What's left").
+- **Stage M לא אומת חי** ב-2 דפדפנים — BJ/דואל עם חברים, הכי חשוב לבדוק.
+- **דליפת קוסמטיקה במולטיפלייר** (Q5) — באג פעיל כרגע בפרודקשן: שחקנים ב-BJ/פוקר MP רואים את הסקין (קלפים/ז'יטונים) של עצמם על שני המושבים, לא את של היריב.
+- **VIP — 5/14 פריטים מתים** (Q4) — מסגרות + שולחן יהלום לא עושים כלום ויזואלית כרגע.
+- **פוקר — קופה בראש המסך דולפת מוקדם** ב-all-in (Q2c) — לא באותו מקום כמו התיקונים הקודמים (displayStacks תקין, זה `state.pot` הגולמי).
+- **`activeMiniGame`** (ה-legacy field על `BjState`, לפני Stage M) — לא בשימוש יותר אחרי המעבר ל-`rooms.active_game`, אבל לא הוסר מה-types — נקי לניקוי ב-Q7.
+- דחיפה ל-`origin` איטית — ~125MB קבצי BLACKJACK 3D ישנים מקומיטים קודמים במונו-רפו.
+- host-death freeze צומצם (M) אך לא אפס — אם נשארו רק אורחים (לא-מחוברים) בחדר, אף אחד לא יכול לתפוס host (השרת דורש session אמיתי). לא בסקופ.

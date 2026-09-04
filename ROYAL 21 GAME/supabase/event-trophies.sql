@@ -24,7 +24,6 @@ insert into public.achievements (id, name, descr, stat, goal, reward, tier, trop
   ('ev_sng_win',        '{"he":"ניצחון בטורניר","en":"Tournament win"}'::jsonb,        '{"he":"נצח בטורניר Sit & Go","en":"Win a Sit & Go tournament"}'::jsonb,                  null, null, 2500, 'gold',     '🏆', 'event'),
   ('ev_jackpot',        '{"he":"פיצוץ הג׳קפוט","en":"Jackpot!"}'::jsonb,                 '{"he":"זכה בקופת הג׳קפוט המצטברת","en":"Hit a progressive jackpot pool"}'::jsonb,        null, null, 5000, 'platinum', '💰', 'event'),
   ('ev_duel_victor',    '{"he":"מנצח הדואל","en":"Duel victor"}'::jsonb,                 '{"he":"נצח בדואל בלאק׳ג׳ק מול חבר","en":"Win a blackjack duel against a friend"}'::jsonb, null, null, 2500, 'gold',     '⚔️', 'event'),
-  ('ev_night_champion', '{"he":"אלוף הערב","en":"Night champion"}'::jsonb,               '{"he":"סיים ערב חברה במקום הראשון","en":"Finish a game night in first place"}'::jsonb,   null, null, 2500, 'gold',     '🎉', 'event'),
   ('ev_side_bet_10x',   '{"he":"פי-10 בצד","en":"10x on the side"}'::jsonb,              '{"he":"זכה פי-10 או יותר בהימור צד בבלאק׳ג׳ק","en":"Win 10x or more on a blackjack side bet"}'::jsonb, null, null, 2500, 'gold', '🎯', 'event'),
   ('ev_first_referral', '{"he":"הבאת חבר","en":"Brought a friend"}'::jsonb,              '{"he":"חבר ראשון הצטרף דרך הקישור שלך","en":"Your first friend joins through your invite link"}'::jsonb, null, null, 2500, 'gold', '🎁', 'event'),
   ('ev_vip',            '{"he":"חבר VIP","en":"VIP member"}'::jsonb,                     '{"he":"הגע למעמד VIP","en":"Reach VIP status"}'::jsonb,                                    null, null, 5000, 'platinum', '👑', 'event'),
@@ -38,4 +37,7 @@ delete from public.achievements where id = 'ev_streak30';
 -- Retired: the weekly-podium event trophy was dropped (STAGE K HUB rework) —
 -- the podium's chip prize stays, only the trophy is gone.
 delete from public.achievements where id = 'ev_weekly_winner';
+-- Retired: Game Night ("ערב חברה") was removed from the app entirely — the
+-- trophy it granted goes with it. Existing holders keep it on profiles.achievements.
+delete from public.achievements where id = 'ev_night_champion';
 

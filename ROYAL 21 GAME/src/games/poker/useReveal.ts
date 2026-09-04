@@ -129,5 +129,18 @@ export function usePokerReveal(state: PokerState | null | undefined) {
     return out;
   }, [state?.seats, state?.showdown, revealing]);
 
-  return { displayCommunity, displayShowdown, liveEquity, revealing, displayStacks };
+  /* Same freeze as displayStacks: the engine zeroes `state.pot` in the same
+     synchronous step that settles the hand, so the raw value would show an
+     empty pot the instant the runout starts. While revealing, hold it at the
+     sum of what the showdown paid out — the pot as it stood right before the
+     push — so the chips visually land only once the reveal finishes. */
+  const displayPot = useMemo(() => {
+    if (revealing && state?.showdown) {
+      return state.showdown.reduce((sum, e) => sum + e.won, 0);
+    }
+    if (!state) return 0;
+    return state.pot || state.pots.reduce((s, p) => s + p.amount, 0);
+  }, [state?.pot, state?.pots, state?.showdown, revealing]);
+
+  return { displayCommunity, displayShowdown, liveEquity, revealing, displayStacks, displayPot };
 }

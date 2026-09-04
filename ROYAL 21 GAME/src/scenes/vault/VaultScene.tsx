@@ -623,6 +623,8 @@ interface RareCardProps {
 }
 
 function RareRotationCard({ item, owned, lang, onOpen, t, exclusive = false, equippedCoin }: RareCardProps) {
+  const bundlePack = item.payload.bundleHandle ? PACKS.find((p) => p.id === item.payload.bundleHandle) : undefined;
+  const bundlePricing = bundlePack ? packPricing(bundlePack) : undefined;
   return (
     <motion.button
       className={`relative w-full p-4 rounded-[var(--r-md)] rar-card rar-${item.rarity} press flex items-center gap-4 overflow-hidden`}
@@ -650,6 +652,18 @@ function RareRotationCard({ item, owned, lang, onOpen, t, exclusive = false, equ
           {t('vault.exclusiveTag')}
         </span>
       )}
+      {bundlePack && (
+        <span
+          className="absolute top-2 start-2 px-2 py-0.5 rounded-full text-[9.5px] font-black tracking-wider"
+          style={{
+            background: 'var(--crimson)',
+            color: '#fff',
+            boxShadow: '0 2px 6px rgba(0,0,0,.35)',
+          }}
+        >
+          {t('vault.bundleTag')}
+        </span>
+      )}
       <div className="grid place-items-center rounded-[var(--r-xs)]" style={{ width: 92, height: 92, background: 'rgba(0,0,0,.35)' }}>
         <ItemPreview item={item} compact />
       </div>
@@ -664,8 +678,17 @@ function RareRotationCard({ item, owned, lang, onOpen, t, exclusive = false, equ
         {item.payload.currencySkin && (
           <p className="text-[10.5px] mt-1" style={{ color: 'var(--gold-hi)' }}>{t('vault.currencyCoinHint')}</p>
         )}
-        <div className="mt-2 num font-bold" style={{ color: owned ? 'var(--jade-hi)' : 'var(--gold-hi)', fontSize: 15 }}>
-          {owned ? t('vault.owned') : `${chipGlyphOf(equippedCoin)} ${item.price.toLocaleString()}`}
+        <div className="mt-2 num font-bold flex items-center gap-2" style={{ color: owned ? 'var(--jade-hi)' : 'var(--gold-hi)', fontSize: 15 }}>
+          {owned ? (
+            t('vault.owned')
+          ) : bundlePricing ? (
+            <>
+              <span className="line-through opacity-50 font-normal" style={{ fontSize: 12 }}>{item.price.toLocaleString()}</span>
+              <span>{chipGlyphOf(equippedCoin)} {bundlePricing.discountedPrice.toLocaleString()}</span>
+            </>
+          ) : (
+            `${chipGlyphOf(equippedCoin)} ${item.price.toLocaleString()}`
+          )}
         </div>
       </div>
     </motion.button>

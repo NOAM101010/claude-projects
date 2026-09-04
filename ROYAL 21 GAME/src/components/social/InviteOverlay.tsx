@@ -44,7 +44,7 @@ export function InviteOverlay() {
     analytics.track('notification_click', { kind: 'invite', surface: 'overlay' });
     play('friendJoin');
     setInvite(null);
-    navigate(roomRouteFor((invite.game || 'blackjack') as GameKey | 'night', invite.code));
+    navigate(roomRouteFor((invite.game || 'blackjack') as GameKey, invite.code));
   };
 
   if (!invite) return null;

@@ -30,7 +30,7 @@ const SUITS = ['♠', '♥', '♣', '♦'];
 
 function zoneOf(pathname: string): 'gold' | 'warm' | 'teal' | 'neutral' {
   if (/^\/(vault|vip)/.test(pathname)) return 'warm';
-  if (/^\/(lobby|rooms?|night|friends)/.test(pathname)) return 'teal';
+  if (/^\/(lobby|rooms?|friends)/.test(pathname)) return 'teal';
   if (/^\/(inventory|settings|profile)/.test(pathname)) return 'neutral';
   return 'gold';
 }

@@ -13,7 +13,6 @@ const CAPACITY: Partial<Record<GameKey, number>> = {
   roulette: 5,
   coinflip: 5,
   highcard: 5,
-  highlow: 8,
   blackjack: 4,
   duel: 4,
 };

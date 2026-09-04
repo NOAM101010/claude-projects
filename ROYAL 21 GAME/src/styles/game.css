@@ -174,12 +174,33 @@ html[data-motion='reduced'] .cf-holo .pc-face { animation: none; background-posi
 .tb-crimson { --table-a: #3d1220; --table-b: #200912; --table-rim: rgba(232, 128, 125, 0.32); }
 .tb-royal { --table-a: #3a2568; --table-b: #1e1338; --table-rim: rgba(200, 160, 255, 0.4); }
 .tb-jade { --table-a: #12402f; --table-b: #0a2a1e; --table-rim: rgba(80, 210, 150, 0.34); }
+.tb-vip-diamond { --table-a: #123a45; --table-b: #071620; --table-rim: rgba(143, 227, 240, 0.55); }
 .table-felt {
   background:
     radial-gradient(ellipse 58% 42% at 50% 10%, rgba(255, 255, 255, 0.1), transparent 70%),
     radial-gradient(ellipse at 50% 32%, var(--table-a), var(--table-b) 62%, #06100c);
   border: 2px solid var(--table-rim);
   box-shadow: var(--shadow-inset), var(--shadow-deep);
+}
+/* VIP diamond felt gets a faceted shimmer sweep + brighter rim glow on top of
+   the normal felt gradient — visibly distinct from every purchasable table. */
+.table-felt.tb-vip-diamond {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 58% 42% at 50% 10%, rgba(200, 245, 255, 0.22), transparent 70%),
+    repeating-linear-gradient(115deg, rgba(143, 227, 240, 0.07) 0 3px, transparent 3px 22px),
+    radial-gradient(ellipse at 50% 32%, var(--table-a), var(--table-b) 62%, #050f14);
+  box-shadow: var(--shadow-inset), var(--shadow-deep), 0 0 30px rgba(143, 227, 240, 0.28);
+}
+.table-felt.tb-vip-diamond::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(75deg, transparent 40%, rgba(210, 250, 255, 0.22) 50%, transparent 60%);
+  transform: translateX(-120%);
+  animation: rarShimmer 4.5s ease-in-out infinite;
+  pointer-events: none;
 }
 
 /* ---------- avatar frames ---------- */
@@ -189,6 +210,24 @@ html[data-motion='reduced'] .cf-holo .pc-face { animation: none; background-posi
 .fr-royal { box-shadow: 0 0 0 2px #b98cff, 0 0 22px rgba(168, 120, 240, 0.55); }
 .fr-jade { box-shadow: 0 0 0 2px #4fd39a, 0 0 20px rgba(56, 200, 150, 0.5); }
 .fr-rose { box-shadow: 0 0 0 2px #f2a0b4, 0 0 18px rgba(240, 140, 170, 0.5); }
+
+/* VIP tier frames — reward, never bought. Escalate in weight and glow with
+   tier: bronze is a warm, understated ring; diamond gets a faceted double
+   ring plus a slow pulsing shimmer (§O). */
+.fr-vip-bronze { box-shadow: 0 0 0 2px #a3673a, 0 0 10px rgba(163, 103, 58, 0.4); }
+.fr-vip-silver { box-shadow: 0 0 0 2px #c7d0da, 0 0 14px rgba(199, 208, 218, 0.5); }
+.fr-vip-gold {
+  box-shadow: 0 0 0 2px var(--gold-hi), 0 0 10px 2px var(--gold), 0 0 22px rgba(248, 227, 168, 0.5);
+}
+.fr-vip-diamond {
+  position: relative;
+  box-shadow: 0 0 0 2px #8fe3f0, 0 0 0 5px rgba(143, 227, 240, 0.22), 0 0 26px rgba(143, 227, 240, 0.6);
+  animation: frVipDiamondPulse 2.6s ease-in-out infinite;
+}
+@keyframes frVipDiamondPulse {
+  0%, 100% { box-shadow: 0 0 0 2px #8fe3f0, 0 0 0 5px rgba(143, 227, 240, 0.22), 0 0 26px rgba(143, 227, 240, 0.6); }
+  50% { box-shadow: 0 0 0 2px #c7f7ff, 0 0 0 6px rgba(143, 227, 240, 0.4), 0 0 40px rgba(143, 227, 240, 0.9); }
+}
 
 /* rank rings, used when no frame is equipped */
 .rk-bronze { box-shadow: 0 0 0 2px #a06a34; }
@@ -345,8 +384,8 @@ html[data-motion='reduced'] .cf-holo .pc-face { animation: none; background-posi
 /* ---- §01: the casino floor — a big roulette disc anchors the middle, three
    tables down each side. RTL: the first named column is the start edge; per
    the approved mockup that's poker / sit&go / baccarat on the right,
-   blackjack / vs-friends / game night on the left. Three equal columns, equal
-   auto rows and a single uniform gap = symmetric spacing everywhere. */
+   blackjack / vs-friends on the left. Three equal columns, equal auto rows
+   and a single uniform gap = symmetric spacing everywhere. */
 .hub-floor {
   display: grid;
   gap: var(--s-4);
@@ -356,7 +395,7 @@ html[data-motion='reduced'] .cf-holo .pc-face { animation: none; background-posi
   grid-template-areas:
     "poker roul bj"
     "sng   roul duel"
-    "bacc  roul night";
+    "bacc  roul .";
 }
 
 @media (max-width: 900px) {
@@ -366,7 +405,7 @@ html[data-motion='reduced'] .cf-holo .pc-face { animation: none; background-posi
       "poker bj"
       "roul  roul"
       "sng   duel"
-      "bacc  night";
+      "bacc  .";
   }
 }
 @media (max-width: 540px) {

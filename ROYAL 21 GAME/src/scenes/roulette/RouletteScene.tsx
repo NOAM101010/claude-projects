@@ -17,8 +17,6 @@ import { usePlayer } from '@/stores/usePlayer';
 import { useUI } from '@/stores/useUI';
 import { useT } from '@/hooks/useT';
 import { useGhostSeatCleanup } from '@/hooks/useGhostSeatCleanup';
-import { useNightReturn } from '@/hooks/useNightReturn';
-import { useNightScoring } from '@/hooks/useNightScoring';
 import { isOnline } from '@/services/supabase';
 import { roomsService } from '@/services/roomsService';
 import { presenceService } from '@/services/presenceService';
@@ -28,6 +26,8 @@ import { fmt } from '@/lib/format';
 import { newSeed } from '@/lib/random';
 import { audio } from '@/audio/AudioManager';
 import { haptic } from '@/lib/haptics';
+import { roomBackgroundOf } from '@/data/roomThemes';
+import { DEFAULT_TABLE_SKIN } from '@/data/items';
 
 interface Props { mode: 'solo' | 'room'; roomCode?: string }
 
@@ -52,8 +52,6 @@ const PAYTABLE_ROWS: { kind: RouletteBetKind; labelKey: string }[] = [
 export default function RouletteScene({ mode, roomCode }: Props) {
   const navigate = useNavigate();
   const { t } = useT();
-  const nightReturn = useNightReturn();
-  const reportNight = useNightScoring('roulette');
   const profile = usePlayer((s) => s.profile);
   const addChips = usePlayer((s) => s.addChips);
   const addXp = usePlayer((s) => s.addXp);
@@ -373,7 +371,6 @@ export default function RouletteScene({ mode, roomCode }: Props) {
       audio.play('lose');
     }
     recordResult('roulette', net > 0 ? 'win' : net === 0 ? 'push' : 'lose', net);
-    reportNight(net > 0 ? 'win' : net === 0 ? 'push' : 'lose', net);
     addXp(XP_REWARDS.handPlayed + (net > 0 ? XP_REWARDS.gameWon : 0));
   };
 
@@ -388,7 +385,6 @@ export default function RouletteScene({ mode, roomCode }: Props) {
       if (pendingPayout.current?.round !== snap.round) return;
       creditedRound.current = snap.round;
       if (snap.payout > 0) addChips(snap.payout);
-      reportNight(snap.net > 0 ? 'win' : snap.net === 0 ? 'push' : 'lose', snap.net);
       if (roundOutlay.current.round === snap.round) {
         const clearedBack = clearRefunded.current.round === snap.round ? clearRefunded.current.amount : 0;
         const rejected = roundOutlay.current.amount - (snap.payout - snap.net) - clearedBack;
@@ -527,11 +523,18 @@ export default function RouletteScene({ mode, roomCode }: Props) {
   const canBet = phase === 'betting' && !mySeat?.spectator;
   const anyBets = Boolean(state?.seats.some((s) => s.bets.length > 0));
 
+  /* Private table follows the host's equipped felt + backdrop, same pattern
+     as Blackjack/Poker. Solo has no room, so it always gets the default felt. */
+  const roomBg = mode === 'room' && room?.config?.bgSkin ? roomBackgroundOf(room.config.bgSkin) : null;
+  const tableSkin = mode === 'room' ? room?.config?.tableSkin : null;
+  const customTable = !!tableSkin && tableSkin !== DEFAULT_TABLE_SKIN;
+  const hostName = mode === 'room' ? members?.find((m) => m.isHost)?.username : undefined;
+
   return (
     <SceneShell compactHud>
       <div className="fixed inset-0 -z-10">
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 0%, #16211c, #0b0f0d 55%, #08090b 85%)' }} />
-        <LightPool x="50%" y="18%" size={680} color="rgba(46,158,107,.16)" />
+        <div className="absolute inset-0" style={{ background: roomBg?.gradient ?? 'radial-gradient(ellipse at 50% 0%, #16211c, #0b0f0d 55%, #08090b 85%)' }} />
+        <LightPool x="50%" y="18%" size={680} color={roomBg?.glowColor ?? 'rgba(46,158,107,.16)'} />
       </div>
 
       <div className="mx-auto px-4 py-3 flex flex-col items-center gap-3" style={{ maxWidth: 640 }}>
@@ -545,6 +548,14 @@ export default function RouletteScene({ mode, roomCode }: Props) {
             <div className="flex items-center gap-2">
               <span className="eyebrow">{t('rooms.code')}</span>
               <b style={{ fontFamily: 'var(--font-display)', letterSpacing: '.2em', color: 'var(--gold-hi)' }}>{room.code}</b>
+              {customTable && hostName && (
+                <span
+                  className="px-2 py-0.5 rounded-full text-[10.5px]"
+                  style={{ background: 'rgba(227,178,60,.12)', color: 'var(--gold-hi)', border: '1px solid var(--gold-line)' }}
+                >
+                  {t('rooms.customTable', { name: hostName })}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-1.5">
               {(members ?? []).map((m) => {
@@ -717,13 +728,16 @@ export default function RouletteScene({ mode, roomCode }: Props) {
 
         {/* felt — pass the winning number so the dolly (casino marker) lands
             on it after the wheel reveal. Hidden during pendingReveal so the
-            number doesn't leak on the felt before the wheel finishes spinning. */}
-        <BettingTable
-          seats={state?.seats ?? []}
-          disabled={!canBet}
-          winningNumber={phase !== 'betting' && !pendingReveal ? state?.winningNumber ?? null : null}
-          onBet={handleBet}
-        />
+            number doesn't leak on the felt before the wheel finishes spinning.
+            Wrapped in the host's table skin (if any) in a private room. */}
+        <div className={tableSkin ? `table-felt ${tableSkin} w-full rounded-[var(--r-sm)] p-1.5` : 'w-full'}>
+          <BettingTable
+            seats={state?.seats ?? []}
+            disabled={!canBet}
+            winningNumber={phase !== 'betting' && !pendingReveal ? state?.winningNumber ?? null : null}
+            onBet={handleBet}
+          />
+        </div>
 
         {/* players */}
         {mode === 'room' && !!state?.seats.length && (
@@ -740,8 +754,8 @@ export default function RouletteScene({ mode, roomCode }: Props) {
 
         <div className="flex gap-2">
           <GameButton tone="ghost" size="sm" onClick={() => setPayTableOpen(true)}>{t('games.paytable')}</GameButton>
-          <GameButton tone="ghost" size="sm" onClick={() => navigate(nightReturn ?? '/hub')}>
-            {nightReturn ? t('night.backToNight') : t('common.back')}
+          <GameButton tone="ghost" size="sm" onClick={() => navigate('/hub')}>
+            {t('common.back')}
           </GameButton>
         </div>
       </div>

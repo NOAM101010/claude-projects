@@ -21,8 +21,6 @@ import { notificationService } from '@/services/notificationService';
 import { presenceService, type RoomPresenceMeta } from '@/services/presenceService';
 import { useT } from '@/hooks/useT';
 import { useGhostSeatCleanup } from '@/hooks/useGhostSeatCleanup';
-import { useNightReturn } from '@/hooks/useNightReturn';
-import { useNightScoring } from '@/hooks/useNightScoring';
 import { isOnline } from '@/services/supabase';
 import { isFriendOnline } from '@/lib/presence';
 import { roomsService } from '@/services/roomsService';
@@ -31,12 +29,11 @@ import { VIP_CHIP_EXTRA, isVipEligible } from '@/data/vip';
 import { fmt } from '@/lib/format';
 import { audio } from '@/audio/AudioManager';
 import { haptic } from '@/lib/haptics';
+import { roomBackgroundOf } from '@/data/roomThemes';
+import { DEFAULT_TABLE_SKIN } from '@/data/items';
 import type { Card } from '@/games/blackjack/types';
 
 interface Props { mode: 'solo' | 'room'; roomCode?: string }
-
-/** Game-night uniform-ante tiers the host picks from. */
-const NIGHT_ANTES = [500, 1000, 2500, 5000];
 
 export default function HighCardScene({ mode, roomCode }: Props) {
   return mode === 'room' && roomCode ? <HighCardRoom roomCode={roomCode} /> : <HighCardSolo />;
@@ -46,8 +43,6 @@ export default function HighCardScene({ mode, roomCode }: Props) {
 function HighCardSolo() {
   const navigate = useNavigate();
   const { t } = useT();
-  const nightReturn = useNightReturn();
-  const reportNight = useNightScoring('highcard');
   const profile = usePlayer((s) => s.profile);
   const stats = usePlayer((s) => s.stats);
   const addChips = usePlayer((s) => s.addChips);
@@ -116,7 +111,6 @@ function HighCardSolo() {
             } else {
               audio.play('lose');
             }
-            reportNight(isWin ? 'win' : 'lose', isWin ? nextPot - amount : -amount);
             recordResult('highcard', isWin ? 'win' : 'lose', isWin ? nextPot - amount : -amount, {
               hcGames: stats.hcGames + 1,
             });
@@ -198,8 +192,8 @@ function HighCardSolo() {
               ) : (
                 <GameButton tone="gold" block onClick={() => setPhase('bet')}>{t('games.rematch')}</GameButton>
               )}
-              <GameButton tone="ghost" block onClick={() => navigate(nightReturn ?? '/hub')}>
-                {nightReturn ? t('night.backToNight') : t('common.back')}
+              <GameButton tone="ghost" block onClick={() => navigate('/hub')}>
+                {t('common.back')}
               </GameButton>
             </div>
           </GlassPanel>
@@ -268,12 +262,9 @@ function HighCardRoom({ roomCode }: { roomCode: string }) {
   const addChips = usePlayer((s) => s.addChips);
   const addXp = usePlayer((s) => s.addXp);
   const recordResult = usePlayer((s) => s.recordResult);
-  const nightReturn = useNightReturn();
-  const reportNight = useNightScoring('highcard');
   const friends = useSocial((s) => s.friends);
 
   const { room, members, state, isHost, create, joinByCode, send, leave } = useHighcardRoom();
-  const isNight = Boolean(nightReturn);
   const [stake, setStake] = useState(100);
   const [payTableOpen, setPayTableOpen] = useState(false);
   const settledRound = useRef(-1);
@@ -328,13 +319,6 @@ function HighCardRoom({ roomCode }: { roomCode: string }) {
 
   const mySeat = state?.seats.find((s) => s.userId === profile.id);
   const joinRetryRef = useRef<NodeJS.Timeout | null>(null);
-
-  /* Night mode: the host switches the table to the uniform-ante model on entry
-     (default 500) so every seat pays the same and the pot is just ante × N. */
-  useEffect(() => {
-    if (!isNight || !isHost || !state || state.anteMode) return;
-    void send(profile.id, { type: 'nightAnte', amount: NIGHT_ANTES[0] });
-  }, [isNight, isHost, state?.anteMode, send, profile.id, state]);
 
   /* Host removes any seat whose player dropped out of room membership. */
   useGhostSeatCleanup(isHost, state?.seats, members ?? [],
@@ -468,7 +452,6 @@ function HighCardRoom({ roomCode }: { roomCode: string }) {
     } else {
       audio.play('lose');
     }
-    reportNight(seat.net > 0 ? 'win' : 'lose', seat.net);
     recordResult('highcard', seat.net > 0 ? 'win' : 'lose', seat.net, {});
     addXp(XP_REWARDS.handPlayed + (seat.net > 0 ? XP_REWARDS.gameWon : 0));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -484,8 +467,7 @@ function HighCardRoom({ roomCode }: { roomCode: string }) {
     if (!state || state.phase !== 'betting') return;
     // Guard against a rapid double-tap racing the seat's ante update.
     if (mySeat?.stake) return;
-    // Night mode: the host's uniform ante, not the personal stake selector.
-    const amount = state.anteMode ? (state.anteAmount ?? 0) : stake;
+    const amount = stake;
     if (amount <= 0) return;
     if (profile.chips < amount) {
       audio.play('error');
@@ -551,11 +533,18 @@ function HighCardRoom({ roomCode }: { roomCode: string }) {
   const phase = state.phase;
   const canAnte = phase === 'betting' && !mySeat?.stake;
 
+  /* Private table follows the host's equipped felt + backdrop, same pattern
+     as Blackjack/Poker. Room-only cosmetic — solo HighCard keeps its own look. */
+  const roomBg = room.config?.bgSkin ? roomBackgroundOf(room.config.bgSkin) : null;
+  const tableSkin = room.config?.tableSkin;
+  const customTable = !!tableSkin && tableSkin !== DEFAULT_TABLE_SKIN;
+  const hostName = members?.find((m) => m.isHost)?.username;
+
   return (
     <SceneShell compactHud>
       <div className="fixed inset-0 -z-10">
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 8%, #1a1424, #0c0a10 55%, #08090b 85%)' }} />
-        <LightPool x="50%" y="20%" size={640} color="rgba(123,91,214,.16)" />
+        <div className="absolute inset-0" style={{ background: roomBg?.gradient ?? 'radial-gradient(ellipse at 50% 8%, #1a1424, #0c0a10 55%, #08090b 85%)' }} />
+        <LightPool x="50%" y="20%" size={640} color={roomBg?.glowColor ?? 'rgba(123,91,214,.16)'} />
       </div>
 
       <div className="mx-auto px-4 py-3 flex flex-col items-center gap-3" style={{ maxWidth: 700 }}>
@@ -566,6 +555,14 @@ function HighCardRoom({ roomCode }: { roomCode: string }) {
             {phase === 'war' && <span style={{ color: 'var(--social)' }}> · {t('games.war')} {state.warRound}</span>}
           </h1>
           {state.pot > 0 && <p className="num mt-1 text-[13px]" style={{ color: 'var(--gold-hi)' }}>{t('games.pot')} {fmt(state.pot)}</p>}
+          {customTable && hostName && (
+            <span
+              className="mt-1 inline-block px-2 py-0.5 rounded-full text-[10.5px]"
+              style={{ background: 'rgba(227,178,60,.12)', color: 'var(--gold-hi)', border: '1px solid var(--gold-line)' }}
+            >
+              {t('rooms.customTable', { name: hostName })}
+            </span>
+          )}
         </div>
 
         <GlassPanel gold className="p-3 w-full flex items-center justify-between gap-3 flex-wrap">
@@ -582,8 +579,8 @@ function HighCardRoom({ roomCode }: { roomCode: string }) {
           </div>
         </GlassPanel>
 
-        {/* seats + cards */}
-        <div className="flex flex-wrap justify-center gap-4 w-full py-2">
+        {/* seats + cards — sits on the host's table skin (if any) in a private room */}
+        <div className={`flex flex-wrap justify-center gap-4 w-full py-2${tableSkin ? ` table-felt ${tableSkin} rounded-[var(--r-md)]` : ''}`}>
           <AnimatePresence>
             {phase === 'settled' && state.winners.includes(profile.id) && <VictoryEffect kind={profile.equipped.victory} />}
           </AnimatePresence>
@@ -611,7 +608,7 @@ function HighCardRoom({ roomCode }: { roomCode: string }) {
                   <Avatar config={seat.avatar} size={30} level={seat.level} id={`hc-${seat.userId}`} />
                   <span className="absolute -bottom-0.5 -end-0.5 rounded-full" style={{ width: 10, height: 10, background: seat.color, border: '2px solid var(--ink)' }} />
                 </div>
-                <b className="text-[10.5px] truncate max-w-[70px]">{seat.userId === profile.id ? t('night.you') : seat.username}</b>
+                <b className="text-[10.5px] truncate max-w-[70px]">{seat.userId === profile.id ? t('common.you') : seat.username}</b>
                 {seat.stake > 0 && <span className="text-[9.5px] num" style={{ color: 'var(--gold)' }}>{fmt(seat.stake)}</span>}
               </motion.div>
             );
@@ -635,40 +632,11 @@ function HighCardRoom({ roomCode }: { roomCode: string }) {
         <GlassPanel gold className="p-4 w-full">
           {phase === 'betting' ? (
             <>
-              {isNight ? (
-                <div className="mb-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="eyebrow">{t('night.fixedAnte')}</span>
-                    <span className="num text-[12px]" style={{ color: 'var(--gold-hi)' }}>
-                      {t('games.pot')} {fmt((state.anteAmount ?? 0) * state.seats.filter((s) => s.stake > 0).length || (state.anteAmount ?? 0) * state.seats.length)}
-                    </span>
-                  </div>
-                  {isHost && (
-                    <div className="flex flex-wrap gap-2">
-                      {NIGHT_ANTES.map((amt) => (
-                        <button
-                          key={amt}
-                          onClick={() => { audio.play('click'); void send(profile.id, { type: 'nightAnte', amount: amt }); }}
-                          disabled={state.seats.some((s) => s.stake > 0)}
-                          className="px-3 py-1.5 rounded-[var(--r-xs)] text-[12px] num press"
-                          style={{
-                            background: state.anteAmount === amt ? 'var(--gold-line)' : 'var(--glass)',
-                            border: `1px solid ${state.anteAmount === amt ? 'var(--gold-hi)' : 'var(--glass-line)'}`,
-                          }}
-                        >
-                          {fmt(amt)}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <BetSelector stakes={STAKES} vipStakes={isVipEligible(profile) ? VIP_CHIP_EXTRA : undefined} value={stake} onChange={setStake} chipSkin={profile.equipped.chipSkin} disabled={!canAnte} chips={profile.chips} />
-              )}
+              <BetSelector stakes={STAKES} vipStakes={isVipEligible(profile) ? VIP_CHIP_EXTRA : undefined} value={stake} onChange={setStake} chipSkin={profile.equipped.chipSkin} disabled={!canAnte} chips={profile.chips} />
               <div className="flex gap-2">
                 <GameButton tone="ghost" block disabled={phase !== 'betting' || !mySeat?.stake} onClick={clearAnte}>{t('blackjack.clear')}</GameButton>
-                <GameButton tone="gold" block disabled={!canAnte || (isNight && !state.anteAmount)} onClick={ante}>
-                  {t('games.draw')} · {fmt(isNight ? (state.anteAmount ?? 0) : stake)}
+                <GameButton tone="gold" block disabled={!canAnte} onClick={ante}>
+                  {t('games.draw')} · {fmt(stake)}
                 </GameButton>
               </div>
               {isHost ? (
@@ -693,8 +661,8 @@ function HighCardRoom({ roomCode }: { roomCode: string }) {
 
         <div className="flex gap-2">
           <GameButton tone="ghost" size="sm" onClick={() => setPayTableOpen(true)}>{t('games.paytable')}</GameButton>
-          <GameButton tone="ghost" size="sm" onClick={() => navigate(nightReturn ?? '/hub')}>
-            {nightReturn ? t('night.backToNight') : t('common.back')}
+          <GameButton tone="ghost" size="sm" onClick={() => navigate('/hub')}>
+            {t('common.back')}
           </GameButton>
         </div>
       </div>

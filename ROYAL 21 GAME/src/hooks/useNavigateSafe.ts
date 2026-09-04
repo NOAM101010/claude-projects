@@ -10,7 +10,6 @@ const IN_GAME_PREFIXES = [
   '/poker',
   '/blackjack/room',
   '/blackjack/duel',
-  '/night',
   '/game/roulette',
 ];
 

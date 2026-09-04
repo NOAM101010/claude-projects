@@ -60,7 +60,7 @@ export function NotificationsPanel() {
     }
     analytics.track('notification_click', { kind: 'invite', surface: 'panel' });
     openPanel(null);
-    navigate(roomRouteFor((payload.game ?? 'blackjack') as GameKey | 'night', payload.room_code));
+    navigate(roomRouteFor((payload.game ?? 'blackjack') as GameKey, payload.room_code));
   };
 
   return (

@@ -29,6 +29,8 @@ import { JackpotBanner } from '@/components/game/JackpotBanner';
 import { JackpotWin } from '@/components/effects/JackpotWin';
 import { PasswordPromptModal } from '@/components/game/PasswordPromptModal';
 import { isVipEligible } from '@/data/vip';
+import { roomBackgroundOf } from '@/data/roomThemes';
+import { DEFAULT_TABLE_SKIN } from '@/data/items';
 import {
   POKER_STAKES, buyInFor, callCost, minRaiseTo, canSeatAct, ACTION_SECONDS, NEXT_HAND_DELAY_MS,
 } from '@/games/poker/engine';
@@ -207,7 +209,7 @@ export default function PokerScene() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHost, state?.version, state?.deadline, state?.toAct, now, room?.id, profile.id]);
 
-  const { displayCommunity, displayShowdown, liveEquity, revealing, displayStacks } = usePokerReveal(state);
+  const { displayCommunity, displayShowdown, liveEquity, revealing, displayStacks, displayPot } = usePokerReveal(state);
 
   /* Seats that took (part of) the pot on the hand that just finished — gold ring
      until the next deal. From the showdown when there was one, else the single
@@ -513,11 +515,17 @@ export default function PokerScene() {
   const canStart = state.street === 'waiting' && seatedPlayers.filter((s) => s.stack > 0).length >= 2;
   const recommendedBuyIn = buyInFor(state.bigBlind);
 
+  /* Private table follows the host's equipped felt + backdrop (stamped into
+     rooms.config on create), same pattern as the Blackjack table. */
+  const roomBg = room.config?.bgSkin ? roomBackgroundOf(room.config.bgSkin) : null;
+  const customTable = !!room.config?.tableSkin && room.config.tableSkin !== DEFAULT_TABLE_SKIN;
+  const hostName = members.find((m) => m.isHost)?.username;
+
   return (
     <SceneShell compactHud>
       <div className="fixed inset-0 -z-10">
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 10%, #14231c, #0a120e 55%, #08090b 88%)' }} />
-        <LightPool x="50%" y="18%" size={700} color="rgba(46,158,107,.14)" />
+        <div className="absolute inset-0" style={{ background: roomBg?.gradient ?? 'radial-gradient(ellipse at 50% 10%, #14231c, #0a120e 55%, #08090b 88%)' }} />
+        <LightPool x="50%" y="18%" size={700} color={roomBg?.glowColor ?? 'rgba(46,158,107,.14)'} />
       </div>
 
       <div className="mx-auto px-3 py-3 flex flex-col gap-3" style={{ maxWidth: 880 }}>
@@ -525,6 +533,14 @@ export default function PokerScene() {
           <div>
             <span className="eyebrow">{t('poker.title')}</span>
             <h1 className="mt-0.5 text-[19px]">{room.code} · {state.smallBlind}/{state.bigBlind}</h1>
+            {customTable && hostName && (
+              <span
+                className="mt-0.5 inline-block px-2 py-0.5 rounded-full text-[10.5px]"
+                style={{ background: 'rgba(227,178,60,.12)', color: 'var(--gold-hi)', border: '1px solid var(--gold-line)' }}
+              >
+                {t('rooms.customTable', { name: hostName })}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {spectators.length > 0 && (
@@ -565,7 +581,7 @@ export default function PokerScene() {
           {/* pot + community */}
           <div className="absolute inset-x-0 top-[30%] flex flex-col items-center gap-2 z-10">
             <div className="px-3 py-1 rounded-full text-[12px] num" style={{ background: 'rgba(0,0,0,.4)', color: 'var(--gold-hi)', border: '1px solid var(--gold-line)' }}>
-              {chipGlyphOf(profile.equipped.currencySkin)} {t('poker.pot')} {fmt(state.pot || state.pots.reduce((s, p) => s + p.amount, 0))}
+              {chipGlyphOf(profile.equipped.currencySkin)} {t('poker.pot')} {fmt(displayPot)}
             </div>
             <div className="flex gap-1.5">
               {displayCommunity.map((card, i) => (

@@ -19,8 +19,6 @@ import { notificationService } from '@/services/notificationService';
 import { presenceService, type RoomPresenceMeta } from '@/services/presenceService';
 import { useT } from '@/hooks/useT';
 import { useGhostSeatCleanup } from '@/hooks/useGhostSeatCleanup';
-import { useNightReturn } from '@/hooks/useNightReturn';
-import { useNightScoring } from '@/hooks/useNightScoring';
 import { isOnline } from '@/services/supabase';
 import { isFriendOnline } from '@/lib/presence';
 import { roomsService } from '@/services/roomsService';
@@ -31,6 +29,8 @@ import { fmt } from '@/lib/format';
 import { newSeed } from '@/lib/random';
 import { audio } from '@/audio/AudioManager';
 import { haptic } from '@/lib/haptics';
+import { roomBackgroundOf } from '@/data/roomThemes';
+import { DEFAULT_TABLE_SKIN } from '@/data/items';
 
 interface Props { mode: 'solo' | 'room'; roomCode?: string }
 
@@ -42,8 +42,6 @@ export default function CoinFlipScene({ mode, roomCode }: Props) {
 function CoinFlipSolo() {
   const navigate = useNavigate();
   const { t } = useT();
-  const nightReturn = useNightReturn();
-  const reportNight = useNightScoring('coinflip');
   const profile = usePlayer((s) => s.profile);
   const stats = usePlayer((s) => s.stats);
   const addChips = usePlayer((s) => s.addChips);
@@ -90,7 +88,6 @@ function CoinFlipSolo() {
         setStreakWin(0);
         audio.play('lose');
       }
-      reportNight(isWin ? 'win' : 'lose', isWin ? amount : -amount);
       recordResult('coinflip', isWin ? 'win' : 'lose', isWin ? amount : -amount, {
         cfGames: stats.cfGames + 1,
         cfWins: stats.cfWins + (isWin ? 1 : 0),
@@ -197,8 +194,8 @@ function CoinFlipSolo() {
 
         <div className="flex gap-2">
           <GameButton tone="ghost" size="sm" onClick={() => setPayTableOpen(true)}>{t('games.paytable')}</GameButton>
-          <GameButton tone="ghost" size="sm" onClick={() => navigate(nightReturn ?? '/hub')}>
-            {nightReturn ? t('night.backToNight') : t('common.back')}
+          <GameButton tone="ghost" size="sm" onClick={() => navigate('/hub')}>
+            {t('common.back')}
           </GameButton>
         </div>
       </div>
@@ -242,8 +239,6 @@ function CoinFlipRoom({ roomCode }: { roomCode: string }) {
   const addChips = usePlayer((s) => s.addChips);
   const addXp = usePlayer((s) => s.addXp);
   const recordResult = usePlayer((s) => s.recordResult);
-  const nightReturn = useNightReturn();
-  const reportNight = useNightScoring('coinflip');
   const friends = useSocial((s) => s.friends);
 
   const { room, members, state, isHost, create, joinByCode, send, leave } = useCoinflipRoom();
@@ -430,7 +425,6 @@ function CoinFlipRoom({ roomCode }: { roomCode: string }) {
       } else if (seat.net < 0) {
         audio.play('lose');
       }
-      reportNight(seat.net > 0 ? 'win' : seat.net < 0 ? 'lose' : 'push', seat.net);
       recordResult('coinflip', seat.net > 0 ? 'win' : seat.net < 0 ? 'lose' : 'push', seat.net);
       addXp(XP_REWARDS.handPlayed + (seat.net > 0 ? XP_REWARDS.gameWon : 0));
     }, 1800);
@@ -515,17 +509,32 @@ function CoinFlipRoom({ roomCode }: { roomCode: string }) {
   const phase = state.phase;
   const canPick = phase === 'betting' && !mySeat?.pick;
 
+  /* Private table follows the host's equipped felt + backdrop, same pattern
+     as Blackjack/Poker. */
+  const roomBg = room.config?.bgSkin ? roomBackgroundOf(room.config.bgSkin) : null;
+  const tableSkin = room.config?.tableSkin;
+  const customTable = !!tableSkin && tableSkin !== DEFAULT_TABLE_SKIN;
+  const hostName = members?.find((m) => m.isHost)?.username;
+
   return (
     <SceneShell compactHud>
       <div className="fixed inset-0 -z-10">
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 10%, #1c1710, #0d0c0a 55%, #08090b 85%)' }} />
-        <LightPool x="50%" y="20%" size={680} color="rgba(227,178,60,.2)" />
+        <div className="absolute inset-0" style={{ background: roomBg?.gradient ?? 'radial-gradient(ellipse at 50% 10%, #1c1710, #0d0c0a 55%, #08090b 85%)' }} />
+        <LightPool x="50%" y="20%" size={680} color={roomBg?.glowColor ?? 'rgba(227,178,60,.2)'} />
       </div>
 
       <div className="mx-auto px-4 py-3 flex flex-col items-center gap-3" style={{ maxWidth: 620 }}>
         <div className="text-center">
           <span className="eyebrow">{t('games.coinflip')} · {t('duel.short')}</span>
           <h1 className="mt-1">{room.code}</h1>
+          {customTable && hostName && (
+            <span
+              className="mt-1 inline-block px-2 py-0.5 rounded-full text-[10.5px]"
+              style={{ background: 'rgba(227,178,60,.12)', color: 'var(--gold-hi)', border: '1px solid var(--gold-line)' }}
+            >
+              {t('rooms.customTable', { name: hostName })}
+            </span>
+          )}
         </div>
 
         <GlassPanel gold className="p-3 w-full flex items-center justify-between gap-3 flex-wrap">
@@ -562,8 +571,11 @@ function CoinFlipRoom({ roomCode }: { roomCode: string }) {
           </div>
         )}
 
-        {/* the coin */}
-        <div className="relative grid place-items-center" style={{ height: 200, perspective: 1000 }}>
+        {/* the coin — sits on the host's table skin (if any) in a private room */}
+        <div
+          className={`relative grid place-items-center w-full${tableSkin ? ` table-felt ${tableSkin} rounded-[var(--r-md)]` : ''}`}
+          style={{ height: 200, perspective: 1000 }}
+        >
           <motion.div
             style={{ width: 140, height: 140, transformStyle: 'preserve-3d', position: 'relative' }}
             animate={flipping ? { rotateX: [0, 1440, 1800], y: [0, -110, 0] } : { rotateX: state.result === 'tails' ? 180 : 0 }}
@@ -635,8 +647,8 @@ function CoinFlipRoom({ roomCode }: { roomCode: string }) {
 
         <div className="flex gap-2">
           <GameButton tone="ghost" size="sm" onClick={() => setPayTableOpen(true)}>{t('games.paytable')}</GameButton>
-          <GameButton tone="ghost" size="sm" onClick={() => navigate(nightReturn ?? '/hub')}>
-            {nightReturn ? t('night.backToNight') : t('common.back')}
+          <GameButton tone="ghost" size="sm" onClick={() => navigate('/hub')}>
+            {t('common.back')}
           </GameButton>
         </div>
       </div>

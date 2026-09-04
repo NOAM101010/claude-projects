@@ -82,6 +82,51 @@ export function VictoryEffect({ kind }: { kind: string | null }) {
     );
   }
 
+  if (kind === 'vc-vip-diamond') {
+    const colors = ['#8fe3f0', '#c7f7ff', '#e3d0ff', '#ffffff'];
+    return (
+      <div className="absolute inset-0 grid place-items-center pointer-events-none overflow-hidden">
+        {/* central diamond burst */}
+        <motion.span
+          className="absolute text-[80px]"
+          initial={{ scale: 0, opacity: 0, rotate: -30 }}
+          animate={{ scale: [0, 1.3, 1], opacity: [0, 1, 1, 0], rotate: 0 }}
+          transition={{ duration: 2.2, times: [0, 0.3, 0.75, 1] }}
+        >
+          💎
+        </motion.span>
+        {/* radiating shard ring */}
+        {Array.from({ length: 20 }).map((_, i) => (
+          <motion.span
+            key={`shard-${i}`}
+            className="absolute w-2 h-2 rounded-full"
+            style={{ background: colors[i % colors.length], boxShadow: `0 0 8px ${colors[i % colors.length]}` }}
+            initial={{ scale: 0, opacity: 1 }}
+            animate={{
+              x: Math.cos((i / 20) * Math.PI * 2) * 170,
+              y: Math.sin((i / 20) * Math.PI * 2) * 170,
+              scale: [0, 1.6, 0], opacity: [1, 1, 0],
+            }}
+            transition={{ duration: 1.8, delay: 0.15 + i * 0.02, ease: 'easeOut' }}
+          />
+        ))}
+        {/* falling sparkle shower, denser and longer than the standard effects */}
+        {Array.from({ length: 22 }).map((_, i) => (
+          <motion.span
+            key={`spark-${i}`}
+            className="absolute"
+            style={{ left: `${2 + i * 4.4}%`, top: -30, fontSize: 12 + (i % 4) * 5, color: colors[i % colors.length] }}
+            initial={{ y: -40, opacity: 0, rotate: 0 }}
+            animate={{ y: '95vh', opacity: [0, 1, 1, 0], rotate: 300 }}
+            transition={{ duration: 2.2 + (i % 5) * 0.22, delay: 0.1 + i * 0.045, ease: 'easeIn' }}
+          >
+            ✦
+          </motion.span>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="absolute inset-0 grid place-items-center pointer-events-none">
       {Array.from({ length: 12 }).map((_, i) => (

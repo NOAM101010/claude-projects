@@ -9,8 +9,6 @@ import { ScratchCard } from './ScratchCard';
 import { usePlayer } from '@/stores/usePlayer';
 import { useUI } from '@/stores/useUI';
 import { useT } from '@/hooks/useT';
-import { useNightReturn } from '@/hooks/useNightReturn';
-import { useNightScoring } from '@/hooks/useNightScoring';
 import { SCRATCH_TIERS, XP_REWARDS, rollScratch, scratchPaytable, type ScratchTier } from '@/data/economy';
 import { fmt } from '@/lib/format';
 import { audio } from '@/audio/AudioManager';
@@ -31,8 +29,6 @@ function faceFor(tier: ScratchTier, prize: number) {
 export default function ScratchScene() {
   const navigate = useNavigate();
   const { t, lang } = useT();
-  const nightReturn = useNightReturn();
-  const reportNight = useNightScoring('scratch');
   const profile = usePlayer((s) => s.profile);
   const stats = usePlayer((s) => s.stats);
   const addChips = usePlayer((s) => s.addChips);
@@ -82,7 +78,6 @@ export default function ScratchScene() {
       audio.play('lose');
     }
     const netOutcome = net > 0 ? 'win' : net < 0 ? 'lose' : 'push';
-    reportNight(netOutcome, net);
     recordResult('scratch', netOutcome, net, { scCards: stats.scCards + 1 });
     addXp(XP_REWARDS.scratchCard);
   };
@@ -172,8 +167,8 @@ export default function ScratchScene() {
               </div>
 
               <div className="text-center mt-5">
-                <GameButton tone="ghost" size="sm" onClick={() => navigate(nightReturn ?? '/hub')}>
-                  {nightReturn ? t('night.backToNight') : t('common.back')}
+                <GameButton tone="ghost" size="sm" onClick={() => navigate('/hub')}>
+                  {t('common.back')}
                 </GameButton>
               </div>
             </motion.div>

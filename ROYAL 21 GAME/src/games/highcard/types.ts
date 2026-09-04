@@ -39,10 +39,6 @@ export interface HcState {
   /** userIds who took the pot, once settled. */
   winners: string[];
   deadline: number | null;
-  /** Game-night only: every seat antes the same host-set amount instead of a
-   *  personal stake, so the pot is simply `anteAmount × seats that anted in`. */
-  anteMode?: boolean;
-  anteAmount?: number;
 }
 
 export type HcAction =
@@ -50,9 +46,6 @@ export type HcAction =
   | { type: 'leave'; userId: string }
   | { type: 'ante'; userId: string; amount: number }
   | { type: 'clearAnte'; userId: string }
-  /** Game-night: host turns on the uniform-ante model and sets the amount every
-   *  seat pays. Ignored once someone has anted into the open round. */
-  | { type: 'nightAnte'; amount: number }
   | { type: 'openBetting'; deadline?: number | null }
   /** `nonce` is fresh host randomness minted at draw time; it reseeds the shoe
    *  so upcoming cards can't be read off the published `seed`+`cursor`. */

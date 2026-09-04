@@ -5,7 +5,7 @@ import { SceneShell } from '@/components/layout/SceneShell';
 import { HubCard } from './HubCard';
 import { Leaderboard } from './Leaderboard';
 import {
-  BlackjackTableArt, CoinStandArt, DuelTableArt, GameNightArt, GiftArt, HighCardArt, InviteArt,
+  BlackjackTableArt, CoinStandArt, DuelTableArt, GiftArt, HighCardArt, InviteArt,
   LoungeArt, MyRoomDoorArt, PokerTableArt, RouletteTableArt, ScratchCounterArt, SlotMachineArt, VaultDoorArt,
 } from './hubObjects';
 import { GameButton } from '@/components/ui/GameButton';
@@ -202,18 +202,6 @@ export default function HubScene() {
             onEnter={() => setRouletteOpen(true)}
           >
             {(focused) => <RouletteTableArt focused={focused} />}
-          </HubCard>
-
-          <HubCard
-            area="night"
-            label={t('hub.gameNight')}
-            action={t('hub.hostNight')}
-            blurb={t('hub.blurbNight')}
-            hoverSound="notify"
-            glow="rgba(123,91,214,.26)"
-            onEnter={() => navigate('/night/new')}
-          >
-            {(focused) => <GameNightArt focused={focused} />}
           </HubCard>
 
           {/* Baccarat promoted to the main-games section (§ user request):

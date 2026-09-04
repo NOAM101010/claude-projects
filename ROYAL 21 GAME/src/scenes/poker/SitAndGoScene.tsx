@@ -21,6 +21,8 @@ import { audio } from '@/audio/AudioManager';
 import { chipGlyphOf } from '@/components/game/CoinFace';
 import { fmt } from '@/lib/format';
 import { SNG_BUYINS, ACTION_SECONDS, NEXT_HAND_DELAY_MS, levelIndexFor } from '@/games/poker/engine';
+import { roomBackgroundOf } from '@/data/roomThemes';
+import { DEFAULT_TABLE_SKIN } from '@/data/items';
 import { XP_REWARDS } from '@/data/economy';
 import { usePokerReveal } from '@/games/poker/useReveal';
 import { bestHand } from '@/games/poker/handEval';
@@ -132,7 +134,7 @@ export default function SitAndGoScene() {
   }, [isHost, state?.toAct, state?.deadline, now]);
   const secondsLeft = state?.deadline ? Math.max(0, Math.ceil((state.deadline - now) / 1000)) : null;
 
-  const { displayCommunity, displayShowdown, liveEquity, revealing, displayStacks } = usePokerReveal(state);
+  const { displayCommunity, displayShowdown, liveEquity, revealing, displayStacks, displayPot } = usePokerReveal(state);
 
   /* Players still in the tournament. Frozen against the raw eliminated list while
      an all-in runout is playing out — otherwise "players left" ticks down and a
@@ -332,11 +334,17 @@ export default function SitAndGoScene() {
     return { seatNumber, occupant, position: SLOTS[rel] };
   });
 
+  /* Private table follows the host's equipped felt + backdrop, same pattern
+     as the cash poker table and Blackjack. */
+  const roomBg = room.config?.bgSkin ? roomBackgroundOf(room.config.bgSkin) : null;
+  const customTable = !!room.config?.tableSkin && room.config.tableSkin !== DEFAULT_TABLE_SKIN;
+  const hostName = members.find((m) => m.isHost)?.username;
+
   return (
     <SceneShell compactHud>
       <div className="fixed inset-0 -z-10">
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 10%, #241a0e, #120c08 55%, #08090b 88%)' }} />
-        <LightPool x="50%" y="18%" size={700} color="rgba(227,178,60,.16)" />
+        <div className="absolute inset-0" style={{ background: roomBg?.gradient ?? 'radial-gradient(ellipse at 50% 10%, #241a0e, #120c08 55%, #08090b 88%)' }} />
+        <LightPool x="50%" y="18%" size={700} color={roomBg?.glowColor ?? 'rgba(227,178,60,.16)'} />
       </div>
 
       <div className="mx-auto px-3 py-3 flex flex-col gap-3" style={{ maxWidth: 880 }}>
@@ -344,6 +352,14 @@ export default function SitAndGoScene() {
           <div>
             <span className="eyebrow">🏆 {t('sng.title')}</span>
             <h1 className="mt-0.5 text-[19px]">{room.code} · {t('sng.buyIn')} {fmt(tournament.buyIn)}</h1>
+            {customTable && hostName && (
+              <span
+                className="mt-0.5 inline-block px-2 py-0.5 rounded-full text-[10.5px]"
+                style={{ background: 'rgba(227,178,60,.12)', color: 'var(--gold-hi)', border: '1px solid var(--gold-line)' }}
+              >
+                {t('rooms.customTable', { name: hostName })}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {spectators.length > 0 && (
@@ -377,7 +393,7 @@ export default function SitAndGoScene() {
 
           <div className="absolute inset-x-0 top-[30%] flex flex-col items-center gap-2 z-10">
             <div className="px-3 py-1 rounded-full text-[12px] num" style={{ background: 'rgba(0,0,0,.4)', color: 'var(--gold-hi)', border: '1px solid var(--gold-line)' }}>
-              {chipGlyphOf(profile.equipped.currencySkin)} {t('poker.pot')} {fmt(state.pot || state.pots.reduce((s, p) => s + p.amount, 0))}
+              {chipGlyphOf(profile.equipped.currencySkin)} {t('poker.pot')} {fmt(displayPot)}
             </div>
             <div className="flex gap-1.5">
               {displayCommunity.map((card, i) => (

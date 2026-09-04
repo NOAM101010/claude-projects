@@ -11,8 +11,6 @@ import { VictoryEffect } from '@/components/effects/VictoryEffect';
 import { usePlayer } from '@/stores/usePlayer';
 import { useUI } from '@/stores/useUI';
 import { useT } from '@/hooks/useT';
-import { useNightReturn } from '@/hooks/useNightReturn';
-import { useNightScoring } from '@/hooks/useNightScoring';
 import { XP_REWARDS } from '@/data/economy';
 import { SLOT_STAKES, symbolsForTheme, pull, spinReel, type SlotSymbol, type SpinOutcome } from '@/data/slots';
 import { VIP_CHIP_EXTRA, isVipEligible } from '@/data/vip';
@@ -88,8 +86,6 @@ export default function SlotsScene() {
   const recordResult = usePlayer((s) => s.recordResult);
   const toast = useUI((s) => s.toast);
   const showMoment = useUI((s) => s.showMoment);
-  const nightReturn = useNightReturn();
-  const reportNight = useNightScoring('slots');
 
   const theme = profile.equipped.slotsTheme ?? 'sl-classic';
   const themeSymbols = symbolsForTheme(theme);
@@ -211,7 +207,6 @@ export default function SlotsScene() {
       }
 
       const netOutcome = net > 0 ? 'win' : net < 0 ? 'lose' : 'push';
-      reportNight(netOutcome, net);
       recordResult('slots', netOutcome, net, {
         slSpins: stats.slSpins + 1,
         slWins: stats.slWins + (net > 0 ? 1 : 0),
@@ -352,8 +347,8 @@ export default function SlotsScene() {
             <GameButton tone="ghost" size="sm" block disabled={autoSpinsLeft > 0} onClick={() => setPayTableOpen(true)}>
               {t('slots.paytable')}
             </GameButton>
-            <GameButton tone="ghost" size="sm" block disabled={autoSpinsLeft > 0} onClick={() => navigate(nightReturn ?? '/hub')}>
-              {nightReturn ? t('night.backToNight') : t('common.back')}
+            <GameButton tone="ghost" size="sm" block disabled={autoSpinsLeft > 0} onClick={() => navigate('/hub')}>
+              {t('common.back')}
             </GameButton>
           </div>
         </GlassPanel>

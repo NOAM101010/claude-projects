@@ -17,9 +17,7 @@ const SettingsScene = lazy(() => import('@/scenes/settings/SettingsScene'));
 const CoinFlipScene = lazy(() => import('@/games/coinflip/CoinFlipScene'));
 const ScratchScene = lazy(() => import('@/games/scratch/ScratchScene'));
 const SlotsScene = lazy(() => import('@/games/slots/SlotsScene'));
-const NightScene = lazy(() => import('@/scenes/night/NightScene'));
 const HighCardScene = lazy(() => import('@/games/highcard/HighCardScene'));
-const HighLowScene = lazy(() => import('@/games/highlow/HighLowScene'));
 const BaccaratScene = lazy(() => import('@/games/baccarat/BaccaratScene'));
 const AdminScene = lazy(() => import('@/scenes/admin/AdminScene'));
 const PokerScene = lazy(() => import('@/scenes/poker/PokerScene'));
@@ -73,11 +71,6 @@ function HighCardRoomRoute() {
   return <HighCardScene mode="room" roomCode={roomCode} />;
 }
 
-function HighLowRoomRoute() {
-  const { roomCode } = useParams();
-  return <HighLowScene mode="room" roomCode={roomCode} />;
-}
-
 function BaccaratRoomRoute() {
   const { roomCode } = useParams();
   return <BaccaratScene mode="room" roomCode={roomCode} />;
@@ -92,7 +85,6 @@ export function AppRoutes() {
         <Route path="/login" element={<AuthScene />} />
         <Route path="/hub" element={<RequireSession><HubScene /></RequireSession>} />
         <Route path="/room/:roomCode" element={<RequireSession><RoomScene /></RequireSession>} />
-        <Route path="/night/:roomCode" element={<RequireSession><NightScene /></RequireSession>} />
         <Route path="/poker/sng/:roomCode" element={<RequireSession><SitAndGoScene /></RequireSession>} />
         <Route path="/poker/:roomCode" element={<RequireSession><PokerScene /></RequireSession>} />
         <Route path="/blackjack/solo" element={<RequireSession><BlackjackScene mode="solo" /></RequireSession>} />
@@ -103,7 +95,6 @@ export function AppRoutes() {
         <Route path="/game/slots" element={<RequireSession><SlotsScene /></RequireSession>} />
         <Route path="/game/highcard" element={<RequireSession><HighCardScene mode="solo" /></RequireSession>} />
         <Route path="/game/highcard/room/:roomCode" element={<RequireSession><HighCardRoomRoute /></RequireSession>} />
-        <Route path="/game/highlow/room/:roomCode" element={<RequireSession><HighLowRoomRoute /></RequireSession>} />
         <Route path="/game/baccarat" element={<RequireSession><BaccaratScene mode="solo" /></RequireSession>} />
         <Route path="/game/baccarat/room/:roomCode" element={<RequireSession><BaccaratRoomRoute /></RequireSession>} />
         <Route path="/game/roulette/solo" element={<RequireSession><RouletteScene mode="solo" /></RequireSession>} />
