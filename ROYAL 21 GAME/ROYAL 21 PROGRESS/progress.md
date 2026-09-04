@@ -34,7 +34,9 @@
   - `51afe29` — roster: הוסרו slots/coinflip/scratch. `sessionStorage` keyed לחדר.
   - `0a94616` — **רולטה נוספה** (`useNightReturn`+`useNightScoring`, double-report guarded). **הייקארד ב-Night = ante אחיד** (מארח בוחר 500/1k/2.5k/5k, כולם משלמים, מנצח לוקח את הקופה; `nightAnte` action + `anteMode`). ניקוד `pointsFor(game,outcome)`. reviewer נקי. **אין SQL.**
   - **N2 — "גבוה/נמוך הישרדות" ✅ נדחף** (`a50cb02`). משחק MP חדש מקצה לקצה: ante אחיד, קלף בסיס, ניחוש גבוה/נמוך בו-זמני (טיימר 8ש), טעות/timeout=הדחה, תיקו=push, אחרון לוקח קופה. `src/games/highlow/*` (engine+types+redact+scene) + `useHighLowRoom`+`highlowService` + מסלול/roster/ניקוד/8 מושבים. reviewer: 2 חוסמים תוקנו (חלוקת wipe לא הייתה zero-sum + חלוקה באפס כשאף אחד לא ניחש — עכשיו הסיבוב מבוטל). **הרצה: `RUN-THIS-NEXT.sql`** (seat check 0-7 + `enforce_room_capacity`).
-  - **נשאר ל-N:** דואל ב-Night (דורש החלטת ארכיטקטורה) · BJ MP הימורי-צד + תגית מושב (נוגע כסף) · עוד משחקי מסיבה (לפי רצון).
+  - **BJ MP הימורי-צד ✅ נדחף** (`3e9f680`). Perfect Pairs/21+3 היו "solo-only" מהערה מיושנת בלבד — ה-state כבר תמך בזה גנרית. נפתח ב-room (חסום ב-duel), תגית מושב "🎲 500 · Perfect Pairs". **באג כסף אמיתי שנחשף:** `claim_blackjack_payout` מעולם לא כלל `sideResults` בחישוב — זכייה בהימור צד ב-room הייתה מוצגת אבל לא משלמת. תוקן. reviewer נקי. **הרצה: `RUN-THIS-NEXT.sql`.**
+  - **דואל ב-Night:** דילגנו לבקשת המשתמש (לא כרגע).
+  - **נשאר ל-N:** עוד משחקי מסיבה (לפי רצון).
 - STAGE M — תשתית חדרים (בסוף, לבקשת המשתמש).
 - *doc drift ידוע:* `SCHEMA.sql`/`README.md` לא עודכנו ל-`items.vip_tier` + `profiles.vip_*_claimed` + RPCs של VIP — לסדר בשלב ניקוי.
 
