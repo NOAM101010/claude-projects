@@ -9,7 +9,6 @@ import { ChatPanel } from '@/components/social/ChatPanel';
 import { LightPool } from '@/components/effects/LightPool';
 import { usePlayer } from '@/stores/usePlayer';
 import { useRoom } from '@/stores/useRoom';
-import { useCoinflipRoom } from '@/stores/useCoinflipRoom';
 import { useHighcardRoom } from '@/stores/useHighcardRoom';
 import { useSocial } from '@/stores/useSocial';
 import { notificationService } from '@/services/notificationService';
@@ -36,10 +35,7 @@ interface NightGame {
 
 const GAMES: NightGame[] = [
   { key: 'blackjack', icon: '♠', labelKey: 'nav.blackjack', to: (code) => `/blackjack/room/${code}?night=${code}`, scored: true },
-  { key: 'slots', icon: '🎰', labelKey: 'nav.slots', to: (code) => `/game/slots?night=${code}`, scored: true },
-  { key: 'coinflip', icon: '🪙', labelKey: 'nav.coinflip', to: () => '', scored: true, multiplayer: true },
   { key: 'highcard', icon: '🂡', labelKey: 'nav.highcard', to: () => '', scored: true, multiplayer: true },
-  { key: 'scratch', icon: '🎫', labelKey: 'nav.scratch', to: (code) => `/game/scratch?night=${code}`, scored: true },
 ];
 
 const MEDALS = ['🥇', '🥈', '🥉'];
@@ -60,7 +56,6 @@ export default function NightScene() {
   const toast = useUI((s) => s.toast);
   const setLoading = useUI((s) => s.setLoading);
   const { room, members, state, isHost, create, joinByCode, send } = useRoom();
-  const createCoinflip = useCoinflipRoom((s) => s.create);
   const createHighcard = useHighcardRoom((s) => s.create);
   const [podium, setPodium] = useState(false);
   const [invited, setInvited] = useState<string[]>([]);
@@ -70,10 +65,10 @@ export default function NightScene() {
   /* Only the room host picks the next game, and the pick pulls EVERY player in
      the room into it. The host publishes `activeMiniGame` (game + which room);
      every client — host included — watches that field and auto-navigates in.
-     Coin flip / high card need their own `rooms` row (a different game shape);
+     High card needs its own `rooms` row (a different game shape);
      everything else rides the night room's own code. */
   const gameUrl = (amg: { game: string; code: string }): string | null => {
-    if (amg.game === 'coinflip' || amg.game === 'highcard') {
+    if (amg.game === 'highcard') {
       return `/game/${amg.game}/room/${amg.code}?night=${roomCode}`;
     }
     const def = GAMES.find((g) => g.key === amg.game);
@@ -91,7 +86,7 @@ export default function NightScene() {
         if (existing?.game === game.key && existing.code) {
           code = existing.code;
         } else {
-          const created = await (game.key === 'coinflip' ? createCoinflip(profile.id) : createHighcard(profile.id));
+          const created = await createHighcard(profile.id);
           if (!created) { toast(t('errors.generic'), 'bad', '⚠'); return; }
           code = created.code;
         }
@@ -106,13 +101,14 @@ export default function NightScene() {
      (per-tab) remembers the pointer we already acted on, so a player who
      returns to the lobby while the pointer is still live isn't bounced back in. */
   const handledMiniGame = useRef<string | null>(null);
+  const nightActiveKey = `night-active:${roomCode}`;
   useEffect(() => {
     const amg = state?.activeMiniGame;
     if (!amg?.game) return;
     const key = `${amg.game}:${amg.code}`;
-    if (handledMiniGame.current === key || sessionStorage.getItem('night-active') === key) return;
+    if (handledMiniGame.current === key || sessionStorage.getItem(nightActiveKey) === key) return;
     handledMiniGame.current = key;
-    sessionStorage.setItem('night-active', key);
+    sessionStorage.setItem(nightActiveKey, key);
     const url = gameUrl(amg);
     if (url) { audio.play('door'); navigate(url); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -127,10 +123,10 @@ export default function NightScene() {
     if (!amg?.game) return;
     const key = `${amg.game}:${amg.code}`;
     const creatorGone = amg.by ? !members.some((m) => m.userId === amg.by) : false;
-    if (!creatorGone && sessionStorage.getItem('night-active') !== key) return;
+    if (!creatorGone && sessionStorage.getItem(nightActiveKey) !== key) return;
     const timer = setTimeout(() => {
       void send(profile.id, { type: 'setActiveMiniGame', userId: profile.id, game: '', code: '' });
-      sessionStorage.removeItem('night-active');
+      sessionStorage.removeItem(nightActiveKey);
     }, creatorGone ? 0 : 2500);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
