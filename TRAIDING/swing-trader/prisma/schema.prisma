@@ -3,8 +3,11 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Pooled connection (pgbouncer) — used by the app at runtime.
+  url       = env("DATABASE_URL")
+  // Direct connection — used by `prisma migrate deploy` during the Vercel build.
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 // ==================== Trade analyses ====================
