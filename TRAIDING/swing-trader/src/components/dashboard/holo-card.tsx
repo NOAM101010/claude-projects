@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatCurrency, formatPercent, cn } from "@/lib/utils";
+import { useCountUp } from "./use-count-up";
 
 type Props = {
   accountSize: number | null;
@@ -9,6 +10,8 @@ type Props = {
   openPnl: number | null;
   monthReturnPct: number | null;
   openRisk: number | null;
+  /** hero = the dashboard's main object; bigger, warmer, animated foil */
+  hero?: boolean;
 };
 
 function money(n: number | null) {
@@ -21,11 +24,16 @@ export default function HoloCard({
   openPnl,
   monthReturnPct,
   openRisk,
+  hero = false,
 }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | null>(null);
   const [flipped, setFlipped] = useState(false);
   const [interactive, setInteractive] = useState(false);
+
+  const size = useCountUp(accountSize ?? 0, 1500);
+  const cash = useCountUp(cashBalance ?? 0, 1200);
+  const pnl = useCountUp(openPnl ?? 0, 1000);
 
   useEffect(() => {
     const mq = window.matchMedia(
@@ -47,8 +55,8 @@ export default function HoloCard({
       const py = (e.clientY - rect.top) / rect.height;
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       rafRef.current = requestAnimationFrame(() => {
-        const ry = (px - 0.5) * 16; // deg
-        const rx = -(py - 0.5) * 14;
+        const ry = (px - 0.5) * 18; // deg
+        const rx = -(py - 0.5) * 15;
         el.style.setProperty("--rx", `${rx.toFixed(2)}deg`);
         el.style.setProperty("--ry", `${ry.toFixed(2)}deg`);
         el.style.setProperty("--mx", `${(px * 100).toFixed(1)}%`);
@@ -76,7 +84,7 @@ export default function HoloCard({
   );
 
   return (
-    <div className="holo-scene mx-auto sm:mx-0">
+    <div className={cn("holo-scene mx-auto sm:mx-0", hero && "holo-scene--hero")}>
       <div
         ref={cardRef}
         className={cn("holo-card", flipped && "is-flipped")}
@@ -95,11 +103,12 @@ export default function HoloCard({
       >
         {/* FRONT */}
         <div className="holo-face">
+          {hero && <div className="holo-sweep" aria-hidden />}
           <div className="holo-content">
             <div className="flex items-start justify-between">
               <div>
                 <div className="text-[15px] font-black tracking-tight">SWING TERMINAL</div>
-                <div className="text-[9px] uppercase tracking-[0.28em] text-[var(--up)] mt-1">
+                <div className="text-[9px] uppercase tracking-[0.28em] text-[var(--warn-2)] mt-1">
                   Trading Account
                 </div>
               </div>
@@ -107,19 +116,19 @@ export default function HoloCard({
             </div>
 
             <div>
-              <div className="mono text-[13px] tracking-[0.22em] text-[var(--fg-2)]">
+              <div dir="ltr" className="mono text-[13px] tracking-[0.22em] text-[var(--fg-2)]">
                 •••• •••• •••• 2026
               </div>
-              <div className="mt-3 flex items-end justify-between">
+              <div className="mt-3 flex items-end justify-between gap-3">
                 <div>
                   <div className="text-[9px] uppercase tracking-[0.2em] text-[var(--muted)]">
                     גודל חשבון
                   </div>
-                  <div className="mono text-3xl font-black leading-none mt-1">
-                    {money(accountSize)}
+                  <div className="mono text-[34px] md:text-[40px] font-black leading-none mt-1 tabular">
+                    {accountSize == null ? "—" : formatCurrency(size, 0)}
                   </div>
                 </div>
-                <div className="text-[9px] uppercase tracking-[0.2em] text-[var(--muted)] text-left">
+                <div className="text-[9px] uppercase tracking-[0.2em] text-[var(--muted)] text-left shrink-0">
                   לחץ להיפוך
                 </div>
               </div>
@@ -129,15 +138,19 @@ export default function HoloCard({
 
         {/* BACK */}
         <div className="holo-face holo-face--back">
+          {hero && <div className="holo-sweep" aria-hidden />}
           <div className="holo-content">
-            <div className="text-[9px] uppercase tracking-[0.28em] text-[var(--up)]">
+            <div className="text-[9px] uppercase tracking-[0.28em] text-[var(--warn-2)]">
               Account Snapshot
             </div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-              <Metric label="Buying Power" value={money(cashBalance)} />
+              <Metric
+                label="Buying Power"
+                value={cashBalance == null ? "—" : formatCurrency(cash, 0)}
+              />
               <Metric
                 label="P&L פתוח"
-                value={openPnl == null ? "—" : formatCurrency(openPnl, 0)}
+                value={openPnl == null ? "—" : formatCurrency(pnl, 0)}
                 tone={openPnl == null ? undefined : openPnl >= 0 ? "up" : "down"}
               />
               <Metric
@@ -182,8 +195,9 @@ function Metric({
         {label}
       </div>
       <div
+        dir="ltr"
         className={cn(
-          "mono text-lg font-bold mt-0.5",
+          "mono text-lg font-bold mt-0.5 tabular text-right",
           tone === "up" && "text-[var(--up)]",
           tone === "down" && "text-[var(--down)]"
         )}

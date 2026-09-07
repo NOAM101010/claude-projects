@@ -1,0 +1,442 @@
+/* ============================================================
+   DASHBOARD — "THE CINEMATIC TERMINAL"
+   a control-room console: amber = the account, green/red = the market.
+   detection frames, chromatic edges, a slow scanline, live glitch.
+   ============================================================ */
+
+.dash {
+  position: relative;
+  isolation: isolate;
+  --amber: 245, 158, 11;
+  --amber-hot: 255, 196, 92;
+}
+
+/* ---------- parallax backdrop (behind everything on this page) ---------- */
+.dash-backdrop {
+  position: fixed;
+  inset: -8vh -8vw;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  --px: 0px;
+  --py: 0px;
+}
+.dash-layer {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+/* far layer — engineering grid */
+.dash-layer--grid {
+  transform: translate3d(calc(var(--px) * 0.35), calc(var(--py) * 0.35), 0);
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.014) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.014) 1px, transparent 1px);
+  background-size: 132px 132px, 132px 132px, 33px 33px, 33px 33px;
+  -webkit-mask-image: radial-gradient(ellipse 78% 62% at 50% 32%, #000 8%, transparent 72%);
+  mask-image: radial-gradient(ellipse 78% 62% at 50% 32%, #000 8%, transparent 72%);
+}
+/* mid layer — ghost candles, deliberately off-centre */
+.dash-layer--candles {
+  transform: translate3d(calc(var(--px) * 0.85), calc(var(--py) * 0.85), 0);
+  opacity: 0.5;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      rgba(16, 185, 129, 0.05) 0 3px,
+      transparent 3px 46px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(239, 68, 68, 0.045) 0 3px,
+      transparent 3px 79px
+    );
+  background-position: 12% 0, 41% 0;
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 26%, #000 58%, transparent 88%);
+  mask-image: linear-gradient(180deg, transparent, #000 26%, #000 58%, transparent 88%);
+}
+/* warm key light, low and to one side — the cinematic bit */
+.dash-layer--bloom {
+  transform: translate3d(calc(var(--px) * 1.6), calc(var(--py) * 1.6), 0);
+  background:
+    radial-gradient(ellipse 46% 40% at 76% 14%, rgba(var(--amber), 0.085), transparent 66%),
+    radial-gradient(ellipse 52% 44% at 14% 82%, rgba(16, 185, 129, 0.055), transparent 68%);
+  mix-blend-mode: screen;
+}
+.dash-vignette {
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 240px 46px rgba(0, 0, 0, 0.55);
+}
+
+/* ---------- scanline: sweeps the frame every ~14s ---------- */
+.dash-scan {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 190px;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(var(--amber), 0.05) 62%,
+    rgba(var(--amber-hot), 0.22) 92%,
+    rgba(255, 255, 255, 0.42) 99%,
+    transparent 100%
+  );
+  mix-blend-mode: screen;
+  opacity: 0;
+  animation: dashScan 14s cubic-bezier(0.45, 0, 0.3, 1) 3s infinite;
+}
+@keyframes dashScan {
+  0% { transform: translateY(-24vh); opacity: 0; }
+  3% { opacity: 0.9; }
+  26% { opacity: 0.75; }
+  32% { transform: translateY(124vh); opacity: 0; }
+  100% { transform: translateY(124vh); opacity: 0; }
+}
+
+/* ---------- chromatic dispersion edge on panels ---------- */
+.holo-edge::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    142deg,
+    rgba(0, 196, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0.06) 18%,
+    transparent 40%,
+    transparent 62%,
+    rgba(255, 255, 255, 0.06) 82%,
+    rgba(255, 0, 92, 0.5) 100%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0.42;
+  transition: opacity 0.35s ease;
+  z-index: 3;
+}
+.holo-edge:hover::after { opacity: 0.95; }
+/* amber variant — anything that talks about money */
+.holo-edge--amber::after {
+  background: linear-gradient(
+    142deg,
+    rgba(var(--amber-hot), 0.7) 0%,
+    rgba(255, 255, 255, 0.05) 22%,
+    transparent 46%,
+    transparent 64%,
+    rgba(255, 140, 0, 0.28) 92%,
+    rgba(255, 0, 92, 0.35) 100%
+  );
+  opacity: 0.5;
+}
+
+/* ---------- detection frame corners (HUD language) ---------- */
+.det-frame {
+  position: relative;
+}
+.det-frame::before {
+  content: "";
+  position: absolute;
+  inset: 9px;
+  pointer-events: none;
+  z-index: 2;
+  background:
+    linear-gradient(rgba(var(--amber-hot), 0.5) 0 0) 0 0 / 11px 1px no-repeat,
+    linear-gradient(rgba(var(--amber-hot), 0.5) 0 0) 0 0 / 1px 11px no-repeat,
+    linear-gradient(rgba(var(--amber-hot), 0.5) 0 0) 100% 0 / 11px 1px no-repeat,
+    linear-gradient(rgba(var(--amber-hot), 0.5) 0 0) 100% 0 / 1px 11px no-repeat,
+    linear-gradient(rgba(var(--amber-hot), 0.5) 0 0) 0 100% / 11px 1px no-repeat,
+    linear-gradient(rgba(var(--amber-hot), 0.5) 0 0) 0 100% / 1px 11px no-repeat,
+    linear-gradient(rgba(var(--amber-hot), 0.5) 0 0) 100% 100% / 11px 1px no-repeat,
+    linear-gradient(rgba(var(--amber-hot), 0.5) 0 0) 100% 100% / 1px 11px no-repeat;
+  opacity: 0.55;
+  transition: opacity 0.3s ease;
+}
+.det-frame:hover::before { opacity: 1; }
+
+/* numbers keep their sign on the correct side inside an RTL document */
+.num {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* mono label chip — "BEST · +$412" */
+.det-chip {
+  direction: ltr;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 9px;
+  border: 1px solid rgba(var(--amber), 0.4);
+  background: rgba(6, 8, 13, 0.82);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(245, 225, 190, 0.86);
+  white-space: nowrap;
+}
+.det-chip--up { border-color: rgba(16, 185, 129, 0.45); color: var(--up-2); }
+.det-chip--down { border-color: rgba(239, 68, 68, 0.45); color: var(--down-2); }
+
+/* ---------- top HUD ---------- */
+.dash-hud {
+  direction: ltr;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0.006));
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.dash-hud-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 15px;
+  border-inline-end: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  min-width: 84px;
+}
+.dash-hud-cell:last-child { border-inline-end: none; }
+.dash-hud-k {
+  font-size: 8.5px;
+  letter-spacing: 0.24em;
+  color: var(--muted-2);
+  text-transform: uppercase;
+}
+.dash-hud-v { font-size: 12.5px; font-weight: 600; color: var(--fg-2); }
+
+/* ---------- live flash / glitch on changed numbers ---------- */
+@keyframes liveGlitchUp {
+  0% { transform: translateX(0); text-shadow: none; }
+  12% { transform: translateX(-1.5px); text-shadow: 2px 0 rgba(255, 0, 92, 0.85), -2px 0 rgba(0, 200, 255, 0.85); }
+  26% { transform: translateX(1.5px); text-shadow: -2px 0 rgba(255, 0, 92, 0.7), 2px 0 rgba(0, 200, 255, 0.7); }
+  40% { transform: translateX(0); color: var(--up-2); text-shadow: 0 0 14px var(--up-glow); }
+  100% { transform: translateX(0); text-shadow: none; }
+}
+@keyframes liveGlitchDown {
+  0% { transform: translateX(0); text-shadow: none; }
+  12% { transform: translateX(1.5px); text-shadow: 2px 0 rgba(255, 0, 92, 0.85), -2px 0 rgba(0, 200, 255, 0.85); }
+  26% { transform: translateX(-1.5px); text-shadow: -2px 0 rgba(255, 0, 92, 0.7), 2px 0 rgba(0, 200, 255, 0.7); }
+  40% { transform: translateX(0); color: var(--down-2); text-shadow: 0 0 14px var(--down-glow); }
+  100% { transform: translateX(0); text-shadow: none; }
+}
+.live-glitch-up { animation: liveGlitchUp 0.9s cubic-bezier(0.3, 0, 0.2, 1); }
+.live-glitch-down { animation: liveGlitchDown 0.9s cubic-bezier(0.3, 0, 0.2, 1); }
+.live-cell {
+  display: inline-block;
+  direction: ltr;
+  unicode-bidi: isolate;
+  will-change: transform;
+}
+
+/* refresh sweep across a panel when its data lands */
+@keyframes panelRefresh {
+  0% { opacity: 0; transform: translateX(-100%); }
+  40% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(100%); }
+}
+.panel-refresh {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 40%;
+  pointer-events: none;
+  z-index: 4;
+  background: linear-gradient(90deg, transparent, rgba(var(--amber-hot), 0.075), transparent);
+  animation: panelRefresh 0.85s ease-out;
+}
+
+/* ---------- holo card, hero size ---------- */
+.holo-scene--hero { max-width: 460px; }
+.holo-scene--hero .holo-face {
+  border-radius: 22px;
+  box-shadow:
+    0 40px 90px -28px rgba(0, 0, 0, 0.85),
+    0 0 60px -22px rgba(var(--amber), 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    inset 2px 0 0 rgba(0, 196, 255, 0.09),
+    inset -2px 0 0 rgba(255, 0, 92, 0.09);
+  background:
+    radial-gradient(ellipse 80% 60% at 12% 6%, rgba(var(--amber), 0.12), transparent 62%),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 5px),
+    linear-gradient(150deg, #12100a 0%, #0a0f18 48%, #0d0b14 100%);
+}
+.holo-scene--hero .holo-face::before {
+  background: conic-gradient(
+    from 200deg,
+    rgba(var(--amber), 0.3),
+    rgba(16, 185, 129, 0.18),
+    rgba(59, 130, 246, 0.15),
+    rgba(217, 70, 239, 0.14),
+    rgba(var(--amber), 0.3)
+  );
+}
+/* animated foil sweep — a band of light that crawls the card */
+.holo-sweep {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.55;
+  background: linear-gradient(
+    115deg,
+    transparent 34%,
+    rgba(0, 196, 255, 0.16) 45%,
+    rgba(255, 255, 255, 0.24) 50%,
+    rgba(255, 0, 92, 0.16) 55%,
+    transparent 66%
+  );
+  background-size: 260% 100%;
+  animation: holoSweep 7.5s ease-in-out infinite;
+}
+@keyframes holoSweep {
+  0%, 100% { background-position: 130% 0; }
+  50% { background-position: -30% 0; }
+}
+
+/* ---------- gauge instrument ---------- */
+.gauge-wrap {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.gauge-halo {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: background 0.8s ease;
+}
+.gauge-needle-g {
+  transform-origin: 100px 106px;
+  transform-box: view-box;
+  transition: transform 1.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.gauge-arc-live {
+  transition: stroke-dashoffset 1.4s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.6s ease;
+}
+@keyframes gaugePulse {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.7; }
+}
+.gauge-pulse { animation: gaugePulse 3.4s ease-in-out infinite; }
+
+/* ---------- equity detection boxes (inside the recharts svg) ---------- */
+@keyframes detIn {
+  0% { opacity: 0; transform: scale(1.12); filter: blur(3px); }
+  60% { opacity: 1; filter: blur(0); }
+  100% { opacity: 1; transform: scale(1); filter: blur(0); }
+}
+.det-g {
+  animation: detIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.det-rect {
+  stroke-dasharray: 4 3.5;
+  animation: detDash 8s linear infinite;
+}
+@keyframes detDash { to { stroke-dashoffset: -60; } }
+.det-text {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+
+/* ---------- section rule with a mono index ---------- */
+.dash-rule {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  direction: rtl;
+}
+.dash-rule::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border));
+}
+.dash-rule-i {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.26em;
+  color: var(--muted-2);
+  direction: ltr;
+}
+
+/* ---------- typography (serif display, tuned for Frank Ruhl) ---------- */
+.display-serif.dash-title {
+  font-size: clamp(46px, 7.6vw, 94px);
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+}
+.display-serif.panel-title {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  line-height: 1.15;
+}
+.display-serif.stat-title {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--fg-dim);
+}
+
+/* ---------- misc ---------- */
+.dash-title-glow {
+  text-shadow: 0 0 60px rgba(var(--amber), 0.28), 0 0 22px rgba(0, 0, 0, 0.6);
+}
+.seg-track {
+  display: flex;
+  gap: 2px;
+  height: 6px;
+}
+.seg-cell {
+  flex: 1;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  transition: background 0.4s ease, box-shadow 0.4s ease;
+}
+.seg-cell.is-on {
+  background: var(--up);
+  box-shadow: 0 0 8px var(--up-glow);
+}
+.seg-cell.is-on-warn { background: var(--warn); box-shadow: 0 0 8px rgba(245, 158, 11, 0.5); }
+
+/* ---------- reduced motion / coarse pointer ---------- */
+@media (pointer: coarse) {
+  .dash-backdrop { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dash-scan,
+  .holo-sweep,
+  .det-rect,
+  .gauge-pulse,
+  .panel-refresh { animation: none !important; }
+  .panel-refresh { display: none; }
+  .holo-sweep { opacity: 0.28; }
+  .det-g { animation: none !important; }
+  .gauge-needle-g,
+  .gauge-arc-live { transition: none !important; }
+  .live-glitch-up,
+  .live-glitch-down { animation: none !important; }
+  .dash-layer { transform: none !important; }
+}
