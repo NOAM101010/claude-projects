@@ -7,7 +7,7 @@ export const revalidate = 0;
 export async function GET() {
   try {
     const regime = await computeMarketRegime();
-    return NextResponse.json({ ok: true, regime });
+    return NextResponse.json({ ok: true, ...regime });
   } catch (e: any) {
     return NextResponse.json(
       { ok: false, error: e?.message ?? String(e) },

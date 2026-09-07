@@ -297,7 +297,7 @@ export default function DashboardPage() {
                 {regime.vix != null && <span>VIX {regime.vix.toFixed(1)}</span>}
               </div>
               <ul className="mt-4 space-y-1.5 text-xs text-[var(--fg-dim)] leading-relaxed">
-                {regime.notes.map((n, i) => (
+                {(regime.notes ?? []).map((n, i) => (
                   <li key={i} className="flex gap-2">
                     <span className="text-[var(--up)] mt-[3px]">•</span>
                     <span>{n}</span>
