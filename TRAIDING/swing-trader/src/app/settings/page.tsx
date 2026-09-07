@@ -188,13 +188,13 @@ export default function SettingsPage() {
           </div>
           <div>
             <label className="block text-[10px] uppercase tracking-[0.15em] font-bold text-[var(--muted)] mb-2">
-              מזומן פנוי ($)
+              מזומן פנוי (השאר ריק לחישוב אוטומטי מגודל החשבון פחות פוזיציות פתוחות)
             </label>
             <Input
               inputMode="decimal"
               value={cashBalance}
               onChange={(e) => setCashBalance(e.target.value)}
-              placeholder="12000"
+              placeholder="חישוב אוטומטי"
               className="mono"
             />
           </div>

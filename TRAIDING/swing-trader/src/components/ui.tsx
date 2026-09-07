@@ -45,7 +45,7 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all disabled:opacity-40 disabled:pointer-events-none active:scale-[0.97]",
+        "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-[color,background-color,border-color,box-shadow,transform] duration-200 disabled:opacity-40 disabled:pointer-events-none active:scale-[0.97]",
         variants[variant], sizes[size], className
       )}
       {...props}
@@ -57,7 +57,7 @@ export function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInp
   return (
     <input
       className={cn(
-        "w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-[var(--border-hi)] text-sm outline-none focus:border-[var(--up)]/60 focus:ring-2 focus:ring-[var(--up)]/15 transition-all tabular text-[var(--fg)] placeholder:text-[var(--muted)]",
+        "w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-[var(--border-hi)] text-sm outline-none focus:border-[var(--up)]/60 focus:ring-2 focus:ring-[var(--up)]/15 transition-[color,background-color,border-color,box-shadow] duration-200 tabular text-[var(--fg)] placeholder:text-[var(--muted)]",
         className
       )}
       {...props}
@@ -69,7 +69,7 @@ export function Textarea({ className, ...props }: React.TextareaHTMLAttributes<H
   return (
     <textarea
       className={cn(
-        "w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-[var(--border-hi)] text-sm outline-none focus:border-[var(--up)]/60 focus:ring-2 focus:ring-[var(--up)]/15 transition-all text-[var(--fg)] placeholder:text-[var(--muted)]",
+        "w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-[var(--border-hi)] text-sm outline-none focus:border-[var(--up)]/60 focus:ring-2 focus:ring-[var(--up)]/15 transition-[color,background-color,border-color,box-shadow] duration-200 text-[var(--fg)] placeholder:text-[var(--muted)]",
         className
       )}
       {...props}
@@ -81,7 +81,7 @@ export function Select({ className, ...props }: React.SelectHTMLAttributes<HTMLS
   return (
     <select
       className={cn(
-        "w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-[var(--border-hi)] text-sm outline-none focus:border-[var(--up)]/60 focus:ring-2 focus:ring-[var(--up)]/15 transition-all text-[var(--fg)]",
+        "w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-[var(--border-hi)] text-sm outline-none focus:border-[var(--up)]/60 focus:ring-2 focus:ring-[var(--up)]/15 transition-[color,background-color,border-color,box-shadow] duration-200 text-[var(--fg)]",
         className
       )}
       {...props}
@@ -133,7 +133,7 @@ export function Grade({
   return (
     <div
       className={cn(
-        "inline-flex items-center justify-center border font-black tracking-tight backdrop-blur-md",
+        "inline-flex items-center justify-center border font-black tracking-tight",
         sizes[size], gradeClass, className
       )}
     >

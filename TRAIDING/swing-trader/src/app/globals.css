@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: dark;
   /* Deep dark with cool blue tint */
   --bg: #05070c;
   --bg-2: #08090e;
@@ -90,8 +91,7 @@ html, body {
   inset: 0;
   z-index: -2;
   pointer-events: none;
-  opacity: 0.35;
-  mix-blend-mode: overlay;
+  opacity: 0.04;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0.08 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
@@ -111,12 +111,21 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   outline: none;
 }
 
+/* native dropdown lists — force dark so options aren't white-on-white */
+select option, select optgroup {
+  background: #0b0e14;
+  color: #f5f5f5;
+}
+
 /* ==== Glass card ==== */
 .glass {
-  background: var(--bg-elevated);
+  background: rgba(20, 24, 33, 0.72);
+  border: 1px solid var(--border);
+}
+/* expensive real blur — only for the handful of pill-nav header elements */
+.glass-blur {
   backdrop-filter: blur(24px) saturate(140%);
   -webkit-backdrop-filter: blur(24px) saturate(140%);
-  border: 1px solid var(--border);
 }
 .glass-hover {
   transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),

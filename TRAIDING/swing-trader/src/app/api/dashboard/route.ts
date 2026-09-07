@@ -44,7 +44,21 @@ export async function GET() {
     const monthPnl = monthEntry?.netPnl ?? 0;
 
     const accountSize = accountSizeRaw ? Number(accountSizeRaw) : null;
-    const cashBalance = cashRaw ? Number(cashRaw) : null;
+    const cashOverride = cashRaw ? Number(cashRaw) : null;
+
+    // מזומן פנוי מחושב: גודל חשבון פחות עלות הפוזיציות הפתוחות
+    const openCost = trades
+      .filter((t) => t.sellDate == null)
+      .reduce((s, t) => s + t.buyPrice * t.quantity, 0);
+    const cashComputed =
+      accountSize != null && Number.isFinite(accountSize)
+        ? accountSize - openCost
+        : null;
+
+    const cashBalance =
+      cashOverride != null && Number.isFinite(cashOverride)
+        ? cashOverride
+        : null;
     const monthReturnPct =
       accountSize && accountSize > 0 ? (monthPnl / accountSize) * 100 : null;
 
@@ -52,7 +66,8 @@ export async function GET() {
       ok: true,
       account: {
         accountSize: Number.isFinite(accountSize as number) ? accountSize : null,
-        cashBalance: Number.isFinite(cashBalance as number) ? cashBalance : null,
+        cashBalance,
+        cashComputed,
       },
       pnl: {
         today: todayPnl,

@@ -23,6 +23,7 @@ export default function TerminalBackdrop() {
     if (!mq.matches) return;
 
     let raf = 0;
+    let running = false;
     // target (from pointer) and eased current, in px of max travel
     let tx = 0;
     let ty = 0;
@@ -30,21 +31,33 @@ export default function TerminalBackdrop() {
     let cy = 0;
     const MAX = 14;
 
-    const onMove = (e: PointerEvent) => {
-      tx = (e.clientX / window.innerWidth - 0.5) * -2 * MAX;
-      ty = (e.clientY / window.innerHeight - 0.5) * -2 * MAX;
-    };
-
     const loop = () => {
       cx += (tx - cx) * 0.06;
       cy += (ty - cy) * 0.06;
       el.style.setProperty("--px", `${cx.toFixed(2)}px`);
       el.style.setProperty("--py", `${cy.toFixed(2)}px`);
+      // park once the eased position has caught up to the pointer
+      if (Math.abs(tx - cx) < 0.05 && Math.abs(ty - cy) < 0.05) {
+        running = false;
+        return;
+      }
       raf = requestAnimationFrame(loop);
     };
 
+    const wake = () => {
+      if (running) return;
+      running = true;
+      raf = requestAnimationFrame(loop);
+    };
+
+    const onMove = (e: PointerEvent) => {
+      tx = (e.clientX / window.innerWidth - 0.5) * -2 * MAX;
+      ty = (e.clientY / window.innerHeight - 0.5) * -2 * MAX;
+      wake();
+    };
+
     window.addEventListener("pointermove", onMove, { passive: true });
-    raf = requestAnimationFrame(loop);
+    wake();
 
     return () => {
       cancelAnimationFrame(raf);

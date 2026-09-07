@@ -11,12 +11,18 @@ type Quote = {
   changePercent: number | null;
 };
 
-const DISPLAY_SYMBOLS = ["SPY", "QQQ", "^VIX", "BTC-USD", "ETH-USD"];
+const DISPLAY_SYMBOLS = ["SPY", "QQQ", "^VIX", "BTC-USD", "ETH-USD", "^TA125.TA"];
+
+const LABELS: Record<string, string> = { "^TA125.TA": "ת\"א 125" };
 
 function formatPrice(symbol: string, price: number | null): string {
   if (price == null) return "—";
   if (symbol === "BTC-USD" || symbol === "ETH-USD") {
     return `$${price.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+  }
+  if (symbol === "^TA125.TA") {
+    // שקלי — בלי סימן דולר
+    return price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
   return `$${price.toFixed(2)}`;
 }
@@ -50,8 +56,8 @@ export default function MarketIndices() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-        {[0, 1, 2, 3, 4].map((i) => (
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+        {[0, 1, 2, 3, 4, 5].map((i) => (
           <div key={i} className="h-24 rounded-2xl shimmer" />
         ))}
       </div>
@@ -59,22 +65,26 @@ export default function MarketIndices() {
   }
 
   return (
-    <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
       {quotes.map((q) => {
         const up = (q.changePercent ?? 0) >= 0;
         const isVix = q.symbol === "^VIX";
         const isCrypto = q.symbol === "BTC-USD" || q.symbol === "ETH-USD";
+        const tvSymbol =
+          q.symbol === "^TA125.TA"
+            ? "TASE:TA125"
+            : q.symbol.replace("^", "").replace("-", "");
         return (
           <a
             key={q.symbol}
-            href={`https://www.tradingview.com/chart/?symbol=${q.symbol.replace("^", "").replace("-", "")}`}
+            href={`https://www.tradingview.com/chart/?symbol=${tvSymbol}`}
             target="_blank"
             rel="noopener noreferrer"
             className="glass rounded-2xl p-4 glass-hover group"
           >
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold text-[var(--muted)] uppercase tracking-wider">
-                {q.label}
+                {LABELS[q.symbol] ?? q.label}
               </span>
               {!isVix && (up ? (
                 <TrendingUp className="w-3.5 h-3.5 text-[var(--up)]" />

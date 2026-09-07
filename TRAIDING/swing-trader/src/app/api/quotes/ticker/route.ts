@@ -14,6 +14,7 @@ const CORE = [
   { symbol: "SPY", label: "SPY" },
   { symbol: "BTC-USD", label: "Bitcoin" },
   { symbol: "ETH-USD", label: "Ethereum" },
+  { symbol: "^TA125.TA", label: "ת\"א 125" },
 ];
 
 export async function GET() {

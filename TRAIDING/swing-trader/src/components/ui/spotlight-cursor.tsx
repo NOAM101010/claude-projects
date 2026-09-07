@@ -43,7 +43,9 @@ function useTradingCursor(config: Required<TradingCursorConfig>) {
     if (!ctx) return;
 
     let raf = 0;
-    let dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let running = false;
+    let lastMove = 0;
+    let dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     let targetX = -9999;
     let targetY = -9999;
     let curX = -9999;
@@ -52,13 +54,20 @@ function useTradingCursor(config: Required<TradingCursorConfig>) {
     const trail: TrailPoint[] = [];
     const pings: Ping[] = [];
 
+    const wake = () => {
+      if (running) return;
+      running = true;
+      raf = requestAnimationFrame(draw);
+    };
+
     const resize = () => {
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       canvas.width = window.innerWidth * dpr;
       canvas.height = window.innerHeight * dpr;
       canvas.style.width = `${window.innerWidth}px`;
       canvas.style.height = `${window.innerHeight}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      wake();
     };
 
     const onMove = (e: MouseEvent) => {
@@ -69,11 +78,14 @@ function useTradingCursor(config: Required<TradingCursorConfig>) {
         curY = targetY;
       }
       active = true;
+      lastMove = performance.now();
+      wake();
     };
     const onLeave = () => {
       active = false;
       targetX = targetY = -9999;
       trail.length = 0;
+      wake();
     };
     const onDown = (e: MouseEvent) => {
       if (!config.pulseOnClick) return;
@@ -85,6 +97,7 @@ function useTradingCursor(config: Required<TradingCursorConfig>) {
         alpha: 0.6,
         color: sell ? DOWN : UP,
       });
+      wake();
     };
     const onCtx = (e: MouseEvent) => {
       if (config.pulseOnClick) e.preventDefault();
@@ -177,6 +190,24 @@ function useTradingCursor(config: Required<TradingCursorConfig>) {
         if (p.alpha < 0.02) pings.splice(i, 1);
       }
 
+      // ---- idle detection: stop the loop when nothing is animating ----
+      const idle = performance.now() - lastMove > 140;
+      const settled =
+        Math.abs(targetX - curX) < 0.5 && Math.abs(targetY - curY) < 0.5;
+      if (idle && settled) {
+        if (trail.length) {
+          // one last frame without the trail, then park
+          trail.length = 0;
+          raf = requestAnimationFrame(draw);
+          return;
+        }
+        if (pings.length) {
+          raf = requestAnimationFrame(draw);
+          return;
+        }
+        running = false;
+        return;
+      }
       raf = requestAnimationFrame(draw);
     };
 
@@ -186,7 +217,7 @@ function useTradingCursor(config: Required<TradingCursorConfig>) {
     window.addEventListener("mouseleave", onLeave);
     window.addEventListener("mousedown", onDown);
     window.addEventListener("contextmenu", onCtx);
-    raf = requestAnimationFrame(draw);
+    wake();
 
     return () => {
       window.removeEventListener("resize", resize);

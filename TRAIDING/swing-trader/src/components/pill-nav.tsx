@@ -23,7 +23,7 @@ export default function PillNav() {
       <div className="max-w-6xl mx-auto flex items-center gap-2 md:gap-3">
         <Link
           href="/"
-          className="glass rounded-full pr-3 pl-2 py-1.5 flex items-center gap-2 shrink-0 group transition-colors duration-200 hover:border-[var(--border-hi)]"
+          className="glass glass-blur rounded-full pr-3 pl-2 py-1.5 flex items-center gap-2 shrink-0 group transition-colors duration-200 hover:border-[var(--border-hi)]"
         >
           <div className="w-8 h-8 rounded-full p-[2px] bg-[conic-gradient(from_90deg,var(--up),var(--fg),var(--down),var(--up))]">
             <div className="w-full h-full rounded-full bg-[var(--bg)] flex items-center justify-center font-black text-xs">
@@ -36,7 +36,7 @@ export default function PillNav() {
           </div>
         </Link>
 
-        <nav className="glass rounded-full px-1.5 py-1.5 flex-1 flex items-center justify-center gap-1 overflow-x-auto no-scrollbar">
+        <nav className="glass glass-blur rounded-full px-1.5 py-1.5 flex-1 flex items-center justify-center gap-1 overflow-x-auto no-scrollbar">
           {NAV.map((item) => {
             const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
             const Icon = item.icon;
@@ -45,7 +45,7 @@ export default function PillNav() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "relative flex items-center gap-2 px-3 md:px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 whitespace-nowrap shrink-0",
+                  "relative flex items-center gap-2 px-3 md:px-4 py-2 rounded-full text-sm font-semibold transition-[color,background-color,border-color,box-shadow] duration-200 whitespace-nowrap shrink-0",
                   active
                     ? "bg-[rgba(16,185,129,0.15)] text-[var(--up)] border border-[rgba(16,185,129,0.3)] shadow-[0_0_20px_rgba(16,185,129,0.15)]"
                     : "text-[var(--fg-dim)] hover:text-[var(--fg)] hover:bg-white/5 border border-transparent"
@@ -59,7 +59,7 @@ export default function PillNav() {
         </nav>
 
         <div className="hidden lg:block">
-          <div className="glass rounded-full px-4 py-2">
+          <div className="glass glass-blur rounded-full px-4 py-2">
             <MarketClock />
           </div>
         </div>
@@ -67,7 +67,7 @@ export default function PillNav() {
         <Link
           href="/settings"
           className={cn(
-            "glass rounded-full p-2.5 shrink-0 transition-colors duration-200",
+            "glass glass-blur rounded-full p-2.5 shrink-0 transition-colors duration-200",
             pathname.startsWith("/settings") ? "text-[var(--up)]" : "text-[var(--fg-dim)] hover:text-[var(--fg)]"
           )}
         >

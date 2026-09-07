@@ -15,7 +15,7 @@ import { useLiveData } from "@/components/dashboard/use-live-data";
 import "@/components/dashboard/dashboard.css";
 
 type DashboardData = {
-  account: { accountSize: number | null; cashBalance: number | null };
+  account: { accountSize: number | null; cashBalance: number | null; cashComputed: number | null };
   pnl: { today: number; month: number; total: number; monthReturnPct: number | null };
   equityCurve: EquityPoint[];
   bySetup: { setup: string; trades: number; winRate: number; netPnl: number; avgPct: number }[];
@@ -226,7 +226,7 @@ export default function DashboardPage() {
                   <HoloCard
                     hero
                     accountSize={dash?.account.accountSize ?? null}
-                    cashBalance={dash?.account.cashBalance ?? null}
+                    cashBalance={dash?.account.cashBalance ?? dash?.account.cashComputed ?? null}
                     openPnl={pos?.totalOpenPnl ?? null}
                     monthReturnPct={dash?.pnl.monthReturnPct ?? null}
                     openRisk={pos?.totalOpenRisk ?? null}
@@ -297,7 +297,7 @@ export default function DashboardPage() {
                   </p>
                   <Link
                     href="/journal"
-                    className="mt-5 text-xs font-bold text-[var(--warn-2)] inline-flex items-center gap-1 hover:gap-2 transition-all"
+                    className="mt-5 text-xs font-bold text-[var(--warn-2)] inline-flex items-center gap-1 hover:gap-2 transition-[gap]"
                   >
                     ליומן <ArrowUpRight className="w-3.5 h-3.5" />
                   </Link>
@@ -453,7 +453,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="h-[3px] bg-white/[0.05] overflow-hidden">
                         <div
-                          className="h-full bar-grow transition-all"
+                          className="h-full bar-grow transition-[width]"
                           style={{
                             width: `${s.winRate}%`,
                             animationDelay: `${i * 70}ms`,
@@ -584,7 +584,7 @@ export default function DashboardPage() {
                   <p className="text-sm text-[var(--fg-dim)]">אין פוזיציות פתוחות כרגע.</p>
                   <Link
                     href="/scanner"
-                    className="mt-4 text-xs font-bold text-[var(--up)] inline-flex items-center gap-1 hover:gap-2 transition-all"
+                    className="mt-4 text-xs font-bold text-[var(--up)] inline-flex items-center gap-1 hover:gap-2 transition-[gap]"
                   >
                     לחפש מועמדים <ArrowUpRight className="w-3.5 h-3.5" />
                   </Link>
@@ -634,7 +634,7 @@ export default function DashboardPage() {
                   </div>
                   <Link
                     href="/scanner"
-                    className="mt-auto pt-5 text-xs font-bold text-[var(--up)] inline-flex items-center gap-1 hover:gap-2 transition-all"
+                    className="mt-auto pt-5 text-xs font-bold text-[var(--up)] inline-flex items-center gap-1 hover:gap-2 transition-[gap]"
                   >
                     לסורק המלא <ArrowUpRight className="w-3.5 h-3.5" />
                   </Link>
@@ -644,7 +644,7 @@ export default function DashboardPage() {
                   <p className="text-sm text-[var(--fg-dim)]">אין תוצאות סריקה עדיין.</p>
                   <Link
                     href="/scanner"
-                    className="mt-4 text-xs font-bold text-[var(--up)] inline-flex items-center gap-1 hover:gap-2 transition-all"
+                    className="mt-4 text-xs font-bold text-[var(--up)] inline-flex items-center gap-1 hover:gap-2 transition-[gap]"
                   >
                     להריץ סריקה <ArrowUpRight className="w-3.5 h-3.5" />
                   </Link>
