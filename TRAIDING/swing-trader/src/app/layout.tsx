@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Heebo, Inter, JetBrains_Mono } from "next/font/google";
+import IntroOverlay from "@/components/intro/intro-overlay";
 import PillNav from "@/components/pill-nav";
 import { Component as SpotlightCursor } from "@/components/ui/spotlight-cursor";
 import "./globals.css";
@@ -52,7 +53,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <div className="grain" aria-hidden />
         <SpotlightCursor config={{ crosshair: false }} />
         <PillNav />
-        <main className="pt-24 md:pt-28 pb-20 min-h-screen">{children}</main>
+        <main className="pt-24 md:pt-28 pb-20 min-h-screen" tabIndex={-1}>
+          {children}
+        </main>
+        <IntroOverlay />
       </body>
     </html>
   );
