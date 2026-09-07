@@ -3,6 +3,8 @@ import { runScanner } from "@/lib/scanner";
 import { sendPushToAll } from "@/lib/push";
 import { sendDiscordTo, scannerResultsEmbed } from "@/lib/discord";
 import { getSetting } from "@/lib/settings";
+import { prisma } from "@/lib/prisma";
+import { ensureBuiltinProfiles, parseProfileConfig, parseUniverse } from "@/lib/scanner-profiles";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -17,7 +19,15 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const result = await runScanner("morning");
+    // סריקת הבוקר רצה עם פרופיל ברירת המחדל שנשמר ב-DB
+    await ensureBuiltinProfiles();
+    const profile =
+      (await prisma.scannerProfile.findFirst({ where: { isDefault: true } })) ??
+      (await prisma.scannerProfile.findFirst());
+    const { filters, weights } = parseProfileConfig(profile?.config);
+    const universe = parseUniverse(profile?.universe);
+
+    const result = await runScanner("morning", filters, universe, profile?.name, weights);
     const top = result.matches.slice(0, 10);
 
     if (top.length > 0) {
@@ -36,14 +46,6 @@ export async function GET(req: NextRequest) {
 
       const discordUrl = await getSetting("discord_webhook_url");
       if (discordUrl) {
-        function scoreToGrade(score: number): string {
-          if (score >= 110) return "A";
-          if (score >= 80) return "B";
-          if (score >= 55) return "C";
-          if (score >= 30) return "D";
-          return "F";
-        }
-
         const embed = scannerResultsEmbed({
           title: `סריקת בוקר — ${result.matches.length} תוצאות`,
           matches: top.map((t) => ({
@@ -51,7 +53,7 @@ export async function GET(req: NextRequest) {
             price: t.price,
             changePercent: t.changePercent,
             volumeRatio: t.volumeRatio,
-            grade: scoreToGrade(t.score),
+            grade: t.grade,
             setups: t.matchedSetups,
           })),
           totalScanned: result.totalScanned,

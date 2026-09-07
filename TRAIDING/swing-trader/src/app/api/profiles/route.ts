@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ensureBuiltinProfiles } from "@/lib/scanner-profiles";
-import { DEFAULT_SCANNER_CONFIG } from "@/lib/scanner-config";
+import { DEFAULT_PROFILE_CONFIG, normalizeProfileConfig } from "@/lib/scanner-config";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     data: {
       name,
       description: description ?? null,
-      config: JSON.stringify(config ?? DEFAULT_SCANNER_CONFIG),
+      config: JSON.stringify(config ? normalizeProfileConfig(config) : DEFAULT_PROFILE_CONFIG),
       universe: universe ? JSON.stringify(universe) : null,
       isDefault: !!isDefault,
     },

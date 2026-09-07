@@ -4,18 +4,10 @@ import { sendPushToAll } from "@/lib/push";
 import { sendDiscordTo, scannerResultsEmbed } from "@/lib/discord";
 import { getSetting } from "@/lib/settings";
 import { prisma } from "@/lib/prisma";
-import { ensureBuiltinProfiles, mergeConfig, parseUniverse } from "@/lib/scanner-profiles";
+import { ensureBuiltinProfiles, parseProfileConfig, parseUniverse } from "@/lib/scanner-profiles";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
-
-function scoreToGrade(score: number): string {
-  if (score >= 110) return "A";
-  if (score >= 80) return "B";
-  if (score >= 55) return "C";
-  if (score >= 30) return "D";
-  return "F";
-}
 
 export async function POST(req: NextRequest) {
   const scanType = (req.nextUrl.searchParams.get("type") as ScanType) ?? "morning";
@@ -28,11 +20,11 @@ export async function POST(req: NextRequest) {
     : await prisma.scannerProfile.findFirst({ where: { isDefault: true } }) ??
       (await prisma.scannerProfile.findFirst());
 
-  const cfg = mergeConfig(profile?.config);
+  const { filters, weights } = parseProfileConfig(profile?.config);
   const universe = parseUniverse(profile?.universe);
 
   try {
-    const result = await runScanner(scanType, cfg, universe, profile?.name);
+    const result = await runScanner(scanType, filters, universe, profile?.name, weights);
     const top = result.matches.slice(0, 8);
 
     if (top.length > 0) {
@@ -60,7 +52,7 @@ export async function POST(req: NextRequest) {
             price: t.price,
             changePercent: t.changePercent,
             volumeRatio: t.volumeRatio,
-            grade: scoreToGrade(t.score),
+            grade: t.grade,
             setups: t.matchedSetups,
           })),
           totalScanned: result.totalScanned,

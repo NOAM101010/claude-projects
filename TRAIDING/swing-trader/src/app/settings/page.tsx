@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { PageContainer, Eyebrow, Display, Card, Button, Input } from "@/components/ui";
 import PushSetup from "@/components/push-setup";
+import ScannerProfilesEditor from "@/components/scanner-profiles-editor";
 import { MessageCircle, Bell, Radar, CheckCircle2, XCircle } from "lucide-react";
 
 type Settings = {
@@ -129,30 +130,14 @@ export default function SettingsPage() {
             <Radar className="w-5 h-5 text-[var(--info)]" />
           </div>
           <div>
-            <h2 className="text-xl font-black">קריטריוני הסורק · חינם</h2>
-            <div className="text-xs text-[var(--muted)] mt-0.5">Large Cap breakouts</div>
+            <h2 className="text-xl font-black">פרופילי הסורק · פילטרים ומשקלים</h2>
+            <div className="text-xs text-[var(--muted)] mt-0.5">
+              מי נכנס לתוצאות, וכמה כל אות שווה בניקוד
+            </div>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-2 text-sm mt-4">
-          <Row label="Market Cap min" value="$5B" />
-          <Row label="נפח יומי min" value="1M" />
-          <Row label="קרבה ל־ATH" value="≤3%" />
-          <Row label="Gap Up min" value="2%" />
-          <Row label="Volume Spike" value="1.5x" />
-          <Row label="Cup & Handle" value="פעיל" />
-          <Row label="RSI Range" value="50-80" />
-          <Row label="MA150 Distance" value="חישוב אוטומטי" />
-        </div>
+        <ScannerProfilesEditor onFlash={flash} />
       </Card>
     </PageContainer>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between p-2.5 rounded-lg bg-white/[0.03] border border-[var(--border)]">
-      <span className="text-[var(--muted)] text-xs">{label}</span>
-      <span className="mono font-bold text-sm">{value}</span>
-    </div>
   );
 }

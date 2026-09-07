@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { normalizeProfileConfig } from "@/lib/scanner-config";
 
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -18,7 +19,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     data: {
       ...(name !== undefined && { name }),
       ...(description !== undefined && { description }),
-      ...(config !== undefined && { config: JSON.stringify(config) }),
+      ...(config !== undefined && { config: JSON.stringify(normalizeProfileConfig(config)) }),
       ...(universe !== undefined && { universe: universe ? JSON.stringify(universe) : null }),
       ...(isDefault !== undefined && { isDefault: !!isDefault }),
     },

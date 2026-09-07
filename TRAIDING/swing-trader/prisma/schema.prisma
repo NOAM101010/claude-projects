@@ -72,6 +72,8 @@ model ScannerResult {
   distanceFromHigh Float?
   distanceFromMa150 Float?
   matchedSetups String?
+  signals      String?
+  verdict      String?
   score        Float?
   grade        String?
   notes        String?

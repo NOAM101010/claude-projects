@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Card, Button, Input, Badge } from "@/components/ui";
+import { Card, Button, Input } from "@/components/ui";
+import SignalBreakdown, { type BreakdownSignal } from "@/components/signal-breakdown";
 import { cn } from "@/lib/utils";
-import { Search, TrendingUp, TrendingDown, Minus, ExternalLink, Target } from "lucide-react";
+import { Search, ExternalLink, Target } from "lucide-react";
 
-type SignalTone = "bullish" | "bearish" | "neutral";
-type Signal = { label: string; value: string; tone: SignalTone; weight: number; explanation: string };
+type Signal = BreakdownSignal;
 type Analysis = {
   symbol: string;
   name: string | null;
@@ -31,12 +31,6 @@ const GRADE_STYLE: Record<Analysis["grade"], string> = {
   D: "text-[var(--down)] border-[var(--down)]/30 bg-[var(--down-bg)]",
   F: "text-[var(--down)] border-[var(--down)]/40 bg-[var(--down-bg)]",
 };
-
-function ToneIcon({ tone }: { tone: SignalTone }) {
-  if (tone === "bullish") return <TrendingUp className="w-4 h-4 text-[var(--up)]" />;
-  if (tone === "bearish") return <TrendingDown className="w-4 h-4 text-[var(--down)]" />;
-  return <Minus className="w-4 h-4 text-[var(--muted)]" />;
-}
 
 export default function AnalyzeClient() {
   const [symbol, setSymbol] = useState("");
@@ -152,38 +146,7 @@ export default function AnalyzeClient() {
           {/* Signals breakdown */}
           <Card className="p-6">
             <div className="text-sm font-bold mb-4">פירוט הניתוח — למה כן/לא</div>
-            <div className="space-y-2">
-              {analysis.signals.map((sig, i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    "rounded-xl border p-4",
-                    sig.tone === "bullish" && "border-[var(--up)]/25 bg-[var(--up-bg)]",
-                    sig.tone === "bearish" && "border-[var(--down)]/25 bg-[var(--down-bg)]",
-                    sig.tone === "neutral" && "border-[var(--border-hi)] bg-white/[0.02]"
-                  )}
-                >
-                  <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <div className="flex items-center gap-2">
-                      <ToneIcon tone={sig.tone} />
-                      <span className="font-bold text-sm">{sig.label}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="mono text-sm font-bold">{sig.value}</span>
-                      {sig.weight !== 0 && (
-                        <Badge className={cn(
-                          "mono",
-                          sig.weight > 0 ? "border-[var(--up)]/30 text-[var(--up)]" : "border-[var(--down)]/30 text-[var(--down)]"
-                        )}>
-                          {sig.weight > 0 ? "+" : ""}{sig.weight}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <p className="text-xs text-[var(--fg-dim)] leading-relaxed">{sig.explanation}</p>
-                </div>
-              ))}
-            </div>
+            <SignalBreakdown signals={analysis.signals} />
           </Card>
 
           {/* Key levels */}

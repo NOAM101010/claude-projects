@@ -1,3 +1,5 @@
+import { DEFAULT_WEIGHTS, SIGNAL_KEYS, type ScoringWeights } from "./scoring";
+
 export const DEFAULT_SCANNER_CONFIG = {
   minMarketCap: 5_000_000_000,
   minAvgVolume: 500_000,
@@ -13,6 +15,60 @@ export const DEFAULT_SCANNER_CONFIG = {
 };
 
 export type ScannerConfig = typeof DEFAULT_SCANNER_CONFIG;
+
+/** מה שנשמר ב-ScannerProfile.config (כ-JSON string). */
+export type ProfileConfig = {
+  filters: ScannerConfig;
+  weights: ScoringWeights;
+};
+
+export const DEFAULT_PROFILE_CONFIG: ProfileConfig = {
+  filters: DEFAULT_SCANNER_CONFIG,
+  weights: DEFAULT_WEIGHTS,
+};
+
+/**
+ * מנרמל config של פרופיל. תומך לאחור בפורמט הישן (אובייקט פילטרים שטוח) —
+ * במקרה כזה הוא נעטף כ-filters ומקבל את משקלי ברירת המחדל.
+ */
+export function normalizeProfileConfig(raw: unknown): ProfileConfig {
+  let parsed: unknown = raw;
+  if (typeof raw === "string") {
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return DEFAULT_PROFILE_CONFIG;
+    }
+  }
+  if (!parsed || typeof parsed !== "object") return DEFAULT_PROFILE_CONFIG;
+  const obj = parsed as Record<string, unknown>;
+
+  const source = (
+    obj.filters && typeof obj.filters === "object" ? obj.filters : obj
+  ) as Record<string, unknown>;
+
+  const filters = { ...DEFAULT_SCANNER_CONFIG };
+  for (const k of Object.keys(DEFAULT_SCANNER_CONFIG) as (keyof ScannerConfig)[]) {
+    const v = source[k];
+    if (typeof v === "number" && Number.isFinite(v)) {
+      if (typeof filters[k] === "number") (filters[k] as number) = v;
+    } else if (typeof v === "boolean" && typeof filters[k] === "boolean") {
+      (filters[k] as boolean) = v;
+    }
+  }
+
+  const weights: ScoringWeights = { ...DEFAULT_WEIGHTS };
+  const rawWeights = obj.weights;
+  if (rawWeights && typeof rawWeights === "object") {
+    const w = rawWeights as Record<string, unknown>;
+    for (const k of SIGNAL_KEYS) {
+      const v = w[k];
+      if (typeof v === "number" && Number.isFinite(v)) weights[k] = v;
+    }
+  }
+
+  return { filters, weights };
+}
 
 export const SCANNER_UNIVERSE: string[] = [
   // ============ Technology ============

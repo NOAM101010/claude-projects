@@ -5,6 +5,13 @@ import {
   SCANNER_UNIVERSE_UNIQUE,
   type ScannerConfig,
 } from "./scanner-config";
+import {
+  scoreSignals,
+  DEFAULT_WEIGHTS,
+  type AnalysisSignal,
+  type Grade,
+  type ScoringWeights,
+} from "./scoring";
 
 export type ScanType = "premarket" | "morning" | "custom";
 
@@ -28,6 +35,10 @@ type Candidate = {
   gapPercent: number | null;
   matchedSetups: string[];
   score: number;
+  grade: Grade;
+  verdict: string;
+  summary: string;
+  signals: AnalysisSignal[];
 };
 
 function calcRSI(closes: number[], period = 14): number | null {
@@ -197,7 +208,8 @@ function detectGapEntry(
 
 async function analyzeSymbol(
   symbol: string,
-  cfg: ScannerConfig
+  cfg: ScannerConfig,
+  weights: ScoringWeights
 ): Promise<Candidate | null> {
   try {
     let quote: any = null;
@@ -252,6 +264,7 @@ async function analyzeSymbol(
     const rsi = calcRSI(closes);
     const atr = calcATR(highs, lows, closes);
     const atrPercent = atr && price ? (atr / price) * 100 : null;
+    const ma50 = calcMA(closes, 50);
     const ma150 = calcMA(closes, 150);
 
     const distanceFromAth =
@@ -343,18 +356,24 @@ async function analyzeSymbol(
 
     if (matchedSetups.length === 0) return null;
 
-    let score = 0;
-    if (matchedSetups.includes("breakout_ath")) score += 65;
-    if (matchedSetups.includes("breakout_52w")) score += 45;
-    if (matchedSetups.includes("near_ath")) score += 25;
-    if (matchedSetups.includes("near_52w")) score += 18;
-    if (matchedSetups.includes("gap_up")) score += 20;
-    if (matchedSetups.includes("gap_entry")) score += 35;
-    if (matchedSetups.includes("high_volume")) score += 20;
-    if (matchedSetups.includes("cup_and_handle")) score += 40;
-    if (rsi != null && rsi >= cfg.minRsi && rsi <= cfg.maxRsi) score += 10;
-    if (volumeRatio != null) score += Math.min(volumeRatio * 5, 25);
-    if (distanceFromMa150 != null && distanceFromMa150 > 0) score += 5;
+    // ניקוד עובר דרך מנוע הניקוד המשותף (אותו מנוע של דף הניתוח)
+    const { score, grade, signals, verdict, summary } = scoreSignals(
+      {
+        symbol,
+        price,
+        changePercent,
+        rsi,
+        ma50,
+        ma150,
+        ath,
+        high52w,
+        low52w,
+        volumeRatio,
+        matchedSetups,
+      },
+      weights,
+      "scanner"
+    );
 
     return {
       symbol,
@@ -376,6 +395,10 @@ async function analyzeSymbol(
       gapPercent,
       matchedSetups,
       score,
+      grade,
+      verdict,
+      summary,
+      signals,
     };
   } catch (e) {
     console.error(`[scanner] failed for ${symbol}:`, e);
@@ -387,7 +410,8 @@ export async function runScanner(
   scanType: ScanType = "morning",
   cfg: ScannerConfig = DEFAULT_SCANNER_CONFIG,
   universe: string[] = SCANNER_UNIVERSE_UNIQUE,
-  profileName?: string
+  profileName?: string,
+  weights: ScoringWeights = DEFAULT_WEIGHTS
 ) {
   const run = await prisma.scannerRun.create({
     data: { scanType, status: "running", profileName: profileName ?? null },
@@ -399,7 +423,7 @@ export async function runScanner(
     for (let i = 0; i < universe.length; i += BATCH) {
       const chunk = universe.slice(i, i + BATCH);
       const results = await Promise.all(
-        chunk.map((s) => analyzeSymbol(s, cfg))
+        chunk.map((s) => analyzeSymbol(s, cfg, weights))
       );
       for (const r of results) {
         if (r) candidates.push(r);
@@ -407,14 +431,6 @@ export async function runScanner(
     }
 
     candidates.sort((a, b) => b.score - a.score);
-
-    function scoreToGrade(score: number): string {
-      if (score >= 110) return "A";
-      if (score >= 80) return "B";
-      if (score >= 55) return "C";
-      if (score >= 30) return "D";
-      return "F";
-    }
 
     await prisma.scannerResult.createMany({
       data: candidates.map((c) => ({
@@ -433,8 +449,10 @@ export async function runScanner(
         distanceFromHigh: c.distanceFromHigh,
         distanceFromMa150: c.distanceFromMa150,
         matchedSetups: JSON.stringify(c.matchedSetups),
+        signals: JSON.stringify(c.signals),
+        verdict: c.verdict,
         score: c.score,
-        grade: scoreToGrade(c.score),
+        grade: c.grade,
       })),
     });
 

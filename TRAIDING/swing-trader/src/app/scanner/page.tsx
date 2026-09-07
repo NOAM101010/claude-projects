@@ -3,8 +3,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { PageContainer, Eyebrow, Display, Card, Grade, Button } from "@/components/ui";
 import AddToWatchlistInline from "@/components/add-to-watchlist-inline";
+import SignalBreakdown, { type BreakdownSignal } from "@/components/signal-breakdown";
 import { cn, formatCurrency, formatPercent } from "@/lib/utils";
-import { Radar, Loader2, TrendingUp, CandlestickChart, ArrowUpRight, Star } from "lucide-react";
+import { Radar, Loader2, TrendingUp, CandlestickChart, ArrowUpRight, ChevronDown } from "lucide-react";
 
 type ScanResult = {
   id: string;
@@ -13,6 +14,8 @@ type ScanResult = {
   changePercent: number | null;
   volumeRatio: number | null;
   matchedSetups: string;
+  signals: string | null;
+  verdict: string | null;
   score: number | null;
   grade: string | null;
   distanceFromHigh: number | null;
@@ -20,6 +23,18 @@ type ScanResult = {
 };
 
 type Folder = { id: string; name: string };
+
+type Profile = { id: string; name: string; description: string | null; isDefault: boolean };
+
+function parseSignals(raw: string | null): BreakdownSignal[] {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? (arr as BreakdownSignal[]) : [];
+  } catch {
+    return [];
+  }
+}
 
 type ScanCategory = {
   key: string;
@@ -99,6 +114,9 @@ export default function ScannerPage() {
   const [error, setError] = useState<string | null>(null);
   const [lastScanTime, setLastScanTime] = useState<string | null>(null);
   const [totalScanned, setTotalScanned] = useState(0);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [profileId, setProfileId] = useState<string>("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const loadExisting = useCallback(async () => {
     try {
@@ -119,13 +137,28 @@ export default function ScannerPage() {
     } catch {}
   }, []);
 
+  const loadProfiles = useCallback(async () => {
+    try {
+      const res = await fetch("/api/profiles");
+      const json = await res.json();
+      if (!json.ok) return;
+      const list: Profile[] = json.profiles ?? [];
+      setProfiles(list);
+      setProfileId((cur) => cur || list.find((p) => p.isDefault)?.id || list[0]?.id || "");
+    } catch {}
+  }, []);
+
   useEffect(() => { loadExisting(); }, [loadExisting]);
+  useEffect(() => { loadProfiles(); }, [loadProfiles]);
 
   async function runScan() {
     setScanning(true);
     setError(null);
     try {
-      const res = await fetch("/api/scanner/run", { method: "POST" });
+      const url = profileId
+        ? `/api/scanner/run?profileId=${encodeURIComponent(profileId)}`
+        : "/api/scanner/run";
+      const res = await fetch(url, { method: "POST" });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error ?? "scan failed");
       await loadExisting();
@@ -154,7 +187,25 @@ export default function ScannerPage() {
             לחץ על &quot;סרוק הכל&quot; — הסורק בודק 500+ מניות Large Cap ($5B+) ומחלק את התוצאות ל-3 קטגוריות
           </p>
         </div>
-        <div className="flex flex-col items-end gap-1">
+        <div className="flex flex-col items-end gap-2">
+          {profiles.length > 0 && (
+            <label className="flex items-center gap-2 text-xs text-[var(--muted)]">
+              פרופיל סריקה
+              <select
+                value={profileId}
+                onChange={(e) => setProfileId(e.target.value)}
+                disabled={scanning}
+                className="bg-[var(--bg)] border border-[var(--border-hi)] rounded-lg px-3 py-1.5 text-sm text-[var(--fg)] outline-none focus:border-[var(--up)]/50"
+              >
+                {profiles.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                    {p.isDefault ? " ★" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <Button variant="accent" size="lg" onClick={runScan} disabled={scanning}>
             {scanning ? (
               <><Loader2 className="w-4 h-4 animate-spin" /> סורק... (30-60 שניות)</>
@@ -208,35 +259,82 @@ export default function ScannerPage() {
                     {catResults.map((r, i) => {
                       const setups: string[] = r.matchedSetups ? JSON.parse(r.matchedSetups) : [];
                       const grade = r.grade ?? "?";
+                      const rowKey = `${cat.key}:${r.id}`;
+                      const expanded = expandedId === rowKey;
+                      const signals = expanded ? parseSignals(r.signals) : [];
                       return (
                         <div
                           key={r.id}
-                          className="rounded-xl px-4 py-3 row-hover flex flex-wrap items-center gap-3 md:gap-4 bg-white/[0.02] border border-transparent"
+                          className={cn(
+                            "rounded-xl bg-white/[0.02] border",
+                            expanded ? "border-[var(--border-hi)]" : "border-transparent"
+                          )}
                         >
-                          <span className="mono text-[var(--muted)] font-bold text-sm w-6">
-                            {String(i + 1).padStart(2, "0")}
-                          </span>
-                          <a
-                            href={`https://www.tradingview.com/chart/?symbol=${r.symbol}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="ticker text-lg hover:text-[var(--up)] transition-colors duration-200 min-w-[70px]"
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => setExpandedId(expanded ? null : rowKey)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                setExpandedId(expanded ? null : rowKey);
+                              }
+                            }}
+                            className="cursor-pointer rounded-xl px-4 py-3 row-hover flex flex-wrap items-center gap-3 md:gap-4"
                           >
-                            {r.symbol}
-                          </a>
-                          <span className="hidden md:block text-xs text-[var(--fg-dim)] flex-1 truncate">
-                            {setups.map((s) => SETUP_LABELS[s] ?? s).join(" · ")}
-                          </span>
-                          <span className="hidden md:block mono text-sm">{formatCurrency(r.price)}</span>
-                          <span className={cn("mono text-sm font-bold",
-                            (r.changePercent ?? 0) >= 0 ? "trend-up" : "trend-down")}>
-                            {formatPercent(r.changePercent)}
-                          </span>
-                          <span className="hidden md:block mono text-sm text-[var(--muted)]">
-                            {r.volumeRatio ? `${r.volumeRatio.toFixed(1)}×` : "—"}
-                          </span>
-                          <Grade value={grade} size="sm" />
-                          <AddToWatchlistInline symbol={r.symbol} folders={folders} />
+                            <span className="mono text-[var(--muted)] font-bold text-sm w-6">
+                              {String(i + 1).padStart(2, "0")}
+                            </span>
+                            <a
+                              href={`https://www.tradingview.com/chart/?symbol=${r.symbol}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="ticker text-lg hover:text-[var(--up)] transition-colors duration-200 min-w-[70px]"
+                            >
+                              {r.symbol}
+                            </a>
+                            <div className="hidden md:block flex-1 min-w-0">
+                              <div className="text-xs text-[var(--fg-dim)] truncate">
+                                {setups.map((s) => SETUP_LABELS[s] ?? s).join(" · ")}
+                              </div>
+                              {r.verdict && (
+                                <div className="text-[11px] text-[var(--muted)] truncate mt-0.5">
+                                  {r.verdict}
+                                </div>
+                              )}
+                            </div>
+                            <span className="hidden md:block mono text-sm">{formatCurrency(r.price)}</span>
+                            <span className={cn("mono text-sm font-bold",
+                              (r.changePercent ?? 0) >= 0 ? "trend-up" : "trend-down")}>
+                              {formatPercent(r.changePercent)}
+                            </span>
+                            <span className="hidden md:block mono text-sm text-[var(--muted)]">
+                              {r.volumeRatio ? `${r.volumeRatio.toFixed(1)}×` : "—"}
+                            </span>
+                            <Grade value={grade} size="sm" />
+                            <span onClick={(e) => e.stopPropagation()}>
+                              <AddToWatchlistInline symbol={r.symbol} folders={folders} />
+                            </span>
+                            <ChevronDown
+                              className={cn(
+                                "w-4 h-4 text-[var(--muted)] transition-transform",
+                                expanded && "rotate-180"
+                              )}
+                            />
+                          </div>
+
+                          {expanded && (
+                            <div className="px-4 pb-4 pt-1 border-t border-[var(--border)]">
+                              {r.verdict && (
+                                <div className="md:hidden text-xs text-[var(--fg-dim)] mb-2">{r.verdict}</div>
+                              )}
+                              <div className="text-xs font-bold text-[var(--muted)] mb-2">
+                                פירוט האותות {r.score != null && `· ${Math.round(r.score)}/100`}
+                              </div>
+                              <SignalBreakdown signals={signals} compact />
+                            </div>
+                          )}
                         </div>
                       );
                     })}

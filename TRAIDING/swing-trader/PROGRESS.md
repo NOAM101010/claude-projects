@@ -103,3 +103,32 @@ start-swing-trader.bat          — Windows automation
 
 **Last Updated**: 2026-08-18 after scanner fixes + auto-start setup
 **User Model**: claude-opus-4-7 (when fixes needed), claude-haiku-4-5 (for efficiency)
+
+---
+
+## 🧠 שלב 2 — מנוע ניקוד אחד מוגדר-משתמש (2026-09-07)
+
+**ארכיטקטורה חדשה:** `src/lib/scoring.ts` הוא **מקור האמת היחיד** לניקוד.
+לא לכתוב לוגיקת ניקוד/grade בשום מקום אחר.
+
+- `ScoringWeights` — משקל לכל אות (6 אותות ניתוח + 8 אותות setup של הסורק). משקל 0 = האות לא נספר ולא מוצג.
+- `scoreSignals(metrics, weights, mode)` → `{ score 0-100, grade A-F, signals[], verdict, summary }`.
+  מתחיל ב-`BASE_SCORE = 50`; כל אות תורם `Math.round(weight × factor)`.
+- **שני מצבי כיול** (`ScoreMode`):
+  - `"analysis"` (ברירת מחדל, דף הניתוח) — clamp ל-0-100, grade 78/64/50/36.
+  - `"scanner"` (הסורק) — הציון הגולמי **לא** נחסם ב-100 (סקאלה פתוחה ~0-190, כדי לא להידבק לתקרה),
+    ה-grade נקבע ב-`scannerScoreToGrade` על ספי `SCANNER_GRADE_CUTOFFS = {A:106, B:95, C:70, D:40}`,
+    והציון המוצג מנורמל ב-`normalizeScannerScore` ל-0-100 piecewise-linear כך שהספים נופלים בדיוק על 78/64/50/36.
+    מכויל על סריקה אמיתית (123 תוצאות): A 7% / B 15% / C 27% / D 27% / F 24%.
+- `DEFAULT_WEIGHTS` = המשקלים ההיסטוריים של דף הניתוח → התנהגות /api/analyze לא השתנתה.
+- `stock-analyzer.ts` מחשב metrics בלבד וקורא ל-scoreSignals. `scanner.ts` מזהה setups (matchedSetups)
+  ואז מנקד באותו מנוע — הניקוד הגס הישן (65/45/40...) והדירוג 110/80/55/30 הוסרו.
+
+**פרופילים:** `ScannerProfile.config` = JSON של `{ filters: ScannerConfig, weights: ScoringWeights }`.
+`normalizeProfileConfig()` (ב-scanner-config.ts) תומך לאחור בפורמט השטוח הישן. לכל פרופיל מובנה יש סט משקלים משלו.
+
+**UI:** עורך פרופילים מלא בהגדרות (`scanner-profiles-editor.tsx`), מתג פרופיל בדף הסורק,
+verdict + פאנל אותות נפתח לכל שורה (`signal-breakdown.tsx` — משותף עם דף הניתוח).
+
+**DB:** `ScannerResult.signals` (JSON) + `ScannerResult.verdict`. הוחל עם `prisma db push`
+(migration היסטורית כבר בדריפט בגלל טבלת Trade — אין להריץ `migrate reset`, זה ימחק את היומן).
