@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
-import { PageContainer, Eyebrow, Display, Card, Grade, LivePulse } from "@/components/ui";
+import { PageContainer, Eyebrow, Card, Grade, LivePulse } from "@/components/ui";
 import SectorHeatmap from "@/components/sector-heatmap";
 import MarketIndices from "@/components/market-indices";
+import HomeGreeting from "@/components/home-greeting";
 import { cn, formatPercent } from "@/lib/utils";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
@@ -42,11 +43,8 @@ export default async function HomePage() {
     <PageContainer className="space-y-10">
       <section>
         <Eyebrow>Market Overview · סקירת שוק</Eyebrow>
-        <Display className="mt-3">
-          בוקר טוב.<br />
-          <span className="trend-up-glow">השוק מחכה.</span>
-        </Display>
-        <p className="text-sm text-[var(--fg-dim)] mt-3">{hebrewDate}</p>
+        <HomeGreeting />
+        <p className="text-sm text-[var(--fg-dim)] mt-4">{hebrewDate}</p>
       </section>
 
       <section>

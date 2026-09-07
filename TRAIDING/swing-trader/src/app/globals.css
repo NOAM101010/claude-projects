@@ -24,6 +24,7 @@
   --up-2: #34d399;
   --up-3: #6ee7b7;
   --up-bg: rgba(16, 185, 129, 0.12);
+  --up-wash: rgba(16, 185, 129, 0.05);
   --up-glow: rgba(16, 185, 129, 0.35);
   --down: #ef4444;
   --down-2: #f87171;
@@ -104,20 +105,20 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 /* ==== Glass card ==== */
 .glass {
-  background: rgba(255, 255, 255, 0.025);
+  background: var(--bg-elevated);
   backdrop-filter: blur(24px) saturate(140%);
   -webkit-backdrop-filter: blur(24px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
 }
 .glass-hover {
-  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
-              border-color 0.25s ease,
-              background 0.25s ease;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+              border-color 0.2s ease,
+              background 0.2s ease;
 }
 .glass-hover:hover {
   transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--border-hi);
+  background: var(--card-hi);
 }
 
 /* ==== Text gradients ==== */
@@ -203,8 +204,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 /* ==== Row hover (subtle green wash) ==== */
 .row-hover { transition: background 0.2s ease, border-color 0.2s ease; }
 .row-hover:hover {
-  background: linear-gradient(90deg, rgba(16,185,129,0.05), transparent 60%);
-  border-color: rgba(255,255,255,0.15);
+  background: linear-gradient(90deg, var(--up-wash), transparent 60%);
+  border-color: var(--border-hi);
 }
 
 /* ==== Shimmer ==== */

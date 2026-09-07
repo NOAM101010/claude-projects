@@ -1,184 +1,219 @@
 "use client";
 import { useRef, useEffect, HTMLAttributes } from "react";
 
-interface TradingSpotlightConfig {
-  /** Spotlight glow radius in px */
-  radius?: number;
-  /** Spotlight glow opacity (0-1) */
-  brightness?: number;
-  /** Spotlight color, hex (defaults to the app's --up green) */
-  color?: string;
-  /** Draw a TradingView-style dashed crosshair through the cursor */
+/**
+ * Trading-terminal cursor FX — canvas overlay, single rAF loop.
+ *  · thin TradingView-style crosshair that eases toward the pointer
+ *  · floating price tag at the (RTL) right end of the horizontal line
+ *  · short fading light-trail behind the pointer (no round halo)
+ *  · trade-ping ring on click — green = buy (left) / red = sell (right)
+ *
+ * Fully disabled on coarse pointers and prefers-reduced-motion.
+ */
+
+interface TradingCursorConfig {
+  /** kept for backwards-compat with layout.tsx — no longer draws a halo */
   crosshair?: boolean;
-  /** Crosshair line color, hex */
-  crosshairColor?: string;
-  /** Fire an expanding "trade ping" ring on click (green = buy / left click, red = sell / right click) */
+  /** fire a trade-ping ring on click (default true) */
   pulseOnClick?: boolean;
-  /** Disable everything on touch/coarse-pointer devices (default true) */
+  /** disable on touch / coarse-pointer devices (default true) */
   disableOnTouch?: boolean;
 }
 
-type Pulse = { x: number; y: number; r: number; alpha: number; color: string };
+const UP = "16,185,129";
+const DOWN = "239,68,68";
+const BASE_PRICE = 428.5;
+const PRICE_SPREAD = 0.06; // ±6% top-to-bottom
 
-function hexToRgb(hex: string) {
-  const bigint = parseInt(hex.replace("#", ""), 16);
-  return `${(bigint >> 16) & 255},${(bigint >> 8) & 255},${bigint & 255}`;
-}
+type Ping = { x: number; y: number; r: number; alpha: number; color: string };
+type TrailPoint = { x: number; y: number };
 
-const useTradingSpotlight = (config: Required<TradingSpotlightConfig>) => {
+function useTradingCursor(config: Required<TradingCursorConfig>) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    if (config.disableOnTouch && window.matchMedia("(pointer: coarse)").matches) {
-      return;
-    }
+    const coarse = window.matchMedia("(pointer: coarse)").matches;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if ((config.disableOnTouch && coarse) || reduced) return;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    let animationFrameId: number;
-    let mouseX = -1000;
-    let mouseY = -1000;
+    let raf = 0;
+    let dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let targetX = -9999;
+    let targetY = -9999;
+    let curX = -9999;
+    let curY = -9999;
     let active = false;
-    const pulses: Pulse[] = [];
+    const trail: TrailPoint[] = [];
+    const pings: Ping[] = [];
 
-    const spotRgb = hexToRgb(config.color);
-    const crossRgb = hexToRgb(config.crosshairColor);
-
-    const resizeCanvas = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+    const resize = () => {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      canvas.style.width = `${window.innerWidth}px`;
+      canvas.style.height = `${window.innerHeight}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
 
-    const handleMouseMove = (event: MouseEvent) => {
-      mouseX = event.clientX;
-      mouseY = event.clientY;
+    const onMove = (e: MouseEvent) => {
+      targetX = e.clientX;
+      targetY = e.clientY;
+      if (!active) {
+        curX = targetX;
+        curY = targetY;
+      }
       active = true;
     };
-
-    const handleMouseLeave = () => {
+    const onLeave = () => {
       active = false;
-      mouseX = -1000;
-      mouseY = -1000;
+      targetX = targetY = -9999;
+      trail.length = 0;
     };
-
-    const handleMouseDown = (event: MouseEvent) => {
+    const onDown = (e: MouseEvent) => {
       if (!config.pulseOnClick) return;
-      const isSell = event.button === 2;
-      pulses.push({
-        x: event.clientX,
-        y: event.clientY,
-        r: 4,
-        alpha: 0.55,
-        color: isSell ? "239,68,68" : "16,185,129",
+      const sell = e.button === 2;
+      pings.push({
+        x: e.clientX,
+        y: e.clientY,
+        r: 5,
+        alpha: 0.6,
+        color: sell ? DOWN : UP,
       });
     };
+    const onCtx = (e: MouseEvent) => {
+      if (config.pulseOnClick) e.preventDefault();
+    };
 
-    const handleContextMenu = (event: MouseEvent) => {
-      if (config.pulseOnClick) event.preventDefault();
+    const priceAt = (y: number, h: number) => {
+      const t = 0.5 - (y / h - 0.5); // top of screen → higher price
+      return BASE_PRICE * (1 + t * PRICE_SPREAD * 2);
     };
 
     const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      ctx.clearRect(0, 0, w, h);
+
+      curX += (targetX - curX) * 0.15;
+      curY += (targetY - curY) * 0.15;
 
       if (active) {
-        // Spotlight glow
-        const gradient = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, config.radius);
-        gradient.addColorStop(0, `rgba(${spotRgb},${config.brightness})`);
-        gradient.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // TradingView-style crosshair
-        if (config.crosshair) {
-          ctx.save();
-          ctx.strokeStyle = `rgba(${crossRgb},0.35)`;
-          ctx.lineWidth = 1;
-          ctx.setLineDash([4, 4]);
+        // ---- trail ----
+        trail.push({ x: curX, y: curY });
+        if (trail.length > 9) trail.shift();
+        for (let i = 1; i < trail.length; i++) {
+          const a = trail[i - 1];
+          const b = trail[i];
+          const p = i / trail.length;
           ctx.beginPath();
-          ctx.moveTo(0, mouseY);
-          ctx.lineTo(canvas.width, mouseY);
-          ctx.moveTo(mouseX, 0);
-          ctx.lineTo(mouseX, canvas.height);
-          ctx.stroke();
-          ctx.restore();
-
-          // small crosshair ring, like a chart price marker
-          ctx.beginPath();
-          ctx.arc(mouseX, mouseY, 4, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(${crossRgb},0.9)`;
-          ctx.lineWidth = 1.5;
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.strokeStyle = `rgba(${UP},${0.28 * p})`;
+          ctx.lineWidth = 2 * p + 0.4;
+          ctx.lineCap = "round";
           ctx.stroke();
         }
+
+        // ---- crosshair ----
+        ctx.save();
+        ctx.strokeStyle = "rgba(255,255,255,0.12)";
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 5]);
+        ctx.beginPath();
+        ctx.moveTo(0, curY + 0.5);
+        ctx.lineTo(w, curY + 0.5);
+        ctx.moveTo(curX + 0.5, 0);
+        ctx.lineTo(curX + 0.5, h);
+        ctx.stroke();
+        ctx.restore();
+
+        // ---- focus dot ----
+        ctx.beginPath();
+        ctx.arc(curX, curY, 3, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(255,255,255,0.5)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // ---- price tag (RTL → right edge of the horizontal line) ----
+        const bullish = curY < h / 2;
+        const rgb = bullish ? UP : DOWN;
+        const label = priceAt(curY, h).toFixed(2);
+        ctx.font =
+          "600 11px ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace";
+        const padX = 7;
+        const tw = ctx.measureText(label).width + padX * 2;
+        const th = 18;
+        const tx = w - tw - 6;
+        const ty = Math.min(Math.max(curY - th / 2, 4), h - th - 4);
+        ctx.fillStyle = `rgba(${rgb},0.16)`;
+        ctx.strokeStyle = `rgba(${rgb},0.5)`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(tx, ty, tw, th, 4);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = `rgb(${rgb})`;
+        ctx.textBaseline = "middle";
+        ctx.textAlign = "left";
+        ctx.fillText(label, tx + padX, ty + th / 2 + 0.5);
       }
 
-      // "Trade ping" ripples on click
-      for (let i = pulses.length - 1; i >= 0; i--) {
-        const p = pulses[i];
+      // ---- trade pings ----
+      for (let i = pings.length - 1; i >= 0; i--) {
+        const p = pings[i];
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         ctx.strokeStyle = `rgba(${p.color},${p.alpha})`;
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1.75;
         ctx.stroke();
-
-        p.r += 2.2;
-        p.alpha *= 0.955;
-        if (p.alpha < 0.02) pulses.splice(i, 1);
+        p.r += 2.4;
+        p.alpha *= 0.94;
+        if (p.alpha < 0.02) pings.splice(i, 1);
       }
 
-      animationFrameId = requestAnimationFrame(draw);
+      raf = requestAnimationFrame(draw);
     };
 
-    resizeCanvas();
-    window.addEventListener("resize", resizeCanvas);
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseleave", handleMouseLeave);
-    window.addEventListener("mousedown", handleMouseDown);
-    window.addEventListener("contextmenu", handleContextMenu);
-    animationFrameId = requestAnimationFrame(draw);
+    resize();
+    window.addEventListener("resize", resize);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseleave", onLeave);
+    window.addEventListener("mousedown", onDown);
+    window.addEventListener("contextmenu", onCtx);
+    raf = requestAnimationFrame(draw);
 
     return () => {
-      window.removeEventListener("resize", resizeCanvas);
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseleave", handleMouseLeave);
-      window.removeEventListener("mousedown", handleMouseDown);
-      window.removeEventListener("contextmenu", handleContextMenu);
-      cancelAnimationFrame(animationFrameId);
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseleave", onLeave);
+      window.removeEventListener("mousedown", onDown);
+      window.removeEventListener("contextmenu", onCtx);
+      cancelAnimationFrame(raf);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    config.radius,
-    config.brightness,
-    config.color,
-    config.crosshair,
-    config.crosshairColor,
-    config.pulseOnClick,
-    config.disableOnTouch,
-  ]);
+  }, [config.pulseOnClick, config.disableOnTouch]);
 
   return canvasRef;
-};
+}
 
 interface SpotlightCursorProps extends HTMLAttributes<HTMLCanvasElement> {
-  config?: TradingSpotlightConfig;
+  config?: TradingCursorConfig;
 }
 
 export const Component = ({ config = {}, className, ...rest }: SpotlightCursorProps) => {
-  const spotlightConfig: Required<TradingSpotlightConfig> = {
-    radius: 220,
-    brightness: 0.12,
-    color: "#10b981", // matches --up
+  const resolved: Required<TradingCursorConfig> = {
     crosshair: true,
-    crosshairColor: "#10b981",
     pulseOnClick: true,
     disableOnTouch: true,
     ...config,
   };
 
-  const canvasRef = useTradingSpotlight(spotlightConfig);
+  const canvasRef = useTradingCursor(resolved);
 
   return (
     <canvas

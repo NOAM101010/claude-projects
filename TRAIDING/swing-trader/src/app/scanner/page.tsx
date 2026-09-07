@@ -173,7 +173,7 @@ export default function ScannerPage() {
           <section key={cat.key}>
             <Card className="overflow-hidden">
               {/* Category Header */}
-              <div className={cn("p-5 md:p-6 border-b", cat.borderColor, "border-[var(--border)]")}>
+              <div className="p-5 md:p-6 border-b border-[var(--border)]">
                 <div className="flex items-center gap-3">
                   <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", cat.bgColor, cat.borderColor, "border", cat.color)}>
                     {cat.icon}
@@ -211,7 +211,7 @@ export default function ScannerPage() {
                       return (
                         <div
                           key={r.id}
-                          className="rounded-xl px-4 py-3 row-hover flex flex-wrap items-center gap-3 md:gap-4 bg-white/[0.02] hover:bg-white/[0.05] transition-colors"
+                          className="rounded-xl px-4 py-3 row-hover flex flex-wrap items-center gap-3 md:gap-4 bg-white/[0.02] border border-transparent"
                         >
                           <span className="mono text-[var(--muted)] font-bold text-sm w-6">
                             {String(i + 1).padStart(2, "0")}
@@ -220,7 +220,7 @@ export default function ScannerPage() {
                             href={`https://www.tradingview.com/chart/?symbol=${r.symbol}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="ticker text-lg hover:text-[var(--up)] min-w-[70px]"
+                            className="ticker text-lg hover:text-[var(--up)] transition-colors duration-200 min-w-[70px]"
                           >
                             {r.symbol}
                           </a>
