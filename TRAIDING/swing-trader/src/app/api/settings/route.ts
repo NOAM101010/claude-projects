@@ -12,6 +12,7 @@ const KEYS: SettingKey[] = [
   "premarket_alert_enabled",
   "account_size",
   "cash_balance",
+  "finnhub_api_key",
 ];
 
 export async function GET() {

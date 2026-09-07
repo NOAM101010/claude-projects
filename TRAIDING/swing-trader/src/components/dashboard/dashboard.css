@@ -7,8 +7,18 @@
 .dash {
   position: relative;
   isolation: isolate;
-  --amber: 245, 158, 11;
-  --amber-hot: 255, 196, 92;
+  --amber: 232, 179, 65;
+  --amber-hot: 245, 205, 130;
+}
+
+/* every surface inside the control room is machined titanium */
+.dash .glass {
+  background: linear-gradient(180deg, #14171c 0%, #0f1216 62%, var(--metal-1) 100%);
+  border: 1px solid var(--metal-edge);
+  border-radius: 14px;
+  box-shadow:
+    inset 0 1px 0 var(--metal-hi),
+    0 14px 34px -24px rgba(0, 0, 0, 0.75);
 }
 
 /* ---------- parallax backdrop (behind everything on this page) ---------- */
@@ -28,7 +38,6 @@
 }
 /* far layer — engineering grid */
 .dash-layer--grid {
-  transform: translate3d(calc(var(--px) * 0.35), calc(var(--py) * 0.35), 0);
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
@@ -38,32 +47,11 @@
   -webkit-mask-image: radial-gradient(ellipse 78% 62% at 50% 32%, #000 8%, transparent 72%);
   mask-image: radial-gradient(ellipse 78% 62% at 50% 32%, #000 8%, transparent 72%);
 }
-/* mid layer — ghost candles, deliberately off-centre */
-.dash-layer--candles {
-  transform: translate3d(calc(var(--px) * 0.85), calc(var(--py) * 0.85), 0);
-  opacity: 0.5;
-  background-image:
-    repeating-linear-gradient(
-      90deg,
-      rgba(16, 185, 129, 0.05) 0 3px,
-      transparent 3px 46px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      rgba(239, 68, 68, 0.045) 0 3px,
-      transparent 3px 79px
-    );
-  background-position: 12% 0, 41% 0;
-  -webkit-mask-image: linear-gradient(180deg, transparent, #000 26%, #000 58%, transparent 88%);
-  mask-image: linear-gradient(180deg, transparent, #000 26%, #000 58%, transparent 88%);
-}
-/* warm key light, low and to one side — the cinematic bit */
-.dash-layer--bloom {
-  transform: translate3d(calc(var(--px) * 1.6), calc(var(--py) * 1.6), 0);
-  background:
-    radial-gradient(ellipse 46% 40% at 76% 14%, rgba(var(--amber), 0.085), transparent 66%),
-    radial-gradient(ellipse 52% 44% at 14% 82%, rgba(16, 185, 129, 0.055), transparent 68%);
-  mix-blend-mode: screen;
+/* mid + bloom + scanline layers retired — the room stays still now */
+.dash-layer--candles,
+.dash-layer--bloom,
+.dash-scan {
+  display: none;
 }
 .dash-vignette {
   position: absolute;
@@ -71,34 +59,7 @@
   box-shadow: inset 0 0 240px 46px rgba(0, 0, 0, 0.55);
 }
 
-/* ---------- scanline: sweeps the frame every ~14s ---------- */
-.dash-scan {
-  position: absolute;
-  inset-inline: 0;
-  top: 0;
-  height: 190px;
-  pointer-events: none;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgba(var(--amber), 0.05) 62%,
-    rgba(var(--amber-hot), 0.22) 92%,
-    rgba(255, 255, 255, 0.42) 99%,
-    transparent 100%
-  );
-  mix-blend-mode: screen;
-  opacity: 0;
-  animation: dashScan 14s cubic-bezier(0.45, 0, 0.3, 1) 3s infinite;
-}
-@keyframes dashScan {
-  0% { transform: translateY(-24vh); opacity: 0; }
-  3% { opacity: 0.9; }
-  26% { opacity: 0.75; }
-  32% { transform: translateY(124vh); opacity: 0; }
-  100% { transform: translateY(124vh); opacity: 0; }
-}
-
-/* ---------- chromatic dispersion edge on panels ---------- */
+/* ---------- machined edge on panels: one thin highlight down the top ---------- */
 .holo-edge::after {
   content: "";
   position: absolute;
@@ -107,35 +68,28 @@
   padding: 1px;
   pointer-events: none;
   background: linear-gradient(
-    142deg,
-    rgba(0, 196, 255, 0.55) 0%,
-    rgba(255, 255, 255, 0.06) 18%,
-    transparent 40%,
-    transparent 62%,
-    rgba(255, 255, 255, 0.06) 82%,
-    rgba(255, 0, 92, 0.5) 100%
+    180deg,
+    rgba(255, 255, 255, 0.10) 0%,
+    rgba(255, 255, 255, 0.02) 28%,
+    transparent 58%
   );
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   mask-composite: exclude;
-  opacity: 0.42;
-  transition: opacity 0.35s ease;
+  opacity: 0.85;
+  transition: opacity 0.25s ease;
   z-index: 3;
 }
-.holo-edge:hover::after { opacity: 0.95; }
+.holo-edge:hover::after { opacity: 1; }
 /* amber variant — anything that talks about money */
 .holo-edge--amber::after {
   background: linear-gradient(
-    142deg,
-    rgba(var(--amber-hot), 0.7) 0%,
-    rgba(255, 255, 255, 0.05) 22%,
-    transparent 46%,
-    transparent 64%,
-    rgba(255, 140, 0, 0.28) 92%,
-    rgba(255, 0, 92, 0.35) 100%
+    180deg,
+    rgba(var(--amber-hot), 0.38) 0%,
+    rgba(var(--amber), 0.06) 32%,
+    transparent 60%
   );
-  opacity: 0.5;
 }
 
 /* ---------- detection frame corners (HUD language) ---------- */
@@ -186,6 +140,13 @@
 }
 .det-chip--up { border-color: rgba(16, 185, 129, 0.45); color: var(--up-2); }
 .det-chip--down { border-color: rgba(239, 68, 68, 0.45); color: var(--down-2); }
+/* selected filter chip — machined amber key */
+.det-chip--on {
+  border-color: rgba(232, 179, 65, 0.4);
+  background: linear-gradient(180deg, rgba(232, 179, 65, 0.14), rgba(232, 179, 65, 0.04));
+  color: var(--warn-2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
 
 /* ---------- top HUD ---------- */
 .dash-hud {
@@ -194,10 +155,10 @@
   align-items: center;
   gap: 0;
   flex-wrap: wrap;
-  border: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0.006));
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--metal-edge);
+  border-radius: 12px;
+  background: linear-gradient(180deg, var(--metal-2), var(--metal-1));
+  box-shadow: inset 0 1px 0 var(--metal-hi), 0 10px 24px -18px rgba(0, 0, 0, 0.8);
 }
 .dash-hud-cell {
   display: flex;
@@ -218,23 +179,17 @@
 }
 .dash-hud-v { font-size: 12.5px; font-weight: 600; color: var(--fg-2); }
 
-/* ---------- live flash / glitch on changed numbers ---------- */
-@keyframes liveGlitchUp {
-  0% { transform: translateX(0); text-shadow: none; }
-  12% { transform: translateX(-1.5px); text-shadow: 2px 0 rgba(255, 0, 92, 0.85), -2px 0 rgba(0, 200, 255, 0.85); }
-  26% { transform: translateX(1.5px); text-shadow: -2px 0 rgba(255, 0, 92, 0.7), 2px 0 rgba(0, 200, 255, 0.7); }
-  40% { transform: translateX(0); color: var(--up-2); text-shadow: 0 0 14px var(--up-glow); }
-  100% { transform: translateX(0); text-shadow: none; }
+/* ---------- live flash on changed numbers — colour only, one shot ---------- */
+@keyframes liveTickUp {
+  0%, 100% { color: inherit; }
+  35% { color: var(--up-2); }
 }
-@keyframes liveGlitchDown {
-  0% { transform: translateX(0); text-shadow: none; }
-  12% { transform: translateX(1.5px); text-shadow: 2px 0 rgba(255, 0, 92, 0.85), -2px 0 rgba(0, 200, 255, 0.85); }
-  26% { transform: translateX(-1.5px); text-shadow: -2px 0 rgba(255, 0, 92, 0.7), 2px 0 rgba(0, 200, 255, 0.7); }
-  40% { transform: translateX(0); color: var(--down-2); text-shadow: 0 0 14px var(--down-glow); }
-  100% { transform: translateX(0); text-shadow: none; }
+@keyframes liveTickDown {
+  0%, 100% { color: inherit; }
+  35% { color: var(--down-2); }
 }
-.live-glitch-up { animation: liveGlitchUp 0.9s cubic-bezier(0.3, 0, 0.2, 1); }
-.live-glitch-down { animation: liveGlitchDown 0.9s cubic-bezier(0.3, 0, 0.2, 1); }
+.live-glitch-up { animation: liveTickUp 0.9s ease; }
+.live-glitch-down { animation: liveTickDown 0.9s ease; }
 .live-cell {
   display: inline-block;
   direction: ltr;
@@ -259,53 +214,46 @@
   animation: panelRefresh 0.85s ease-out;
 }
 
-/* ---------- holo card, hero size ---------- */
-.holo-scene--hero { max-width: 460px; }
-.holo-scene--hero .holo-face {
-  border-radius: 22px;
+/* ---------- account panel — machined titanium, the hero surface ---------- */
+.metal-panel {
+  position: relative;
+  border: 1px solid var(--metal-edge);
+  border-radius: 14px;
+  background: linear-gradient(180deg, var(--metal-2) 0%, #101317 52%, var(--metal-1) 100%);
   box-shadow:
-    0 40px 90px -28px rgba(0, 0, 0, 0.85),
-    0 0 60px -22px rgba(var(--amber), 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.09),
-    inset 2px 0 0 rgba(0, 196, 255, 0.09),
-    inset -2px 0 0 rgba(255, 0, 92, 0.09);
-  background:
-    radial-gradient(ellipse 80% 60% at 12% 6%, rgba(var(--amber), 0.12), transparent 62%),
-    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 5px),
-    linear-gradient(150deg, #12100a 0%, #0a0f18 48%, #0d0b14 100%);
+    0 26px 60px -30px rgba(0, 0, 0, 0.8),
+    inset 0 1px 0 var(--metal-hi),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5);
 }
-.holo-scene--hero .holo-face::before {
-  background: conic-gradient(
-    from 200deg,
-    rgba(var(--amber), 0.3),
-    rgba(16, 185, 129, 0.18),
-    rgba(59, 130, 246, 0.15),
-    rgba(217, 70, 239, 0.14),
-    rgba(var(--amber), 0.3)
-  );
-}
-/* animated foil sweep — a band of light that crawls the card */
-.holo-sweep {
+/* thin bright line machined along the very top edge */
+.metal-panel::before {
+  content: "";
   position: absolute;
   inset: 0;
-  z-index: 1;
+  border-radius: inherit;
   pointer-events: none;
-  mix-blend-mode: screen;
-  opacity: 0.55;
-  background: linear-gradient(
-    115deg,
-    transparent 34%,
-    rgba(0, 196, 255, 0.16) 45%,
-    rgba(255, 255, 255, 0.24) 50%,
-    rgba(255, 0, 92, 0.16) 55%,
-    transparent 66%
-  );
-  background-size: 260% 100%;
-  animation: holoSweep 7.5s ease-in-out infinite;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 20%);
 }
-@keyframes holoSweep {
-  0%, 100% { background-position: 130% 0; }
-  50% { background-position: -30% 0; }
+/* dark engraved rule sitting just under the top edge */
+.metal-panel::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 0;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.45);
+}
+.metal-engrave {
+  position: absolute;
+  bottom: 12px;
+  inset-inline-start: 18px;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.34em;
+  color: var(--muted-2);
+  direction: ltr;
+  pointer-events: none;
 }
 
 /* ---------- gauge instrument ---------- */
@@ -330,17 +278,12 @@
 .gauge-arc-live {
   transition: stroke-dashoffset 1.4s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.6s ease;
 }
-@keyframes gaugePulse {
-  0%, 100% { opacity: 0.25; }
-  50% { opacity: 0.7; }
-}
-.gauge-pulse { animation: gaugePulse 3.4s ease-in-out infinite; }
+.gauge-pulse { opacity: 0.4; }
 
 /* ---------- equity detection boxes (inside the recharts svg) ---------- */
 @keyframes detIn {
-  0% { opacity: 0; transform: scale(1.12); filter: blur(3px); }
-  60% { opacity: 1; filter: blur(0); }
-  100% { opacity: 1; transform: scale(1); filter: blur(0); }
+  0% { opacity: 0; transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
 }
 .det-g {
   animation: detIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -349,9 +292,7 @@
 }
 .det-rect {
   stroke-dasharray: 4 3.5;
-  animation: detDash 8s linear infinite;
 }
-@keyframes detDash { to { stroke-dashoffset: -60; } }
 .det-text {
   direction: ltr;
   unicode-bidi: isolate;
@@ -402,7 +343,7 @@
 
 /* ---------- misc ---------- */
 .dash-title-glow {
-  text-shadow: 0 0 60px rgba(var(--amber), 0.28), 0 0 22px rgba(0, 0, 0, 0.6);
+  text-shadow: 0 0 34px rgba(var(--amber), 0.16);
 }
 .seg-track {
   display: flex;
@@ -427,12 +368,10 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .dash-scan,
-  .holo-sweep,
   .det-rect,
   .gauge-pulse,
   .panel-refresh { animation: none !important; }
   .panel-refresh { display: none; }
-  .holo-sweep { opacity: 0.28; }
   .det-g { animation: none !important; }
   .gauge-needle-g,
   .gauge-arc-live { transition: none !important; }

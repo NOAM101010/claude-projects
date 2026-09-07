@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui";
+import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import { Radar, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -27,13 +27,13 @@ export default function RunScannerButton({ children }: { children?: React.ReactN
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <Button variant="accent" size="lg" onClick={run} disabled={running}>
+      <LiquidButton size="lg" onClick={run} disabled={running}>
         {running ? (
           <><Loader2 className="w-4 h-4 animate-spin" /> סורק...</>
         ) : (
           <><Radar className="w-4 h-4" /> {children ?? "הרץ סריקה"}</>
         )}
-      </Button>
+      </LiquidButton>
       {error && (
         <span className="text-xs text-[var(--down)]">{error}</span>
       )}

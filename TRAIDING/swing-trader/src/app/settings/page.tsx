@@ -15,6 +15,7 @@ type Settings = {
   discord_webhook_watchlist: string | null;
   account_size: string | null;
   cash_balance: string | null;
+  finnhub_api_key: string | null;
 };
 
 type DiscordChannel = {
@@ -42,6 +43,8 @@ export default function SettingsPage() {
   const [discordChannels, setDiscordChannels] = useState<Record<string, string>>({});
   const [accountSize, setAccountSize] = useState("");
   const [cashBalance, setCashBalance] = useState("");
+  const [finnhubKey, setFinnhubKey] = useState("");
+  const [savingFinnhub, setSavingFinnhub] = useState(false);
   const [savingAccount, setSavingAccount] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState<string | null>(null);
@@ -62,6 +65,7 @@ export default function SettingsPage() {
       });
       setAccountSize(json.settings.account_size ?? "");
       setCashBalance(json.settings.cash_balance ?? "");
+      setFinnhubKey(json.settings.finnhub_api_key ?? "");
     }
   }
   useEffect(() => { load(); }, []);
@@ -122,6 +126,20 @@ export default function SettingsPage() {
     flash("חשבון המסחר נשמר");
     await load();
     setSavingAccount(false);
+  }
+
+  async function saveFinnhub() {
+    setSavingFinnhub(true);
+    await fetch("/api/settings", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        settings: { finnhub_api_key: finnhubKey.trim() || null },
+      }),
+    });
+    flash("מפתח Finnhub נשמר");
+    await load();
+    setSavingFinnhub(false);
   }
 
   async function testDiscord() {
@@ -204,6 +222,35 @@ export default function SettingsPage() {
             {savingAccount ? "שומר..." : "שמור"}
           </Button>
         </div>
+      </Card>
+
+      <Card className="p-6 md:p-8">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-11 h-11 rounded-xl bg-[var(--info)]/10 border border-[var(--info)]/30 flex items-center justify-center">
+            <MessageCircle className="w-5 h-5 text-[var(--info)]" />
+          </div>
+          <div>
+            <h2 className="text-xl font-black">מפתח Finnhub API</h2>
+            <div className="text-xs text-[var(--muted)] mt-0.5">
+              חינם מ-finnhub.io — לחדשות ולוח רווחים
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <Input
+            type="password"
+            value={finnhubKey}
+            onChange={(e) => setFinnhubKey(e.target.value)}
+            placeholder="מפתח Finnhub API"
+            className="mono flex-1 min-w-[240px]"
+          />
+          <Button variant="accent" onClick={saveFinnhub} disabled={savingFinnhub}>
+            {savingFinnhub ? "שומר..." : "שמור"}
+          </Button>
+        </div>
+        <p className="text-xs text-[var(--muted)] mt-3 leading-relaxed">
+          בלי המפתח — עדיין מקבלים כותרות מ-Yahoo, פחות מקורות.
+        </p>
       </Card>
 
       <Card className="p-6 md:p-8">

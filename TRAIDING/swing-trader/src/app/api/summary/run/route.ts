@@ -5,6 +5,7 @@ import { computeMarketRegime } from "@/lib/market-regime";
 import { yf } from "@/lib/yf";
 import { sendToChannel, FOOTER, type DiscordEmbed } from "@/lib/discord";
 import { getMarketHoliday } from "@/lib/market-calendar";
+import { getCuratedNews } from "@/lib/news";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -235,6 +236,37 @@ export async function GET(req: NextRequest) {
     }
 
     const send = await sendToChannel("summary", embeds);
+
+    // כותרות רלוונטיות לפוזיציות / לסריקה → ערוץ updates
+    try {
+      const { items: newsItems } = await getCuratedNews();
+      const relevantSymbols = new Set(uniqueScans.map((r) => r.symbol.toUpperCase()));
+      const news = newsItems
+        .filter(
+          (n) =>
+            n.category === "position" ||
+            (n.symbol != null && relevantSymbols.has(n.symbol.toUpperCase()))
+        )
+        .slice(0, 5);
+      if (news.length > 0) {
+        await sendToChannel("updates", [
+          {
+            title: "📰 כותרות שרלוונטיות לפוזיציות/לסריקה",
+            description: news
+              .map(
+                (n) =>
+                  `• [${n.title}](${n.url})${n.symbol ? ` \`${n.symbol}\`` : ""} — ${n.source}`
+              )
+              .join("\n"),
+            color: AMBER,
+            footer: FOOTER,
+            timestamp: now.toISOString(),
+          },
+        ]).catch(() => {});
+      }
+    } catch {
+      /* דלג בשקט */
+    }
 
     return NextResponse.json({
       ok: true,

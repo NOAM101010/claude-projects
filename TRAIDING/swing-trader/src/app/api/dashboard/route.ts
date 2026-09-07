@@ -62,6 +62,9 @@ export async function GET() {
     const monthReturnPct =
       accountSize && accountSize > 0 ? (monthPnl / accountSize) * 100 : null;
 
+    const exposurePct =
+      accountSize && accountSize > 0 ? (openCost / accountSize) * 100 : null;
+
     return NextResponse.json({
       ok: true,
       account: {
@@ -81,6 +84,13 @@ export async function GET() {
       winRate: stats.winRate,
       closedTrades: stats.closedTrades,
       openPositions: stats.openPositions,
+      rollingWinRate: stats.rollingWinRate,
+      bestDayOfWeek: stats.bestDayOfWeek,
+      currentStreak: stats.currentStreak,
+      longestWinStreak: stats.longestWinStreak,
+      longestLossStreak: stats.longestLossStreak,
+      openCost,
+      exposurePct,
     });
   } catch (e: any) {
     return NextResponse.json(

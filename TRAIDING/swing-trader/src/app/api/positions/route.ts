@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { yf } from "@/lib/yf";
+import { getSetting } from "@/lib/settings";
+import { getEarningsCalendar } from "@/lib/news";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -19,6 +21,7 @@ export type PositionRow = {
   unrealizedPnlPct: number | null;
   risk: number | null; // $ at risk to stop
   distanceToStopPct: number | null;
+  earningsDate: string | null;
 };
 
 async function chunkedQuotes(symbols: string[]): Promise<Map<string, number | null>> {
@@ -48,7 +51,12 @@ export async function GET() {
     });
 
     const tickers = Array.from(new Set(open.map((t) => t.ticker.toUpperCase())));
-    const priceMap = await chunkedQuotes(tickers);
+    const [priceMap, earningsMap] = await Promise.all([
+      chunkedQuotes(tickers),
+      getSetting("finnhub_api_key")
+        .then((key) => getEarningsCalendar(key, tickers))
+        .catch(() => ({} as Record<string, string>)),
+    ]);
 
     const positions: PositionRow[] = open.map((t) => {
       const shares = t.quantity;
@@ -82,6 +90,7 @@ export async function GET() {
         unrealizedPnlPct,
         risk,
         distanceToStopPct,
+        earningsDate: earningsMap[t.ticker.toUpperCase()] ?? null,
       };
     });
 

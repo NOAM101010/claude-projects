@@ -11,7 +11,8 @@ export type SettingKey =
   | "morning_brief_enabled"
   | "premarket_alert_enabled"
   | "account_size"
-  | "cash_balance";
+  | "cash_balance"
+  | "finnhub_api_key";
 
 export async function getSetting(key: SettingKey): Promise<string | null> {
   const row = await prisma.setting.findUnique({ where: { key } });

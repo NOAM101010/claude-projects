@@ -3,9 +3,9 @@
 import { useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
-  AreaChart, Area, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine,
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
-import { Upload, Plus, Trash2, Pencil, TrendingUp, TrendingDown, Flame, Snowflake, X, Sparkles, AlertTriangle, Target } from "lucide-react";
+import { Upload, Plus, Trash2, Pencil, TrendingUp, TrendingDown, X, Sparkles, Target } from "lucide-react";
 import { Card, Button, Input, Select, Label, Badge } from "@/components/ui";
 import PnlCalendar from "@/components/pnl-calendar";
 import PnlCalendarMonth from "@/components/pnl-calendar-month";
@@ -242,17 +242,6 @@ export default function JournalClient({
         {autoTagMsg && <span className="text-xs text-[var(--fg-dim)]">{autoTagMsg}</span>}
       </div>
 
-      {/* Losing streak warning */}
-      {stats.currentStreak.type === "loss" && stats.currentStreak.count >= 3 && (
-        <Card className="p-5 border-[var(--down)]/40 bg-[var(--down-bg)] flex items-center gap-3">
-          <AlertTriangle className="w-5 h-5 text-[var(--down)] shrink-0" />
-          <div>
-            <div className="font-bold text-[var(--down)]">אתה ברצף של {stats.currentStreak.count} הפסדים ברצף</div>
-            <div className="text-xs text-[var(--fg-dim)] mt-0.5">שקול להקטין גודל פוזיציה או לקחת הפסקה קצרה עד שהתנאים משתפרים.</div>
-          </div>
-        </Card>
-      )}
-
       {stats.totalTrades === 0 ? (
         <Card className="p-12 text-center">
           <div className="text-lg font-bold mb-2">אין עדיין טריידים</div>
@@ -276,18 +265,6 @@ export default function JournalClient({
               sub="ממוצע צפוי לכל טרייד"
               tone={toneOf(stats.expectancy)}
             />
-            <StatCard
-              label="רצף נוכחי"
-              value={
-                <span className="flex items-center gap-2">
-                  {stats.currentStreak.type === "win" ? <Flame className="w-5 h-5 text-[var(--up)]" /> : stats.currentStreak.type === "loss" ? <Snowflake className="w-5 h-5 text-[var(--down)]" /> : null}
-                  {stats.currentStreak.count}
-                </span>
-              }
-              sub={stats.currentStreak.type === "win" ? "רצף ניצחונות" : stats.currentStreak.type === "loss" ? "רצף הפסדים" : "—"}
-              tone={stats.currentStreak.type === "win" ? "up" : stats.currentStreak.type === "loss" ? "down" : "neutral"}
-            />
-            <StatCard label="הכי ארוך W/L" value={`${stats.longestWinStreak} / ${stats.longestLossStreak}`} sub="רצפי שיא" />
             <StatCard
               label="זמן החזקה ממוצע"
               value={`${stats.avgHoldDaysWinners.toFixed(0)}d / ${stats.avgHoldDaysLosers.toFixed(0)}d`}
@@ -374,63 +351,6 @@ export default function JournalClient({
           <PnlCalendar dailyPnl={stats.dailyPnl} />
           <PnlCalendarMonth dailyPnl={stats.dailyPnl} compact />
 
-          {/* Rolling Win Rate */}
-          {stats.rollingWinRate.length >= 3 && (
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-1">
-                <div className="text-sm font-bold">מגמת Win Rate (ממוצע נגלל של 10 טריידים אחרונים)</div>
-                {(() => {
-                  const first = stats.rollingWinRate[0].winRate;
-                  const last = stats.rollingWinRate[stats.rollingWinRate.length - 1].winRate;
-                  const diff = last - first;
-                  const up = diff > 2;
-                  const down = diff < -2;
-                  return (
-                    <span className={cn(
-                      "text-xs font-bold flex items-center gap-1",
-                      up ? "text-[var(--up)]" : down ? "text-[var(--down)]" : "text-[var(--fg-dim)]"
-                    )}>
-                      {up && <TrendingUp className="w-3.5 h-3.5" />}
-                      {down && <TrendingDown className="w-3.5 h-3.5" />}
-                      {diff >= 0 ? "+" : ""}{diff.toFixed(0)} נק׳ מתחילת היומן
-                    </span>
-                  );
-                })()}
-              </div>
-              <div className="text-xs text-[var(--fg-dim)] mb-4">
-                כל נקודה = אחוז הצלחה ב-10 הטריידים שקדמו לה (לא כולל טריידים פתוחים). קו מקווקו = 50% (שובר שוויון).
-              </div>
-              <ResponsiveContainer width="100%" height={220}>
-                <LineChart data={stats.rollingWinRate}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                  <XAxis dataKey="index" tick={{ fontSize: 10, fill: "var(--muted)" }} label={{ value: "מספר טרייד סגור", position: "insideBottom", offset: -5, fontSize: 10, fill: "var(--muted)" }} />
-                  <YAxis tick={{ fontSize: 10, fill: "var(--muted)" }} width={40} domain={[0, 100]} />
-                  <Tooltip
-                    contentStyle={{ background: "var(--bg)", border: "1px solid var(--border-hi)", borderRadius: 12, fontSize: 12 }}
-                    labelFormatter={(v: any) => `טרייד #${v}`}
-                    formatter={(v: any) => [`${Number(v).toFixed(0)}%`, "Win Rate נגלל"]}
-                  />
-                  <ReferenceLine y={50} stroke="var(--muted)" strokeDasharray="4 4" />
-                  <Line
-                    type="monotone"
-                    dataKey="winRate"
-                    stroke="var(--up)"
-                    strokeWidth={2}
-                    dot={(props: any) => {
-                      const { cx, cy, payload, index } = props;
-                      const color = payload.winRate >= 50 ? "var(--up)" : "var(--down)";
-                      return <circle key={index} cx={cx} cy={cy} r={3} fill={color} stroke="none" />;
-                    }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-              <div className="text-xs text-[var(--fg-dim)] mt-3">
-                Win Rate נגלל נוכחי: <span className="font-bold text-[var(--fg)]">{stats.rollingWinRate[stats.rollingWinRate.length - 1].winRate.toFixed(0)}%</span>
-                {" · "}נקודות ירוקות = מעל 50%, אדומות = מתחת ל-50%
-              </div>
-            </Card>
-          )}
-
           {/* By Ticker / By Setup */}
           <div className="grid md:grid-cols-2 gap-4">
             <Card className="p-6">
@@ -469,24 +389,6 @@ export default function JournalClient({
               </div>
             </Card>
           </div>
-
-          {/* Day of week */}
-          {stats.bestDayOfWeek.length > 0 && (
-            <Card className="p-6">
-              <div className="text-sm font-bold mb-4">איזה יום כניסה הכי משתלם לך?</div>
-              <div className="grid grid-cols-3 sm:grid-cols-7 gap-2">
-                {stats.bestDayOfWeek.map((d) => (
-                  <div key={d.day} className="rounded-xl border border-[var(--border-hi)] p-3 text-center">
-                    <div className="text-xs text-[var(--fg-dim)]">{d.day}</div>
-                    <div className={cn("mono font-bold mt-1", toneOf(d.avgPct) === "up" ? "text-[var(--up)]" : "text-[var(--down)]")}>
-                      {fmtPct(d.avgPct)}
-                    </div>
-                    <div className="text-[10px] text-[var(--muted)] mt-0.5">{d.trades} טריידים</div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
 
           {/* Best/Worst */}
           <div className="grid md:grid-cols-2 gap-4">

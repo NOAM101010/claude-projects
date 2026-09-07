@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Radar, Calculator, Star, Settings, BookOpen, Sparkles, LayoutDashboard } from "lucide-react";
+import { Home, Radar, Calculator, Star, Settings, BookOpen, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import MarketClock from "./market-clock";
 
 const NAV = [
   { href: "/", label: "ראשי", icon: Home },
-  { href: "/dashboard", label: "לוח בקרה", icon: LayoutDashboard },
   { href: "/scanner", label: "סורק", icon: Radar },
   { href: "/analyze", label: "ניתוח", icon: Sparkles },
   { href: "/calculator", label: "מחשבון", icon: Calculator },
@@ -23,20 +22,20 @@ export default function PillNav() {
       <div className="max-w-6xl mx-auto flex items-center gap-2 md:gap-3">
         <Link
           href="/"
-          className="glass glass-blur rounded-full pr-3 pl-2 py-1.5 flex items-center gap-2 shrink-0 group transition-colors duration-200 hover:border-[var(--border-hi)]"
+          className="btn-metal rounded-[13px] pr-3 pl-2 py-1.5 flex items-center gap-2.5 shrink-0 group"
         >
-          <div className="w-8 h-8 rounded-full p-[2px] bg-[conic-gradient(from_90deg,var(--up),var(--fg),var(--down),var(--up))]">
-            <div className="w-full h-full rounded-full bg-[var(--bg)] flex items-center justify-center font-black text-xs">
+          <div className="w-8 h-8 rounded-full p-[2px] bg-[conic-gradient(from_140deg,var(--warn-2),#5a4522,var(--warn-2),#3a2e18,var(--warn-2))]">
+            <div className="w-full h-full rounded-full bg-[var(--metal-1)] flex items-center justify-center font-black text-xs text-[var(--warn-2)]">
               S
             </div>
           </div>
           <div className="hidden sm:block leading-none">
             <div className="text-sm font-black tracking-tight">Swing</div>
-            <div className="text-[9px] uppercase tracking-[0.2em] text-[var(--muted)] mt-0.5">Terminal</div>
+            <div className="text-[9px] uppercase tracking-[0.24em] text-[var(--muted)] mt-0.5 mono">Terminal</div>
           </div>
         </Link>
 
-        <nav className="glass glass-blur rounded-full px-1.5 py-1.5 flex-1 flex items-center justify-center gap-1 overflow-x-auto no-scrollbar">
+        <nav className="rounded-[13px] border border-[var(--metal-edge)] bg-[var(--metal-1)]/85 px-1.5 py-1.5 flex-1 flex items-center justify-center gap-1.5 overflow-x-auto no-scrollbar shadow-[inset_0_1px_0_var(--metal-hi)]">
           {NAV.map((item) => {
             const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
             const Icon = item.icon;
@@ -45,10 +44,10 @@ export default function PillNav() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "relative flex items-center gap-2 px-3 md:px-4 py-2 rounded-full text-sm font-semibold transition-[color,background-color,border-color,box-shadow] duration-200 whitespace-nowrap shrink-0",
+                  "relative flex items-center gap-2 px-3 md:px-3.5 py-1.5 rounded-[9px] text-sm font-semibold whitespace-nowrap shrink-0",
                   active
-                    ? "bg-[rgba(16,185,129,0.15)] text-[var(--up)] border border-[rgba(16,185,129,0.3)] shadow-[0_0_20px_rgba(16,185,129,0.15)]"
-                    : "text-[var(--fg-dim)] hover:text-[var(--fg)] hover:bg-white/5 border border-transparent"
+                    ? "btn-metal btn-metal--active"
+                    : "btn-metal text-[var(--fg-dim)] hover:text-[var(--fg)]"
                 )}
               >
                 <Icon className="w-4 h-4" />
@@ -59,7 +58,7 @@ export default function PillNav() {
         </nav>
 
         <div className="hidden lg:block">
-          <div className="glass glass-blur rounded-full px-4 py-2">
+          <div className="btn-metal rounded-[13px] px-4 py-2.5">
             <MarketClock />
           </div>
         </div>
@@ -67,8 +66,8 @@ export default function PillNav() {
         <Link
           href="/settings"
           className={cn(
-            "glass glass-blur rounded-full p-2.5 shrink-0 transition-colors duration-200",
-            pathname.startsWith("/settings") ? "text-[var(--up)]" : "text-[var(--fg-dim)] hover:text-[var(--fg)]"
+            "btn-metal rounded-[13px] p-2.5 shrink-0",
+            pathname.startsWith("/settings") ? "text-[var(--warn-2)]" : "text-[var(--fg-dim)] hover:text-[var(--fg)]"
           )}
         >
           <Settings className="w-4 h-4" />

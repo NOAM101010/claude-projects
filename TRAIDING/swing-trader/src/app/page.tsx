@@ -3,6 +3,7 @@ import { PageContainer, Eyebrow, Card, Grade, LivePulse } from "@/components/ui"
 import SectorHeatmap from "@/components/sector-heatmap";
 import MarketIndices from "@/components/market-indices";
 import HomeGreeting from "@/components/home-greeting";
+import CommandCenter from "@/components/dashboard/command-center";
 import { cn, formatPercent } from "@/lib/utils";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
@@ -115,6 +116,8 @@ export default async function HomePage() {
           </Link>
         </Card>
       )}
+
+      <CommandCenter />
     </PageContainer>
   );
 }
