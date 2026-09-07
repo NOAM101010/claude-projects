@@ -1,4 +1,5 @@
 import { DEFAULT_WEIGHTS, SIGNAL_KEYS, type ScoringWeights } from "./scoring";
+import { SETUP_IDS, isSetupId, type SetupId } from "./setups";
 
 export const DEFAULT_SCANNER_CONFIG = {
   minMarketCap: 5_000_000_000,
@@ -20,11 +21,14 @@ export type ScannerConfig = typeof DEFAULT_SCANNER_CONFIG;
 export type ProfileConfig = {
   filters: ScannerConfig;
   weights: ScoringWeights;
+  /** אילו סטאפים הפרופיל מחפש. config ישן בלי השדה → כל הסטאפים. */
+  enabledSetups: SetupId[];
 };
 
 export const DEFAULT_PROFILE_CONFIG: ProfileConfig = {
   filters: DEFAULT_SCANNER_CONFIG,
   weights: DEFAULT_WEIGHTS,
+  enabledSetups: [...SETUP_IDS],
 };
 
 /**
@@ -67,7 +71,16 @@ export function normalizeProfileConfig(raw: unknown): ProfileConfig {
     }
   }
 
-  return { filters, weights };
+  const rawSetups = obj.enabledSetups;
+  const enabledSetups = Array.isArray(rawSetups)
+    ? rawSetups.filter(isSetupId)
+    : [];
+
+  return {
+    filters,
+    weights,
+    enabledSetups: enabledSetups.length ? enabledSetups : [...SETUP_IDS],
+  };
 }
 
 export const SCANNER_UNIVERSE: string[] = [

@@ -4,11 +4,15 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 const SETUP_PRIORITY = [
+  { key: "ath_breakout", label: "ATH Breakout" },
   { key: "breakout_ath", label: "ATH Breakout" },
   { key: "breakout_52w", label: "52W Breakout" },
+  { key: "resistance_breakout", label: "Resistance Breakout" },
   { key: "cup_and_handle", label: "Cup & Handle" },
   { key: "gap_entry", label: "Gap & Go" },
   { key: "gap_up", label: "Gap & Go" },
+  { key: "momentum", label: "Momentum" },
+  { key: "pullback", label: "Pullback" },
   { key: "near_ath", label: "ATH Breakout" },
   { key: "near_52w", label: "52W Breakout" },
 ];

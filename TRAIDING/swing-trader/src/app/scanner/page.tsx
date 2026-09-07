@@ -5,7 +5,8 @@ import { PageContainer, Eyebrow, Display, Card, Grade, Button } from "@/componen
 import AddToWatchlistInline from "@/components/add-to-watchlist-inline";
 import SignalBreakdown, { type BreakdownSignal } from "@/components/signal-breakdown";
 import { cn, formatCurrency, formatPercent } from "@/lib/utils";
-import { Radar, Loader2, TrendingUp, CandlestickChart, ArrowUpRight, ChevronDown } from "lucide-react";
+import { SETUP_LABELS } from "@/lib/setups";
+import { Radar, Loader2, ChevronDown } from "lucide-react";
 
 type ScanResult = {
   id: string;
@@ -16,6 +17,7 @@ type ScanResult = {
   matchedSetups: string;
   signals: string | null;
   verdict: string | null;
+  confidence: number | null;
   score: number | null;
   grade: string | null;
   distanceFromHigh: number | null;
@@ -36,75 +38,28 @@ function parseSignals(raw: string | null): BreakdownSignal[] {
   }
 }
 
-type ScanCategory = {
-  key: string;
-  title: string;
-  subtitle: string;
-  icon: React.ReactNode;
-  color: string;
-  borderColor: string;
-  bgColor: string;
-  setupKeys: string[];
-};
-
-const CATEGORIES: ScanCategory[] = [
-  {
-    key: "ath",
-    title: "פריצות ATH / 52W",
-    subtitle: "מניות ששוברות שיא כל הזמנים או שיא 52 שבועות",
-    icon: <TrendingUp className="w-5 h-5" />,
-    color: "text-[var(--up)]",
-    borderColor: "border-[var(--up)]/30",
-    bgColor: "bg-[var(--up)]/10",
-    setupKeys: ["breakout_ath", "near_ath", "breakout_52w", "near_52w"],
-  },
-  {
-    key: "gap",
-    title: "כניסה לגאפ",
-    subtitle: "מניות שנכנסות לתוך אזור גאפ שלא נסגר — המחיר מתקרב לאזור הצהוב",
-    icon: <ArrowUpRight className="w-5 h-5" />,
-    color: "text-[var(--warn)]",
-    borderColor: "border-[var(--warn)]/30",
-    bgColor: "bg-[var(--warn)]/10",
-    setupKeys: ["gap_entry", "gap_up"],
-  },
-  {
-    key: "cup",
-    title: "Cup & Handle",
-    subtitle: "תבנית כוס ואוזן — ירידה, התאוששות, ואוזן קטנה לפני פריצה",
-    icon: <CandlestickChart className="w-5 h-5" />,
-    color: "text-[var(--info)]",
-    borderColor: "border-[var(--info)]/30",
-    bgColor: "bg-[var(--info)]/10",
-    setupKeys: ["cup_and_handle"],
-  },
-];
-
-const SETUP_LABELS: Record<string, string> = {
-  breakout_ath: "פריצת ATH",
-  near_ath: "קרוב ל־ATH",
-  breakout_52w: "פריצת 52W",
-  near_52w: "קרוב ל־52W",
-  gap_up: "Gap Up",
-  gap_entry: "נכנס לגאפ",
-  high_volume: "ווליום גבוה",
-  cup_and_handle: "Cup & Handle",
-};
-
-function groupResults(results: ScanResult[]): Record<string, ScanResult[]> {
-  const groups: Record<string, ScanResult[]> = {};
-  for (const cat of CATEGORIES) {
-    groups[cat.key] = [];
+function parseSetups(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.map(String) : [];
+  } catch {
+    return [];
   }
+}
+
+/** מקבץ את תוצאות הפרופיל לפי הסטאפ הראשי (החזק ביותר) שנמצא בכל מניה. */
+function groupBySetup(results: ScanResult[]): { setup: string; rows: ScanResult[] }[] {
+  const groups = new Map<string, ScanResult[]>();
   for (const r of results) {
-    const setups: string[] = r.matchedSetups ? JSON.parse(r.matchedSetups) : [];
-    for (const cat of CATEGORIES) {
-      if (setups.some((s) => cat.setupKeys.includes(s))) {
-        groups[cat.key].push(r);
-      }
-    }
+    const primary = parseSetups(r.matchedSetups)[0] ?? "other";
+    const list = groups.get(primary);
+    if (list) list.push(r);
+    else groups.set(primary, [r]);
   }
-  return groups;
+  return [...groups.entries()]
+    .map(([setup, rows]) => ({ setup, rows }))
+    .sort((a, b) => b.rows.length - a.rows.length);
 }
 
 export default function ScannerPage() {
@@ -169,7 +124,8 @@ export default function ScannerPage() {
     }
   }
 
-  const grouped = groupResults(results);
+  const selectedProfile = profiles.find((p) => p.id === profileId) ?? null;
+  const groups = groupBySetup(results);
 
   return (
     <PageContainer className="space-y-10">
@@ -184,8 +140,14 @@ export default function ScannerPage() {
             סורק<br /><span className="trend-up-glow">מניות.</span>
           </Display>
           <p className="text-sm text-[var(--fg-dim)] mt-4 max-w-lg">
-            לחץ על &quot;סרוק הכל&quot; — הסורק בודק 500+ מניות Large Cap ($5B+) ומחלק את התוצאות ל-3 קטגוריות
+            כל פרופיל מחפש סטאפ אחד ספציפי. הסורק עובר על 500+ מניות Large Cap ($5B+)
+            ומחזיר רק מניות שבהן הסטאפ של הפרופיל באמת נמצא.
           </p>
+          {selectedProfile?.description && (
+            <p className="text-xs text-[var(--muted)] mt-2 max-w-lg">
+              {selectedProfile.name} — {selectedProfile.description}
+            </p>
+          )}
         </div>
         <div className="flex flex-col items-end gap-2">
           {profiles.length > 0 && (
@@ -217,134 +179,118 @@ export default function ScannerPage() {
         </div>
       </section>
 
-      {/* Scanner Categories */}
-      {CATEGORIES.map((cat) => {
-        const catResults = grouped[cat.key] ?? [];
-        return (
-          <section key={cat.key}>
+      {results.length === 0 ? (
+        <Card className="p-10 text-center text-sm text-[var(--muted)]">
+          {lastScanTime
+            ? "הסריקה האחרונה לא מצאה מניה שעומדת בסטאפ של הפרופיל."
+            : "הרץ סריקה כדי לראות תוצאות"}
+        </Card>
+      ) : (
+        groups.map((g) => (
+          <section key={g.setup}>
             <Card className="overflow-hidden">
-              {/* Category Header */}
-              <div className="p-5 md:p-6 border-b border-[var(--border)]">
-                <div className="flex items-center gap-3">
-                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", cat.bgColor, cat.borderColor, "border", cat.color)}>
-                    {cat.icon}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <h2 className="text-lg font-black">{cat.title}</h2>
-                      <span className={cn(
-                        "mono text-xs font-bold px-2 py-0.5 rounded-full",
-                        catResults.length > 0
-                          ? cn(cat.bgColor, cat.color)
-                          : "bg-white/5 text-[var(--muted)]"
-                      )}>
-                        {catResults.length}
-                      </span>
-                    </div>
-                    <p className="text-xs text-[var(--muted)] mt-0.5">{cat.subtitle}</p>
-                  </div>
-                </div>
+              <div className="p-5 md:p-6 border-b border-[var(--border)] flex items-center gap-3">
+                <h2 className="text-lg font-black">{SETUP_LABELS[g.setup] ?? g.setup}</h2>
+                <span className="mono text-xs font-bold px-2 py-0.5 rounded-full bg-[var(--up)]/10 text-[var(--up)]">
+                  {g.rows.length}
+                </span>
               </div>
 
-              {/* Results */}
               <div className="p-3 md:p-4">
-                {catResults.length === 0 ? (
-                  <div className="text-center py-8 text-sm text-[var(--muted)]">
-                    {results.length === 0
-                      ? "הרץ סריקה כדי לראות תוצאות"
-                      : "לא נמצאו תוצאות בקטגוריה הזו"}
-                  </div>
-                ) : (
-                  <div className="space-y-1.5">
-                    {catResults.map((r, i) => {
-                      const setups: string[] = r.matchedSetups ? JSON.parse(r.matchedSetups) : [];
-                      const grade = r.grade ?? "?";
-                      const rowKey = `${cat.key}:${r.id}`;
-                      const expanded = expandedId === rowKey;
-                      const signals = expanded ? parseSignals(r.signals) : [];
-                      return (
+                <div className="space-y-1.5">
+                  {g.rows.map((r, i) => {
+                    const setups = parseSetups(r.matchedSetups);
+                    const grade = r.grade ?? "?";
+                    const expanded = expandedId === r.id;
+                    const signals = expanded ? parseSignals(r.signals) : [];
+                    return (
+                      <div
+                        key={r.id}
+                        className={cn(
+                          "rounded-xl bg-white/[0.02] border",
+                          expanded ? "border-[var(--border-hi)]" : "border-transparent"
+                        )}
+                      >
                         <div
-                          key={r.id}
-                          className={cn(
-                            "rounded-xl bg-white/[0.02] border",
-                            expanded ? "border-[var(--border-hi)]" : "border-transparent"
-                          )}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setExpandedId(expanded ? null : r.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setExpandedId(expanded ? null : r.id);
+                            }
+                          }}
+                          className="cursor-pointer rounded-xl px-4 py-3 row-hover flex flex-wrap items-center gap-3 md:gap-4"
                         >
-                          <div
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => setExpandedId(expanded ? null : rowKey)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                setExpandedId(expanded ? null : rowKey);
-                              }
-                            }}
-                            className="cursor-pointer rounded-xl px-4 py-3 row-hover flex flex-wrap items-center gap-3 md:gap-4"
+                          <span className="mono text-[var(--muted)] font-bold text-sm w-6">
+                            {String(i + 1).padStart(2, "0")}
+                          </span>
+                          <a
+                            href={`https://www.tradingview.com/chart/?symbol=${r.symbol}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="ticker text-lg hover:text-[var(--up)] transition-colors duration-200 min-w-[70px]"
                           >
-                            <span className="mono text-[var(--muted)] font-bold text-sm w-6">
-                              {String(i + 1).padStart(2, "0")}
-                            </span>
-                            <a
-                              href={`https://www.tradingview.com/chart/?symbol=${r.symbol}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="ticker text-lg hover:text-[var(--up)] transition-colors duration-200 min-w-[70px]"
-                            >
-                              {r.symbol}
-                            </a>
-                            <div className="hidden md:block flex-1 min-w-0">
-                              <div className="text-xs text-[var(--fg-dim)] truncate">
-                                {setups.map((s) => SETUP_LABELS[s] ?? s).join(" · ")}
-                              </div>
-                              {r.verdict && (
-                                <div className="text-[11px] text-[var(--muted)] truncate mt-0.5">
-                                  {r.verdict}
-                                </div>
-                              )}
+                            {r.symbol}
+                          </a>
+                          <div className="hidden md:block flex-1 min-w-0">
+                            <div className="text-xs text-[var(--fg-dim)] truncate">
+                              {setups.map((s) => SETUP_LABELS[s] ?? s).join(" · ")}
                             </div>
-                            <span className="hidden md:block mono text-sm">{formatCurrency(r.price)}</span>
-                            <span className={cn("mono text-sm font-bold",
-                              (r.changePercent ?? 0) >= 0 ? "trend-up" : "trend-down")}>
-                              {formatPercent(r.changePercent)}
-                            </span>
-                            <span className="hidden md:block mono text-sm text-[var(--muted)]">
-                              {r.volumeRatio ? `${r.volumeRatio.toFixed(1)}×` : "—"}
-                            </span>
-                            <Grade value={grade} size="sm" />
-                            <span onClick={(e) => e.stopPropagation()}>
-                              <AddToWatchlistInline symbol={r.symbol} folders={folders} />
-                            </span>
-                            <ChevronDown
-                              className={cn(
-                                "w-4 h-4 text-[var(--muted)] transition-transform",
-                                expanded && "rotate-180"
-                              )}
-                            />
+                            {r.verdict && (
+                              <div className="text-[11px] text-[var(--muted)] truncate mt-0.5">
+                                {r.verdict}
+                              </div>
+                            )}
                           </div>
-
-                          {expanded && (
-                            <div className="px-4 pb-4 pt-1 border-t border-[var(--border)]">
-                              {r.verdict && (
-                                <div className="md:hidden text-xs text-[var(--fg-dim)] mb-2">{r.verdict}</div>
-                              )}
-                              <div className="text-xs font-bold text-[var(--muted)] mb-2">
-                                פירוט האותות {r.score != null && `· ${Math.round(r.score)}/100`}
-                              </div>
-                              <SignalBreakdown signals={signals} compact />
-                            </div>
+                          {r.confidence != null && (
+                            <span className="mono text-[11px] font-bold px-2 py-0.5 rounded-full border border-[var(--up)]/30 text-[var(--up)]">
+                              {Math.round(r.confidence * 100)}%
+                            </span>
                           )}
+                          <span className="hidden md:block mono text-sm">{formatCurrency(r.price)}</span>
+                          <span className={cn("mono text-sm font-bold",
+                            (r.changePercent ?? 0) >= 0 ? "trend-up" : "trend-down")}>
+                            {formatPercent(r.changePercent)}
+                          </span>
+                          <span className="hidden md:block mono text-sm text-[var(--muted)]">
+                            {r.volumeRatio ? `${r.volumeRatio.toFixed(1)}×` : "—"}
+                          </span>
+                          <Grade value={grade} size="sm" />
+                          <span onClick={(e) => e.stopPropagation()}>
+                            <AddToWatchlistInline symbol={r.symbol} folders={folders} />
+                          </span>
+                          <ChevronDown
+                            className={cn(
+                              "w-4 h-4 text-[var(--muted)] transition-transform",
+                              expanded && "rotate-180"
+                            )}
+                          />
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
+
+                        {expanded && (
+                          <div className="px-4 pb-4 pt-1 border-t border-[var(--border)]">
+                            {r.verdict && (
+                              <div className="md:hidden text-xs text-[var(--fg-dim)] mb-2">{r.verdict}</div>
+                            )}
+                            <div className="text-xs font-bold text-[var(--muted)] mb-2">
+                              פירוט האותות {r.score != null && `· ${Math.round(r.score)}/100`}
+                              {r.confidence != null && ` · ביטחון בתבנית ${Math.round(r.confidence * 100)}%`}
+                            </div>
+                            <SignalBreakdown signals={signals} compact />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </Card>
           </section>
-        );
-      })}
+        ))
+      )}
 
       {totalScanned > 0 && (
         <div className="text-center text-xs text-[var(--muted)] pb-6">

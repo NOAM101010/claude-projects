@@ -7,6 +7,21 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   const body = await req.json();
   const { name, description, config, universe, isDefault } = body ?? {};
 
+  // פרופיל מובנה נדרס בכל ensureBuiltinProfiles — עריכה שלו רק מבלבלת.
+  // מותר רק לסמן אותו כברירת מחדל.
+  const existing = await prisma.scannerProfile.findUnique({ where: { id } });
+  if (!existing) {
+    return NextResponse.json({ ok: false, error: "profile not found" }, { status: 404 });
+  }
+  const editsContent =
+    name !== undefined || description !== undefined || config !== undefined || universe !== undefined;
+  if (existing.isBuiltin && editsContent) {
+    return NextResponse.json(
+      { ok: false, error: "פרופיל מובנה — שכפל אותו כדי לערוך" },
+      { status: 400 }
+    );
+  }
+
   if (isDefault) {
     await prisma.scannerProfile.updateMany({
       data: { isDefault: false },
@@ -29,6 +44,13 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
 
 export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
+  const existing = await prisma.scannerProfile.findUnique({ where: { id } });
+  if (existing?.isBuiltin) {
+    return NextResponse.json(
+      { ok: false, error: "פרופיל מובנה — לא ניתן למחיקה" },
+      { status: 400 }
+    );
+  }
   await prisma.scannerProfile.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }

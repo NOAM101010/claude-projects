@@ -10,7 +10,8 @@ export async function GET(req: NextRequest) {
   if (!symbol) {
     return NextResponse.json({ ok: false, error: "חסר סימבול" }, { status: 400 });
   }
-  const result = await analyzeStock(symbol);
+  const setup = req.nextUrl.searchParams.get("setup");
+  const result = await analyzeStock(symbol, { setupId: setup });
   if ("error" in result) {
     return NextResponse.json({ ok: false, error: result.error }, { status: 404 });
   }
@@ -30,6 +31,8 @@ export async function GET(req: NextRequest) {
           verdict: result.verdict,
           signals: result.signals,
           suggestedStop: result.keyLevels.suggestedStop,
+          setupLabel: result.setupLabel,
+          patternValid: result.patternValid,
         }),
       ]);
     } catch {

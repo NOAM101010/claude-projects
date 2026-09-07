@@ -8,19 +8,9 @@ import { format } from "date-fns";
 import { he } from "date-fns/locale";
 import Link from "next/link";
 import { ArrowLeft, Radar } from "lucide-react";
+import { SETUP_LABELS } from "@/lib/setups";
 
 export const dynamic = "force-dynamic";
-
-const SETUP_LABELS: Record<string, string> = {
-  breakout_ath: "פריצת ATH",
-  near_ath: "קרוב ל־ATH",
-  breakout_52w: "פריצת 52W",
-  near_52w: "קרוב ל־52W",
-  gap_up: "Gap Up",
-  gap_entry: "נכנס לגאפ",
-  high_volume: "ווליום גבוה",
-  cup_and_handle: "Cup & Handle",
-};
 
 export default async function HomePage() {
   const lastRun = await prisma.scannerRun.findFirst({

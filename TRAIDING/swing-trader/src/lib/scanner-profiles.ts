@@ -8,108 +8,105 @@ import {
   type ScannerConfig,
 } from "./scanner-config";
 import { DEFAULT_WEIGHTS, type ScoringWeights } from "./scoring";
+import { unionSetupWeights, type SetupId } from "./setups";
 
+/**
+ * 5 הפרופילים המובנים. כל פרופיל = סטאפ (או שניים) + פילטרים ומשקלים מותאמים.
+ * הם נשמרים ב-DB עם isBuiltin=true ומתעדכנים בכל ensureBuiltinProfiles.
+ */
 export const BUILTIN_PROFILES: {
   name: string;
   description: string;
+  enabledSetups: SetupId[];
   config: Partial<ScannerConfig>;
   weights: Partial<ScoringWeights>;
 }[] = [
   {
-    name: "Breakouts (ברירת מחדל)",
-    description: "Large Cap פריצות ATH / 52W עם ווליום — הסטייל האישי שלך",
-    config: {},
+    name: "פריצת ATH",
+    description: "רק פריצות טריות מעל שיא כל הזמנים, עם ווליום תומך",
+    enabledSetups: ["ath_breakout"],
+    config: { nearAthPercent: 2, volumeSpikeRatio: 1.5, minRsi: 50, maxRsi: 85 },
+    weights: { highVolume: 10 },
+  },
+  {
+    name: "פריצת שיא (52ש׳ / התנגדות)",
+    description: "יציאה מבסיס — פריצת שיא 52 שבועות או פריצת התנגדות של 20-60 יום",
+    enabledSetups: ["breakout_52w", "resistance_breakout"],
+    config: { near52wHighPercent: 3, volumeSpikeRatio: 1.5 },
+    weights: { highVolume: 10 },
+  },
+  {
+    name: "Cup & Handle",
+    description: "תבנית כוס ואוזן לפני פריצה — עומק תקין, אוזן צרה, ווליום מתייבש",
+    enabledSetups: ["cup_and_handle"],
+    config: { cupAndHandle: true, volumeSpikeRatio: 1, minRsi: 40 },
     weights: {},
   },
   {
-    name: "Momentum חזק",
-    description: "מניות עם מומנטום גבוה בלבד — RSI 65-80, ווליום 2x+, קרוב לATH",
-    config: {
-      minRsi: 65,
-      maxRsi: 80,
-      volumeSpikeRatio: 2,
-      nearAthPercent: 2,
-      near52wHighPercent: 2,
-    },
-    // מדגיש ווליום + RSI, מפחית משקל לתבניות איטיות
-    weights: {
-      rsi: 20,
-      volume: 20,
-      highVolume: 14,
-      todayMove: 14,
-      breakoutAth: 22,
-      breakout52w: 16,
-      cupHandle: 0,
-      gapEntry: 4,
-    },
+    name: "כניסה לגאפ",
+    description: "מניות שנכנסות לאזור גאפ פתוח שלא נסגר — כניסה עם סטופ קצר",
+    enabledSetups: ["gap_entry"],
+    config: { gapUpMin: 2.5, volumeSpikeRatio: 1.2 },
+    weights: {},
   },
   {
-    name: "Pullback לא נורא",
-    description: "מניות במגמת עלייה שירדו מעט (RSI 45-60, קרוב לEMA)",
-    config: {
-      minRsi: 45,
-      maxRsi: 60,
-      nearAthPercent: 8,
-      near52wHighPercent: 8,
-      volumeSpikeRatio: 1,
-    },
-    // מדגיש מבנה מגמה וקרבה לשיא, מוריד את משקל הפריצה/ווליום הרגעי
-    weights: {
-      maTrend: 24,
-      rsi: 6,
-      distanceFromAth: 14,
-      nearAth: 14,
-      near52w: 10,
-      volume: 4,
-      highVolume: 0,
-      todayMove: 0,
-      breakoutAth: 8,
-      breakout52w: 6,
-      gapUp: 0,
-      cupHandle: 16,
-    },
-  },
-  {
-    name: "Gap Runners",
-    description: "רק Gap Up מעל 3% עם ווליום גבוה — למסחר בפתיחה",
-    config: {
-      gapUpMin: 3,
-      volumeSpikeRatio: 2,
-    },
-    // הכל סביב הגאפ והווליום של היום
-    weights: {
-      gapUp: 24,
-      gapEntry: 18,
-      todayMove: 18,
-      volume: 16,
-      highVolume: 12,
-      cupHandle: 0,
-      maTrend: 8,
-      range52w: 4,
-    },
+    name: "Momentum",
+    description: "RSI 65-80, ווליום 2x+, מחיר צמוד לשיא ומעל כל הממוצעים",
+    enabledSetups: ["momentum"],
+    config: { minRsi: 65, maxRsi: 80, volumeSpikeRatio: 2, nearAthPercent: 5, near52wHighPercent: 5 },
+    weights: {},
   },
 ];
 
 function builtinConfig(p: (typeof BUILTIN_PROFILES)[number]): ProfileConfig {
   return {
     filters: { ...DEFAULT_SCANNER_CONFIG, ...p.config },
-    weights: { ...DEFAULT_WEIGHTS, ...p.weights },
+    // בסיס = משקלי ברירת המחדל, מעליהם הדגשי הסטאפים ואז התאמות הפרופיל
+    weights: { ...DEFAULT_WEIGHTS, ...unionSetupWeights(p.enabledSetups), ...p.weights },
+    enabledSetups: p.enabledSetups,
   };
 }
 
+/** נשמר לכל מופע כדי לא לכתוב ל-DB בכל בקשה. */
+let builtinsEnsured = false;
+
+/**
+ * Upsert לפי שם: מעדכן/יוצר את 5 המובנים (isBuiltin=true), מוחק מובנים ישנים
+ * שכבר לא ברשימה, ולא נוגע בפרופילים של המשתמש (isBuiltin=false).
+ */
 export async function ensureBuiltinProfiles() {
-  const existing = await prisma.scannerProfile.findMany();
-  if (existing.length > 0) return;
-  for (const [i, p] of BUILTIN_PROFILES.entries()) {
-    await prisma.scannerProfile.create({
-      data: {
+  if (builtinsEnsured) return;
+
+  const names = BUILTIN_PROFILES.map((p) => p.name);
+
+  for (const p of BUILTIN_PROFILES) {
+    const config = JSON.stringify(builtinConfig(p));
+    await prisma.scannerProfile.upsert({
+      where: { name: p.name },
+      update: { description: p.description, config, isBuiltin: true },
+      create: {
         name: p.name,
         description: p.description,
-        config: JSON.stringify(builtinConfig(p)),
-        isDefault: i === 0,
+        config,
+        isBuiltin: true,
       },
     });
   }
+
+  // מובנים ישנים (כולל אלה שסומנו ע"י המיגרציה) שכבר לא ברשימה
+  await prisma.scannerProfile.deleteMany({
+    where: { isBuiltin: true, name: { notIn: names } },
+  });
+
+  const hasDefault = await prisma.scannerProfile.findFirst({ where: { isDefault: true } });
+  if (!hasDefault) {
+    await prisma.scannerProfile.update({
+      where: { name: names[0] },
+      data: { isDefault: true },
+    });
+  }
+
+  builtinsEnsured = true;
 }
 
 /** config מלא של פרופיל (פילטרים + משקלים), עם תאימות לאחור לפורמט השטוח הישן. */

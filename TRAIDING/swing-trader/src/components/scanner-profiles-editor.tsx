@@ -10,7 +10,8 @@ import {
   type ScannerConfig,
 } from "@/lib/scanner-config";
 import { SIGNAL_KEYS, SIGNAL_LABELS, type SignalKey } from "@/lib/scoring";
-import { Copy, Save, Star, Trash2 } from "lucide-react";
+import { SETUP_LIST, type SetupId } from "@/lib/setups";
+import { Copy, Lock, Save, Star, Trash2 } from "lucide-react";
 
 type Profile = {
   id: string;
@@ -19,6 +20,7 @@ type Profile = {
   config: string;
   universe: string | null;
   isDefault: boolean;
+  isBuiltin: boolean;
 };
 
 type FilterField = {
@@ -87,6 +89,8 @@ export default function ScannerProfilesEditor({ onFlash }: { onFlash?: (msg: str
   useEffect(() => { load(); }, [load]);
 
   const selected = profiles.find((p) => p.id === selectedId) ?? null;
+  // פרופילים מובנים לקריאה בלבד — הם נדרסים בכל עדכון גרסה. "שכפל" כדי לערוך.
+  const readOnly = !!selected?.isBuiltin;
 
   function setFilter(key: keyof ScannerConfig, value: number | boolean) {
     setConfig((c) => ({ ...c, filters: { ...c.filters, [key]: value } }));
@@ -96,8 +100,17 @@ export default function ScannerProfilesEditor({ onFlash }: { onFlash?: (msg: str
     setConfig((c) => ({ ...c, weights: { ...c.weights, [key]: value } }));
   }
 
+  function toggleSetup(id: SetupId, on: boolean) {
+    setConfig((c) => {
+      const next = on
+        ? [...new Set([...c.enabledSetups, id])]
+        : c.enabledSetups.filter((s) => s !== id);
+      return { ...c, enabledSetups: next };
+    });
+  }
+
   async function save() {
-    if (!selectedId) return;
+    if (!selectedId || readOnly) return;
     setBusy(true);
     try {
       await fetch(`/api/profiles/${selectedId}`, {
@@ -196,20 +209,67 @@ export default function ScannerProfilesEditor({ onFlash }: { onFlash?: (msg: str
         <Button variant="outline" size="sm" onClick={duplicate} disabled={busy}>
           <Copy className="w-3.5 h-3.5" /> שכפל
         </Button>
-        <Button variant="danger" size="sm" onClick={remove} disabled={busy || profiles.length <= 1}>
+        <Button
+          variant="danger"
+          size="sm"
+          onClick={remove}
+          disabled={busy || readOnly || profiles.length <= 1}
+        >
           <Trash2 className="w-3.5 h-3.5" /> מחק
         </Button>
       </div>
+
+      {readOnly && (
+        <div className="rounded-xl border border-[var(--warn)]/30 bg-[var(--warn-bg)] p-3 flex items-center gap-2 text-xs text-[var(--fg-dim)]">
+          <Lock className="w-4 h-4 text-[var(--warn)] shrink-0" />
+          פרופיל מובנה — לקריאה בלבד. לחץ &quot;שכפל&quot; כדי ליצור עותק שאפשר לערוך.
+        </div>
+      )}
 
       {/* שם + תיאור */}
       <div className="grid md:grid-cols-2 gap-3">
         <div>
           <div className="text-[11px] text-[var(--muted)] mb-1.5">שם הפרופיל</div>
-          <Input value={name} onChange={(e) => setName(e.target.value)} />
+          <Input value={name} onChange={(e) => setName(e.target.value)} disabled={readOnly} />
         </div>
         <div>
           <div className="text-[11px] text-[var(--muted)] mb-1.5">תיאור</div>
-          <Input value={description} onChange={(e) => setDescription(e.target.value)} />
+          <Input
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            disabled={readOnly}
+          />
+        </div>
+      </div>
+
+      {/* סטאפים */}
+      <div>
+        <div className="text-sm font-bold mb-1">סטאפים — מה הפרופיל מחפש</div>
+        <p className="text-[11px] text-[var(--muted)] mb-3">
+          מניה נכנסת לתוצאות רק אם לפחות אחד מהסטאפים המסומנים נמצא בה בפועל.
+        </p>
+        <div className="grid sm:grid-cols-2 gap-2">
+          {SETUP_LIST.map((s) => (
+            <label
+              key={s.id}
+              className={cn(
+                "rounded-xl border border-[var(--border)] bg-white/[0.02] p-3 flex items-start justify-between gap-3",
+                readOnly ? "opacity-60" : "cursor-pointer"
+              )}
+            >
+              <span>
+                <span className="text-xs font-bold">{s.label}</span>
+                <span className="block text-[11px] text-[var(--muted)] mt-0.5">{s.description}</span>
+              </span>
+              <input
+                type="checkbox"
+                checked={config.enabledSetups.includes(s.id)}
+                onChange={(e) => toggleSetup(s.id, e.target.checked)}
+                disabled={readOnly}
+                className="w-4 h-4 accent-[var(--up)] mt-0.5"
+              />
+            </label>
+          ))}
         </div>
       </div>
 
@@ -228,6 +288,7 @@ export default function ScannerProfilesEditor({ onFlash }: { onFlash?: (msg: str
                 step={f.step ?? 1}
                 value={String(config.filters[f.key] ?? "")}
                 onChange={(e) => setFilter(f.key, Number(e.target.value))}
+                disabled={readOnly}
                 className="mono py-2"
               />
             </div>
@@ -238,6 +299,7 @@ export default function ScannerProfilesEditor({ onFlash }: { onFlash?: (msg: str
               type="checkbox"
               checked={!!config.filters.cupAndHandle}
               onChange={(e) => setFilter("cupAndHandle", e.target.checked)}
+              disabled={readOnly}
               className="w-4 h-4 accent-[var(--up)]"
             />
           </label>
@@ -268,6 +330,7 @@ export default function ScannerProfilesEditor({ onFlash }: { onFlash?: (msg: str
                   step={1}
                   value={v}
                   onChange={(e) => setWeight(k, Number(e.target.value))}
+                  disabled={readOnly}
                   className="w-full accent-[var(--up)]"
                 />
               </div>
@@ -287,19 +350,20 @@ export default function ScannerProfilesEditor({ onFlash }: { onFlash?: (msg: str
           onChange={(e) => setUniverseText(e.target.value)}
           rows={3}
           placeholder="AAPL, NVDA, MSFT ..."
+          disabled={readOnly}
           className="mono text-xs"
         />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="accent" onClick={save} disabled={busy}>
+        <Button variant="accent" onClick={save} disabled={busy || readOnly}>
           <Save className="w-4 h-4" /> {busy ? "שומר..." : "שמור פרופיל"}
         </Button>
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setConfig((c) => ({ ...c, filters: { ...DEFAULT_SCANNER_CONFIG } }))}
-          disabled={busy}
+          disabled={busy || readOnly}
         >
           אפס פילטרים
         </Button>

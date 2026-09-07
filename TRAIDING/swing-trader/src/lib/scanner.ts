@@ -1,17 +1,19 @@
 import { yf } from "@/lib/yf";
 import { prisma } from "@/lib/prisma";
 import {
-  DEFAULT_SCANNER_CONFIG,
+  DEFAULT_PROFILE_CONFIG,
   SCANNER_UNIVERSE_UNIQUE,
-  type ScannerConfig,
+  type ProfileConfig,
 } from "./scanner-config";
 import {
-  scoreSignals,
-  DEFAULT_WEIGHTS,
-  type AnalysisSignal,
-  type Grade,
-  type ScoringWeights,
-} from "./scoring";
+  SETUPS,
+  buildSetupContext,
+  unionRelevantSignals,
+  unionSetupWeights,
+  type SetupDetection,
+  type SetupId,
+} from "./setups";
+import { scoreSignals, type AnalysisSignal, type Grade } from "./scoring";
 
 export type ScanType = "premarket" | "morning" | "custom";
 
@@ -33,7 +35,12 @@ type Candidate = {
   distanceFromHigh: number | null;
   distanceFromMa150: number | null;
   gapPercent: number | null;
-  matchedSetups: string[];
+  matchedSetups: SetupId[];
+  /** הסטאפ עם ה-confidence הגבוה ביותר — ממנו נגזר ה-verdict */
+  primarySetup: SetupId;
+  confidence: number;
+  keyLevel: number | null;
+  boxLabel: string;
   score: number;
   grade: Grade;
   verdict: string;
@@ -83,134 +90,15 @@ function calcMA(closes: number[], period: number): number | null {
   return window.reduce((s, v) => s + v, 0) / period;
 }
 
-function detectCupAndHandle(
-  closes: number[],
-  volumes: number[]
-): boolean {
-  if (closes.length < 90) return false;
-
-  const window = Math.min(closes.length, 160);
-  const rc = closes.slice(-window);
-  const rv = volumes.slice(-window);
-
-  const halfPoint = Math.floor(rc.length / 2);
-  const leftHalf = rc.slice(0, halfPoint);
-  const lipPrice = Math.max(...leftHalf);
-  const lipIndex = leftHalf.indexOf(lipPrice);
-
-  const rightSide = rc.slice(lipIndex);
-  const bottomPrice = Math.min(...rightSide);
-  const bottomIndex = rightSide.indexOf(bottomPrice) + lipIndex;
-
-  // Cup depth: 18-38%
-  const cupDepth = ((lipPrice - bottomPrice) / lipPrice) * 100;
-  if (cupDepth < 18 || cupDepth > 38) return false;
-
-  // Current price should be in handle formation (80-95% of lip price)
-  // NOT already at the breakout
-  const currentPrice = rc[rc.length - 1];
-  const distanceFromLip = ((lipPrice - currentPrice) / lipPrice) * 100;
-  if (distanceFromLip < 5 || distanceFromLip > 12) return false;
-
-  // Last 20 bars: handle consolidation
-  const handleWindow = rc.slice(-20);
-  const handleHigh = Math.max(...handleWindow);
-  const handleLow = Math.min(...handleWindow);
-  const handleDepth = ((handleHigh - handleLow) / handleHigh) * 100;
-  if (handleDepth < 2 || handleDepth > 10) return false;
-
-  // Verify handle high is below lip (not broken out yet)
-  if (handleHigh > lipPrice * 1.01) return false;
-
-  // Volume should decrease during handle
-  const cupVolume = rv.slice(lipIndex, Math.min(bottomIndex + 8, rc.length))
-    .reduce((s, v) => s + v, 0) / Math.max(Math.min(bottomIndex + 8, rc.length) - lipIndex, 1);
-  const handleVolume = rv.slice(-20).reduce((s, v) => s + v, 0) / 20;
-  if (handleVolume > cupVolume * 0.9) return false;
-
-  return true;
-}
-
-function detectGapEntry(
-  opens: number[],
-  closes: number[],
-  highs: number[],
-  lows: number[],
-  currentPrice: number,
-  minGapPct = 2.5
-): boolean {
-  if (opens.length < 3) return false;
-
-  // Search ALL history for unfilled gaps, not just recent ones
-  for (let i = 1; i < opens.length; i++) {
-    const prevClose = closes[i - 1];
-    const barOpen = opens[i];
-    const barHigh = highs[i];
-    const barLow = lows[i];
-
-    // Gap UP (bullish)
-    const gapUpPct = ((barOpen - prevClose) / prevClose) * 100;
-    if (gapUpPct >= minGapPct) {
-      const gapBottom = prevClose;
-      const gapTop = barOpen;
-
-      // Check if gap is still UNFILLED (price never closed it)
-      let gapFilled = false;
-      for (let j = i; j < lows.length; j++) {
-        if (lows[j] <= gapBottom * 1.001) {
-          gapFilled = true;
-          break;
-        }
-      }
-      if (gapFilled) continue;
-
-      // Price is ENTERING or INSIDE gap zone:
-      // Already inside gap: gapBottom < price < gapTop
-      // OR about to enter: price within 1-1.5% of gapBottom
-      const distToGap = ((gapBottom - currentPrice) / gapBottom) * 100;
-      const priceInsideGap = currentPrice > gapBottom * 1.001 && currentPrice < gapTop * 0.99;
-      const aboutToEnter = distToGap > 0 && distToGap <= 1.5;
-
-      if (priceInsideGap || aboutToEnter) {
-        return true;
-      }
-    }
-
-    // Gap DOWN (bearish)
-    const gapDownPct = ((prevClose - barOpen) / prevClose) * 100;
-    if (gapDownPct >= minGapPct) {
-      const gapBottom = barOpen;
-      const gapTop = prevClose;
-
-      // Check if gap is still unfilled
-      let gapFilled = false;
-      for (let j = i; j < highs.length; j++) {
-        if (highs[j] >= gapTop * 0.999) {
-          gapFilled = true;
-          break;
-        }
-      }
-      if (gapFilled) continue;
-
-      // Price entering or inside
-      const distToGap = ((currentPrice - gapTop) / gapTop) * 100;
-      const priceInsideGap = currentPrice > gapBottom * 1.01 && currentPrice < gapTop * 0.999;
-      const aboutToEnter = distToGap > 0 && distToGap <= 1.5;
-
-      if (priceInsideGap || aboutToEnter) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
+/**
+ * מנתח סימבול בודד מול פרופיל: מריץ רק את הסטאפים שהפרופיל מבקש,
+ * ומחזיר מועמד רק אם לפחות סטאפ אחד נמצא.
+ */
 async function analyzeSymbol(
   symbol: string,
-  cfg: ScannerConfig,
-  weights: ScoringWeights
+  profile: ProfileConfig
 ): Promise<Candidate | null> {
+  const cfg = profile.filters;
   try {
     let quote: any = null;
     let hist: any[] = [];
@@ -264,11 +152,12 @@ async function analyzeSymbol(
     const rsi = calcRSI(closes);
     const atr = calcATR(highs, lows, closes);
     const atrPercent = atr && price ? (atr / price) * 100 : null;
+    const ma20 = calcMA(closes, 20);
     const ma50 = calcMA(closes, 50);
     const ma150 = calcMA(closes, 150);
+    const ma200 = calcMA(closes, 200);
 
-    const distanceFromAth =
-      ath && price ? ((ath - price) / ath) * 100 : null;
+    const distanceFromAth = ath && price ? ((ath - price) / ath) * 100 : null;
     const distanceFromHigh =
       high52w && price ? ((high52w - price) / high52w) * 100 : null;
     const distanceFromMa150 =
@@ -276,88 +165,56 @@ async function analyzeSymbol(
 
     const volumeRatio = volume && avgVolume ? volume / avgVolume : null;
 
-    const matchedSetups: string[] = [];
-
-    const distFromAthPct = ath && price ? ((ath - price) / ath) * 100 : null;
-
-    // FRESH breakout check: price crossed above previous ATH in last 3 days
-    // Previous ATH = highest high EXCLUDING last 3 bars
-    let isFreshAthBreakout = false;
-    if (ath && price && highs.length >= 30) {
-      const previousAth = Math.max(...highs.slice(0, -3));
-      const last3Bars = highs.slice(-3);
-      const currentHigh = Math.max(...last3Bars);
-      // Breakout must have happened in last 3 days AND price still near new ATH
-      if (currentHigh > previousAth * 1.001 && distFromAthPct !== null && distFromAthPct <= 2) {
-        isFreshAthBreakout = true;
-      }
-    }
-
-    if (isFreshAthBreakout) {
-      matchedSetups.push("breakout_ath");
-    } else if (
-      distFromAthPct !== null &&
-      distFromAthPct > 0 &&
-      distFromAthPct <= cfg.nearAthPercent
-    ) {
-      matchedSetups.push("near_ath");
-    }
-
-    // FRESH 52W breakout: crossed 52W high in last 3 days
-    let isFresh52wBreakout = false;
-    if (high52w && price && highs.length >= 30) {
-      const previous52wHigh = Math.max(...highs.slice(0, -3));
-      const currentHigh = Math.max(...highs.slice(-3));
-      const distFrom52w = ((high52w - price) / high52w) * 100;
-      if (currentHigh > previous52wHigh * 1.001 && distFrom52w <= 2) {
-        isFresh52wBreakout = true;
-      }
-    }
-
-    if (isFresh52wBreakout) {
-      matchedSetups.push("breakout_52w");
-    } else if (
-      high52w &&
-      price &&
-      ((high52w - price) / high52w) * 100 > 0 &&
-      ((high52w - price) / high52w) * 100 <= cfg.near52wHighPercent
-    ) {
-      matchedSetups.push("near_52w");
-    }
-
-    // Real gap check: today's OPEN vs yesterday's CLOSE (not just intraday change)
-    const gapPercent = changePercent ?? null;
-    let hasRealGapToday = false;
-    if (opens.length >= 2 && closes.length >= 2) {
-      const yesterdayClose = closes[closes.length - 2];
-      const todayOpen = opens[opens.length - 1];
-      const gapPct = ((todayOpen - yesterdayClose) / yesterdayClose) * 100;
-      if (gapPct >= cfg.gapUpMin) hasRealGapToday = true;
-    }
-    if (hasRealGapToday) {
-      matchedSetups.push("gap_up");
-    }
-
-    if (volumeRatio != null && volumeRatio >= cfg.volumeSpikeRatio) {
-      matchedSetups.push("high_volume");
-    }
-
-    if (cfg.cupAndHandle && detectCupAndHandle(closes, volumes)) {
-      matchedSetups.push("cup_and_handle");
-    }
-
-    if (price && detectGapEntry(opens, closes, highs, lows, price, cfg.gapUpMin)) {
-      matchedSetups.push("gap_entry");
-    }
-
+    // פילטרים קשיחים לפני זיהוי הסטאפים
+    if (price == null) return null;
     if (marketCap != null && marketCap < cfg.minMarketCap) return null;
     if (avgVolume != null && avgVolume < cfg.minAvgVolume) return null;
-    if (price != null && price < cfg.minPrice) return null;
+    if (price < cfg.minPrice) return null;
 
-    if (matchedSetups.length === 0) return null;
+    const ctx = buildSetupContext({
+      symbol,
+      price,
+      changePercent,
+      closes,
+      highs,
+      lows,
+      opens,
+      volumes,
+      rsi,
+      atr,
+      ma20,
+      ma50,
+      ma150,
+      ma200,
+      ath,
+      high52w,
+      low52w,
+      volumeRatio,
+      thresholds: {
+        gapUpMin: cfg.gapUpMin,
+        volumeSpikeRatio: cfg.volumeSpikeRatio,
+        nearAthPercent: cfg.nearAthPercent,
+        near52wHighPercent: cfg.near52wHighPercent,
+        minRsi: cfg.minRsi,
+        maxRsi: cfg.maxRsi,
+      },
+    });
 
-    // ניקוד עובר דרך מנוע הניקוד המשותף (אותו מנוע של דף הניתוח)
-    const { score, grade, signals, verdict, summary } = scoreSignals(
+    // רק הסטאפים שהפרופיל ביקש
+    const found: { id: SetupId; det: SetupDetection }[] = [];
+    for (const id of profile.enabledSetups) {
+      if (id === "cup_and_handle" && !cfg.cupAndHandle) continue;
+      const det = SETUPS[id].detect(ctx);
+      if (det.present) found.push({ id, det });
+    }
+    if (found.length === 0) return null;
+
+    found.sort((a, b) => b.det.confidence - a.det.confidence);
+    const primary = found[0];
+    const matchedSetups = found.map((f) => f.id);
+
+    // ניקוד רק על האותות הרלוונטיים לסטאפים שנמצאו, עם הדגשי המשקל שלהם
+    const { score, grade, signals } = scoreSignals(
       {
         symbol,
         price,
@@ -371,9 +228,12 @@ async function analyzeSymbol(
         volumeRatio,
         matchedSetups,
       },
-      weights,
-      "scanner"
+      { ...profile.weights, ...unionSetupWeights(matchedSetups) },
+      "scanner",
+      unionRelevantSignals(matchedSetups)
     );
+
+    const { title, summary } = SETUPS[primary.id].verdict(grade, true);
 
     return {
       symbol,
@@ -392,11 +252,15 @@ async function analyzeSymbol(
       distanceFromAth,
       distanceFromHigh,
       distanceFromMa150,
-      gapPercent,
+      gapPercent: changePercent ?? null,
       matchedSetups,
+      primarySetup: primary.id,
+      confidence: primary.det.confidence,
+      keyLevel: primary.det.keyLevel,
+      boxLabel: primary.det.boxLabel,
       score,
       grade,
-      verdict,
+      verdict: title,
       summary,
       signals,
     };
@@ -408,10 +272,9 @@ async function analyzeSymbol(
 
 export async function runScanner(
   scanType: ScanType = "morning",
-  cfg: ScannerConfig = DEFAULT_SCANNER_CONFIG,
+  profile: ProfileConfig = DEFAULT_PROFILE_CONFIG,
   universe: string[] = SCANNER_UNIVERSE_UNIQUE,
-  profileName?: string,
-  weights: ScoringWeights = DEFAULT_WEIGHTS
+  profileName?: string
 ) {
   const run = await prisma.scannerRun.create({
     data: { scanType, status: "running", profileName: profileName ?? null },
@@ -423,7 +286,7 @@ export async function runScanner(
     for (let i = 0; i < universe.length; i += BATCH) {
       const chunk = universe.slice(i, i + BATCH);
       const results = await Promise.all(
-        chunk.map((s) => analyzeSymbol(s, cfg, weights))
+        chunk.map((s) => analyzeSymbol(s, profile))
       );
       for (const r of results) {
         if (r) candidates.push(r);
@@ -451,6 +314,7 @@ export async function runScanner(
         matchedSetups: JSON.stringify(c.matchedSetups),
         signals: JSON.stringify(c.signals),
         verdict: c.verdict,
+        confidence: c.confidence,
         score: c.score,
         grade: c.grade,
       })),

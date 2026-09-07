@@ -194,6 +194,8 @@ export function stockAnalysisEmbed(opts: {
   verdict: string;
   signals: { label: string; value: string; tone: string; weight?: number }[];
   suggestedStop?: number | null;
+  setupLabel?: string | null;
+  patternValid?: boolean;
 }): DiscordEmbed {
   const toneIcon = (t: string) =>
     t === "bullish" || t === "up" ? "🟢" : t === "bearish" || t === "down" ? "🔴" : "⚪";
@@ -213,6 +215,11 @@ export function stockAnalysisEmbed(opts: {
   }
   if (opts.suggestedStop != null)
     fields.push({ name: "סטופ מוצע", value: `$${opts.suggestedStop}`, inline: true });
+  if (opts.setupLabel)
+    fields.push({
+      name: "סטאפ נבדק",
+      value: `${opts.setupLabel} · ${opts.patternValid ? "תבנית תקינה ✅" : "תבנית לא תקינה ⚠️"}`,
+    });
   if (top.length)
     fields.push({
       name: "אותות מובילים",

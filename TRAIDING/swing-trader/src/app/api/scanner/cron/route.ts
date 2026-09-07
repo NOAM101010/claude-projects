@@ -23,10 +23,10 @@ export async function GET(req: NextRequest) {
     const profile =
       (await prisma.scannerProfile.findFirst({ where: { isDefault: true } })) ??
       (await prisma.scannerProfile.findFirst());
-    const { filters, weights } = parseProfileConfig(profile?.config);
+    const profileConfig = parseProfileConfig(profile?.config);
     const universe = parseUniverse(profile?.universe);
 
-    const result = await runScanner("morning", filters, universe, profile?.name, weights);
+    const result = await runScanner("morning", profileConfig, universe, profile?.name);
     const top = result.matches.slice(0, 10);
 
     if (top.length > 0) {

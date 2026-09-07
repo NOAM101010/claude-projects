@@ -19,11 +19,11 @@ export async function POST(req: NextRequest) {
     : await prisma.scannerProfile.findFirst({ where: { isDefault: true } }) ??
       (await prisma.scannerProfile.findFirst());
 
-  const { filters, weights } = parseProfileConfig(profile?.config);
+  const profileConfig = parseProfileConfig(profile?.config);
   const universe = parseUniverse(profile?.universe);
 
   try {
-    const result = await runScanner(scanType, filters, universe, profile?.name, weights);
+    const result = await runScanner(scanType, profileConfig, universe, profile?.name);
     const top = result.matches.slice(0, 8);
 
     if (top.length > 0) {

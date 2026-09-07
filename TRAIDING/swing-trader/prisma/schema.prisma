@@ -41,6 +41,7 @@ model ScannerProfile {
   config      String
   universe    String?
   isDefault   Boolean  @default(false)
+  isBuiltin   Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -77,6 +78,7 @@ model ScannerResult {
   matchedSetups String?
   signals      String?
   verdict      String?
+  confidence   Float?
   score        Float?
   grade        String?
   notes        String?

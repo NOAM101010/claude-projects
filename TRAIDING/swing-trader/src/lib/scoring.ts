@@ -21,7 +21,10 @@ export type SignalKey =
   | "gapUp"
   | "gapEntry"
   | "cupHandle"
-  | "highVolume";
+  | "highVolume"
+  | "resistanceBreakout"
+  | "momentum"
+  | "pullback";
 
 export type ScoringWeights = Record<SignalKey, number>;
 
@@ -90,6 +93,9 @@ export const DEFAULT_WEIGHTS: ScoringWeights = {
   gapEntry: 10,
   cupHandle: 12,
   highVolume: 6,
+  resistanceBreakout: 12,
+  momentum: 14,
+  pullback: 12,
 };
 
 export const SIGNAL_LABELS: Record<SignalKey, string> = {
@@ -107,6 +113,9 @@ export const SIGNAL_LABELS: Record<SignalKey, string> = {
   gapEntry: "כניסה לאזור גאפ",
   cupHandle: "תבנית Cup & Handle",
   highVolume: "ווליום חריג",
+  resistanceBreakout: "פריצת התנגדות (20-60 יום)",
+  momentum: "מומנטום (RSI + ווליום + שיא)",
+  pullback: "תיקון למגמה (Pullback)",
 };
 
 /** סדר התצוגה בעורך המשקלים בהגדרות. */
@@ -125,17 +134,25 @@ export const SIGNAL_KEYS: SignalKey[] = [
   "gapEntry",
   "cupHandle",
   "highVolume",
+  "resistanceBreakout",
+  "momentum",
+  "pullback",
 ];
 
-/** מיפוי מזהי setup של הסורק למפתחות משקל. */
+/** מיפוי מזהי setup של הסורק למפתחות משקל (כולל מזהים היסטוריים). */
 const SETUP_TO_KEY: Record<string, SignalKey> = {
-  breakout_ath: "breakoutAth",
+  ath_breakout: "breakoutAth",
   breakout_52w: "breakout52w",
+  resistance_breakout: "resistanceBreakout",
+  cup_and_handle: "cupHandle",
+  gap_entry: "gapEntry",
+  momentum: "momentum",
+  pullback: "pullback",
+  // מזהים ישנים ששמורים בתוצאות סריקה קודמות
+  breakout_ath: "breakoutAth",
   near_ath: "nearAth",
   near_52w: "near52w",
   gap_up: "gapUp",
-  gap_entry: "gapEntry",
-  cup_and_handle: "cupHandle",
   high_volume: "highVolume",
 };
 
@@ -156,6 +173,12 @@ const SETUP_EXPLANATIONS: Record<SignalKey, string> = {
     "זוהתה תבנית כוס-ואוזן: ירידה, התאוששות ואוזן בהתכווצות ווליום לפני פריצה.",
   highVolume:
     "נפח המסחר חורג משמעותית מהממוצע — עניין מוסדי שמאשש את המהלך.",
+  resistanceBreakout:
+    "פריצה טרייה של שיא 20-60 יום בווליום — המניה משתחררת מטווח דשדוש, עדיין מתחת לשיאים הגדולים.",
+  momentum:
+    "כל תנאי המומנטום התקיימו יחד: RSI 65-80, ווליום כפול מהממוצע, מחיר צמוד לשיא ומעל כל הממוצעים.",
+  pullback:
+    "תיקון בריא בתוך מגמת עלייה — המחיר נשען על ממוצע נע מלמעלה וה-RSI התקרר לאזור 40-55.",
   // אותות ניתוח — לא בשימוש כאן
   distanceFromAth: "",
   rsi: "",
@@ -212,12 +235,19 @@ export function normalizeScannerScore(rawScore: number): number {
   return 100;
 }
 
+/**
+ * @param relevantSignals אם מוגדר — רק האותות האלה נספרים ומוצגים.
+ *   משמש את הסורק כדי לנקד כל מניה לפי הסטאפים שנמצאו בה בלבד.
+ *   בלי הפרמטר (מצב הניתוח הקיים) — כל האותות נספרים כרגיל.
+ */
 export function scoreSignals(
   metrics: ScoringMetrics,
   rawWeights?: Partial<ScoringWeights> | null,
-  mode: ScoreMode = "analysis"
+  mode: ScoreMode = "analysis",
+  relevantSignals?: SignalKey[] | null
 ): ScoreResult {
   const weights = normalizeWeights(rawWeights);
+  const allowed = relevantSignals?.length ? new Set(relevantSignals) : null;
   const signals: AnalysisSignal[] = [];
   let score = BASE_SCORE;
 
@@ -230,6 +260,7 @@ export function scoreSignals(
     explanation: string,
     label = SIGNAL_LABELS[key]
   ) {
+    if (allowed && !allowed.has(key)) return; // האות לא רלוונטי לסטאפ הנוכחי
     const base = weights[key];
     if (!base) return; // משקל 0 → האות לא נספר ולא מוצג
     const weight = Math.round(base * factor);

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Card, Button, Input } from "@/components/ui";
+import { Card, Button, Input, Select } from "@/components/ui";
 import SignalBreakdown, { type BreakdownSignal } from "@/components/signal-breakdown";
 import { cn } from "@/lib/utils";
-import { Search, ExternalLink, Target } from "lucide-react";
+import { SETUP_LIST } from "@/lib/setups";
+import { Search, ExternalLink, Target, AlertTriangle } from "lucide-react";
 
 type Signal = BreakdownSignal;
 type Analysis = {
@@ -17,6 +18,12 @@ type Analysis = {
   verdict: string;
   summary: string;
   signals: Signal[];
+  setupId?: string;
+  setupLabel?: string;
+  patternValid?: boolean;
+  confidence?: number;
+  boxLabel?: string;
+  setupKeyLevel?: number | null;
   keyLevels: {
     ath: number | null; high52w: number | null; low52w: number | null;
     ma50: number | null; ma150: number | null; ma200: number | null;
@@ -37,6 +44,7 @@ export default function AnalyzeClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [setupId, setSetupId] = useState("");
 
   async function run(sym?: string) {
     const q = (sym ?? symbol).trim().toUpperCase();
@@ -46,7 +54,10 @@ export default function AnalyzeClient() {
     setError(null);
     setAnalysis(null);
     try {
-      const res = await fetch(`/api/analyze?symbol=${encodeURIComponent(q)}`, { cache: "no-store" });
+      const url =
+        `/api/analyze?symbol=${encodeURIComponent(q)}` +
+        (setupId ? `&setup=${encodeURIComponent(setupId)}` : "");
+      const res = await fetch(url, { cache: "no-store" });
       const json = await res.json();
       if (json.ok) setAnalysis(json.analysis);
       else setError(json.error || "שגיאה בניתוח");
@@ -61,6 +72,21 @@ export default function AnalyzeClient() {
     <div className="space-y-6">
       {/* Search box */}
       <Card className="p-5">
+        <div className="mb-3">
+          <div className="text-[11px] text-[var(--muted)] mb-1.5">מה לבדוק</div>
+          <Select
+            value={setupId}
+            onChange={(e) => setSetupId(e.target.value)}
+            className="max-w-xs"
+          >
+            <option value="">ניתוח כללי</option>
+            {SETUP_LIST.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.label}
+              </option>
+            ))}
+          </Select>
+        </div>
         <div className="flex gap-2">
           <Input
             value={symbol}
@@ -103,6 +129,21 @@ export default function AnalyzeClient() {
 
       {analysis && !loading && (
         <>
+          {/* באנר תקינות התבנית — רק בניתוח ממוקד-סטאפ */}
+          {analysis.setupLabel && analysis.patternValid === false && (
+            <Card className="p-4 border-[var(--warn)]/40 bg-[var(--warn-bg)] flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-[var(--warn)] shrink-0 mt-0.5" />
+              <div>
+                <div className="text-sm font-bold text-[var(--warn)]">
+                  התבנית לא תקינה כרגע — {analysis.setupLabel}
+                </div>
+                <p className="text-xs text-[var(--fg-dim)] mt-1 leading-relaxed">
+                  {analysis.summary}
+                </p>
+              </div>
+            </Card>
+          )}
+
           {/* Verdict header */}
           <Card className="p-6">
             <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -127,8 +168,20 @@ export default function AnalyzeClient() {
             </div>
 
             <div className="mt-4 pt-4 border-t border-[var(--border-hi)]">
-              <div className={cn("inline-block text-xs font-bold px-3 py-1 rounded-full border mb-2", GRADE_STYLE[analysis.grade])}>
-                {analysis.verdict}
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <span className={cn("inline-block text-xs font-bold px-3 py-1 rounded-full border", GRADE_STYLE[analysis.grade])}>
+                  {analysis.verdict}
+                </span>
+                {analysis.patternValid && analysis.confidence != null && (
+                  <span className="mono text-xs font-bold px-3 py-1 rounded-full border border-[var(--up)]/40 text-[var(--up)] bg-[var(--up-bg)]">
+                    {analysis.boxLabel} · ביטחון {Math.round(analysis.confidence * 100)}%
+                  </span>
+                )}
+                {analysis.patternValid && analysis.setupKeyLevel != null && (
+                  <span className="mono text-xs px-3 py-1 rounded-full border border-[var(--border-hi)] text-[var(--fg-dim)]">
+                    רמת מפתח ${analysis.setupKeyLevel.toFixed(2)}
+                  </span>
+                )}
               </div>
               <p className="text-sm text-[var(--fg-dim)] leading-relaxed">{analysis.summary}</p>
             </div>
