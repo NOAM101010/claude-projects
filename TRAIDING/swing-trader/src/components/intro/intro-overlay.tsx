@@ -4,9 +4,12 @@ import CandleField from "./candle-field";
 import "./intro.css";
 
 /**
- * INTRO — "TERMINAL BOOT"
- * Shutters open → live candle field builds left→right → brand reveals word by word
- * → CTA "היכנס לטרמינל" slams the shutters shut and hands over to the app.
+ * INTRO — "THE CINEMATIC TERMINAL"
+ *
+ * Two tall doors part on a warm amber seam → a candle field builds left→right
+ * with a scanning reticle that snaps real detection boxes onto real patterns →
+ * a serif headline converges out of an RGB split → CTA slams the doors shut
+ * with a chromatic flash and hands over to the app.
  *
  * Shown once per browser session (sessionStorage). ESC / "דלג" close it.
  * Mount-gated → renders nothing on the server, so SSR/hydration stay untouched.
@@ -14,9 +17,10 @@ import "./intro.css";
 
 const SEEN_KEY = "swing_intro_seen";
 
-const BRAND = ["SWING", "TERMINAL"];
-const TAGLINE = "המחיר מספר סיפור. אתה מחליט מתי להיכנס.";
-const ACCENT_WORDS = new Set(["מתי", "להיכנס."]);
+/** headline — serif display, revealed word by word */
+const HEAD_A = ["כל", "נר", "—"];
+const HEAD_B = ["החלטה."];
+const SUBLINE = "מסחר · סריקה · יומן · לוח בקרה";
 
 const TICKS: Array<[string, string, number]> = [
   ["NVDA", "184.22", 2.41],
@@ -36,23 +40,6 @@ const TICKS: Array<[string, string, number]> = [
   ["IWM", "238.41", -0.83],
 ];
 
-function Words({ text, base, step }: { text: string; base: number; step: number }) {
-  return (
-    <>
-      {text.split(" ").map((word, i) => (
-        <span
-          key={`${word}-${i}`}
-          className="iw"
-          style={{ animationDelay: `${base + i * step}s` }}
-        >
-          {ACCENT_WORDS.has(word) ? <em>{word}</em> : word}
-          {" "}
-        </span>
-      ))}
-    </>
-  );
-}
-
 export default function IntroOverlay() {
   const [cfg, setCfg] = useState<{ lite: boolean; reduced: boolean } | null>(null);
   const [closing, setClosing] = useState(false);
@@ -61,6 +48,7 @@ export default function IntroOverlay() {
   const reduced = cfg?.reduced ?? false;
   const rootRef = useRef<HTMLDivElement>(null);
   const veilRef = useRef<HTMLDivElement>(null);
+  const cursorRef = useRef<HTMLDivElement>(null);
   const ctaRef = useRef<HTMLButtonElement>(null);
   const skipRef = useRef<HTMLButtonElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -104,7 +92,7 @@ export default function IntroOverlay() {
       const usePrev = prev && prev !== document.body && document.contains(prev);
       const target = usePrev ? prev : (document.querySelector("main") as HTMLElement | null);
       target?.focus?.({ preventScroll: true });
-    }, 800);
+    }, 900);
   }, []);
 
   // ---- scroll lock, ESC, focus, reduced-motion auto-dismiss ----
@@ -139,9 +127,9 @@ export default function IntroOverlay() {
 
     const focusTimer = setTimeout(
       () => ctaRef.current?.focus({ preventScroll: true }),
-      reduced ? 30 : 2500,
+      reduced ? 30 : 3100,
     );
-    const autoTimer = reduced ? setTimeout(close, 1200) : null;
+    const autoTimer = reduced ? setTimeout(close, 1400) : null;
 
     return () => {
       document.body.style.overflow = prevOverflow;
@@ -150,6 +138,40 @@ export default function IntroOverlay() {
       if (autoTimer) clearTimeout(autoTimer);
     };
   }, [visible, reduced, close]);
+
+  // ---- custom reticle cursor (desktop only, no state churn) ----
+  useEffect(() => {
+    if (!visible || lite || reduced) return;
+    let frame = 0;
+    let x = 0;
+    let y = 0;
+    const apply = () => {
+      frame = 0;
+      const el = cursorRef.current;
+      if (el) el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    };
+    const onMove = (e: PointerEvent) => {
+      x = e.clientX;
+      y = e.clientY;
+      const el = cursorRef.current;
+      if (el && el.dataset.on !== "1") {
+        el.dataset.on = "1";
+        el.style.opacity = "1";
+      }
+      if (!frame) frame = requestAnimationFrame(apply);
+    };
+    const onDown = () => cursorRef.current?.classList.add("is-down");
+    const onUp = () => cursorRef.current?.classList.remove("is-down");
+    window.addEventListener("pointermove", onMove, { passive: true });
+    window.addEventListener("pointerdown", onDown);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [visible, lite, reduced]);
 
   useEffect(
     () => () => {
@@ -165,24 +187,33 @@ export default function IntroOverlay() {
   return (
     <div
       ref={rootRef}
-      className={`intro-root${closing ? " is-closing" : ""}`}
+      className={`intro-root${closing ? " is-closing" : ""}${lite ? " is-lite" : ""}${
+        reduced ? " is-reduced" : ""
+      }`}
       role="dialog"
       aria-modal="true"
       aria-label="מסך פתיחה — Swing Terminal"
       tabIndex={-1}
     >
-      <CandleField running={!closing} lite={flat} still={reduced} veilRef={veilRef} />
+      <CandleField
+        running={!closing}
+        lite={flat}
+        compact={lite}
+        still={reduced}
+        veilRef={veilRef}
+      />
       <div ref={veilRef} className={`intro-veil${flat ? " is-flat" : ""}`} aria-hidden />
+      <div className="intro-bloom" aria-hidden />
       <div className="intro-vignette" aria-hidden />
-      {!reduced && <div className="intro-scan" aria-hidden />}
-      {!reduced && <div className="intro-boot" aria-hidden>BOOTING · MARKET FEED</div>}
+      <div className="intro-aberration" aria-hidden />
+      <div className="intro-grain" aria-hidden />
 
       <div className="intro-content">
         <div className="intro-hud">
           <span>
             <b>SWING TERMINAL</b>
             <span className="intro-hud-more">
-              &nbsp;&nbsp;/&nbsp;&nbsp;v2 · SESSION {new Date().getFullYear()}
+              &nbsp;&nbsp;/&nbsp;&nbsp;PATTERN ENGINE · {new Date().getFullYear()}
             </span>
           </span>
           <span className="intro-hud-status">
@@ -192,21 +223,27 @@ export default function IntroOverlay() {
         </div>
 
         <div className="intro-block">
-          <span className="intro-eyebrow">מצב שוק · פתוח</span>
-          <h1 className="intro-brand">
-            {BRAND.map((word, i) => (
-              <span key={word} className="line iw" style={{ animationDelay: `${0.95 + i * 0.11}s` }}>
-                {word}
-                {i === 0 ? " " : ""}
-              </span>
-            ))}
-            <span className="thin iw" style={{ animationDelay: "1.3s" }}>
-              מסחר · סריקה · יומן
+          <span className="intro-eyebrow">סורק תבניות · פעיל</span>
+
+          <h1 className="intro-head display-serif">
+            <span className="intro-head-a">
+              {HEAD_A.map((word, i) => (
+                <span key={word} className="hw" style={{ animationDelay: `${1.42 + i * 0.13}s` }}>
+                  {word}
+                  {i < HEAD_A.length - 1 ? " " : ""}
+                </span>
+              ))}
+            </span>
+            <span className="intro-head-b">
+              {HEAD_B.map((word) => (
+                <span key={word} className="hw" style={{ animationDelay: "1.86s" }}>
+                  {word}
+                </span>
+              ))}
             </span>
           </h1>
-          <p className="intro-tagline">
-            <Words text={TAGLINE} base={1.45} step={0.055} />
-          </p>
+
+          <p className="intro-sub">{SUBLINE}</p>
 
           <div className="intro-cta-wrap">
             <button ref={ctaRef} type="button" className="intro-cta" onClick={close}>
@@ -216,7 +253,7 @@ export default function IntroOverlay() {
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                   <path
                     d="M13 13L5 5M5 5H12M5 5V12"
-                    stroke="#05070c"
+                    stroke="#0a0805"
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -257,20 +294,28 @@ export default function IntroOverlay() {
 
       {!reduced && (
         <>
-          <div className="intro-shutters" aria-hidden>
-            <div className="intro-row intro-row-top">
-              {[0, 1, 2, 3, 4].map((i) => (
-                <div key={i} className="intro-panel" />
-              ))}
+          <div className="intro-doors" aria-hidden>
+            <div className="intro-door intro-door-a">
+              <span className="intro-door-rim" />
             </div>
-            <div className="intro-row intro-row-bottom">
-              {[0, 1, 2, 3, 4].map((i) => (
-                <div key={i} className="intro-panel" />
-              ))}
+            <div className="intro-door intro-door-b">
+              <span className="intro-door-rim" />
             </div>
           </div>
           <div className="intro-seam" aria-hidden />
+          <div className="intro-flash" aria-hidden />
+          <div className="intro-boot" aria-hidden>
+            LOADING PATTERN ENGINE
+          </div>
         </>
+      )}
+
+      {!flat && (
+        <div ref={cursorRef} className="intro-cursor" aria-hidden>
+          <span className="c-box" />
+          <span className="c-h" />
+          <span className="c-v" />
+        </div>
       )}
     </div>
   );

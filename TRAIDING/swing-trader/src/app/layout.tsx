@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Heebo, Inter, JetBrains_Mono } from "next/font/google";
+import { Frank_Ruhl_Libre, Heebo, Inter, JetBrains_Mono } from "next/font/google";
 import IntroOverlay from "@/components/intro/intro-overlay";
 import PillNav from "@/components/pill-nav";
 import { Component as SpotlightCursor } from "@/components/ui/spotlight-cursor";
@@ -14,6 +14,13 @@ const heebo = Heebo({
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
+});
+/** display serif — headlines only (intro + dashboard hero) */
+const frank = Frank_Ruhl_Libre({
+  variable: "--font-frank",
+  subsets: ["hebrew", "latin"],
+  weight: ["500", "700", "900"],
   display: "swap",
 });
 const jetbrains = JetBrains_Mono({
@@ -45,7 +52,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="he"
       dir="rtl"
-      className={`${heebo.variable} ${inter.variable} ${jetbrains.variable} h-full antialiased`}
+      className={`${heebo.variable} ${inter.variable} ${jetbrains.variable} ${frank.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full text-[var(--fg)]">

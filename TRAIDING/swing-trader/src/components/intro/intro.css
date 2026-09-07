@@ -1,6 +1,7 @@
 /* ============================================================
-   INTRO — "TERMINAL BOOT"
-   Shutter panels → live candle field → word reveal → CTA
+   INTRO — "THE CINEMATIC TERMINAL"
+   doors part on an amber seam → candle field + detection boxes
+   → serif headline converges out of an RGB split → CTA slams shut
    ============================================================ */
 
 .intro-root {
@@ -10,22 +11,30 @@
   overflow: hidden;
   background: var(--bg);
   color: var(--fg);
-  --panel-open: 0.9s;
-  --ease-shutter: cubic-bezier(0.96, -0.02, 0.38, 1.01);
+
+  --door-ms: 1.15s;
+  --ease-door: cubic-bezier(0.72, 0.02, 0.16, 1);
   --ease-soft: cubic-bezier(0.16, 1, 0.3, 1);
+  --amber: 245, 158, 11;
+  --amber-hot: 255, 196, 92;
 }
 .intro-root.is-closing {
   pointer-events: none;
 }
+/* the reticle replaces the OS pointer inside the overlay */
+.intro-root:not(.is-lite):not(.is-reduced),
+.intro-root:not(.is-lite):not(.is-reduced) * {
+  cursor: none;
+}
 
-/* ---------- canvas + veil ---------- */
+/* ---------- canvas + atmosphere ---------- */
 .intro-canvas {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   opacity: 0;
-  animation: introChartIn 1.1s ease 0.3s forwards;
+  animation: introChartIn 1.2s ease 0.55s forwards;
 }
 @keyframes introChartIn {
   from { opacity: 0; }
@@ -38,114 +47,188 @@
   inset: 0;
   pointer-events: none;
   --mx: 50%;
-  --my: 40%;
+  --my: 42%;
   background:
-    radial-gradient(ellipse 55% 45% at 82% 58%, rgba(5, 7, 12, 0.6), transparent 72%),
-    linear-gradient(90deg, rgba(5, 7, 12, 0.18) 0%, rgba(5, 7, 12, 0.42) 40%, rgba(5, 7, 12, 0.86) 68%, rgba(5, 7, 12, 0.95) 100%);
-  -webkit-mask-image: radial-gradient(circle 250px at var(--mx) var(--my), transparent 0%, transparent 26%, #000 78%);
-  mask-image: radial-gradient(circle 250px at var(--mx) var(--my), transparent 0%, transparent 26%, #000 78%);
+    radial-gradient(ellipse 55% 45% at 84% 60%, rgba(5, 7, 12, 0.55), transparent 72%),
+    linear-gradient(90deg, rgba(5, 7, 12, 0.14) 0%, rgba(5, 7, 12, 0.38) 42%, rgba(5, 7, 12, 0.84) 70%, rgba(5, 7, 12, 0.95) 100%);
+  -webkit-mask-image: radial-gradient(circle 260px at var(--mx) var(--my), transparent 0%, transparent 24%, #000 78%);
+  mask-image: radial-gradient(circle 260px at var(--mx) var(--my), transparent 0%, transparent 24%, #000 78%);
 }
 .intro-veil.is-flat {
   -webkit-mask-image: none;
   mask-image: none;
-  background: linear-gradient(180deg, rgba(5, 7, 12, 0.22) 0%, rgba(5, 7, 12, 0.55) 38%, rgba(5, 7, 12, 0.93) 62%, rgba(5, 7, 12, 0.97) 100%);
+  background: linear-gradient(180deg, rgba(5, 7, 12, 0.2) 0%, rgba(5, 7, 12, 0.5) 38%, rgba(5, 7, 12, 0.92) 64%, rgba(5, 7, 12, 0.97) 100%);
 }
 
-/* vignette + scanline sweep on boot */
+/* warm cinematic key light — sits low-right, plays against the cool chart */
+.intro-bloom {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 55% at 50% 108%, rgba(var(--amber), 0.16), transparent 62%),
+    radial-gradient(ellipse 40% 60% at 4% 30%, rgba(var(--amber), 0.07), transparent 66%);
+  mix-blend-mode: screen;
+  opacity: 0;
+  animation: introFadeIn 1.6s ease 0.6s forwards;
+}
+@keyframes introFadeIn { to { opacity: 1; } }
+
 .intro-vignette {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  box-shadow: inset 0 0 170px 24px rgba(0, 0, 0, 0.55);
-}
-.intro-scan {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 2px;
-  top: 0;
-  pointer-events: none;
-  background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.55), rgba(255, 255, 255, 0.35), transparent);
-  box-shadow: 0 0 22px rgba(16, 185, 129, 0.45);
-  opacity: 0;
-  animation: introScan 1.5s cubic-bezier(0.4, 0, 0.2, 1) 0.28s 1;
-}
-@keyframes introScan {
-  0% { transform: translateY(0); opacity: 0; }
-  12% { opacity: 1; }
-  85% { opacity: 0.6; }
-  100% { transform: translateY(100vh); opacity: 0; }
+  box-shadow: inset 0 0 200px 30px rgba(0, 0, 0, 0.62), inset 0 0 60px rgba(0, 0, 0, 0.4);
 }
 
-/* ---------- shutter panels ---------- */
-.intro-shutters {
+/* very subtle chromatic aberration at the frame edges */
+.intro-aberration {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.7;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 190, 255, 0.09) 0%,
+    transparent 9%,
+    transparent 91%,
+    rgba(255, 0, 90, 0.09) 100%
+  );
+}
+
+.intro-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.42;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---------- the doors ---------- */
+.intro-doors {
   position: absolute;
   inset: 0;
   z-index: 40;
   pointer-events: none;
-}
-.intro-row {
   display: flex;
-  width: 100%;
-  height: 50%;
+  /* the app is RTL — force LTR here or the two doors swap sides and cross */
+  direction: ltr;
 }
-.intro-panel {
-  flex: 1 1 20%;
+.intro-door {
+  position: relative;
+  width: 50.2%;
   height: 100%;
-  background: linear-gradient(180deg, #0b0f17 0%, #05070c 100%);
-  border-inline-end: 1px solid rgba(255, 255, 255, 0.05);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 26%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 78px),
+    linear-gradient(180deg, #0c1017 0%, #06080d 58%, #04060a 100%);
   will-change: transform;
+  animation: doorOpenA var(--door-ms) var(--ease-door) 0.42s forwards;
 }
-.intro-row-top .intro-panel {
-  animation: shutterUp var(--panel-open) var(--ease-shutter) forwards;
-  box-shadow: 0 1px 0 rgba(16, 185, 129, 0.25);
+.intro-door-b {
+  animation-name: doorOpenB;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 26%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 78px),
+    linear-gradient(180deg, #0b0f16 0%, #06080d 58%, #04060a 100%);
 }
-.intro-row-bottom .intro-panel {
-  animation: shutterDown var(--panel-open) var(--ease-shutter) forwards;
-  box-shadow: 0 -1px 0 rgba(239, 68, 68, 0.22);
+/* warm rim light on the inner edge + chromatic fringe while it travels */
+.intro-door-rim {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(var(--amber-hot), 0.75) 18%,
+    rgba(var(--amber-hot), 0.95) 50%,
+    rgba(var(--amber-hot), 0.7) 82%,
+    transparent
+  );
 }
-.intro-panel:nth-child(1) { animation-delay: 0.34s; }
-.intro-panel:nth-child(2) { animation-delay: 0.4s; }
-.intro-panel:nth-child(3) { animation-delay: 0.46s; }
-.intro-panel:nth-child(4) { animation-delay: 0.52s; }
-.intro-panel:nth-child(5) { animation-delay: 0.58s; }
+.intro-door-a .intro-door-rim {
+  right: 0;
+  box-shadow: 0 0 26px 4px rgba(var(--amber), 0.45), 2px 0 0 rgba(0, 200, 255, 0.5), -2px 0 0 rgba(255, 0, 90, 0.45);
+}
+.intro-door-b .intro-door-rim {
+  left: 0;
+  box-shadow: 0 0 26px 4px rgba(var(--amber), 0.45), -2px 0 0 rgba(0, 200, 255, 0.5), 2px 0 0 rgba(255, 0, 90, 0.45);
+}
 
-@keyframes shutterUp { from { transform: translateY(0); } to { transform: translateY(-101%); } }
-@keyframes shutterDown { from { transform: translateY(0); } to { transform: translateY(101%); } }
-@keyframes shutterUpBack { from { transform: translateY(-101%); } to { transform: translateY(0); } }
-@keyframes shutterDownBack { from { transform: translateY(101%); } to { transform: translateY(0); } }
+@keyframes doorOpenA {
+  0% { transform: translateX(0); }
+  14% { transform: translateX(1.2%); }
+  100% { transform: translateX(-101%); }
+}
+@keyframes doorOpenB {
+  0% { transform: translateX(0); }
+  14% { transform: translateX(-1.2%); }
+  100% { transform: translateX(101%); }
+}
+@keyframes doorShutA { from { transform: translateX(-101%); } to { transform: translateX(0); } }
+@keyframes doorShutB { from { transform: translateX(101%); } to { transform: translateX(0); } }
 
-/* closing: shutters slam back, fastest in the middle outwards */
-.is-closing .intro-row-top .intro-panel { animation: shutterUpBack 0.46s cubic-bezier(0.7, 0, 0.2, 1) forwards; }
-.is-closing .intro-row-bottom .intro-panel { animation: shutterDownBack 0.46s cubic-bezier(0.7, 0, 0.2, 1) forwards; }
-.is-closing .intro-panel:nth-child(1) { animation-delay: 0.1s; }
-.is-closing .intro-panel:nth-child(2) { animation-delay: 0.05s; }
-.is-closing .intro-panel:nth-child(3) { animation-delay: 0s; }
-.is-closing .intro-panel:nth-child(4) { animation-delay: 0.05s; }
-.is-closing .intro-panel:nth-child(5) { animation-delay: 0.1s; }
-
-.is-closing { animation: introFadeOut 0.28s ease 0.5s forwards; }
+.is-closing .intro-door {
+  animation: doorShutA 0.52s cubic-bezier(0.76, 0, 0.14, 1) forwards;
+}
+.is-closing .intro-door-b {
+  animation-name: doorShutB;
+}
+.is-closing { animation: introFadeOut 0.3s ease 0.6s forwards; }
 @keyframes introFadeOut { to { opacity: 0; visibility: hidden; } }
 
-/* the "seam" flash across the middle when the shutters shut */
+/* the seam: a hairline of amber light between the closed doors */
 .intro-seam {
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  height: 1px;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
   z-index: 45;
-  transform: scaleX(0);
-  background: linear-gradient(90deg, transparent, var(--up), #fff, var(--down), transparent);
-  box-shadow: 0 0 30px rgba(16, 185, 129, 0.7);
+  margin-left: -0.5px;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgba(var(--amber-hot), 1) 22%, #fff 50%, rgba(var(--amber-hot), 1) 78%, transparent);
+  box-shadow: 0 0 24px 3px rgba(var(--amber), 0.7);
+  transform-origin: center;
+  animation: seamOpen 0.62s ease forwards;
+}
+@keyframes seamOpen {
+  0% { transform: scaleY(0.1); opacity: 0; }
+  38% { transform: scaleY(1); opacity: 1; }
+  100% { transform: scaleY(1); opacity: 0; }
+}
+.is-closing .intro-seam { animation: seamShut 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.42s forwards; }
+@keyframes seamShut {
+  0% { transform: scaleY(0.05); opacity: 0; }
+  30% { transform: scaleY(1); opacity: 1; }
+  100% { transform: scaleY(1); opacity: 0; }
+}
+
+/* chromatic flash across the frame when the doors slam */
+.intro-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 46;
   pointer-events: none;
   opacity: 0;
+  mix-blend-mode: screen;
+  background: linear-gradient(
+    90deg,
+    transparent 45%,
+    rgba(0, 200, 255, 0.45) 48.2%,
+    rgba(255, 255, 255, 0.85) 50%,
+    rgba(255, 0, 90, 0.45) 51.8%,
+    transparent 55%
+  );
 }
-.is-closing .intro-seam { animation: seamFlash 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.16s forwards; }
-@keyframes seamFlash {
-  0% { transform: scaleX(0); opacity: 0; }
-  35% { transform: scaleX(1); opacity: 1; }
-  100% { transform: scaleX(1); opacity: 0; }
+.is-closing .intro-flash { animation: chromaFlash 0.34s ease-out 0.36s forwards; }
+@keyframes chromaFlash {
+  0% { opacity: 0; transform: scaleX(0.5); filter: blur(1px); }
+  35% { opacity: 0.95; transform: scaleX(1); }
+  100% { opacity: 0; transform: scaleX(1.5); filter: blur(7px); }
 }
 
 /* ---------- content ---------- */
@@ -162,35 +245,32 @@
   .intro-content { padding: 34px 54px 0; }
 }
 .is-closing .intro-content {
-  animation: introContentOut 0.32s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+  animation: introContentOut 0.34s cubic-bezier(0.7, 0, 0.84, 0) forwards;
 }
 @keyframes introContentOut {
-  to { opacity: 0; transform: scale(1.04); filter: blur(6px); }
+  to { opacity: 0; transform: scale(1.05); filter: blur(8px); }
 }
 
 /* HUD line (top) */
 .intro-hud {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: flex-end;
   gap: 26px;
-  padding-inline-end: 92px; /* clears the skip pill on the far side */
+  /* latin HUD strings read left→right even though the app is RTL */
+  direction: ltr;
+  padding-left: 92px; /* clears the skip pill, which sits at the RTL end (left) */
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--muted);
   opacity: 0;
-  animation: introFadeUp 0.6s ease 0.15s forwards;
+  animation: introFadeUp 0.7s ease 1.35s forwards;
 }
-.intro-hud b {
-  color: var(--fg-2);
-  font-weight: 600;
-}
+.intro-hud b { color: var(--fg-2); font-weight: 600; }
 .intro-hud-more { display: none; }
-@media (min-width: 700px) {
-  .intro-hud-more { display: inline; }
-}
+@media (min-width: 700px) { .intro-hud-more { display: inline; } }
 .intro-hud-status {
   display: inline-flex;
   align-items: center;
@@ -206,16 +286,16 @@
   animation: pulse-dot 1.6s ease-in-out infinite;
 }
 
-/* main block — anchored to the RTL start (right), bottom-third: no boring centering */
+/* main block — RTL start (right), bottom third. deliberately off-centre. */
 .intro-block {
   align-self: end;
   justify-self: start;
-  max-width: min(660px, 92vw);
+  max-width: min(680px, 92vw);
   padding-bottom: 8vh;
   pointer-events: auto;
 }
 @media (min-width: 768px) {
-  .intro-block { padding-bottom: 12vh; }
+  .intro-block { padding-bottom: 11vh; }
 }
 
 .intro-eyebrow {
@@ -226,66 +306,70 @@
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.3em;
-  color: var(--up);
+  color: rgba(var(--amber-hot), 0.95);
   opacity: 0;
-  animation: introFadeUp 0.5s ease 0.75s forwards;
+  animation: introFadeUp 0.6s ease 1.25s forwards;
 }
 .intro-eyebrow::before {
   content: "";
-  width: 40px;
+  width: 44px;
   height: 1px;
-  background: var(--up);
-  box-shadow: 0 0 10px var(--up-glow);
+  background: rgb(var(--amber-hot));
+  box-shadow: 0 0 12px rgba(var(--amber), 0.8);
 }
 
-.intro-brand {
-  margin: 18px 0 0;
-  font-size: clamp(42px, 9.5vw, 118px);
-  font-weight: 900;
-  line-height: 0.86;
-  letter-spacing: -0.05em;
+/* ---------- serif headline ---------- */
+.intro-head {
+  margin: 20px 0 0;
+  font-size: clamp(50px, 10.5vw, 138px);
+  line-height: 0.9;
   color: var(--fg);
   text-wrap: balance;
 }
-.intro-brand .line {
-  display: block;
-  direction: ltr;
-  text-align: right;
+.intro-head-a,
+.intro-head-b { display: block; }
+/* break the grid: the second line steps in */
+.intro-head-b {
+  margin-inline-start: clamp(24px, 7vw, 96px);
+  color: #fff4e2;
 }
-.intro-brand .thin {
-  display: block;
-  font-family: var(--font-mono);
-  font-weight: 300;
-  font-size: clamp(11px, 0.145em, 20px);
-  letter-spacing: 0.42em;
-  color: var(--fg-dim);
-  margin-top: 1.1em;
-  white-space: nowrap;
-}
-
-.intro-tagline {
-  margin: 26px 0 0;
-  font-size: clamp(16px, 2.3vw, 23px);
-  font-weight: 400;
-  line-height: 1.5;
-  color: var(--fg-2);
-  max-width: 30ch;
-}
-.intro-tagline em {
-  font-style: normal;
-  color: var(--up-2);
-}
-
-/* word-by-word reveal: blur → sharp */
-.iw {
+.intro-head .hw {
   display: inline-block;
   opacity: 0;
-  animation: wordIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: headIn 0.86s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, filter, opacity;
 }
-@keyframes wordIn {
-  from { opacity: 0; transform: translateY(14px); filter: blur(12px); }
-  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+/* RGB split → converge */
+@keyframes headIn {
+  0% {
+    opacity: 0;
+    transform: translateY(0.16em) scale(1.04);
+    filter: blur(14px);
+    text-shadow: 9px 0 rgba(255, 0, 90, 0.9), -9px 0 rgba(0, 200, 255, 0.9);
+  }
+  45% {
+    opacity: 1;
+    filter: blur(2px);
+    text-shadow: 4px 0 rgba(255, 0, 90, 0.75), -4px 0 rgba(0, 200, 255, 0.75);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+    text-shadow: 0 0 46px rgba(var(--amber), 0.22);
+  }
 }
+
+.intro-sub {
+  margin: 26px 0 0;
+  font-family: var(--font-mono);
+  font-size: clamp(10px, 1.1vw, 13px);
+  letter-spacing: 0.42em;
+  color: var(--fg-dim);
+  opacity: 0;
+  animation: introFadeUp 0.7s ease 2.15s forwards;
+}
+
 @keyframes introFadeUp {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -293,16 +377,16 @@
 
 /* ---------- CTA ---------- */
 .intro-cta-wrap {
-  margin-top: 34px;
+  margin-top: 36px;
   display: flex;
   align-items: center;
   gap: 18px;
   flex-wrap: wrap;
   opacity: 0;
-  animation: ctaIn 0.75s cubic-bezier(0.25, 0.46, 0.45, 0.94) 1.85s forwards;
+  animation: ctaIn 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) 2.45s forwards;
 }
 @keyframes ctaIn {
-  from { opacity: 0; transform: translateY(46px) scale(0.72); }
+  from { opacity: 0; transform: translateY(40px) scale(0.78); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
@@ -314,8 +398,8 @@
   padding: 7px;
   border: none;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: 0 0 0 1px var(--border-hi), 0 18px 60px -20px rgba(16, 185, 129, 0.55);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 0 1px rgba(var(--amber), 0.35), 0 20px 64px -22px rgba(var(--amber), 0.75);
   cursor: pointer;
   overflow: hidden;
   font-family: inherit;
@@ -327,9 +411,9 @@
   inset-inline-start: 7px;
   width: calc(100% - 7px - 7px - 48px - 12px);
   border-radius: 9999px;
-  background: #f5f5f5;
+  background: linear-gradient(100deg, #fff7ea, #f7e3c2);
   z-index: 0;
-  transition: width 0.42s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: width 0.44s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 .intro-cta-text {
   position: relative;
@@ -338,7 +422,7 @@
   font-size: 16px;
   font-weight: 700;
   letter-spacing: -0.01em;
-  color: #05070c;
+  color: #0a0805;
   white-space: nowrap;
 }
 .intro-cta-circle {
@@ -350,9 +434,9 @@
   height: 48px;
   flex-shrink: 0;
   border-radius: 50%;
-  background: linear-gradient(150deg, var(--up-2), var(--up));
-  box-shadow: 0 0 24px rgba(16, 185, 129, 0.5);
-  transition: transform 0.42s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  background: linear-gradient(150deg, rgb(var(--amber-hot)), rgb(var(--amber)));
+  box-shadow: 0 0 26px rgba(var(--amber), 0.6);
+  transition: transform 0.44s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 @media (min-width: 768px) {
   .intro-cta-text { font-size: 18px; padding: 15px 38px; }
@@ -363,7 +447,7 @@
 .intro-cta:focus-visible .intro-cta-bg { width: calc(100% - 14px); }
 .intro-cta:hover .intro-cta-circle,
 .intro-cta:focus-visible .intro-cta-circle { transform: translateX(7px); }
-.intro-cta:focus-visible { outline: 2px solid var(--up-2); outline-offset: 4px; }
+.intro-cta:focus-visible { outline: 2px solid rgb(var(--amber-hot)); outline-offset: 4px; }
 .intro-cta:active { transform: scale(0.985); }
 
 .intro-hint {
@@ -401,14 +485,14 @@
   letter-spacing: 0.14em;
   cursor: pointer;
   opacity: 0;
-  animation: introFadeUp 0.5s ease 0.9s forwards;
+  animation: introFadeUp 0.5s ease 1.5s forwards;
   transition: color 0.25s ease, border-color 0.25s ease, background 0.25s ease;
 }
 @media (min-width: 768px) {
   .intro-skip { top: 26px; inset-inline-end: 30px; }
 }
-.intro-skip:hover { color: var(--fg); border-color: var(--border-hi); background: rgba(255, 255, 255, 0.07); }
-.intro-skip:focus-visible { outline: 2px solid var(--up-2); outline-offset: 3px; }
+.intro-skip:hover { color: var(--fg); border-color: rgba(var(--amber), 0.5); background: rgba(255, 255, 255, 0.07); }
+.intro-skip:focus-visible { outline: 2px solid rgb(var(--amber-hot)); outline-offset: 3px; }
 
 /* ---------- ticker tape ---------- */
 .intro-ticker {
@@ -416,10 +500,10 @@
   z-index: 35;
   margin: 0 -22px;
   border-top: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(5, 7, 12, 0.2), rgba(5, 7, 12, 0.85));
+  background: linear-gradient(180deg, rgba(5, 7, 12, 0.2), rgba(5, 7, 12, 0.88));
   overflow: hidden;
   opacity: 0;
-  animation: introFadeUp 0.6s ease 1.15s forwards;
+  animation: introFadeUp 0.7s ease 1.9s forwards;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
 }
@@ -429,7 +513,6 @@
 .intro-ticker-track {
   display: flex;
   width: max-content;
-  gap: 0;
   animation: tickerRun 42s linear infinite;
   direction: ltr;
 }
@@ -453,7 +536,7 @@
 .intro-tick .up { color: var(--up-2); }
 .intro-tick .down { color: var(--down-2); }
 
-/* ---------- boot line ---------- */
+/* ---------- boot line (behind the doors, visible only at t0) ---------- */
 .intro-boot {
   position: absolute;
   z-index: 50;
@@ -461,46 +544,104 @@
   inset-inline-start: 50%;
   transform: translate(50%, -50%);
   font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.3em;
-  color: rgba(16, 185, 129, 0.85);
+  font-size: 10px;
+  letter-spacing: 0.34em;
+  color: rgba(var(--amber-hot), 0.9);
+  text-shadow: 0 0 18px rgba(var(--amber), 0.7);
   white-space: nowrap;
-  animation: bootOut 0.25s ease 0.55s forwards;
+  animation: bootOut 0.22s ease 0.44s forwards;
 }
 .intro-boot::after {
   content: "";
   display: inline-block;
-  width: 7px;
-  height: 12px;
-  margin-inline-start: 4px;
-  background: var(--up);
+  width: 6px;
+  height: 11px;
+  margin-inline-start: 5px;
+  background: rgb(var(--amber-hot));
   vertical-align: -1px;
-  animation: caret 0.35s steps(1) infinite;
+  animation: caret 0.32s steps(1) infinite;
 }
 @keyframes caret { 50% { opacity: 0; } }
 @keyframes bootOut { to { opacity: 0; visibility: hidden; } }
 
-/* ---------- reduced motion ---------- */
+/* ---------- custom reticle cursor ---------- */
+.intro-cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 70;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.intro-cursor .c-box,
+.intro-cursor .c-h,
+.intro-cursor .c-v {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  transition: width 0.16s ease, height 0.16s ease;
+}
+.intro-cursor .c-box {
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(var(--amber-hot), 0.85);
+  box-shadow: 0 0 12px rgba(var(--amber), 0.45), inset 0 0 8px rgba(var(--amber), 0.15);
+  background:
+    linear-gradient(rgba(var(--amber-hot), 0.9) 0 0) 0 0 / 6px 1px no-repeat,
+    linear-gradient(rgba(var(--amber-hot), 0.9) 0 0) 100% 0 / 6px 1px no-repeat,
+    linear-gradient(rgba(var(--amber-hot), 0.9) 0 0) 0 100% / 6px 1px no-repeat,
+    linear-gradient(rgba(var(--amber-hot), 0.9) 0 0) 100% 100% / 6px 1px no-repeat;
+}
+.intro-cursor .c-h {
+  width: 44px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.55) 0 26%, transparent 26% 74%, rgba(255, 255, 255, 0.55) 74% 100%);
+}
+.intro-cursor .c-v {
+  width: 1px;
+  height: 44px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0 26%, transparent 26% 74%, rgba(255, 255, 255, 0.55) 74% 100%);
+}
+.intro-cursor.is-down .c-box { width: 20px; height: 20px; }
+
+/* ---------- mobile / lite ---------- */
+.intro-root.is-lite .intro-door {
+  animation-duration: 0.72s;
+  animation-delay: 0.24s;
+}
+.intro-root.is-lite .intro-aberration { display: none; }
+.intro-root.is-lite .intro-head { font-size: clamp(42px, 13vw, 74px); }
+.intro-root.is-lite .intro-head .hw { animation-duration: 0.6s; }
+.intro-root.is-lite .intro-sub { letter-spacing: 0.24em; }
+.intro-root.is-lite .intro-block { padding-bottom: 6vh; }
+
+/* ---------- reduced motion: one elegant static frame ---------- */
 @media (prefers-reduced-motion: reduce) {
   .intro-canvas,
+  .intro-bloom,
   .intro-hud,
   .intro-eyebrow,
   .intro-ticker,
   .intro-skip,
+  .intro-sub,
   .intro-cta-wrap,
-  .iw {
+  .intro-head .hw {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
     filter: none !important;
+    text-shadow: none !important;
   }
-  .intro-panel,
-  .intro-scan,
+  .intro-doors,
+  .intro-seam,
+  .intro-flash,
   .intro-boot,
-  .intro-seam { display: none !important; }
+  .intro-cursor { display: none !important; }
   .intro-ticker-track { animation: none !important; }
   .intro-cta-bg,
   .intro-cta-circle { transition: none !important; }
-  .is-closing { animation: introFadeOut 0.18s linear forwards !important; }
+  .is-closing { animation: introFadeOut 0.2s linear forwards !important; }
   .is-closing .intro-content { animation: none !important; }
 }

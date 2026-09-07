@@ -1,30 +1,43 @@
 "use client";
 import { useEffect, useRef, type RefObject } from "react";
+import { getScene, type SceneBox } from "./intro-patterns";
 
 /**
- * Procedural candlestick field for the intro overlay.
- * ─ single rAF, no React state inside the loop, full cleanup on unmount/stop.
- * ─ candles build left→right, then the series goes "live" (new candle every ~700ms).
- * ─ also eases the spotlight CSS vars on the veil element (so we keep ONE loop).
+ * INTRO — candle field + live pattern detection boxes.
+ *
+ * ─ single rAF, zero React state inside the loop, full cleanup on stop/unmount.
+ * ─ the series is NOT random noise: it's 3 synthetic-but-real setups
+ *   (cup & handle → ATH breakout → unfilled gap) fed through the actual
+ *   `detect()` functions in `@/lib/setups`. The boxes show what the scanner
+ *   really returned: `{boxLabel} · {confidence}`.
+ * ─ candles build left→right; a scanning reticle rides the build head and
+ *   "lights up" each box as it crosses it.
+ * ─ also eases the spotlight CSS vars on the veil element (one loop for all).
  */
-
-type Candle = { o: number; h: number; l: number; c: number; v: number };
 
 const UP = "16,185,129";
 const DOWN = "239,68,68";
+const AMBER = "245,158,11";
 
 interface Props {
-  /** while false the loop is stopped (exit / reduced-motion) */
   running: boolean;
-  /** mobile / coarse pointer → cheaper drawing, no spotlight */
+  /** cheap drawing path (mobile OR reduced-motion) */
   lite: boolean;
-  /** prefers-reduced-motion → draw a single static frame, then stop */
+  /** real small screen — picks the single-setup scene */
+  compact?: boolean;
   still?: boolean;
-  /** the dark veil element whose --mx/--my we ease toward the pointer */
   veilRef: RefObject<HTMLDivElement | null>;
 }
 
-export default function CandleField({ running, lite, still = false, veilRef }: Props) {
+const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
+
+export default function CandleField({
+  running,
+  lite,
+  compact = false,
+  still = false,
+  veilRef,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const runningRef = useRef(running);
 
@@ -34,29 +47,25 @@ export default function CandleField({ running, lite, still = false, veilRef }: P
     const ctx = canvas.getContext("2d", { alpha: true });
     if (!ctx) return;
 
-    const STEP = lite ? 9 : 14; // candle pitch
-    const BODY = lite ? 5 : 8;
-    const REVEAL_MS = lite ? 22 : 26; // per candle
-    const LIVE_MS = 720; // new candle cadence once revealed
-    const AXIS_W = lite ? 44 : 62;
-    const PAD_TOP = lite ? 90 : 120;
-    const PAD_BOT = lite ? 120 : 150;
+    const scene = getScene(compact);
+    const bars = scene.bars;
+    const boxes = scene.boxes;
+
+    const START_MS = still ? 0 : 620; // let the doors part first
+    const REVEAL_MS = lite ? 16 : 19; // per candle
+    const BOX_MS = 460;
+    const AXIS_W = lite ? 44 : 64;
+    const PAD_TOP = lite ? 96 : 132;
+    const PAD_BOT = lite ? 132 : 168;
 
     let raf = 0;
     let dpr = 1;
     let w = 0;
     let h = 0;
-    let cols = 0;
-    let series: Candle[] = [];
-    let ema: number[] = [];
-    let lo = 0;
-    let hi = 1;
-    let loS = 0;
-    let hiS = 1;
-    let seeded = false;
+    let step = 12;
+    let body = 7;
+
     const t0 = performance.now();
-    let lastTick = t0;
-    let prevNow = t0;
 
     // spotlight easing state
     let mx = -9999;
@@ -64,39 +73,28 @@ export default function CandleField({ running, lite, still = false, veilRef }: P
     let sx = -9999;
     let sy = -9999;
 
-    const rand = () => Math.random() - 0.5;
-
-    const makeSeries = (n: number) => {
-      const out: Candle[] = [];
-      let price = 180 + Math.random() * 90;
-      let drift = 0.14;
-      for (let i = 0; i < n; i++) {
-        if (i % 26 === 0) drift = 0.05 + Math.random() * 0.3;
-        const o = price;
-        const move = rand() * price * 0.018 + drift * price * 0.0016;
-        const c = Math.max(4, o + move);
-        const wick = price * 0.006 * (0.4 + Math.random());
-        out.push({
-          o,
-          c,
-          h: Math.max(o, c) + wick * Math.random(),
-          l: Math.min(o, c) - wick * Math.random(),
-          v: 0.25 + Math.random() * 0.75 + (Math.abs(move) / (price * 0.018)) * 0.4,
-        });
-        price = c;
-      }
-      return out;
-    };
-
-    const calcEma = () => {
-      const k = 2 / (20 + 1);
-      ema = [];
-      let prev = series[0]?.c ?? 0;
-      for (let i = 0; i < series.length; i++) {
-        prev = series[i].c * k + prev * (1 - k);
+    // EMA(20) over the scene closes — computed once
+    const ema: number[] = [];
+    {
+      const k = 2 / 21;
+      let prev = bars[0]?.c ?? 0;
+      for (const b of bars) {
+        prev = b.c * k + prev * (1 - k);
         ema.push(prev);
       }
-    };
+    }
+
+    // global price range — fixed, so the chart never jitters
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (const b of bars) {
+      if (b.l < lo) lo = b.l;
+      if (b.h > hi) hi = b.h;
+    }
+    const pad = (hi - lo) * 0.08;
+    lo -= pad;
+    hi += pad;
+    const maxVol = Math.max(...bars.map((b) => b.v), 1);
 
     const resize = () => {
       dpr = Math.min(window.devicePixelRatio || 1, lite ? 1.5 : 2);
@@ -107,21 +105,9 @@ export default function CandleField({ running, lite, still = false, veilRef }: P
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      const usable = Math.max(120, w - AXIS_W - 20);
-      const next = Math.max(12, Math.floor(usable / STEP));
-      if (!seeded) {
-        cols = next;
-        series = makeSeries(cols);
-        calcEma();
-        seeded = true;
-      } else if (next > cols) {
-        series = makeSeries(next);
-        calcEma();
-        cols = next;
-      } else {
-        cols = next;
-      }
+      const usable = Math.max(140, w - AXIS_W - 26);
+      step = usable / bars.length;
+      body = Math.max(2, Math.min(lite ? 6 : 10, step * 0.62));
     };
 
     const onMove = (e: PointerEvent) => {
@@ -133,192 +119,305 @@ export default function CandleField({ running, lite, still = false, veilRef }: P
       }
     };
 
-    const drawGrid = (yOf: (p: number) => number, skipY: number) => {
+    const chip = (
+      text: string,
+      x: number,
+      y: number,
+      split: number,
+      hot: boolean,
+      alpha: number,
+    ) => {
+      ctx.font = "600 10px ui-monospace, 'SF Mono', Menlo, monospace";
+      const tw = ctx.measureText(text).width;
+      const pw = tw + 16;
+      const ph = 18;
+      // keep the chip inside the frame (narrow screens push boxes to the edge)
+      x = Math.min(Math.max(x, AXIS_W + 4), w - pw - 6);
+      y = Math.max(y, 8);
       ctx.save();
-      ctx.font = "500 10px ui-monospace, 'SF Mono', Menlo, monospace";
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = "rgba(6,8,13,0.9)";
+      ctx.beginPath();
+      ctx.roundRect(x, y, pw, ph, 2);
+      ctx.fill();
+      ctx.strokeStyle = `rgba(${AMBER},${hot ? 0.85 : 0.45})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
       ctx.textBaseline = "middle";
       ctx.textAlign = "left";
-      const lines = lite ? 4 : 6;
-      for (let i = 0; i <= lines; i++) {
-        const p = loS + ((hiS - loS) * i) / lines;
-        const y = Math.round(yOf(p)) + 0.5;
-        ctx.beginPath();
-        ctx.moveTo(AXIS_W, y);
-        ctx.lineTo(w, y);
-        ctx.strokeStyle = "rgba(255,255,255,0.038)";
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        if (Math.abs(y - skipY) > 15) {
-          ctx.fillStyle = "rgba(255,255,255,0.22)";
-          ctx.fillText(p.toFixed(2), 10, y);
-        }
+      const tx = x + 8;
+      const ty = y + ph / 2 + 0.5;
+      if (split > 0.02) {
+        // chromatic split while the label snaps in
+        ctx.globalCompositeOperation = "lighter";
+        ctx.fillStyle = "rgba(255,60,60,0.85)";
+        ctx.fillText(text, tx - split, ty);
+        ctx.fillStyle = "rgba(60,220,255,0.85)";
+        ctx.fillText(text, tx + split, ty);
+        ctx.globalCompositeOperation = "source-over";
       }
-      // axis rule
-      ctx.beginPath();
-      ctx.moveTo(AXIS_W - 0.5, 0);
-      ctx.lineTo(AXIS_W - 0.5, h);
-      ctx.strokeStyle = "rgba(255,255,255,0.06)";
-      ctx.stroke();
+      ctx.fillStyle = hot ? "#ffe6b8" : "rgba(245,225,190,0.82)";
+      ctx.fillText(text, tx, ty);
       ctx.restore();
+      return pw;
+    };
+
+    const drawBox = (
+      b: SceneBox,
+      p: number,
+      hot: boolean,
+      xOf: (i: number) => number,
+      yOf: (v: number) => number,
+    ) => {
+      const e = easeOut(p);
+      const x0 = xOf(b.from) - step * 0.6;
+      const x1 = xOf(b.to) + step * 0.6;
+      const yT = yOf(b.top);
+      const yB = yOf(b.bottom);
+      const cx = (x0 + x1) / 2;
+      const cy = (yT + yB) / 2;
+      const s = 1 + (1 - e) * 0.07;
+      const a = e;
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(s, s);
+      ctx.translate(-cx, -cy);
+      ctx.globalAlpha = a;
+
+      // faint wash so the region reads as "selected"
+      ctx.fillStyle = `rgba(${AMBER},${hot ? 0.055 : 0.028})`;
+      ctx.fillRect(x0, yT, x1 - x0, yB - yT);
+
+      // dashed frame
+      ctx.setLineDash([5, 4]);
+      ctx.lineDashOffset = -performance.now() / 90;
+      ctx.strokeStyle = `rgba(${AMBER},${hot ? 0.8 : 0.42})`;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(Math.round(x0) + 0.5, Math.round(yT) + 0.5, x1 - x0, yB - yT);
+      ctx.setLineDash([]);
+
+      // corner ticks
+      const t = 9;
+      ctx.strokeStyle = `rgba(${AMBER},${hot ? 1 : 0.7})`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (const [cxp, cyp, dx, dy] of [
+        [x0, yT, 1, 1],
+        [x1, yT, -1, 1],
+        [x0, yB, 1, -1],
+        [x1, yB, -1, -1],
+      ] as const) {
+        ctx.moveTo(cxp + dx * t, cyp);
+        ctx.lineTo(cxp, cyp);
+        ctx.lineTo(cxp, cyp + dy * t);
+      }
+      ctx.stroke();
+
+      // key level inside the box
+      if (b.level != null && b.level < b.top && b.level > b.bottom) {
+        const ly = Math.round(yOf(b.level)) + 0.5;
+        ctx.setLineDash([2, 4]);
+        ctx.strokeStyle = `rgba(${AMBER},0.5)`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x0, ly);
+        ctx.lineTo(x1, ly);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      ctx.restore();
+
+      const label = `${b.label} · ${b.confidence.toFixed(2)}`;
+      chip(label, x0, yT - 24, (1 - e) * 3.5, hot, a);
     };
 
     const draw = (now: number) => {
       if (!runningRef.current) return;
       const elapsed = now - t0;
 
-      // ---- reveal / live progression ----
-      const revealed = still ? cols : Math.min(cols, Math.floor(elapsed / REVEAL_MS) + 1);
-      const isLive = !still && revealed >= cols;
-      if (isLive) {
-        const last = series[series.length - 1];
-        // intrabar tick on the newest candle
-        // random walk with a light pull back to the open — keeps the bar sane
-        const tick = rand() * last.c * 0.0035 - (last.c - last.o) * 0.02;
-        last.c = Math.max(1, last.c + tick);
-        last.h = Math.max(last.h, last.c);
-        last.l = Math.min(last.l, last.c);
-        if (now - lastTick > LIVE_MS) {
-          lastTick = now;
-          const o = last.c;
-          const c = Math.max(1, o + rand() * o * 0.016 + o * 0.0004);
-          series.push({ o, c, h: Math.max(o, c), l: Math.min(o, c), v: 0.3 + Math.random() * 0.8 });
-          series.shift();
-          calcEma();
-        }
-      }
+      const revealed = still
+        ? bars.length
+        : Math.max(0, Math.min(bars.length, Math.floor((elapsed - START_MS) / REVEAL_MS)));
 
-      const view = series.slice(0, revealed);
-      if (!view.length) {
+      if (revealed < 1) {
+        ctx.clearRect(0, 0, w, h);
         raf = requestAnimationFrame(draw);
         return;
       }
 
-      // ---- range (eased) ----
-      lo = Infinity;
-      hi = -Infinity;
-      for (const c of view) {
-        if (c.l < lo) lo = c.l;
-        if (c.h > hi) hi = c.h;
-      }
-      const pad = (hi - lo) * 0.12 || 1;
-      lo -= pad;
-      hi += pad;
-      // frame-rate independent easing; hard snap if the series left the frame
-      const dt = Math.min(120, Math.max(1, now - prevNow));
-      prevNow = now;
-      const k = 1 - Math.pow(1 - 0.09, dt / 16.7);
-      const offscreen = hi < loS || lo > hiS || hi - lo > (hiS - loS) * 2.5;
-      if (still || offscreen || (loS === 0 && hiS === 1)) {
-        loS = lo;
-        hiS = hi;
-      } else {
-        loS += (lo - loS) * k;
-        hiS += (hi - hiS) * k;
-      }
-
       const top = PAD_TOP;
       const bot = h - PAD_BOT;
-      const yOf = (p: number) => bot - ((p - loS) / (hiS - loS || 1)) * (bot - top);
-      const xOf = (i: number) => AXIS_W + 12 + i * STEP + STEP / 2;
+      const yOf = (p: number) => bot - ((p - lo) / (hi - lo || 1)) * (bot - top);
+      const xOf = (i: number) => AXIS_W + 14 + i * step + step / 2;
 
-      const lastClose = view[view.length - 1].c;
-      const chipY = Math.min(Math.max(yOf(lastClose), 72), h - 96);
       ctx.clearRect(0, 0, w, h);
-      drawGrid(yOf, chipY);
+
+      // ---- grid + price scale ----
+      ctx.save();
+      ctx.font = "500 10px ui-monospace, Menlo, monospace";
+      ctx.textBaseline = "middle";
+      ctx.textAlign = "left";
+      const lines = lite ? 4 : 7;
+      for (let i = 0; i <= lines; i++) {
+        const p = lo + ((hi - lo) * i) / lines;
+        const y = Math.round(yOf(p)) + 0.5;
+        ctx.beginPath();
+        ctx.moveTo(AXIS_W, y);
+        ctx.lineTo(w, y);
+        ctx.strokeStyle = "rgba(255,255,255,0.032)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = "rgba(255,255,255,0.2)";
+        ctx.fillText(p.toFixed(2), 10, y);
+      }
+      ctx.beginPath();
+      ctx.moveTo(AXIS_W - 0.5, 0);
+      ctx.lineTo(AXIS_W - 0.5, h);
+      ctx.strokeStyle = "rgba(255,255,255,0.06)";
+      ctx.stroke();
+      ctx.restore();
 
       // ---- volume ----
-      if (!lite) {
-        const vTop = bot + 16;
-        const vH = 54;
-        for (let i = 0; i < view.length; i++) {
-          const c = view[i];
-          const up = c.c >= c.o;
-          const bh = Math.max(1, Math.min(1, c.v) * vH);
-          ctx.fillStyle = `rgba(${up ? UP : DOWN},0.16)`;
-          ctx.fillRect(xOf(i) - BODY / 2, vTop + (vH - bh), BODY, bh);
-        }
+      const vTop = bot + 18;
+      const vH = lite ? 34 : 56;
+      for (let i = 0; i < revealed; i++) {
+        const c = bars[i];
+        const up = c.c >= c.o;
+        const bh = Math.max(1, (c.v / maxVol) * vH);
+        ctx.fillStyle = `rgba(${up ? UP : DOWN},0.15)`;
+        ctx.fillRect(xOf(i) - body / 2, vTop + (vH - bh), body, bh);
       }
 
-      // ---- EMA ----
+      // ---- EMA(20) ----
       ctx.beginPath();
-      for (let i = 0; i < view.length; i++) {
-        const y = yOf(ema[i] ?? view[i].c);
+      for (let i = 0; i < revealed; i++) {
+        const y = yOf(ema[i]);
         if (i === 0) ctx.moveTo(xOf(i), y);
         else ctx.lineTo(xOf(i), y);
       }
-      ctx.strokeStyle = "rgba(245,158,11,0.35)";
+      ctx.strokeStyle = `rgba(${AMBER},0.32)`;
       ctx.lineWidth = 1.25;
       ctx.stroke();
 
       // ---- candles ----
-      const growN = 6; // last N candles fade/grow in
-      for (let i = 0; i < view.length; i++) {
-        const c = view[i];
+      const growN = 8;
+      for (let i = 0; i < revealed; i++) {
+        const c = bars[i];
         const up = c.c >= c.o;
         const rgb = up ? UP : DOWN;
-        const fresh = view.length - i;
-        const a = fresh <= growN ? 0.35 + (1 - fresh / growN) * 0.65 : 1;
+        const fresh = revealed - i;
+        const a = fresh <= growN ? 0.3 + (1 - fresh / growN) * 0.7 : 1;
         const x = xOf(i);
-        const yH = yOf(c.h);
-        const yL = yOf(c.l);
-        const yO = yOf(c.o);
-        const yC = yOf(c.c);
 
-        ctx.strokeStyle = `rgba(${rgb},${0.55 * a})`;
+        ctx.strokeStyle = `rgba(${rgb},${0.5 * a})`;
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(Math.round(x) + 0.5, yH);
-        ctx.lineTo(Math.round(x) + 0.5, yL);
+        ctx.moveTo(Math.round(x) + 0.5, yOf(c.h));
+        ctx.lineTo(Math.round(x) + 0.5, yOf(c.l));
         ctx.stroke();
 
+        const yO = yOf(c.o);
+        const yC = yOf(c.c);
         const bTop = Math.min(yO, yC);
         const bH = Math.max(1.5, Math.abs(yC - yO));
-        ctx.fillStyle = `rgba(${rgb},${(up ? 0.62 : 0.5) * a})`;
-        ctx.fillRect(x - BODY / 2, bTop, BODY, bH);
-        ctx.strokeStyle = `rgba(${rgb},${0.9 * a})`;
-        ctx.strokeRect(Math.round(x - BODY / 2) + 0.5, Math.round(bTop) + 0.5, BODY, bH);
+        ctx.fillStyle = `rgba(${rgb},${(up ? 0.6 : 0.48) * a})`;
+        ctx.fillRect(x - body / 2, bTop, body, bH);
+        ctx.strokeStyle = `rgba(${rgb},${0.88 * a})`;
+        ctx.strokeRect(Math.round(x - body / 2) + 0.5, Math.round(bTop) + 0.5, body, bH);
       }
 
       // ---- last price line + chip ----
-      const last = view[view.length - 1];
+      const last = bars[revealed - 1];
       const lastUp = last.c >= last.o;
       const rgb = lastUp ? UP : DOWN;
-      const y = Math.round(yOf(last.c)) + 0.5;
+      const ly = Math.round(yOf(last.c)) + 0.5;
       ctx.save();
       ctx.setLineDash([2, 5]);
       ctx.beginPath();
-      ctx.moveTo(AXIS_W, y);
-      ctx.lineTo(w, y);
-      ctx.strokeStyle = `rgba(${rgb},0.45)`;
+      ctx.moveTo(AXIS_W, ly);
+      ctx.lineTo(w, ly);
+      ctx.strokeStyle = `rgba(${rgb},0.4)`;
       ctx.lineWidth = 1;
       ctx.stroke();
       ctx.restore();
 
-      const label = last.c.toFixed(2);
-      ctx.font = "600 11px ui-monospace, 'SF Mono', Menlo, monospace";
-      const tw = ctx.measureText(label).width + 14;
+      const priceLabel = last.c.toFixed(2);
+      ctx.font = "600 11px ui-monospace, Menlo, monospace";
+      const tw = ctx.measureText(priceLabel).width + 14;
       const th = 18;
-      const tx = 6;
-      const ty = Math.min(Math.max(y - th / 2, 72), h - th - 96);
+      const ty = Math.min(Math.max(ly - th / 2, 76), h - th - 96);
       ctx.fillStyle = `rgba(${rgb},0.9)`;
       ctx.beginPath();
-      ctx.roundRect(tx, ty, tw, th, 3);
+      ctx.roundRect(6, ty, tw, th, 3);
       ctx.fill();
       ctx.fillStyle = "#05070c";
       ctx.textBaseline = "middle";
       ctx.textAlign = "center";
-      ctx.fillText(label, tx + tw / 2, ty + th / 2 + 0.5);
+      ctx.fillText(priceLabel, 6 + tw / 2, ty + th / 2 + 0.5);
 
-      // pulsing marker on the newest close
-      const px = xOf(view.length - 1);
-      const pulse = 3 + (Math.sin(now / 260) + 1) * 2.4;
-      ctx.beginPath();
-      ctx.arc(px, yOf(last.c), pulse, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(${rgb},0.5)`;
-      ctx.lineWidth = 1;
-      ctx.stroke();
+      // ---- reticle: rides the build head, then parks on the last setup ----
+      const headX = xOf(revealed - 1);
+      const headY = yOf(last.c);
+      const scanning = !still && revealed < bars.length;
+      if (!lite) {
+        const rs = 26;
+        const ra = scanning ? 1 : 0.35 + Math.sin(now / 420) * 0.12;
+        ctx.save();
+        ctx.globalAlpha = ra;
+        ctx.strokeStyle = "rgba(255,255,255,0.5)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(Math.round(headX - rs) + 0.5, Math.round(headY - rs) + 0.5, rs * 2, rs * 2);
+        ctx.strokeStyle = `rgba(${AMBER},0.95)`;
+        ctx.lineWidth = 1.5;
+        const tk = 8;
+        ctx.beginPath();
+        for (const [dx, dy] of [
+          [-1, -1],
+          [1, -1],
+          [-1, 1],
+          [1, 1],
+        ] as const) {
+          const cx = headX + dx * rs;
+          const cy = headY + dy * rs;
+          ctx.moveTo(cx - dx * tk, cy);
+          ctx.lineTo(cx, cy);
+          ctx.lineTo(cx, cy - dy * tk);
+        }
+        ctx.stroke();
+        // crosshair with a centre gap
+        ctx.strokeStyle = "rgba(255,255,255,0.35)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(headX - rs, headY);
+        ctx.lineTo(headX - 6, headY);
+        ctx.moveTo(headX + 6, headY);
+        ctx.lineTo(headX + rs, headY);
+        ctx.moveTo(headX, headY - rs);
+        ctx.lineTo(headX, headY - 6);
+        ctx.moveTo(headX, headY + 6);
+        ctx.lineTo(headX, headY + rs);
+        ctx.stroke();
+        ctx.restore();
+      } else {
+        const pulse = 3 + (Math.sin(now / 260) + 1) * 2;
+        ctx.beginPath();
+        ctx.arc(headX, headY, pulse, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(${rgb},0.5)`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
 
-      // ---- static (reduced motion): one frame and out ----
+      // ---- detection boxes ----
+      for (const b of boxes) {
+        if (revealed <= b.to) continue;
+        const since = still ? BOX_MS : elapsed - (START_MS + (b.to + 1) * REVEAL_MS);
+        const p = Math.min(1, Math.max(0, since / BOX_MS));
+        const hot = headX >= xOf(b.from) - 30 && headX <= xOf(b.to) + 30;
+        drawBox(b, p, hot || (!scanning && b === boxes[boxes.length - 1]), xOf, yOf);
+      }
+
       if (still) return;
 
       // ---- spotlight easing on the veil ----
@@ -344,9 +443,8 @@ export default function CandleField({ running, lite, still = false, veilRef }: P
       window.removeEventListener("resize", resize);
       window.removeEventListener("pointermove", onMove);
     };
-  }, [lite, still, veilRef]);
+  }, [lite, compact, still, veilRef]);
 
-  // stop instantly when the overlay starts closing
   useEffect(() => {
     runningRef.current = running;
   }, [running]);

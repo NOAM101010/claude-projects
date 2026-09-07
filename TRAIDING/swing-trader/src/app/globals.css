@@ -51,6 +51,14 @@
   --color-down: var(--down);
   --font-sans: var(--font-heebo), var(--font-inter), "Helvetica Neue", Helvetica, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, "SF Mono", Menlo, monospace;
+  --font-serif: var(--font-frank), "Frank Ruhl Libre", Georgia, "Times New Roman", serif;
+}
+
+/* display serif — headlines only, never body copy */
+.display-serif {
+  font-family: var(--font-serif);
+  font-weight: 900;
+  letter-spacing: -0.01em;
 }
 
 * {
