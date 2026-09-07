@@ -8,18 +8,34 @@ import { MessageCircle, Bell, Radar, CheckCircle2, XCircle, Wallet } from "lucid
 
 type Settings = {
   discord_webhook_url: string | null;
+  discord_webhook_scan: string | null;
+  discord_webhook_analysis: string | null;
+  discord_webhook_summary: string | null;
   account_size: string | null;
   cash_balance: string | null;
 };
 
+type DiscordChannel = {
+  key: "discord_webhook_scan" | "discord_webhook_analysis" | "discord_webhook_summary";
+  kind: "scan" | "analysis" | "summary";
+  label: string;
+};
+
+const DISCORD_CHANNELS: DiscordChannel[] = [
+  { key: "discord_webhook_scan", kind: "scan", label: "סריקות (אוטומטי + ידני)" },
+  { key: "discord_webhook_analysis", kind: "analysis", label: "ניתוחי מניות" },
+  { key: "discord_webhook_summary", kind: "summary", label: "דוחות יום / שבוע" },
+];
+
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [discordUrl, setDiscordUrl] = useState("");
+  const [discordChannels, setDiscordChannels] = useState<Record<string, string>>({});
   const [accountSize, setAccountSize] = useState("");
   const [cashBalance, setCashBalance] = useState("");
   const [savingAccount, setSavingAccount] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [testingDiscord, setTestingDiscord] = useState(false);
+  const [testing, setTesting] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState<string | null>(null);
 
   async function load() {
@@ -28,6 +44,11 @@ export default function SettingsPage() {
     if (json.ok) {
       setSettings(json.settings);
       setDiscordUrl(json.settings.discord_webhook_url ?? "");
+      setDiscordChannels({
+        discord_webhook_scan: json.settings.discord_webhook_scan ?? "",
+        discord_webhook_analysis: json.settings.discord_webhook_analysis ?? "",
+        discord_webhook_summary: json.settings.discord_webhook_summary ?? "",
+      });
       setAccountSize(json.settings.account_size ?? "");
       setCashBalance(json.settings.cash_balance ?? "");
     }
@@ -44,11 +65,32 @@ export default function SettingsPage() {
     await fetch("/api/settings", {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ settings: { discord_webhook_url: discordUrl.trim() || null } }),
+      body: JSON.stringify({
+        settings: {
+          discord_webhook_url: discordUrl.trim() || null,
+          discord_webhook_scan: (discordChannels.discord_webhook_scan ?? "").trim() || null,
+          discord_webhook_analysis: (discordChannels.discord_webhook_analysis ?? "").trim() || null,
+          discord_webhook_summary: (discordChannels.discord_webhook_summary ?? "").trim() || null,
+        },
+      }),
     });
     flash("נשמר");
     await load();
     setSaving(false);
+  }
+
+  async function testDiscordChannel(ch: DiscordChannel) {
+    const direct = (discordChannels[ch.key] ?? "").trim();
+    const payload = direct ? { url: direct } : { kind: ch.kind };
+    setTesting(ch.key);
+    const res = await fetch("/api/discord/test", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json();
+    alert(json.ok ? "נשלח! בדוק את הערוץ ב־Discord" : "נכשל: " + json.error);
+    setTesting(null);
   }
 
   async function saveAccount() {
@@ -71,7 +113,7 @@ export default function SettingsPage() {
 
   async function testDiscord() {
     if (!discordUrl.trim()) return;
-    setTestingDiscord(true);
+    setTesting("legacy");
     const res = await fetch("/api/discord/test", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -79,10 +121,14 @@ export default function SettingsPage() {
     });
     const json = await res.json();
     alert(json.ok ? "נשלח! בדוק את הערוץ ב־Discord" : "נכשל: " + json.error);
-    setTestingDiscord(false);
+    setTesting(null);
   }
 
-  const hasDiscord = !!settings?.discord_webhook_url;
+  const hasDiscord =
+    !!settings?.discord_webhook_url ||
+    !!settings?.discord_webhook_scan ||
+    !!settings?.discord_webhook_analysis ||
+    !!settings?.discord_webhook_summary;
 
   return (
     <PageContainer className="space-y-10">
@@ -163,21 +209,59 @@ export default function SettingsPage() {
         </div>
 
         <div className="mt-5 mb-5 p-4 rounded-xl bg-white/[0.02] border border-[var(--border)] text-sm text-[var(--fg-dim)] leading-relaxed space-y-2">
-          <p><b className="text-[var(--fg)]">מה זה?</b> כתובת URL שאני שולח אליה התראות — סורק בוקר, ניתוחים. יופיע כהודעה בערוץ ב-Discord.</p>
-          <p><b>איך:</b> 1. פתח שרת ב-Discord 2. צור ערוץ (#trades) 3. Settings → Integrations → Webhooks → New → Copy URL 4. הדבק כאן.</p>
+          <p><b className="text-[var(--fg)]">מה זה?</b> כתובות webhook נפרדות לכל סוג התראה — סריקות, ניתוחים, דוחות. כל אחת יכולה להגיע לערוץ אחר ב-Discord.</p>
+          <p><b>איך:</b> 1. פתח שרת ב-Discord 2. צור ערוץ 3. Settings → Integrations → Webhooks → New → Copy URL 4. הדבק כאן.</p>
+          <p className="text-xs text-[var(--muted)]">השאר ריק כדי להשתמש ב-webhook הכללי.</p>
         </div>
 
-        <div className="flex gap-2 flex-wrap">
-          <Input
-            value={discordUrl}
-            onChange={(e) => setDiscordUrl(e.target.value)}
-            placeholder="https://discord.com/api/webhooks/..."
-            className="mono flex-1 min-w-[240px]"
-          />
-          <Button variant="outline" onClick={testDiscord} disabled={testingDiscord || !discordUrl.trim()}>
-            {testingDiscord ? "שולח..." : "בדוק"}
-          </Button>
-          <Button variant="accent" onClick={saveDiscord} disabled={saving}>שמור</Button>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-[10px] uppercase tracking-[0.15em] font-bold text-[var(--muted)] mb-2">
+              כללי (fallback) — משמש כשאין webhook ספציפי
+            </label>
+            <div className="flex gap-2 flex-wrap">
+              <Input
+                value={discordUrl}
+                onChange={(e) => setDiscordUrl(e.target.value)}
+                placeholder="https://discord.com/api/webhooks/..."
+                className="mono flex-1 min-w-[240px]"
+              />
+              <Button variant="outline" onClick={testDiscord} disabled={testing === "legacy" || !discordUrl.trim()}>
+                {testing === "legacy" ? "שולח..." : "בדוק"}
+              </Button>
+            </div>
+          </div>
+
+          {DISCORD_CHANNELS.map((ch) => (
+            <div key={ch.key}>
+              <label className="block text-[10px] uppercase tracking-[0.15em] font-bold text-[var(--muted)] mb-2">
+                {ch.label}
+              </label>
+              <div className="flex gap-2 flex-wrap">
+                <Input
+                  value={discordChannels[ch.key] ?? ""}
+                  onChange={(e) =>
+                    setDiscordChannels((s) => ({ ...s, [ch.key]: e.target.value }))
+                  }
+                  placeholder="ריק = webhook כללי"
+                  className="mono flex-1 min-w-[240px]"
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => testDiscordChannel(ch)}
+                  disabled={testing === ch.key}
+                >
+                  {testing === ch.key ? "שולח..." : "בדוק"}
+                </Button>
+              </div>
+            </div>
+          ))}
+
+          <div className="flex justify-end">
+            <Button variant="accent" onClick={saveDiscord} disabled={saving}>
+              {saving ? "שומר..." : "שמור"}
+            </Button>
+          </div>
         </div>
       </Card>
 

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runScanner, ScanType } from "@/lib/scanner";
 import { sendPushToAll } from "@/lib/push";
-import { sendDiscordTo, scannerResultsEmbed } from "@/lib/discord";
-import { getSetting } from "@/lib/settings";
+import { sendToChannel, scannerResultsEmbed } from "@/lib/discord";
 import { prisma } from "@/lib/prisma";
 import { ensureBuiltinProfiles, parseProfileConfig, parseUniverse } from "@/lib/scanner-profiles";
 
@@ -43,23 +42,20 @@ export async function POST(req: NextRequest) {
         url: "/scanner",
       }).catch(() => {});
 
-      const discordUrl = await getSetting("discord_webhook_url");
-      if (discordUrl) {
-        const embed = scannerResultsEmbed({
-          title,
-          matches: top.map((t) => ({
-            symbol: t.symbol,
-            price: t.price,
-            changePercent: t.changePercent,
-            volumeRatio: t.volumeRatio,
-            grade: t.grade,
-            setups: t.matchedSetups,
-          })),
-          totalScanned: result.totalScanned,
-          scanType,
-        });
-        await sendDiscordTo(discordUrl, null, [embed]).catch(() => {});
-      }
+      const embed = scannerResultsEmbed({
+        title,
+        matches: top.map((t) => ({
+          symbol: t.symbol,
+          price: t.price,
+          changePercent: t.changePercent,
+          volumeRatio: t.volumeRatio,
+          grade: t.grade,
+          setups: t.matchedSetups,
+        })),
+        totalScanned: result.totalScanned,
+        scanType,
+      });
+      await sendToChannel("scan", [embed]).catch(() => {});
     }
 
     return NextResponse.json({

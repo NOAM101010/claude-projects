@@ -2,6 +2,9 @@ import { prisma } from "./prisma";
 
 export type SettingKey =
   | "discord_webhook_url"
+  | "discord_webhook_scan"
+  | "discord_webhook_analysis"
+  | "discord_webhook_summary"
   | "morning_brief_enabled"
   | "premarket_alert_enabled"
   | "account_size"

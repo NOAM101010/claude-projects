@@ -3,6 +3,10 @@
     {
       "path": "/api/scanner/cron",
       "schedule": "0 10 * * 1-5"
+    },
+    {
+      "path": "/api/summary/run",
+      "schedule": "0 22 * * 1-5"
     }
   ]
 }

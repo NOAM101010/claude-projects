@@ -1,8 +1,60 @@
-import { getSetting } from "./settings";
+import { getSetting, type SettingKey } from "./settings";
 
 const AMBER = 0xe8b341;
 const UP = 0x4ade80;
 const DOWN = 0xf87171;
+
+export const FOOTER = { text: "Swing Terminal" };
+
+export function gradeColor(grade: string | null | undefined): number {
+  switch ((grade ?? "").toUpperCase()) {
+    case "A":
+    case "B":
+      return UP;
+    case "C":
+      return AMBER;
+    case "D":
+    case "F":
+      return DOWN;
+    default:
+      return AMBER;
+  }
+}
+
+export type DiscordChannelKind = "scan" | "analysis" | "summary";
+
+const CHANNEL_KEY: Record<DiscordChannelKind, SettingKey> = {
+  scan: "discord_webhook_scan",
+  analysis: "discord_webhook_analysis",
+  summary: "discord_webhook_summary",
+};
+
+/**
+ * Resolves the webhook URL for a channel kind:
+ * specific key → legacy discord_webhook_url fallback → null (skip silently).
+ */
+export async function resolveChannelWebhook(
+  kind: DiscordChannelKind
+): Promise<string | null> {
+  const specific = (await getSetting(CHANNEL_KEY[kind]))?.trim();
+  if (specific) return specific;
+  const legacy = (await getSetting("discord_webhook_url"))?.trim();
+  return legacy || null;
+}
+
+/**
+ * Sends embeds to the resolved webhook for a channel kind. If no webhook is
+ * configured for that kind (and no legacy fallback) it skips silently.
+ */
+export async function sendToChannel(
+  kind: DiscordChannelKind,
+  embeds: DiscordEmbed[],
+  content: string | null = null
+): Promise<{ ok: boolean; skipped?: boolean; error?: string }> {
+  const url = await resolveChannelWebhook(kind);
+  if (!url) return { ok: false, skipped: true };
+  return sendDiscordTo(url, content, embeds);
+}
 
 export type DiscordEmbed = {
   title?: string;
@@ -86,7 +138,7 @@ export function scannerResultsEmbed(opts: {
     description,
     color: AMBER,
     footer: {
-      text: `סרוקות ${totalScanned} · תואמות ${matches.length}`,
+      text: `Swing Terminal · סרוקות ${totalScanned} · תואמות ${matches.length}`,
     },
     timestamp: new Date().toISOString(),
   };
@@ -124,6 +176,56 @@ export function tradeAnalysisEmbed(opts: {
     color: gradeColors[opts.grade] ?? AMBER,
     fields,
     image: opts.imageUrl ? { url: opts.imageUrl } : undefined,
+    footer: FOOTER,
+    timestamp: new Date().toISOString(),
+  };
+}
+
+/**
+ * Formatted embed for a single-stock analysis (used by /api/analyze).
+ */
+export function stockAnalysisEmbed(opts: {
+  symbol: string;
+  name?: string | null;
+  price?: number | null;
+  changePercent?: number | null;
+  grade: string;
+  score: number;
+  verdict: string;
+  signals: { label: string; value: string; tone: string; weight?: number }[];
+  suggestedStop?: number | null;
+}): DiscordEmbed {
+  const toneIcon = (t: string) =>
+    t === "bullish" || t === "up" ? "🟢" : t === "bearish" || t === "down" ? "🔴" : "⚪";
+  const top = [...opts.signals]
+    .sort((a, b) => Math.abs(b.weight ?? 0) - Math.abs(a.weight ?? 0))
+    .slice(0, 4);
+
+  const fields: DiscordEmbed["fields"] = [
+    { name: "ציון", value: `${opts.grade} · ${opts.score}/100`, inline: true },
+  ];
+  if (opts.price != null) {
+    const chg =
+      opts.changePercent != null
+        ? ` (${opts.changePercent >= 0 ? "+" : ""}${opts.changePercent.toFixed(1)}%)`
+        : "";
+    fields.push({ name: "מחיר", value: `$${opts.price}${chg}`, inline: true });
+  }
+  if (opts.suggestedStop != null)
+    fields.push({ name: "סטופ מוצע", value: `$${opts.suggestedStop}`, inline: true });
+  if (top.length)
+    fields.push({
+      name: "אותות מובילים",
+      value: top.map((s) => `${toneIcon(s.tone)} **${s.label}** — ${s.value}`).join("\n"),
+    });
+
+  return {
+    title: `${opts.symbol}${opts.name ? ` · ${opts.name}` : ""} — ניתוח`,
+    description: opts.verdict,
+    color: gradeColor(opts.grade),
+    fields,
+    url: `https://www.tradingview.com/chart/?symbol=${opts.symbol}`,
+    footer: FOOTER,
     timestamp: new Date().toISOString(),
   };
 }
