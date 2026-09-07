@@ -4,15 +4,20 @@ import { useEffect, useState } from "react";
 import { PageContainer, Eyebrow, Display, Card, Button, Input } from "@/components/ui";
 import PushSetup from "@/components/push-setup";
 import ScannerProfilesEditor from "@/components/scanner-profiles-editor";
-import { MessageCircle, Bell, Radar, CheckCircle2, XCircle } from "lucide-react";
+import { MessageCircle, Bell, Radar, CheckCircle2, XCircle, Wallet } from "lucide-react";
 
 type Settings = {
   discord_webhook_url: string | null;
+  account_size: string | null;
+  cash_balance: string | null;
 };
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [discordUrl, setDiscordUrl] = useState("");
+  const [accountSize, setAccountSize] = useState("");
+  const [cashBalance, setCashBalance] = useState("");
+  const [savingAccount, setSavingAccount] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testingDiscord, setTestingDiscord] = useState(false);
   const [savedFlash, setSavedFlash] = useState<string | null>(null);
@@ -23,6 +28,8 @@ export default function SettingsPage() {
     if (json.ok) {
       setSettings(json.settings);
       setDiscordUrl(json.settings.discord_webhook_url ?? "");
+      setAccountSize(json.settings.account_size ?? "");
+      setCashBalance(json.settings.cash_balance ?? "");
     }
   }
   useEffect(() => { load(); }, []);
@@ -42,6 +49,24 @@ export default function SettingsPage() {
     flash("נשמר");
     await load();
     setSaving(false);
+  }
+
+  async function saveAccount() {
+    setSavingAccount(true);
+    const clean = (v: string) => {
+      const n = v.replace(/[^0-9.]/g, "");
+      return n === "" ? null : n;
+    };
+    await fetch("/api/settings", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        settings: { account_size: clean(accountSize), cash_balance: clean(cashBalance) },
+      }),
+    });
+    flash("חשבון המסחר נשמר");
+    await load();
+    setSavingAccount(false);
   }
 
   async function testDiscord() {
@@ -74,6 +99,51 @@ export default function SettingsPage() {
           <span className="text-sm">{savedFlash}</span>
         </div>
       )}
+
+      <Card className="p-6 md:p-8">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-11 h-11 rounded-xl bg-[var(--up)]/10 border border-[var(--up)]/30 flex items-center justify-center">
+            <Wallet className="w-5 h-5 text-[var(--up)]" />
+          </div>
+          <div>
+            <h2 className="text-xl font-black">חשבון המסחר</h2>
+            <div className="text-xs text-[var(--muted)] mt-0.5">
+              מזין את הכרטיס הפיננסי ואת תשואת החודש בלוח הבקרה
+            </div>
+          </div>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-[10px] uppercase tracking-[0.15em] font-bold text-[var(--muted)] mb-2">
+              גודל חשבון ($)
+            </label>
+            <Input
+              inputMode="decimal"
+              value={accountSize}
+              onChange={(e) => setAccountSize(e.target.value)}
+              placeholder="50000"
+              className="mono"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] uppercase tracking-[0.15em] font-bold text-[var(--muted)] mb-2">
+              מזומן פנוי ($)
+            </label>
+            <Input
+              inputMode="decimal"
+              value={cashBalance}
+              onChange={(e) => setCashBalance(e.target.value)}
+              placeholder="12000"
+              className="mono"
+            />
+          </div>
+        </div>
+        <div className="mt-4 flex justify-end">
+          <Button variant="accent" onClick={saveAccount} disabled={savingAccount}>
+            {savingAccount ? "שומר..." : "שמור"}
+          </Button>
+        </div>
+      </Card>
 
       <Card className="p-6 md:p-8">
         <div className="flex items-center gap-3 mb-2">

@@ -3,7 +3,9 @@ import { prisma } from "./prisma";
 export type SettingKey =
   | "discord_webhook_url"
   | "morning_brief_enabled"
-  | "premarket_alert_enabled";
+  | "premarket_alert_enabled"
+  | "account_size"
+  | "cash_balance";
 
 export async function getSetting(key: SettingKey): Promise<string | null> {
   const row = await prisma.setting.findUnique({ where: { key } });

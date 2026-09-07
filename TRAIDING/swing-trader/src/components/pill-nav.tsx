@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Radar, Calculator, Star, Settings, BookOpen, Sparkles } from "lucide-react";
+import { Home, Radar, Calculator, Star, Settings, BookOpen, Sparkles, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import MarketClock from "./market-clock";
 
 const NAV = [
   { href: "/", label: "ראשי", icon: Home },
+  { href: "/dashboard", label: "לוח בקרה", icon: LayoutDashboard },
   { href: "/scanner", label: "סורק", icon: Radar },
   { href: "/analyze", label: "ניתוח", icon: Sparkles },
   { href: "/calculator", label: "מחשבון", icon: Calculator },

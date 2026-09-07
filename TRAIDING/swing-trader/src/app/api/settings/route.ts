@@ -5,6 +5,8 @@ const KEYS: SettingKey[] = [
   "discord_webhook_url",
   "morning_brief_enabled",
   "premarket_alert_enabled",
+  "account_size",
+  "cash_balance",
 ];
 
 export async function GET() {
