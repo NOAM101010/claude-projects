@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runScanner, ScanType } from "@/lib/scanner";
 import { sendPushToAll } from "@/lib/push";
-import { sendToChannel, scannerResultsEmbed } from "@/lib/discord";
+import {
+  sendToChannel,
+  scannerResultsEmbed,
+  watchlistAlertEmbed,
+} from "@/lib/discord";
 import { prisma } from "@/lib/prisma";
 import { ensureBuiltinProfiles, parseProfileConfig, parseUniverse } from "@/lib/scanner-profiles";
+import { SETUPS } from "@/lib/setups";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -56,6 +61,25 @@ export async function POST(req: NextRequest) {
         scanType,
       });
       await sendToChannel("scan", [embed]).catch(() => {});
+    }
+
+    // התראות לרשימת המעקב — חיתוך בין תוצאות הסריקה לסימבולים במעקב
+    try {
+      const wl = await prisma.watchlist.findMany();
+      const wlSet = new Set(wl.map((w) => w.symbol.toUpperCase()));
+      for (const m of result.matches) {
+        if (!wlSet.has(m.symbol.toUpperCase())) continue;
+        await sendToChannel("watchlist", [
+          watchlistAlertEmbed(
+            m.symbol,
+            SETUPS[m.primarySetup]?.label ?? "סטאפ",
+            m.grade,
+            m.changePercent
+          ),
+        ]).catch(() => {});
+      }
+    } catch {
+      /* דלג בשקט */
     }
 
     return NextResponse.json({

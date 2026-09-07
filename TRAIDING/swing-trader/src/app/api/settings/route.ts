@@ -6,6 +6,8 @@ const KEYS: SettingKey[] = [
   "discord_webhook_scan",
   "discord_webhook_analysis",
   "discord_webhook_summary",
+  "discord_webhook_updates",
+  "discord_webhook_watchlist",
   "morning_brief_enabled",
   "premarket_alert_enabled",
   "account_size",

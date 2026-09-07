@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { syncWatchlistMessage } from "@/lib/watchlist-notify";
 
 export async function POST(req: NextRequest) {
   const { symbol, folderId, notes } = await req.json();
@@ -16,6 +17,7 @@ export async function POST(req: NextRequest) {
   const item = await prisma.watchlist.create({
     data: { symbol: s, folderId: folderId ?? null, notes: notes ?? null },
   });
+  syncWatchlistMessage();
   return NextResponse.json({ ok: true, id: item.id });
 }
 
@@ -26,5 +28,6 @@ export async function DELETE(req: NextRequest) {
   } else if (symbol) {
     await prisma.watchlist.deleteMany({ where: { symbol: String(symbol).toUpperCase() } });
   }
+  syncWatchlistMessage();
   return NextResponse.json({ ok: true });
 }

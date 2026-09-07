@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { syncWatchlistMessage } from "@/lib/watchlist-notify";
 
 export async function GET() {
   const folders = await prisma.watchlistFolder.findMany({
@@ -24,5 +25,6 @@ export async function DELETE(req: NextRequest) {
   const { id } = await req.json();
   if (!id) return NextResponse.json({ ok: false, error: "no id" }, { status: 400 });
   await prisma.watchlistFolder.delete({ where: { id } });
+  syncWatchlistMessage();
   return NextResponse.json({ ok: true });
 }

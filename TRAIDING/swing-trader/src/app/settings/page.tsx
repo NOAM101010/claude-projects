@@ -11,13 +11,20 @@ type Settings = {
   discord_webhook_scan: string | null;
   discord_webhook_analysis: string | null;
   discord_webhook_summary: string | null;
+  discord_webhook_updates: string | null;
+  discord_webhook_watchlist: string | null;
   account_size: string | null;
   cash_balance: string | null;
 };
 
 type DiscordChannel = {
-  key: "discord_webhook_scan" | "discord_webhook_analysis" | "discord_webhook_summary";
-  kind: "scan" | "analysis" | "summary";
+  key:
+    | "discord_webhook_scan"
+    | "discord_webhook_analysis"
+    | "discord_webhook_summary"
+    | "discord_webhook_updates"
+    | "discord_webhook_watchlist";
+  kind: "scan" | "analysis" | "summary" | "updates" | "watchlist";
   label: string;
 };
 
@@ -25,6 +32,8 @@ const DISCORD_CHANNELS: DiscordChannel[] = [
   { key: "discord_webhook_scan", kind: "scan", label: "סריקות (אוטומטי + ידני)" },
   { key: "discord_webhook_analysis", kind: "analysis", label: "ניתוחי מניות" },
   { key: "discord_webhook_summary", kind: "summary", label: "דוחות יום / שבוע" },
+  { key: "discord_webhook_updates", kind: "updates", label: "עדכונים / מצב שוק" },
+  { key: "discord_webhook_watchlist", kind: "watchlist", label: "רשימת מעקב" },
 ];
 
 export default function SettingsPage() {
@@ -48,6 +57,8 @@ export default function SettingsPage() {
         discord_webhook_scan: json.settings.discord_webhook_scan ?? "",
         discord_webhook_analysis: json.settings.discord_webhook_analysis ?? "",
         discord_webhook_summary: json.settings.discord_webhook_summary ?? "",
+        discord_webhook_updates: json.settings.discord_webhook_updates ?? "",
+        discord_webhook_watchlist: json.settings.discord_webhook_watchlist ?? "",
       });
       setAccountSize(json.settings.account_size ?? "");
       setCashBalance(json.settings.cash_balance ?? "");
@@ -71,6 +82,8 @@ export default function SettingsPage() {
           discord_webhook_scan: (discordChannels.discord_webhook_scan ?? "").trim() || null,
           discord_webhook_analysis: (discordChannels.discord_webhook_analysis ?? "").trim() || null,
           discord_webhook_summary: (discordChannels.discord_webhook_summary ?? "").trim() || null,
+          discord_webhook_updates: (discordChannels.discord_webhook_updates ?? "").trim() || null,
+          discord_webhook_watchlist: (discordChannels.discord_webhook_watchlist ?? "").trim() || null,
         },
       }),
     });
@@ -128,7 +141,9 @@ export default function SettingsPage() {
     !!settings?.discord_webhook_url ||
     !!settings?.discord_webhook_scan ||
     !!settings?.discord_webhook_analysis ||
-    !!settings?.discord_webhook_summary;
+    !!settings?.discord_webhook_summary ||
+    !!settings?.discord_webhook_updates ||
+    !!settings?.discord_webhook_watchlist;
 
   return (
     <PageContainer className="space-y-10">

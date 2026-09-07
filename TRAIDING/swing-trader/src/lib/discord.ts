@@ -1,4 +1,4 @@
-import { getSetting, type SettingKey } from "./settings";
+import { getSetting, setSetting, type SettingKey } from "./settings";
 
 const AMBER = 0xe8b341;
 const UP = 0x4ade80;
@@ -21,12 +21,19 @@ export function gradeColor(grade: string | null | undefined): number {
   }
 }
 
-export type DiscordChannelKind = "scan" | "analysis" | "summary";
+export type DiscordChannelKind =
+  | "scan"
+  | "analysis"
+  | "summary"
+  | "updates"
+  | "watchlist";
 
 const CHANNEL_KEY: Record<DiscordChannelKind, SettingKey> = {
   scan: "discord_webhook_scan",
   analysis: "discord_webhook_analysis",
   summary: "discord_webhook_summary",
+  updates: "discord_webhook_updates",
+  watchlist: "discord_webhook_watchlist",
 };
 
 /**
@@ -235,6 +242,105 @@ export function stockAnalysisEmbed(opts: {
     footer: FOOTER,
     timestamp: new Date().toISOString(),
   };
+}
+
+/** אמבר — הודעת "השוק סגור היום" לערוץ updates. */
+export function holidayEmbed(nameHe: string, nextOpenText: string): DiscordEmbed {
+  return {
+    title: "📅 השוק סגור היום",
+    description: `הבורסה בארה"ב סגורה היום — **${nameHe}**.\nהמסחר יתחדש ${nextOpenText}.`,
+    color: AMBER,
+    footer: FOOTER,
+    timestamp: new Date().toISOString(),
+  };
+}
+
+/** התראה ירוקה: מניה מרשימת המעקב עברה סריקה. */
+export function watchlistAlertEmbed(
+  symbol: string,
+  setup: string,
+  grade: string | null | undefined,
+  changePercent: number | null | undefined
+): DiscordEmbed {
+  const chg =
+    changePercent != null
+      ? ` · ${changePercent >= 0 ? "+" : ""}${changePercent.toFixed(1)}%`
+      : "";
+  return {
+    title: `🔔 ${symbol} במעקב — ${setup}${grade ? ` · ${grade}` : ""}`,
+    description: `${symbol} עבר את הסורק עם סטאפ **${setup}**${chg}.`,
+    color: UP,
+    url: `https://www.tradingview.com/chart/?symbol=${symbol}`,
+    footer: FOOTER,
+    timestamp: new Date().toISOString(),
+  };
+}
+
+/**
+ * הודעה חיה אחת (edit-in-place) לערוץ watchlist. אם אין webhook — דלג בשקט.
+ */
+export async function upsertWatchlistMessage(
+  items: { symbol: string; folder?: string | null; addedAt?: Date | string }[]
+): Promise<void> {
+  const webhook = await resolveChannelWebhook("watchlist");
+  if (!webhook) return;
+
+  const groups = new Map<string, string[]>();
+  for (const it of items) {
+    const k = (it.folder ?? "").trim();
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k)!.push(it.symbol);
+  }
+
+  let description: string;
+  if (items.length === 0) {
+    description = "הרשימה ריקה כרגע.";
+  } else if (groups.size === 1 && groups.has("")) {
+    description = groups.get("")!.map((s) => `• **${s}**`).join("\n");
+  } else {
+    description = [...groups.entries()]
+      .sort(([a], [b]) =>
+        a === "" ? 1 : b === "" ? -1 : a.localeCompare(b)
+      )
+      .map(
+        ([folder, syms]) =>
+          `**${folder || "כללי"}**\n${syms.map((s) => `• ${s}`).join("\n")}`
+      )
+      .join("\n\n");
+  }
+
+  const embed: DiscordEmbed = {
+    title: "⭐ רשימת המעקב",
+    description,
+    color: AMBER,
+    footer: { text: `Swing Terminal · עודכן · ${items.length} סימבולים` },
+    timestamp: new Date().toISOString(),
+  };
+
+  try {
+    const existingId = (await getSetting("discord_watchlist_message_id"))?.trim();
+    if (existingId) {
+      const res = await fetch(`${webhook}/messages/${existingId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ embeds: [embed] }),
+      });
+      if (res.ok) return;
+      if (res.status !== 404) return; // שגיאה אחרת — לא מנסים ליצור כפילות
+    }
+    const res = await fetch(`${webhook}?wait=true`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ embeds: [embed], username: "Swing Terminal" }),
+    });
+    if (!res.ok) return;
+    const json: any = await res.json().catch(() => null);
+    if (json?.id) {
+      await setSetting("discord_watchlist_message_id", String(json.id));
+    }
+  } catch {
+    /* דלג בשקט */
+  }
 }
 
 export function morningBriefEmbed(opts: {

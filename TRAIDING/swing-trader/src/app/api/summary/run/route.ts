@@ -4,6 +4,7 @@ import { computeStats, type TradeRow } from "@/lib/trade-stats";
 import { computeMarketRegime } from "@/lib/market-regime";
 import { yf } from "@/lib/yf";
 import { sendToChannel, FOOTER, type DiscordEmbed } from "@/lib/discord";
+import { getMarketHoliday } from "@/lib/market-calendar";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -79,6 +80,23 @@ export async function GET(req: NextRequest) {
 
   try {
     const now = new Date();
+
+    // חג של NYSE — אין P&L חדש, מדלגים על הדוח (וגם על דוח שבוע אם שישי היה חג),
+    // אבל שולחים הודעה קצרה לערוץ updates.
+    const holiday = getMarketHoliday(now);
+    if (holiday) {
+      await sendToChannel("updates", [
+        {
+          title: "📅 השוק היה סגור היום",
+          description: `אין דוח יומי — הבורסה בארה"ב הייתה סגורה · ${holiday.nameHe}.`,
+          color: AMBER,
+          footer: FOOTER,
+          timestamp: now.toISOString(),
+        },
+      ]).catch(() => {});
+      return NextResponse.json({ ok: true, skipped: "holiday", holiday: holiday.name });
+    }
+
     const todayKey = now.toISOString().slice(0, 10);
     const startOfToday = new Date(`${todayKey}T00:00:00.000Z`);
     const weekAgo = new Date(now.getTime() - 7 * 86400000);

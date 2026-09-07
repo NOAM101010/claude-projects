@@ -10,6 +10,8 @@ const KIND_LABEL: Record<DiscordChannelKind, string> = {
   scan: "סריקות",
   analysis: "ניתוחי מניות",
   summary: "דוחות יום/שבוע",
+  updates: "עדכונים / מצב שוק",
+  watchlist: "רשימת מעקב",
 };
 
 export async function POST(req: NextRequest) {

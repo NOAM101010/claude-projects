@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getMarketHoliday, isHalfDay } from "@/lib/market-calendar";
 
 function usIsOpen(now: Date) {
   const et = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
@@ -8,14 +9,21 @@ function usIsOpen(now: Date) {
   const mins = et.getHours() * 60 + et.getMinutes();
   const preOpen = 4 * 60;
   const open = 9 * 60 + 30;
-  const close = 16 * 60;
   const afterEnd = 20 * 60;
-  if (day === 0 || day === 6) return { state: "closed", label: "סגור", color: "text-[var(--muted)]", dot: "bg-[var(--muted-2)]" };
-  if (mins < preOpen) return { state: "closed", label: "סגור", color: "text-[var(--muted)]", dot: "bg-[var(--muted-2)]" };
+  const closedStyle = { color: "text-[var(--muted)]", dot: "bg-[var(--muted-2)]" };
+  if (day === 0 || day === 6) return { state: "closed", label: "סגור", ...closedStyle };
+
+  const holiday = getMarketHoliday(now);
+  if (holiday) return { state: "closed", label: `סגור · ${holiday.nameHe}`, ...closedStyle };
+
+  const half = isHalfDay(now);
+  const close = half ? 13 * 60 : 16 * 60;
+
+  if (mins < preOpen) return { state: "closed", label: "סגור", ...closedStyle };
   if (mins < open) return { state: "pre", label: "Pre-Market", color: "text-[var(--warn)]", dot: "bg-[var(--warn)]" };
-  if (mins < close) return { state: "open", label: "שוק פתוח", color: "text-[var(--up)]", dot: "bg-[var(--up)]" };
+  if (mins < close) return { state: "open", label: half ? "חצי יום" : "שוק פתוח", color: "text-[var(--up)]", dot: "bg-[var(--up)]" };
   if (mins < afterEnd) return { state: "after", label: "After Hours", color: "text-[var(--warn)]", dot: "bg-[var(--warn)]" };
-  return { state: "closed", label: "סגור", color: "text-[var(--muted)]", dot: "bg-[var(--muted-2)]" };
+  return { state: "closed", label: "סגור", ...closedStyle };
 }
 
 export default function MarketClock() {

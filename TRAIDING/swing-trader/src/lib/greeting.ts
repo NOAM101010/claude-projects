@@ -4,6 +4,8 @@
  * Line 2  — US market session status (America/New_York), mirrors market-clock.tsx.
  */
 
+import { getMarketHoliday, isHalfDay, nextMarketOpen } from "./market-calendar";
+
 const HE_DAYS = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
 
 /** Wall-clock fields of `now` in a given IANA timezone. */
@@ -51,19 +53,55 @@ const OPEN = 9 * 60 + 30;
 const CLOSE = 16 * 60;
 const AFTER_END = 20 * 60;
 
+/** HH:MM בשעון ישראל של רגע נתון. */
+function ilHm(target: Date): string {
+  const il = zoned(target, "Asia/Jerusalem");
+  return `${String(il.getHours()).padStart(2, "0")}:${String(il.getMinutes()).padStart(2, "0")}`;
+}
+
+/** "היום" / "מחר" / "ביום X" — יחסית להיום בשעון ישראל. */
+function ilWhenLabel(now: Date, target: Date): string {
+  const a = zoned(now, "Asia/Jerusalem");
+  const b = zoned(target, "Asia/Jerusalem");
+  const diff = Math.round(
+    (Date.UTC(b.getFullYear(), b.getMonth(), b.getDate()) -
+      Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())) /
+      86_400_000
+  );
+  return diff <= 0 ? "היום" : diff === 1 ? "מחר" : `ביום ${HE_DAYS[b.getDay()]}`;
+}
+
 export function sessionInfo(now: Date): SessionInfo {
   const et = zoned(now, "America/New_York");
   const day = et.getDay();
   const mins = et.getHours() * 60 + et.getMinutes();
   const isWeekday = day >= 1 && day <= 5;
 
-  if (isWeekday && mins >= OPEN && mins < CLOSE) {
-    const left = CLOSE - mins;
+  // חג של NYSE — השוק סגור, מחשבים את הפתיחה הבאה (מדלג חגים)
+  const holiday = getMarketHoliday(now);
+  if (holiday) {
+    const open = nextMarketOpen(now);
+    return {
+      state: "closed",
+      text: `השוק סגור — ${holiday.nameHe}. נפתח ${ilWhenLabel(now, open)} ב-${ilHm(open)}`,
+      bullish: false,
+    };
+  }
+
+  // חצי-יום מסחר: סגירה 13:00 ET במקום 16:00
+  const half = isHalfDay(now);
+  const closeM = half ? 13 * 60 : CLOSE;
+  const earlyNote = half
+    ? ` · סגירה מוקדמת היום ${ilTimeForEtMinutes(now, 13 * 60)}`
+    : "";
+
+  if (isWeekday && mins >= OPEN && mins < closeM) {
+    const left = closeM - mins;
     const hh = Math.floor(left / 60);
     const mm = left % 60;
     return {
       state: "open",
-      text: `השוק פתוח — ${hh}:${String(mm).padStart(2, "0")} לסגירה`,
+      text: `השוק פתוח — ${hh}:${String(mm).padStart(2, "0")} לסגירה${earlyNote}`,
       bullish: true,
     };
   }
@@ -71,18 +109,17 @@ export function sessionInfo(now: Date): SessionInfo {
   if (isWeekday && mins >= PRE_OPEN && mins < OPEN) {
     return {
       state: "pre",
-      text: `Pre-Market — פתיחה בעוד ${fmtDur(OPEN - mins)}`,
+      text: `Pre-Market — פתיחה בעוד ${fmtDur(OPEN - mins)}${earlyNote}`,
       bullish: true,
     };
   }
 
-  if (isWeekday && mins >= CLOSE && mins < AFTER_END) {
+  if (isWeekday && mins >= closeM && mins < AFTER_END) {
     return { state: "after", text: "After Hours — השוק נסגר", bullish: false };
   }
 
   // closed — figure out the next open
-  const beforePre = isWeekday && mins < PRE_OPEN;
-  const ilOpen = ilTimeForEtMinutes(now, OPEN);
+  const beforePre = isWeekday && mins < PRE_OPEN && !half;
 
   if (beforePre) {
     return {
@@ -92,34 +129,11 @@ export function sessionInfo(now: Date): SessionInfo {
     };
   }
 
-  // Find the next US market open and describe it from the Israeli user's
-  // point of view — the ET calendar day can lag a day behind the IL one.
-  const ilNow = zoned(now, "Asia/Jerusalem");
-  const offsetH = Math.round((ilNow.getTime() - et.getTime()) / 3_600_000);
-  const ilStartOfDay = new Date(
-    ilNow.getFullYear(), ilNow.getMonth(), ilNow.getDate()
-  ).getTime();
-
-  let when = "מחר";
-  for (let off = 0; off <= 8; off++) {
-    const etDay = new Date(et);
-    etDay.setDate(etDay.getDate() + off);
-    const wd = etDay.getDay();
-    if (wd === 0 || wd === 6) continue;
-    if (off === 0 && mins >= OPEN) continue; // today's open already passed
-    const ilOpenMoment = new Date(etDay);
-    ilOpenMoment.setHours(Math.floor(OPEN / 60) + offsetH, OPEN % 60, 0, 0);
-    const ilOpenDay = new Date(
-      ilOpenMoment.getFullYear(), ilOpenMoment.getMonth(), ilOpenMoment.getDate()
-    ).getTime();
-    const dayDiff = Math.round((ilOpenDay - ilStartOfDay) / 86_400_000);
-    when = dayDiff <= 0 ? "היום" : dayDiff === 1 ? "מחר" : `ביום ${HE_DAYS[ilOpenMoment.getDay()]}`;
-    break;
-  }
-
+  // הפתיחה הבאה — מדלגת סופ"ש וחגים כאחד
+  const open = nextMarketOpen(now);
   return {
     state: "closed",
-    text: `השוק סגור. נפתח ${when} ב-${ilOpen}`,
+    text: `השוק סגור. נפתח ${ilWhenLabel(now, open)} ב-${ilHm(open)}`,
     bullish: false,
   };
 }
