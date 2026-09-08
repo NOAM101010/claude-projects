@@ -171,6 +171,7 @@
   },
   "vip": {
     "eyebrow": "מועדון בלעדי",
+    "badgeHint": "דרגת VIP: {tier} · נפתח מרמה {level}",
     "title": "לאונג' VIP",
     "subtitle": "שולחנות פרטיים · High Roller · טורנירים בלעדיים",
     "enter": "היכנס",
@@ -820,7 +821,6 @@
     "plays": "משחקים",
     "myBest": "השיא שלי",
     "byGame": "לפי משחק",
-    "nightWins": "ניצחונות ערב חברה",
     "royalFlushes": "רויאל פלאשים",
     "pokerWon": "רווחי פוקר (מצטבר)",
     "sngStreak": "רצף Sit & Go",

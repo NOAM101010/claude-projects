@@ -116,8 +116,6 @@ export interface Stats {
   roomHands: number;
   /** "Blackjack vs friends" matches won. */
   duelWins: number;
-  /** Game nights finished on top. */
-  nightWins: number;
   /** Lifetime net winnings at the poker table (positive hands only). */
   pokerChipsWon: number;
   /** Showdowns won after going all-in as the mathematical underdog (≤10% equity at the time). */

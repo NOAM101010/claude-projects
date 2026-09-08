@@ -34,6 +34,7 @@ import { fmt } from '@/lib/format';
 import { XP_REWARDS } from '@/data/economy';
 import { isVipEligible } from '@/data/vip';
 import { roomBackgroundOf } from '@/data/roomThemes';
+import { DEFAULT_TABLE_SKIN } from '@/data/items';
 import { isOnline } from '@/services/supabase';
 import type { BjSeat, BjSide } from '@/games/blackjack/types';
 
@@ -642,6 +643,8 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
      (stamped into rooms.config on create); solo keeps the local player's. */
   const tableSkin = (!solo && room?.config?.tableSkin) || profile.equipped.table;
   const roomBg = !solo && room?.config?.bgSkin ? roomBackgroundOf(room.config.bgSkin) : null;
+  const customTable = !solo && !!room?.config?.tableSkin && room.config.tableSkin !== DEFAULT_TABLE_SKIN;
+  const hostName = !solo ? members?.find((m) => m.isHost)?.username : undefined;
 
   return (
     <SceneShell compactHud particles={false}>
@@ -653,6 +656,17 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
       <div className="mx-auto px-3 pb-4 flex flex-col" style={{ maxWidth: 1180, minHeight: 'calc(100dvh - 62px)' }}>
         {duel && others.length === 1 && mySeat && (
           <VsHeader seatA={mySeat} seatB={others[0]} scores={duel.scores} />
+        )}
+
+        {!duel && customTable && hostName && (
+          <div className="flex justify-center mb-1.5">
+            <span
+              className="px-2 py-0.5 rounded-full text-[10.5px]"
+              style={{ background: 'rgba(227,178,60,.12)', color: 'var(--gold-hi)', border: '1px solid var(--gold-line)' }}
+            >
+              {t('rooms.customTable', { name: hostName })}
+            </span>
+          </div>
         )}
 
         {/* ---------------- the table ---------------- */}

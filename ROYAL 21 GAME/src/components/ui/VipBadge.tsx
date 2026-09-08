@@ -1,5 +1,5 @@
-import { useSettings } from '@/stores/useSettings';
 import { isVipEligible, vipTier, vipTierName, VIP_MIN_LEVEL } from '@/data/vip';
+import { useT } from '@/hooks/useT';
 import { Tooltip } from './Tooltip';
 import type { Profile } from '@/types';
 
@@ -16,15 +16,13 @@ const TIER_STYLE: Record<1 | 2 | 3 | 4, { grad: string; fg: string }> = {
  * Renders nothing below level 5.
  */
 export function VipBadge({ profile }: { profile: Profile }) {
-  const lang = useSettings((s) => s.lang);
+  const { t } = useT();
   if (!isVipEligible(profile)) return null;
 
   const tier = vipTier(profile.level) as 1 | 2 | 3 | 4;
   const name = vipTierName(tier);
   const style = TIER_STYLE[tier];
-  const hint = lang === 'he'
-    ? `דרגת VIP: ${name} · נפתח מרמה ${VIP_MIN_LEVEL}`
-    : `VIP tier: ${name} · unlocks at level ${VIP_MIN_LEVEL}`;
+  const hint = t('vip.badgeHint', { tier: name, level: VIP_MIN_LEVEL });
 
   return (
     <Tooltip label={`VIP ${name}`} hint={hint} side="bottom">

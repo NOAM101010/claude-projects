@@ -132,7 +132,6 @@ export default function MyRoomScene() {
 
   const prideStats = ([
     { label: t('games.duel'), value: view.duelWins },
-    { label: t('profile.nightWins'), value: view.nightWins },
     { label: t('profile.royalFlushes'), value: view.royalFlushes },
     { label: t('profile.pokerWon'), value: view.pokerChipsWon },
     { label: t('profile.sngStreak'), value: view.sngWinStreak },

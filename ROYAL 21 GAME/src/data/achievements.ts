@@ -35,9 +35,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'first_table', tier: 'bronze', trophy: '🤝', social: true, name: { he: 'לא לבד', en: 'Not alone' }, desc: { he: 'שחק יד אחת מול חברים', en: 'Play one hand with friends' }, stat: 'roomHands', goal: 1, reward: 100 },
   { id: 'table_night', tier: 'silver', trophy: '🍸', social: true, name: { he: 'ערב שלם', en: 'A whole evening' }, desc: { he: 'שחק 50 ידיים מול חברים', en: 'Play 50 hands with friends' }, stat: 'roomHands', goal: 50, reward: 400 },
   { id: 'duelist', tier: 'silver', trophy: '⚔️', social: true, name: { he: 'דואליסט', en: 'Duellist' }, desc: { he: 'נצח בתחרות מול חבר', en: 'Win a match against a friend' }, stat: 'duelWins', goal: 1, reward: 250 },
-  { id: 'king_of_night', tier: 'gold', trophy: '👑', social: true, name: { he: 'מלך הערב', en: 'King of the night' }, desc: { he: 'נצח בערב חברה', en: 'Win a game night' }, stat: 'nightWins', goal: 1, reward: 750 },
   { id: 'rival', tier: 'gold', trophy: '🏅', social: true, name: { he: 'יריב רציני', en: 'Serious rival' }, desc: { he: 'נצח ב-5 תחרויות מול חברים', en: 'Win 5 matches against friends' }, stat: 'duelWins', goal: 5, reward: 1000 },
-  { id: 'legend_of_night', tier: 'platinum', trophy: '🌟', social: true, name: { he: 'אגדת הערבים', en: 'Legend of the nights' }, desc: { he: 'נצח ב-10 ערבי חברה', en: 'Win 10 game nights' }, stat: 'nightWins', goal: 10, reward: 3500 },
 
   /* ------------------------------- gold: real time at the table ---------- */
   { id: 'high_roller', tier: 'gold', trophy: '💎', name: { he: 'הימור גבוה', en: 'High roller' }, desc: { he: 'שים הימור של 10,000 צ׳יפים', en: 'Place a 10,000 chip bet' }, stat: 'biggestBet', goal: 10000, reward: 500 },

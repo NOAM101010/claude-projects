@@ -91,7 +91,7 @@ export const EMPTY_STATS: Stats = {
   streak: 0, bestStreak: 0, bjHands: 0, bjWins: 0, bjLosses: 0, blackjacks: 0,
   doubleWins: 0, splitWins: 0, betTotal: 0, betCount: 0, cfGames: 0, cfWins: 0,
   cfLossStreak: 0, slSpins: 0, slWins: 0, scCards: 0, diceGames: 0, hcGames: 0,
-  doubleOrNothing: 0, roomHands: 0, duelWins: 0, nightWins: 0,
+  doubleOrNothing: 0, roomHands: 0, duelWins: 0,
   pokerChipsWon: 0, allInLongshotWins: 0, royalFlushes: 0, sngWinStreak: 0,
 };
 

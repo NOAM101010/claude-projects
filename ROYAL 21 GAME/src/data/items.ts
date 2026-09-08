@@ -141,7 +141,6 @@ export const ITEMS: ShopItem[] = [
   { id: 'ttl_legend', category: 'title', name: { he: 'האגדה', en: 'The Legend' }, rarity: 'mythic', price: 55000, icon: '🌟', payload: { title: 'ttl-legend' } },
   { id: 'ttl_bj_king', category: 'title', name: { he: "מלך הבלאק'ג'ק", en: 'Blackjack King' }, rarity: 'legendary', price: 0, icon: '👑', payload: { title: 'ttl-bj-king' }, unlockedBy: 'blackjack_master' },
   { id: 'ttl_royal', category: 'title', name: { he: 'רויאל', en: 'Royal' }, rarity: 'mythic', price: 0, icon: '♛', payload: { title: 'ttl-royal' }, unlockedBy: 'royal_flush' },
-  { id: 'ttl_night_king', category: 'title', name: { he: 'מלך הלילות', en: 'King of Nights' }, rarity: 'legendary', price: 0, icon: '🌙', payload: { title: 'ttl-night-king' }, unlockedBy: 'king_of_night' },
   { id: 'ttl_vip', category: 'title', name: { he: 'חבר מועדון', en: 'Club Member' }, rarity: 'mythic', price: 0, icon: '🎩', payload: { title: 'ttl-vip' }, unlockedBy: 'ev_vip' },
 
   // ==== Stage P — name colours (fixed palette, never free-form hex) ============

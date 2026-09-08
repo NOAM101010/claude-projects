@@ -171,6 +171,7 @@
   },
   "vip": {
     "eyebrow": "Exclusive club",
+    "badgeHint": "VIP tier: {tier} · unlocks at level {level}",
     "title": "VIP Lounge",
     "subtitle": "Private tables · High Roller · Exclusive tournaments",
     "enter": "Enter",
@@ -820,7 +821,6 @@
     "plays": "plays",
     "myBest": "My best",
     "byGame": "By game",
-    "nightWins": "Game-night wins",
     "royalFlushes": "Royal flushes",
     "pokerWon": "Poker winnings (lifetime)",
     "sngStreak": "Sit & Go streak",
