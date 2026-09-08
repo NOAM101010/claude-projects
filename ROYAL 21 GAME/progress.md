@@ -1,67 +1,44 @@
-# ROYAL 21 — סבב סגירת באגים סופי
+# ROYAL 21 — Progress
 
-## סטטוס — כל הבאגים סגורים בקוד + בדיקת בודק. ממתין לאימות חי סופי + commit/push.
+**עודכן:** 2026-09-08 · **הקובץ היחיד.** (`ROYAL_21_PROGRESS.md` ו-`ROYAL 21 PROGRESS/` ישנים — למחוק.)
 
----
-## Hub redesign + לוח מנהיגים גלובלי — הושלם, אושר ע"י המשתמש (2026-09-01), נדחף ל-main
-- **Hub §01 חדש — "רצפת קזינו":** 3 עמודות שוות, gap אחיד, רולטה = כרטיס עגול גדול שפורש את עמודת המרכז (3 שורות); 6 שולחנות סביבה (פוקר/SnG/באקרה ימין · Blackjack/נגד-חברים/ערב-חברה שמאל). כל ה-art מוכל. בלי תגי "חדש".
-- **`src/components/layout/AppBackdrop.tsx`** (חדש, render פעם אחת ב-App.tsx מאחורי כל route): גרדיאנט סטטי + tint לפי `data-zone` (gold/warm/teal/neutral, crossfade 0.9s) + 4 סמלי ♠♥♦♣ (opacity נמוך, בלי blur, drift CSS איטי, גוון לפי zone) + bokeh + אבק + וינייטה נושמת. הכל `@keyframes` CSS (framer לא רץ). reduced-motion / quality=low מקפיאים. `HubBackdrop.tsx` נמחק.
-- **לוח מנהיגים אמיתי גלובלי+חברים:** `src/scenes/hub/Leaderboard.tsx` — `LeaderboardWidget` (Top 3 + אתה + לינק "הלוח המלא") ב-Hub, `LeaderboardFull` ב-Modal עם `<Tabs>` (חצי ‹ ›) ל-5 קטגוריות. נתונים מ-`profileService.leaderboard()` (נוסף `biggest_win`); friends = סינון ל-ids של חברים; mock = fallback ל-guest/offline. הכיתוב "המובילים בכל הזמנים" (היה "השבוע" בטעות). הטאב הישן בפאנל החברים נמחק; claim פרס שבועי עבר ל-on-open.
-- **חנות:** hints מתחת לטאבי מטבעות/צ'יפים + על preview מטבע-מטבע — מבהירים סקין הטלת-מטבע מול מטבע שמחליף את סמל הצ'יפים.
-- קומיטים: `13ccd54`..`21a56d6`. tsc+build+test:all ירוקים, i18n parity 871/871.
+משחק קזינו חברתי פרטי (~15 חברים, צ'יפים וירטואליים בלבד). חי: https://royal21.vercel.app (deploy אוטומטי מ-`origin/main`).
+Stack, git, dev/build, כללי עבודה → `ROYAL 21 GAME/CLAUDE.md` (נטען אוטומטית).
 
----
+## מצב נוכחי
 
-### באג 1 — ציפים — תוקן (2 שכבות), בודק אישר
-שכבה A (סבב מוקדם): handleClear/clearPick/clearAnte איפסו roundOutlay אופטימית -> clearRefunded ref ב-roulette/coinflip/highcard. settle: rejected = outlay - authStake - clearedBack.
-שכבה B — usePlayer.runReconcile: ה-clamp +-100K חתך תנועות addChips גדולות (>100K) והשארית לא זומנה מחדש -> למשתמש מחובר השרת פיגר. תוקן: runReconcile(id, slice) מזמן ריצה נוספת על אותה שרשרת כשה-clamp חתך, עד התכנסות (תנאי עצירה: remaining=0 / לא מצטמצם / MAX 200). סימולציה scripts/reconcile-sim.mjs מוכיחה diff=0. clamp עצמו לא נגע (anti-cheat).
-שכבה C — HUD desync: המשתמש שחזר חי (guest, סולו BJ) שהאקונומיה תקינה 100% (profile.chips + save עוקבים מושלם), אבל מונה ה-HUD "היתרה שלך" נתקע על ערך נמוך אחרי clear עד ניווט. גורם: hook useCountUp — from.current יצא מסנכרון, early-return delta=0 נטש תצוגה, rAF קפוא בטאב רקע. תוקן: כתיבה מחדש של ה-tween (displayRef עוקב אחרי setDisplay, נחיתה מדויקת, document.hidden קפיצה, setTimeout גיבוי). ה-HUD ערך תצוגה טהור — אין דליפה ל-reconcile/server. תוקן לכל הסצנות בקובץ אחד.
+**סבבים 1–4 הושלמו בקוד, אומתו (tsc/build/test:all ירוקים), עברו reviewer איפה שרלוונטי, נדחפו ל-`origin/main`.**
+כל הסינגל-פלייר, המולטיפלייר, צמיחה/retention, אדמין, VIP, וחנות מורחבת — באוויר.
+סבב 4: קומיטים `2997226`→`dbbdeac`→`15b1274`. Plan: `C:\Users\noam7\.claude\plans\swift-snuggling-harp.md` (סבב 4 בלבד).
 
-### באג 2 — מולטיפלייר (baccarat outlay, SnG refund-race, BJ clearBet) — תוקן, בודק אישר
-### באג 4 — host heartbeat (Worker ticker 8s) — תוקן, בודק אישר
-### באג 3 — hole cards (poker/SnG/BJ redaction + baccarat nonce) — תוקן מאחורי gate, בודק אישר. SQL supabase/poker-privacy.sql הורץ ע"י המשתמש על הפרודקשן (טבלאות + RPC מאומתים חי).
+## מה נשאר (המשתמש — בדיקה חיה בלבד)
 
-### באג 5 — עזיבת שולחן BJ באמצע יד — תוקן (Claude ישירות, PM היה rate-limited)
-BlackjackScene לא היה לו unmount cleanup (בניגוד ל-PokerScene). עזיבה מ-betting -> ההימור שהונח (addChips -value) לא הוחזר = אובדן שקט בסולו. MP: מושב רפאים + HUD תקוע על ערך אופטימי.
-תיקון (BlackjackScene.tsx): leaveCleanup ב-ref + useEffect mount-only. betting: מחזיר את ההימור שהונח (solo: seat.bet; MP: pendingBetTotal.current — race-safe מול clearBet). playing/dealer: forfeit (לא מחזיר — anti-exploit). MP: useRoom.leave() + refreshFromServer(). tsc נקי, 131 טסטים ירוקים.
-אומת חי (guest, סולו): leave מ-betting אחרי stage 2K -> chips 3000->1000->3000 (הוחזר). leave מ-playing -> 2500 נשאר (forfeit). bug 1 לא נסוג: 3 מחזורי stage 2K -> clear -> chips+HUD חוזרים ל-2500 בדיוק.
+1. **הרצת SQL** — `RUN-THIS-NEXT.sql` (מחיקת `ev_night_champion`/`king_of_night`/`legend_of_night`, סנכרון צבעי `nc_cream`/`nc_neon`).
+2. **בדיקה ויזואלית (Q2/Q3/Q4)** — כרטיס חבילה, שולחן אישי בכל המשחקים, 4 דרגות VIP.
+3. **2-דפדפנים** — Q5 (כל שחקן רואה את הסקין האמיתי של היריב), Q6 (סיום יד/מאץ' → כולם ללובי יחד ~4.5ש, כולל host מתנתק באמצע דואל).
+4. **חוב ישן: Stage M** (BJ/דואל עם חברים) ב-2 דפדפנים — לא אומת חי, השלב הכי מסוכן.
 
-### באגים 6-8 — סקירה חיה מקיפה (Claude ישירות, commit 225580e, נדחף) — תוקנו ואומתו חי
-- **באג 6 — הכספת נתקעת ב-overlay "פותח את הכספת..."** (`VaultScene.tsx`). ה-overlay היה בתוך AnimatePresence עם exit animation שנתקע (framer-motion לא החיל את ה-rotate transform בפרוד, onAnimationComplete לא ירה, אין fallback). שוחזר חי ב-localhost + פרודקשן. תיקון: הוצאת ה-overlay מ-AnimatePresence (unmount מיידי, בלי exit), + setTimeout(2500) fallback + transformBox/Origin ל-svg + רמז "הקש להיכנס" (i18n vault.tapToEnter). אומת: נכנס תוך ~1ש.
-- **באג 7 — BJ "עוד יד" דורש 2 לחיצות** + **באג 8 — סולו BJ עזיבה-וחזרה משאירה שולחן ריק / action bar תקוע**. מקור משותף: `AnimatePresence mode="wait"` סביב פקדי ה-phase ב-BlackjackScene — החזיק את הפקד היוצא עד שאנימציית exit נרשמה כגמורה, מה שלא קרה במעברים מהירים. תיקון: הסרת mode="wait". אומת חי: לחיצה אחת מספיקה, חזרה לסולו = מסך הימורים נקי.
+**לא באג (להסביר כשעולה):** פיצול אסים ב-BJ — יד אחת קלף אחד, כלל קזינו סטנדרטי.
+**רעיון עתידי:** משחקי ארקייד — שיחת תכנון נפרדת.
 
-## מצב סקירה (2026-08-31)
-✅ נבדק חי ותקין: כלכלת ציפים ב-5 המשחקים בסולו (BJ/coinflip/highcard/baccarat/roulette — הימור/נקה/חלוקה/הסדרה מדויקים), כספת, מלאי, הגדרות, לובי, VIP — נטענים ועובדים. i18n he/en parity מושלם (854 מפתחות). 0 TODO. הנחת -30% בכספת = פיצ'ר (DAILY_DISCOUNT, מבצעי היום מתחלפים).
+## מה נעשה (תמצית — פירוט מלא בהיסטוריית git)
 
-### copy — תוקן (commit c229a2f, נדחף). המשתמש ביקש לא לגעת ב-copy מעבר לזה.
-כרטיס VIP בבית אמר "נפתח ברמה 15 עם 50K" — הסף האמיתי רמה 5 + 150K (VIP_MIN_LEVEL/VIP_MIN_CHIPS). blurbLocked עכשיו interpolate מהקבועים. lockedSubtitle "עוד קצת ואתה שם" → "השולחנות הבלעדיים ממתינים".
+- **סבב 1 (A–H):** איפוס מלא, Supabase+`app_config` נשלט-אדמין, IntroScene, פודיום שבועי, אודיו עשיר + "השתק הכל", presence+צ'אט חברים, חנות `buy_pack()` אטומי, AvatarEditor.
+- **סבב 2 (J·I·K·L):** תיקון מתנת-צ'יפים כפולה, רולטה MP "סיימתי להמר", תיקון all-in שחשף מנצח מוקדם (`useReveal.displayStacks`), ליטושי HUB/חנות.
+- **סבב 3 (P·O·N·M):** חנות מורחבת (שולחן אישי, טייטלים, צבע שם), VIP rework (זכאות רמה 5, סולם ברונזה/כסף/זהב/יהלום), "ערב חברה" + "גבוה/נמוך" (נמחקו בסבב 4), **Stage M** — `rooms.active_game` + `useFollowHost` תיקן "חבר שני לא נכנס".
+- **סבב 4 (Q1–Q7):** מחיקת "ערב חברה"+"גבוה/נמוך" לגמרי · תיקוני צבע/חבילה/`displayPot` · השלמת שולחן אישי לכל המשחקים · 4 דרגות VIP אמיתיות (מסגרות CSS, שולחן+אפקט יהלום) · **Q5** דליפת קוסמטיקה MP (seat stamped מ-`equipped`, לא מ-profile הצופה) · **Q6** מסך סיום BJ-עם-חברים (ניווט עצמאי + רשת ביטחון 11ש ל-host מתנתק) · Q7 QA + i18n parity 969/969.
 
-### SQL — **המשתמש הריץ את שניהם על הפרודקשן** (2026-08-31):
-- `supabase/reset-users.sql` (commit c229a2f) — כל הלא-אדמין אופסו למצב התחלתי; חדרים/היסטוריה/התראות/דוחות/אנליטיקס נמחקו. אדמין לא נגע.
-- `supabase/achievements-daily.sql` — 4 הפונקציות + העמודות. שגיאות ה-404 של fetch_achievements/fetch_daily_state אמורות להיעלם. הישגים + בונוס יומי עכשיו server-authoritative.
-- (בעבר גם `supabase/poker-privacy.sql` הורץ — gate של קלפי hole פעיל.)
+## החלטות מפתח
 
-## שלב D — פודיום שבועי חי + הודעה נתבעת + מחיקת הודעות (2026-09-03)
-- פאנל חדש `WeeklyPodiumPanel.tsx` (Modal, `panel==='weeklyPodium'`, ממונט ב-App.tsx ליד NotificationsPanel). טבלה: אתה + כל החברים ממוין לפי chips, מדליות top-3 + פרס, דירוג נוכחי, טיימר לאיפוס (יום ראשון 00:00 UTC). חי דרך `useSocial.friends` (subscribe הקיים על profiles UPDATE).
-- כרטיס hub → `openPanel('weeklyPodium')` (היה 'friends').
-- `supabase/weekly-snapshot.sql` (חדש): טבלה `weekly_chip_snapshot` + RPC `capture_weekly_snapshot()` (idempotent, ISO week של השבוע שהסתיים `IYYY-"W"IW`). נקרא בפתיחת הפאנל.
-- `supabase/weekly-podium.sql` (שכתוב): `profiles.weekly_prize_claimed_week text`. `claim_weekly_prize()` מדרג מול ה-snapshot (חברים + עצמי), מזכה מיד + מכניס notification `podium_prize`/title `weekly_podium_won`. reasons: already/no_snapshot/off_podium.
-- `useSocial.listen`: `podium_prize` → `audio.play('bigWin')` + toast. לא מזכה (ה-RPC כבר זיכה).
-- `NotificationsPanel`: כפתור ✕ לכל שורה (`dismiss`), אייקון 🏆, `describe` case ל-`weekly_podium_won`.
-- i18n: `notifications.podiumWon`, section `podium.*` (he+en).
-- **המשתמש צריך להריץ ב-Supabase לפי הסדר:** `weekly-snapshot.sql` ואז `weekly-podium.sql`.
-- אימות: tsc נקי, build ✓, test:all ✓ (social + כל השאר ירוקים).
+- **framer-motion אסור לרקעים/overlays** — נתקע ומשאיר overlay חוסם. רק CSS `@keyframes` + `{open && …}`.
+- **`useReveal`** — `displayStacks`/`displayPot` מוקפאים עד reveal (מונע חשיפת מנצח מוקדמת ב-all-in), גם cash וגם SnG.
+- **VIP:** זכאות רמה 5 בלבד. `shopDiscountTier` (rename מ-`vipTierOf`). סכומים מ-`app_config`.
+- **שולחן אישי:** `rooms.config.tableSkin/bgSkin` מהמארח. תג "השולחן של X" רק כש-tableSkin ≠ `tb-green`.
+- **`RUN-THIS-NEXT.sql`** — קובץ יחיד שמוחלף (לא מצטבר) בכל שלב עם SQL. אם משהו "לא עובד" בפרוד — לבדוק קודם שכל ה-SQL רץ.
+- **QA ויזואלי/MP:** ה-Browser pane לא אמין (מקפיא אנימציות). המשתמש הוא המאמת הויזואלי + 2-דפדפנים תמיד.
 
-## שלב F — נוכחות אמיתית + צ'אט 1:1 (2026-09-03)
-- **Heartbeat נוכחות** (`App.tsx`): `roomsService.startTicker(25s)` (Worker, נחשף עכשיו ב-roomsService) קורא `profileService.setPresence`. `pagehide`/`visibilitychange→hidden` → `profileService.offlineBeacon` (keepalive PATCH ל-PostgREST עם access token). `visible` → beat מיידי. רק `isRemoteId` + `showPresence`.
-- **שער טריות** `src/lib/presence.ts` → `isFriendOnline(p)` = presence!=offline && lastSeen && <60s. (בחרתי בשם `isFriendOnline` ולא `isOnline` כדי לא להתנגש ב-`supabase.isOnline` שבשימוש ב-6+ קבצים.) `friendsService.list` מחזיר `lastSeen`; `Friend.lastSeen` נוסף. הוחלף `f.presence !== 'offline'` בכל הסצנות (FriendsPanel/Hub/Room/CoinFlip/HighCard/Poker/SnG/Night) — בסצנות המשחק הפילטר גם מסנן `!currentGame`.
-- **גדר הזמנות**: כפתור "הזמן" ב-FriendsPanel disabled + tooltip כש-`!isFriendOnline || currentGame`. שאר הסצנות מסתירות.
-- **צ'אט 1:1**: `supabase/direct-messages.sql` (טבלה `direct_messages` + RLS friends-only/block-aware + `mark_dm_read` + trigger rate-limit + realtime). `src/services/dmService.ts`. `useSocial` הורחב: `dmThreads/dmUnread/dmOpen` + `openDM/closeDM/sendDM` + subscribe ב-listen (מנגן `notify`). UI: `DmThread.tsx` בתוך FriendsPanel (כפתור 💬 לכל חבר + badge), badge מאוחד ב-HUD + SideNav (requests+DM). i18n `dm.*` he+en parity 937/937.
-- **המשתמש צריך להריץ**: `supabase/RUN-THIS-NEXT.sql` (הוחלף — מכיל רק את direct-messages.sql).
-- אימות: tsc נקי, build ✓, test:all ✓ (הוספו בדיקות isFriendOnline + DM unread ל-social.test).
-- בדיקה חיה 2 דפדפנים: (א) A סוגר טאב → B רואה אותו לא-מחובר תוך ~ש' (beacon) או ≤60s (gate). (ב) A ב-Blackjack → כפתור הזמן של A אצל B disabled "באמצע משחק". (ג) A שולח DM ל-B כשפאנל B סגור → צליל + badge; B פותח → נקרא, badge מתאפס. (ד) rate-limit: 16 הודעות ברצף — ה-16 נדחית.
+## ידוע / פתוח
 
-## נשאר (המשתמש)
-- **אימות מולטיפלייר 2 דפדפנים** — `MP_VERIFICATION_GUIDE.md`. באגים 2/3/4 + host handoff + קלפי hole ב-devtools. סצנות שלא נבדקו סולו (פוקר/SnG/ערב חברה) — כאן. זה הפריט האחרון הפתוח.
-
-dev server: `PORT=5199 npm run dev` (5173 תפוס ע"י TYCOON NEO). הפורט משתנה — אם כן, החזר URL למשתמש.
+- סבב 4 ממתין לבדיקה חיה (ראה "מה נשאר").
+- דחיפה ל-`origin` איטית — ~125MB קבצי BLACKJACK 3D ישנים בקומיטים.
+- host-death freeze צומצם ב-M אך לא אפס (חדר עם אורחים-בלבד — אין מי שיתפוס host).
