@@ -13,7 +13,9 @@ import RegimeGauge from "@/components/dashboard/regime-gauge";
 import EquityPanel, { type EquityPoint } from "@/components/dashboard/equity-panel";
 import TerminalBackdrop from "@/components/dashboard/terminal-backdrop";
 import NewsPanel from "@/components/dashboard/news-panel";
+import VoiceBrief from "@/components/dashboard/voice-brief";
 import LiveNumber from "@/components/dashboard/live-number";
+import AlertChecker from "@/components/alert-checker";
 import { useCountUp } from "@/components/dashboard/use-count-up";
 import { useLiveData } from "@/components/dashboard/use-live-data";
 import "@/components/dashboard/dashboard.css";
@@ -183,6 +185,7 @@ export default function CommandCenter() {
   return (
     <div className="dash space-y-8 md:space-y-10">
       <TerminalBackdrop />
+      <AlertChecker />
 
       <div className="space-y-8 md:space-y-10">
         <header className="flex flex-col-reverse lg:flex-row lg:items-end lg:justify-between gap-8">
@@ -197,6 +200,9 @@ export default function CommandCenter() {
               מבט-על חי. החשבון, עקומת ההון, מד מצב השוק, הפוזיציות והסריקה —
               מתעדכנים לבד כל 20 שניות.
             </p>
+            <div className="mt-6">
+              <VoiceBrief />
+            </div>
           </div>
 
           <div className="dash-hud rounded-lg self-start lg:self-auto">

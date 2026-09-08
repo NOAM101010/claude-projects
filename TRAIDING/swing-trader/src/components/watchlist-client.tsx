@@ -1,14 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, Button, Input, EmptyState } from "@/components/ui";
-import { Star, Trash2, ExternalLink, FolderPlus, Copy, Check, Plus, FolderOpen } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Card, Button, Input, Select, EmptyState } from "@/components/ui";
+import { Star, Trash2, ExternalLink, FolderPlus, Copy, Check, Plus, FolderOpen, Bell } from "lucide-react";
+import AlertChecker from "@/components/alert-checker";
 
 type Item = { id: string; symbol: string };
 type Folder = { id: string; name: string; color: string | null; items: Item[] };
 type Data = { folders: Folder[]; unfiled: Item[] };
+
+type Alert = {
+  id: string;
+  symbol: string;
+  targetPrice: number;
+  direction: "above" | "below";
+  note: string | null;
+  active: boolean;
+  triggeredAt: string | null;
+};
 
 export default function WatchlistClient({ data }: { data: Data }) {
   const [newSymbol, setNewSymbol] = useState("");
@@ -16,7 +26,26 @@ export default function WatchlistClient({ data }: { data: Data }) {
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [alertForm, setAlertForm] = useState<string | null>(null);
+  const [alertPrice, setAlertPrice] = useState("");
+  const [alertDir, setAlertDir] = useState<"above" | "below">("above");
+  const [alertNote, setAlertNote] = useState("");
   const router = useRouter();
+
+  async function loadAlerts() {
+    try {
+      const res = await fetch("/api/alerts");
+      const json = await res.json();
+      if (Array.isArray(json?.alerts)) setAlerts(json.alerts);
+    } catch {
+      /* דלג בשקט */
+    }
+  }
+
+  useEffect(() => {
+    loadAlerts();
+  }, []);
 
   async function addSymbol(folderId?: string) {
     const s = newSymbol.trim().toUpperCase();
@@ -39,6 +68,38 @@ export default function WatchlistClient({ data }: { data: Data }) {
       body: JSON.stringify({ id }),
     });
     router.refresh();
+  }
+
+  function openAlertForm(symbol: string) {
+    setAlertForm((cur) => (cur === symbol ? null : symbol));
+    setAlertPrice("");
+    setAlertDir("above");
+    setAlertNote("");
+  }
+
+  async function createAlert(symbol: string) {
+    const price = parseFloat(alertPrice);
+    if (!Number.isFinite(price) || price <= 0) return;
+    await fetch("/api/alerts", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        symbol,
+        targetPrice: price,
+        direction: alertDir,
+        note: alertNote.trim() || null,
+      }),
+    });
+    setAlertForm(null);
+    setAlertPrice("");
+    setAlertNote("");
+    setAlertDir("above");
+    loadAlerts();
+  }
+
+  async function deleteAlert(id: string) {
+    await fetch(`/api/alerts?id=${id}`, { method: "DELETE" });
+    loadAlerts();
   }
 
   async function createFolder() {
@@ -71,34 +132,84 @@ export default function WatchlistClient({ data }: { data: Data }) {
     setTimeout(() => setCopied(null), 2000);
   }
 
+  const activeAlerts = alerts.filter((a) => a.active && !a.triggeredAt);
+  const triggeredAlerts = alerts.filter((a) => a.triggeredAt);
+
   function renderItems(items: Item[]) {
     if (items.length === 0) return null;
     return (
       <div className="space-y-1.5">
         {items.map((w, i) => (
-          <div key={w.id} className="glass rounded-xl px-4 py-3 row-hover flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 flex-1">
-              <span className="mono text-[var(--muted)] font-bold text-xs w-5">
-                {String(i + 1).padStart(2, "0")}
-              </span>
-              <a
-                href={`https://www.tradingview.com/chart/?symbol=${w.symbol}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 group"
-              >
-                <span className="ticker text-lg group-hover:text-[var(--up)] transition-colors">
-                  {w.symbol}
+          <div key={w.id}>
+            <div className="glass rounded-xl px-4 py-3 row-hover flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 flex-1">
+                <span className="mono text-[var(--muted)] font-bold text-xs w-5">
+                  {String(i + 1).padStart(2, "0")}
                 </span>
-                <ExternalLink className="w-3 h-3 text-[var(--muted)] group-hover:text-[var(--up)]" />
-              </a>
+                <a
+                  href={`https://www.tradingview.com/chart/?symbol=${w.symbol}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 group"
+                >
+                  <span className="ticker text-lg group-hover:text-[var(--up)] transition-colors">
+                    {w.symbol}
+                  </span>
+                  <ExternalLink className="w-3 h-3 text-[var(--muted)] group-hover:text-[var(--up)]" />
+                </a>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => openAlertForm(w.symbol)}
+                  className="text-[var(--muted)] hover:text-[var(--warn)] transition-colors p-1"
+                  title="התראת מחיר"
+                >
+                  <Bell className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => removeSymbol(w.id)}
+                  className="text-[var(--muted)] hover:text-[var(--down)] transition-colors p-1"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
-            <button
-              onClick={() => removeSymbol(w.id)}
-              className="text-[var(--muted)] hover:text-[var(--down)] transition-colors p-1"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
+
+            {alertForm === w.symbol && (
+              <div className="glass rounded-xl px-4 py-3 mt-1.5 flex flex-wrap items-center gap-2">
+                <Select
+                  value={alertDir}
+                  onChange={(e) => setAlertDir(e.target.value as "above" | "below")}
+                  className="w-auto py-2"
+                >
+                  <option value="above">מעל</option>
+                  <option value="below">מתחת</option>
+                </Select>
+                <Input
+                  value={alertPrice}
+                  onChange={(e) => setAlertPrice(e.target.value)}
+                  placeholder="מחיר יעד"
+                  inputMode="decimal"
+                  className="w-28 py-2"
+                  onKeyDown={(e) => e.key === "Enter" && createAlert(w.symbol)}
+                />
+                <Input
+                  value={alertNote}
+                  onChange={(e) => setAlertNote(e.target.value)}
+                  placeholder="הערה (אופציונלי)"
+                  className="flex-1 min-w-[140px] py-2"
+                  onKeyDown={(e) => e.key === "Enter" && createAlert(w.symbol)}
+                />
+                <Button
+                  variant="accent"
+                  size="sm"
+                  onClick={() => createAlert(w.symbol)}
+                  disabled={!alertPrice.trim()}
+                >
+                  צור התראה
+                </Button>
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -107,6 +218,8 @@ export default function WatchlistClient({ data }: { data: Data }) {
 
   return (
     <div className="space-y-6">
+      <AlertChecker />
+
       <Card>
         <div className="flex gap-2">
           <Input
@@ -121,6 +234,61 @@ export default function WatchlistClient({ data }: { data: Data }) {
           </Button>
         </div>
       </Card>
+
+      {(activeAlerts.length > 0 || triggeredAlerts.length > 0) && (
+        <Card className="p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Bell className="w-4 h-4 text-[var(--warn)]" />
+            <h3 className="text-base font-black">התראות מחיר</h3>
+            <span className="text-[10px] text-[var(--muted)] mono">{activeAlerts.length}</span>
+          </div>
+          <div className="space-y-1.5">
+            {activeAlerts.map((a) => (
+              <div
+                key={a.id}
+                className="glass rounded-xl px-4 py-2.5 flex items-center justify-between gap-3"
+              >
+                <span className="text-sm">
+                  <span className="ticker">{a.symbol}</span>{" "}
+                  <span className="text-[var(--fg-dim)]">
+                    {a.direction === "above" ? "מעל" : "מתחת"}
+                  </span>{" "}
+                  <span className="mono font-bold">${a.targetPrice}</span>
+                  {a.note && <span className="text-[var(--muted)]"> · {a.note}</span>}
+                </span>
+                <button
+                  onClick={() => deleteAlert(a.id)}
+                  className="text-[var(--muted)] hover:text-[var(--down)] transition-colors p-1"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+            {triggeredAlerts.map((a) => (
+              <div
+                key={a.id}
+                className="glass rounded-xl px-4 py-2.5 flex items-center justify-between gap-3 opacity-50"
+              >
+                <span className="text-sm">
+                  <Check className="w-3.5 h-3.5 text-[var(--up)] inline" />{" "}
+                  <span className="ticker">{a.symbol}</span>{" "}
+                  <span className="mono font-bold">${a.targetPrice}</span>
+                  <span className="text-[var(--muted)]">
+                    {" "}
+                    · {new Date(a.triggeredAt!).toLocaleDateString("he-IL")}
+                  </span>
+                </span>
+                <button
+                  onClick={() => deleteAlert(a.id)}
+                  className="text-[var(--muted)] hover:text-[var(--down)] transition-colors p-1"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <div className="flex items-center gap-2">
         <Button variant="outline" size="sm" onClick={() => setShowNewFolder(!showNewFolder)}>

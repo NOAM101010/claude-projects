@@ -6,6 +6,7 @@ import { yf } from "@/lib/yf";
 import { sendToChannel, FOOTER, type DiscordEmbed } from "@/lib/discord";
 import { getMarketHoliday } from "@/lib/market-calendar";
 import { getCuratedNews } from "@/lib/news";
+import { runAlertCheck } from "@/lib/alerts";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -268,8 +269,35 @@ export async function GET(req: NextRequest) {
       /* דלג בשקט */
     }
 
+    // התראות מחיר — בדיקה יומית כשהאפליקציה סגורה. runAlertCheck שולח פוש +
+    // embed לערוץ updates לכל התראה; כאן רק מוסיפים סיכום אם משהו הופעל.
+    let alertsTriggered: { symbol: string; targetPrice: number }[] = [];
+    try {
+      const { triggered } = await runAlertCheck();
+      alertsTriggered = triggered.map((t) => ({ symbol: t.symbol, targetPrice: t.targetPrice }));
+      if (triggered.length > 0) {
+        await sendToChannel("updates", [
+          {
+            title: `🔔 ${triggered.length} התראות מחיר הופעלו`,
+            description: triggered
+              .map(
+                (t) =>
+                  `• **${t.symbol}** ${t.direction === "above" ? "מעל" : "מתחת"} $${t.targetPrice} · נוכחי $${t.currentPrice.toFixed(2)}${t.note ? ` — ${t.note}` : ""}`
+              )
+              .join("\n"),
+            color: AMBER,
+            footer: FOOTER,
+            timestamp: now.toISOString(),
+          },
+        ]).catch(() => {});
+      }
+    } catch {
+      /* דלג בשקט */
+    }
+
     return NextResponse.json({
       ok: true,
+      alertsTriggered,
       sent: !send.skipped,
       skipped: !!send.skipped,
       error: send.error ?? null,

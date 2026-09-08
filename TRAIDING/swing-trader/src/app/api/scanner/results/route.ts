@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getSetting } from "@/lib/settings";
+import { getEarningsCalendar } from "@/lib/news";
 
 export const dynamic = "force-dynamic";
 
@@ -24,9 +26,21 @@ export async function GET() {
       orderBy: [{ score: "desc" }, { changePercent: "desc" }],
     });
 
+    const symbols = Array.from(
+      new Set(results.map((r) => r.symbol.toUpperCase()))
+    );
+    const earningsMap = await getSetting("finnhub_api_key")
+      .then((key) => getEarningsCalendar(key, symbols))
+      .catch(() => ({} as Record<string, string>));
+
+    const withEarnings = results.map((r) => ({
+      ...r,
+      earningsDate: earningsMap[r.symbol.toUpperCase()] ?? null,
+    }));
+
     return NextResponse.json({
       ok: true,
-      results,
+      results: withEarnings,
       lastRunAt: lastRun.startedAt.toISOString(),
       totalScanned: lastRun.totalScanned,
     });

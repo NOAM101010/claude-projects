@@ -160,3 +160,16 @@ model Setting {
   key   String @id
   value String
 }
+
+model PriceAlert {
+  id          String    @id @default(cuid())
+  symbol      String
+  targetPrice Float
+  direction   String    // "above" | "below"
+  note        String?
+  active      Boolean   @default(true)
+  triggeredAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([active])
+}

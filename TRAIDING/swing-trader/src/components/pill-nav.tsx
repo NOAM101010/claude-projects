@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Radar, Calculator, Star, Settings, BookOpen, Sparkles } from "lucide-react";
+import { Home, Radar, Calculator, Star, Settings, BookOpen, Sparkles, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import MarketClock from "./market-clock";
 
@@ -12,6 +12,7 @@ const NAV = [
   { href: "/analyze", label: "ניתוח", icon: Sparkles },
   { href: "/calculator", label: "מחשבון", icon: Calculator },
   { href: "/journal", label: "יומן", icon: BookOpen },
+  { href: "/reports", label: "דוחות", icon: BarChart3 },
   { href: "/watchlist", label: "מעקב", icon: Star },
 ];
 

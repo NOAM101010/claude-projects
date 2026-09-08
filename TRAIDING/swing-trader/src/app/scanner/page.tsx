@@ -22,7 +22,15 @@ type ScanResult = {
   grade: string | null;
   distanceFromHigh: number | null;
   distanceFromMa150: number | null;
+  earningsDate: string | null;
 };
+
+function daysUntil(iso: string | null): number | null {
+  if (!iso) return null;
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return null;
+  return Math.ceil((t - Date.now()) / 86400000);
+}
 
 type Folder = { id: string; name: string };
 
@@ -203,6 +211,7 @@ export default function ScannerPage() {
                     const grade = r.grade ?? "?";
                     const expanded = expandedId === r.id;
                     const signals = expanded ? parseSignals(r.signals) : [];
+                    const edays = daysUntil(r.earningsDate);
                     return (
                       <div
                         key={r.id}
@@ -235,6 +244,18 @@ export default function ScannerPage() {
                           >
                             {r.symbol}
                           </a>
+                          {edays != null && edays >= 0 && edays <= 14 && (
+                            <span
+                              className={cn(
+                                "mono text-[10px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap tabular",
+                                edays <= 3
+                                  ? "border-[var(--down)]/45 text-[var(--down-2)] bg-[var(--down)]/10"
+                                  : "border-[var(--metal-edge)] text-[var(--warn-2)] bg-[var(--warn-2)]/[0.07]"
+                              )}
+                            >
+                              📅 רווחים בעוד {edays}d
+                            </span>
+                          )}
                           <div className="hidden md:block flex-1 min-w-0">
                             <div className="text-xs text-[var(--fg-dim)] truncate">
                               {setups.map((s) => SETUP_LABELS[s] ?? s).join(" · ")}

@@ -1,0 +1,258 @@
+/* ============================================================
+   REPORTS — "THE LEDGER WALL"
+   a machined monthly ledger: amber = the account total,
+   green/red = each day on the tape. same titanium as the terminal.
+   ============================================================ */
+
+.rp {
+  position: relative;
+  --amber: 232, 179, 65;
+  --amber-hot: 245, 205, 130;
+}
+
+/* ---------- hero: the all-time number, engraved into titanium ---------- */
+.rp-hero {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 26px 26px 30px;
+  overflow: hidden;
+}
+.rp-hero-k {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+.rp-hero-num {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  font-size: clamp(40px, 6.4vw, 68px);
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  margin-top: 10px;
+  color: var(--warn-2);
+  text-shadow: 0 0 38px rgba(var(--amber), 0.18);
+}
+.rp-hero-sub {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-dim);
+  margin-top: 10px;
+  letter-spacing: 0.02em;
+}
+
+/* ---------- month stepper ---------- */
+.rp-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rp-nav-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+}
+.rp-nav-label {
+  direction: ltr;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+  min-width: 132px;
+  color: var(--fg-2);
+}
+
+/* ---------- calendar ---------- */
+.rp-cal-scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+.rp-cal {
+  min-width: 480px;
+}
+.rp-dow-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.rp-dow {
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--muted-2);
+  text-transform: uppercase;
+}
+.rp-week-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.rp-week-row + .rp-week-row {
+  margin-top: 6px;
+}
+
+.rp-day {
+  position: relative;
+  min-height: 74px;
+  border: 1px solid var(--metal-edge);
+  border-radius: 10px;
+  padding: 7px 8px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.018);
+  transition: border-color 0.16s ease, transform 0.16s ease;
+}
+.rp-day--out {
+  opacity: 0.28;
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.04);
+}
+.rp-day--flat {
+  background: linear-gradient(180deg, var(--metal-2), var(--metal-1));
+}
+.rp-day--live:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-hi);
+}
+.rp-day-n {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+  align-self: flex-end;
+  line-height: 1;
+}
+.rp-day--flat .rp-day-n { color: var(--muted-2); }
+.rp-day-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 3px;
+}
+.rp-day-pnl {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+}
+.rp-day-meta {
+  direction: ltr;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.42);
+}
+.rp-up { color: var(--up-2); }
+.rp-down { color: var(--down-2); }
+
+/* pnl intensity tiers — a heat tape */
+.rp-t1-up { background: rgba(16, 185, 129, 0.10); border-color: rgba(16, 185, 129, 0.22); }
+.rp-t2-up { background: rgba(16, 185, 129, 0.19); border-color: rgba(16, 185, 129, 0.34); }
+.rp-t3-up { background: rgba(16, 185, 129, 0.30); border-color: rgba(16, 185, 129, 0.5); }
+.rp-t1-down { background: rgba(239, 68, 68, 0.10); border-color: rgba(239, 68, 68, 0.22); }
+.rp-t2-down { background: rgba(239, 68, 68, 0.19); border-color: rgba(239, 68, 68, 0.34); }
+.rp-t3-down { background: rgba(239, 68, 68, 0.32); border-color: rgba(239, 68, 68, 0.52); }
+
+/* ---------- month stats panel ---------- */
+.rp-panel-title {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: -0.005em;
+}
+.rp-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+.rp-stat:first-of-type { border-top: none; }
+.rp-stat-k { color: var(--fg-dim); }
+.rp-stat-v {
+  direction: ltr;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--fg-2);
+}
+
+/* mono ledger chip — "BEST · 14 · +$412" */
+.rp-chip {
+  direction: ltr;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 9px;
+  border: 1px solid rgba(var(--amber), 0.4);
+  border-radius: 6px;
+  background: rgba(6, 8, 13, 0.82);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.rp-chip--up { border-color: rgba(16, 185, 129, 0.45); color: var(--up-2); }
+.rp-chip--down { border-color: rgba(239, 68, 68, 0.45); color: var(--down-2); }
+
+/* ---------- weekly summaries ---------- */
+.rp-week {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 11px 14px;
+  border: 1px solid var(--metal-edge);
+  border-inline-start-width: 3px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.018);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+.rp-week:hover { background: rgba(255, 255, 255, 0.035); border-color: var(--border-hi); }
+.rp-week + .rp-week { margin-top: 6px; }
+.rp-week--up { border-inline-start-color: var(--up); }
+.rp-week--down { border-inline-start-color: var(--down); }
+.rp-week--flat { border-inline-start-color: var(--muted-2); }
+.rp-week-span { color: var(--fg-dim); letter-spacing: 0.02em; }
+.rp-week-figs { display: flex; align-items: center; gap: 16px; }
+.rp-week-muted { color: var(--muted); }
+
+/* ---------- shimmer skeleton grid ---------- */
+.rp-skel-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.rp-skel-cell { height: 74px; border-radius: 10px; }
+
+@media (max-width: 640px) {
+  .rp-day { min-height: 62px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rp-day--live:hover { transform: none; }
+}
