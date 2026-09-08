@@ -399,7 +399,11 @@ export default function PokerScene() {
     if (wasSeated) {
       await send(profile.id, { type: 'topUp', userId: profile.id, amount });
     } else {
-      await send(profile.id, { type: 'join', userId: profile.id, username: profile.username, avatar: profile.avatar, level: profile.level, buyIn: amount, title: profile.equipped.title, nameColor: profile.equipped.nameColor });
+      await send(profile.id, {
+        type: 'join', userId: profile.id, username: profile.username, avatar: profile.avatar, level: profile.level, buyIn: amount,
+        title: profile.equipped.title, nameColor: profile.equipped.nameColor,
+        chipSkin: profile.equipped.chipSkin, cardFace: profile.equipped.cardFace, cardBack: profile.equipped.cardBack,
+      });
     }
     setBuyInOpen(false);
     audio.play('chip');
@@ -622,8 +626,8 @@ export default function PokerScene() {
                   street={state.street}
                   showdown={displayShowdown}
                   runoutReveal={state.allInEquity !== null}
-                  cardFace={profile.equipped.cardFace}
-                  cardBack={profile.equipped.cardBack}
+                  cardFace={occupant.cardFace ?? 'cf-classic'}
+                  cardBack={occupant.cardBack ?? 'bk-crimson'}
                   label={{
                     fold: t('poker.folded'), sitOut: t('poker.sittingOut'), allin: t('poker.allInLabel'), winner: t('poker.handWinner'),
                   }}

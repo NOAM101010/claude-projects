@@ -45,6 +45,25 @@ ok('identical 5-card hands tie', compareScore(
   bestHand(['AS', 'KS', 'QS', 'JS', '10S'].map(c)).score,
 ) === 0);
 
+console.log('\nJoin stamps cosmetics onto the seat');
+{
+  let s = createState(1, 25, 50);
+  s = reduce(s, {
+    type: 'join', userId: 'me', username: 'Me', avatar, level: 1, buyIn: 5000,
+    title: 'ttl-shark', nameColor: 'gold', chipSkin: 'ck-gold', cardFace: 'cf-gold', cardBack: 'bk-crown',
+  });
+  const seat = s.seats[0];
+  ok('title mirrored onto the seat', seat.title === 'ttl-shark');
+  ok('nameColor mirrored onto the seat', seat.nameColor === 'gold');
+  ok('chipSkin mirrored onto the seat', seat.chipSkin === 'ck-gold');
+  ok('cardFace mirrored onto the seat', seat.cardFace === 'cf-gold');
+  ok('cardBack mirrored onto the seat', seat.cardBack === 'bk-crown');
+
+  let noSkins = createState(1, 25, 50);
+  noSkins = reduce(noSkins, { type: 'join', userId: 'me', username: 'Me', avatar, level: 1, buyIn: 5000 });
+  ok('missing cosmetics default to null on the seat (UI applies the fallback)', noSkins.seats[0].chipSkin === null && noSkins.seats[0].cardFace === null && noSkins.seats[0].cardBack === null);
+}
+
 console.log('\nBetting round + showdown (3 players, no folds)');
 {
   let s = createState(7, 25, 50);

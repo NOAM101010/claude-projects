@@ -15,12 +15,11 @@ export interface SessionLine {
 }
 
 /** The end-of-night card: results, plus one award nobody asked for (§157). */
-export function SessionSummary({ open, lines, winnerId, pot, onAnother, onClose }: {
+export function SessionSummary({ open, lines, winnerId, pot, onClose }: {
   open: boolean;
   lines: SessionLine[];
   winnerId?: string | null;
   pot?: number;
-  onAnother: () => void;
   onClose: () => void;
 }) {
   const { t } = useT();
@@ -80,12 +79,9 @@ export function SessionSummary({ open, lines, winnerId, pot, onAnother, onClose 
         ))}
       </div>
 
-      <div className="flex flex-col gap-2">
-        <GameButton tone="gold" block onClick={onAnother}>{t('blackjack.newRound')}</GameButton>
-        <div className="flex gap-2">
-          <GameButton tone="ghost" block onClick={() => navigate('/hub')}>{t('blackjack.changeGame')}</GameButton>
-          <GameButton tone="ghost" block onClick={onClose}>{t('common.close')}</GameButton>
-        </div>
+      <div className="flex gap-2">
+        <GameButton tone="ghost" block onClick={() => navigate('/hub')}>{t('blackjack.changeGame')}</GameButton>
+        <GameButton tone="gold" block onClick={onClose}>{t('common.close')}</GameButton>
       </div>
     </Modal>
   );

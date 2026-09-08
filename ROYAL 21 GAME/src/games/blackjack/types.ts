@@ -31,6 +31,12 @@ export interface BjSeat {
   title?: string | null;
   /** Equipped name colour from the fixed palette, mirrored from the joining profile. */
   nameColor?: string | null;
+  /** Equipped chip skin (e.g. "ck-classic"), mirrored from the joining profile. */
+  chipSkin?: string | null;
+  /** Equipped card face skin (e.g. "cf-classic"), mirrored from the joining profile. */
+  cardFace?: string | null;
+  /** Equipped card back skin (e.g. "bk-crimson"), mirrored from the joining profile. */
+  cardBack?: string | null;
   /** Chips committed before the deal. */
   bet: number;
   ready: boolean;
@@ -70,7 +76,7 @@ export interface BjState {
 }
 
 export type BjAction =
-  | { type: 'join'; userId: string; username: string; avatar: AvatarConfig; level: number; title?: string | null; nameColor?: string | null }
+  | { type: 'join'; userId: string; username: string; avatar: AvatarConfig; level: number; title?: string | null; nameColor?: string | null; chipSkin?: string | null; cardFace?: string | null; cardBack?: string | null }
   | { type: 'leave'; userId: string }
   | { type: 'bet'; userId: string; amount: number }
   /** Companion wager (Perfect Pairs / 21+3), solo or room. Additive; `amount <= 0` clears the side. */

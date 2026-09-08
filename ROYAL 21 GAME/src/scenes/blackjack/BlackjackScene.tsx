@@ -129,6 +129,7 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
       type: 'join', userId: profile.id, username: profile.username,
       avatar: profile.avatar, level: profile.level,
       title: profile.equipped.title, nameColor: profile.equipped.nameColor,
+      chipSkin: profile.equipped.chipSkin, cardFace: profile.equipped.cardFace, cardBack: profile.equipped.cardBack,
     });
   }, [state, mySeat, send, profile]);
 
@@ -211,24 +212,84 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
   }, [state?.phase, solo, isHost, Boolean(state?.duel), members.length,
       state?.seats.map((s) => `${s.userId}:${s.bet}:${s.ready}:${s.spectator}`).join('|')]);
 
-  /* After a hand settles the host auto-opens the next betting window (which
-     clears every ready flag), so players just ready up again — no manual "new
-     round" click. Mirrors the Sit & Go auto-continue. */
+  /* After a hand settles mid-duel (match not decided yet), the host alone
+     auto-opens the next betting window after a beat — no manual "new round"
+     click, same as before. Guarded off separately from the lobby-return
+     effect below so that when the winner flips true mid-round, this one's
+     dependency change cancels its own pending timer instead of a shared
+     per-round latch blocking the lobby-return effect from ever firing. */
   useEffect(() => {
     if (!state || solo || !isHost || state.phase !== 'settled') return;
-    if (state.duel?.winner) return; // match's over — no next hand
+    if (!state.duel || state.duel.winner) return;
     if (autoOpenedRound.current === state.round) return;
     autoOpenedRound.current = state.round;
     const timer = setTimeout(() => {
       const st = useRoom.getState().state;
-      if (st?.phase === 'settled' && !st.duel?.winner) {
+      if (st?.phase === 'settled' && st.duel && !st.duel.winner) {
         settledRound.current = -1;
         void send(profile.id, { type: 'openBetting' });
       }
     }, 3200);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state?.phase, state?.round, solo, isHost, state?.duel?.winner]);
+  }, [state?.phase, state?.round, solo, isHost, Boolean(state?.duel), state?.duel?.winner]);
+
+  /* Send everyone back to the room lobby, no button required: a cash room
+     after EVERY settled hand, a duel only once its match is decided (a
+     mid-match hand keeps going via the effect above instead). Every client —
+     not just the host — runs this off the same shared `state`, so all their
+     clocks start within a frame of each other, exactly like the old 3.2s
+     auto-continue used to. */
+  const lobbyReturnRound = useRef(-1);
+  useEffect(() => {
+    if (!state || solo || state.phase !== 'settled') return;
+    const inDuel = Boolean(state.duel);
+    if (inDuel && !state.duel?.winner) return; // mid-match — handled above
+    if (lobbyReturnRound.current === state.round) return;
+    lobbyReturnRound.current = state.round;
+    const timer = setTimeout(() => {
+      if (!room) return;
+      // Drop this tab's "already pulled into this game" guard so the NEXT
+      // time the host starts a game in this room, useFollowHost fires again
+      // instead of treating the (identical game+code) pointer as stale.
+      sessionStorage.removeItem(`follow-host:${room.code}`);
+      if (isHost) void roomsService.clearActiveGame(room.id);
+      navigate(`/room/${room.code}`);
+    }, 4500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state?.phase, state?.round, solo, isHost, Boolean(state?.duel), state?.duel?.winner]);
+
+  /* Safety net: a mid-duel settled hand (no winner yet) is normally advanced
+     by the host alone via `autoOpenedRound` above. If the host has dropped
+     offline right at that moment, nobody sends `openBetting` and every
+     non-host client sits on the settled screen forever — the general
+     host-reassign mechanism elsewhere in the app may take ~15s (or longer)
+     to kick in, and even then isn't guaranteed to catch this exact effect in
+     time. Run on EVERY client (not just the host) with a much longer timer
+     than the normal 3.2s auto-continue, and — if nothing has moved the round
+     forward by then — fall back to the same lobby-return navigation used for
+     a decided match. Harmless if the normal flow already got there first:
+     it's cleared on any phase/round/winner change, same as the others.  */
+  const stuckSettledRound = useRef(-1);
+  useEffect(() => {
+    if (!state || solo || state.phase !== 'settled') return;
+    if (!state.duel || state.duel.winner) return; // handled by lobbyReturnRound instead
+    if (stuckSettledRound.current === state.round) return;
+    stuckSettledRound.current = state.round;
+    const roundAtSchedule = state.round;
+    const timer = setTimeout(() => {
+      const st = useRoom.getState().state;
+      // Still stuck on the very same settled, winner-less duel round? Bail to lobby.
+      if (!room || !st || st.phase !== 'settled' || st.round !== roundAtSchedule) return;
+      if (!st.duel || st.duel.winner) return;
+      sessionStorage.removeItem(`follow-host:${room.code}`);
+      if (isHost) void roomsService.clearActiveGame(room.id);
+      navigate(`/room/${room.code}`);
+    }, 11000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state?.phase, state?.round, solo, isHost, Boolean(state?.duel), state?.duel?.winner]);
 
   /* ------------------------------------------------------ dealer moods --- */
   useEffect(() => {
@@ -546,13 +607,6 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
     void send(profile.id, { type, userId: profile.id } as never);
   };
 
-  const nextHand = () => {
-    settledRound.current = -1;
-    setSummaryOpen(false);
-    audio.play('cardFlip');
-    void send(profile.id, { type: 'openBetting' });
-  };
-
   const sendEmote = (payload: { emote?: string; message?: string }) => {
     setEmotes((prev) => ({ ...prev, [profile.id]: payload }));
     setTimeout(() => setEmotes((prev) => ({ ...prev, [profile.id]: {} })), 2400);
@@ -651,9 +705,9 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
                   seat={seat}
                   active={activeSeat?.userId === seat.userId}
                   activeHand={state.activeHand}
-                  cardFace={profile.equipped.cardFace}
-                  cardBack={profile.equipped.cardBack}
-                  chipSkin={profile.equipped.chipSkin}
+                  cardFace={seat.cardFace ?? 'cf-classic'}
+                  cardBack={seat.cardBack ?? 'bk-crimson'}
+                  chipSkin={seat.chipSkin ?? 'ck-classic'}
                   points={duel ? duel.scores.points[seat.userId] : undefined}
                   emote={emotes[seat.userId]}
                 />
@@ -682,9 +736,9 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
               hero
               active={!!yourTurn}
               activeHand={state.activeHand}
-              cardFace={profile.equipped.cardFace}
-              cardBack={profile.equipped.cardBack}
-              chipSkin={profile.equipped.chipSkin}
+              cardFace={mySeat.cardFace ?? profile.equipped.cardFace}
+              cardBack={mySeat.cardBack ?? profile.equipped.cardBack}
+              chipSkin={mySeat.chipSkin ?? profile.equipped.chipSkin}
               points={duel ? duel.scores.points[profile.id] : undefined}
               emote={emotes[profile.id]}
             />
@@ -702,8 +756,15 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
         {/* ---------------- controls ---------------- */}
         <div className="mt-3 flex flex-col gap-2.5">
           {duel && (
-            <DuelBoard seats={state.seats} config={duel.config} scores={duel.scores}
-              pot={duel.pot ?? potOf(duel.config, state.seats.length)} />
+            <div className="flex flex-col gap-1.5">
+              <DuelBoard seats={state.seats} config={duel.config} scores={duel.scores}
+                pot={duel.pot ?? potOf(duel.config, state.seats.length)} />
+              {/* Always reachable during a duel — not just after a hand settles —
+                  since the "new round" button that used to open it is gone. */}
+              <div className="flex justify-end">
+                <GameButton tone="ghost" size="sm" onClick={() => setSummaryOpen(true)}>{t('duel.scoreboard')}</GameButton>
+              </div>
+            </div>
           )}
 
           {/* No mode="wait" here: it would hold the exiting control (e.g. the
@@ -755,16 +816,10 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
               />
             )}
 
-            {state.phase === 'settled' && (
-              <motion.div key="next" className="flex gap-2.5 items-center justify-center"
-                initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ opacity: 0 }}>
-                <GameButton tone="gold" size="lg" onClick={nextHand}>{t('blackjack.newRound')}</GameButton>
-                {duel && <GameButton tone="ghost" onClick={() => setSummaryOpen(true)}>{t('duel.scoreboard')}</GameButton>}
-                <GameButton tone="ghost" onClick={() => navigate('/hub')}>
-                  {t('common.back')}
-                </GameButton>
-              </motion.div>
-            )}
+            {/* Settled phase shows no controls any more — the result stays on
+                the felt as-is, and every client's own timer above navigates
+                back to the room lobby (or, mid-duel, deals the next hand)
+                without anyone needing to click anything. */}
           </AnimatePresence>
 
           <div className="flex items-center justify-between">
@@ -795,7 +850,6 @@ export default function BlackjackScene({ mode, roomCode }: Props) {
         lines={summaryLines}
         winnerId={duel?.winner}
         pot={duel ? (duel.pot ?? potOf(duel.config, state.seats.length)) : undefined}
-        onAnother={nextHand}
         onClose={() => setSummaryOpen(false)}
       />
 

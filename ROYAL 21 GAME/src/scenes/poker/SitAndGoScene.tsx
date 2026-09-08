@@ -278,7 +278,11 @@ export default function SitAndGoScene() {
     const buyIn = tournament.buyIn;
     addChips(-buyIn, { silent: true });
     audio.play('chip');
-    await send(profile.id, { type: 'join', userId: profile.id, username: profile.username, avatar: profile.avatar, level: profile.level, buyIn: 0, title: profile.equipped.title, nameColor: profile.equipped.nameColor });
+    await send(profile.id, {
+      type: 'join', userId: profile.id, username: profile.username, avatar: profile.avatar, level: profile.level, buyIn: 0,
+      title: profile.equipped.title, nameColor: profile.equipped.nameColor,
+      chipSkin: profile.equipped.chipSkin, cardFace: profile.equipped.cardFace, cardBack: profile.equipped.cardBack,
+    });
     /* Refund ONLY if we're still not seated once the full window has elapsed.
        A bumped state.version is not proof our join was rejected — any other
        player's action advances it too, and firing the refund then handed out
@@ -433,8 +437,8 @@ export default function SitAndGoScene() {
                   street={state.street}
                   showdown={displayShowdown}
                   runoutReveal={state.allInEquity !== null}
-                  cardFace={profile.equipped.cardFace}
-                  cardBack={profile.equipped.cardBack}
+                  cardFace={occupant.cardFace ?? 'cf-classic'}
+                  cardBack={occupant.cardBack ?? 'bk-crimson'}
                   label={{ fold: t('poker.folded'), sitOut: t('sng.eliminated'), allin: t('poker.allInLabel'), winner: t('poker.handWinner') }}
                   revealedIds={state.revealed}
                   displayStack={displayStacks[occupant.userId]}

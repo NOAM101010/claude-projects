@@ -69,8 +69,12 @@ export function createState(seed: number): BjState {
   };
 }
 
-export function makeSeat(userId: string, username: string, avatar: AvatarConfig, level: number, title: string | null = null, nameColor: string | null = null): BjSeat {
-  return { userId, username, avatar, level, title, nameColor, bet: 0, ready: false, hands: [], spectator: false, net: 0 };
+export function makeSeat(
+  userId: string, username: string, avatar: AvatarConfig, level: number,
+  title: string | null = null, nameColor: string | null = null,
+  chipSkin: string | null = null, cardFace: string | null = null, cardBack: string | null = null,
+): BjSeat {
+  return { userId, username, avatar, level, title, nameColor, chipSkin, cardFace, cardBack, bet: 0, ready: false, hands: [], spectator: false, net: 0 };
 }
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -246,7 +250,11 @@ export function reduce(prev: BjState, action: BjAction): BjState {
   switch (action.type) {
     case 'join': {
       if (seatOf(action.userId) || state.seats.length >= MAX_SEATS) return prev;
-      const seat = makeSeat(action.userId, action.username, action.avatar, action.level, action.title ?? null, action.nameColor ?? null);
+      const seat = makeSeat(
+        action.userId, action.username, action.avatar, action.level,
+        action.title ?? null, action.nameColor ?? null,
+        action.chipSkin ?? null, action.cardFace ?? null, action.cardBack ?? null,
+      );
       // Joining mid-hand means watching until the next round (§67).
       seat.spectator = state.phase !== 'betting';
       state.seats.push(seat);

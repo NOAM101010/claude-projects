@@ -18,6 +18,12 @@ export interface PokerSeat {
   title?: string | null;
   /** Equipped name colour from the fixed palette, mirrored from the joining profile. */
   nameColor?: string | null;
+  /** Equipped chip skin (e.g. "ck-classic"), mirrored from the joining profile. */
+  chipSkin?: string | null;
+  /** Equipped card face skin (e.g. "cf-classic"), mirrored from the joining profile. */
+  cardFace?: string | null;
+  /** Equipped card back skin (e.g. "bk-crimson"), mirrored from the joining profile. */
+  cardBack?: string | null;
   /** Chips in front of the player — bought in from their balance, cashed out on leave. */
   stack: number;
   hole: Card[];
@@ -109,7 +115,7 @@ export interface TournamentInfo {
 }
 
 export type PokerAction =
-  | { type: 'join'; userId: string; username: string; avatar: AvatarConfig; level: number; buyIn: number; title?: string | null; nameColor?: string | null }
+  | { type: 'join'; userId: string; username: string; avatar: AvatarConfig; level: number; buyIn: number; title?: string | null; nameColor?: string | null; chipSkin?: string | null; cardFace?: string | null; cardBack?: string | null }
   | { type: 'leave'; userId: string }
   | { type: 'topUp'; userId: string; amount: number }
   | { type: 'sitOut'; userId: string }
