@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { PageContainer, Eyebrow, Display, Card, Button, Input } from "@/components/ui";
 import PushSetup from "@/components/push-setup";
 import ScannerProfilesEditor from "@/components/scanner-profiles-editor";
-import { MessageCircle, Bell, Radar, CheckCircle2, XCircle, Wallet, ShieldCheck } from "lucide-react";
+import { MessageCircle, Bell, Radar, CheckCircle2, XCircle, Wallet, ShieldCheck, Bot } from "lucide-react";
 
 type Settings = {
   discord_webhook_url: string | null;
@@ -51,6 +51,28 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState<string | null>(null);
+  const [registeringBot, setRegisteringBot] = useState(false);
+  const [botResult, setBotResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  async function registerDiscordCommands() {
+    setRegisteringBot(true);
+    setBotResult(null);
+    try {
+      const res = await fetch("/api/discord/register", { method: "POST" });
+      const json = await res.json().catch(() => null);
+      if (json?.ok) {
+        setBotResult({ ok: true, msg: `✅ נרשמו ${json.registered ?? 0} פקודות (${json.scope})` });
+      } else if (Array.isArray(json?.missing) && json.missing.length) {
+        setBotResult({ ok: false, msg: `חסרים משתני סביבה ב-Vercel: ${json.missing.join(", ")}` });
+      } else {
+        const detail = json?.error ?? `HTTP ${res.status}`;
+        setBotResult({ ok: false, msg: `נכשל (status ${json?.status ?? res.status}): ${detail}` });
+      }
+    } catch (e) {
+      setBotResult({ ok: false, msg: "שגיאת רשת: " + (e instanceof Error ? e.message : String(e)) });
+    }
+    setRegisteringBot(false);
+  }
 
   async function load() {
     const res = await fetch("/api/settings");
@@ -368,6 +390,34 @@ export default function SettingsPage() {
               {saving ? "שומר..." : "שמור"}
             </Button>
           </div>
+        </div>
+      </Card>
+
+      <Card className="p-6 md:p-8">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-11 h-11 rounded-xl bg-[#5865F2]/10 border border-[#5865F2]/30 flex items-center justify-center">
+            <Bot className="w-5 h-5 text-[#7289DA]" />
+          </div>
+          <div>
+            <h2 className="text-xl font-black">בוט דיסקורד · Slash Commands</h2>
+            <div className="text-xs text-[var(--muted)] mt-0.5">
+              /מחיר, /פוזיציות, /סריקה, /ביצועים, /התראה, /עזרה
+            </div>
+          </div>
+        </div>
+        <p className="text-sm text-[var(--fg-dim)] leading-relaxed mb-4">
+          אחרי שהגדרת את משתני הסביבה ב-Vercel (DISCORD_APP_ID, DISCORD_BOT_TOKEN,
+          ואופציונלי DISCORD_GUILD_ID) ואת ה-Interactions Endpoint URL — לחץ כאן לרישום הפקודות.
+        </p>
+        <div className="flex items-center gap-3 flex-wrap">
+          <Button variant="accent" onClick={registerDiscordCommands} disabled={registeringBot}>
+            {registeringBot ? "רושם..." : "רשום פקודות"}
+          </Button>
+          {botResult && (
+            <span className={`text-sm ${botResult.ok ? "text-[var(--up)]" : "text-[var(--down)]"}`}>
+              {botResult.msg}
+            </span>
+          )}
         </div>
       </Card>
 
