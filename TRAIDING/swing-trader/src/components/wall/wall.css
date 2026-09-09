@@ -1,85 +1,449 @@
 /* ══════════════════════════════════════════════════════════════
-   THE WALL — 3D cliff (R3F). This file only styles the DOM chrome
-   around the <Canvas>: the top bar, the focus panel, locked state.
-   All the climbing itself is WebGL.
+   THE WALL — shared climbing wall for open positions
+   Motion budget: transform + opacity ONLY.
+   No filter / blur / backdrop-filter / mix-blend-mode anywhere.
+   Static box-shadow & data-uri textures are baked once — allowed.
    ══════════════════════════════════════════════════════════════ */
 
-.wall-stage-3d {
+.wall-stage {
   position: relative;
   border-radius: 16px;
   overflow: hidden;
   border: 1px solid var(--metal-edge);
-  background: linear-gradient(180deg, #0f1319 0%, #0a0c10 55%, #07080b 100%);
-  display: flex;
-  flex-direction: column;
+  box-shadow: inset 0 1px 0 var(--metal-hi), 0 24px 60px -30px rgba(0, 0, 0, 0.9);
+  background:
+    /* summit haze — pure gradient */
+    linear-gradient(180deg,
+      rgba(232, 179, 65, 0.10) 0%,
+      rgba(232, 179, 65, 0.03) 5%,
+      rgba(255, 255, 255, 0.015) 11%,
+      transparent 20%),
+    /* depth — cool light from above, black pit below */
+    linear-gradient(180deg, #10141b 0%, #0b0e13 38%, #08090d 74%, #050609 100%);
 }
 
-.wall-stage-3d__bar {
+/* light pooling on the mid-face + darkened edges — sticks to the
+   scroll viewport, sits under the climbers (later in the DOM) */
+.wall-lightpool {
+  position: sticky;
+  top: 0;
+  height: 76vh;
+  margin-bottom: -76vh;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    radial-gradient(115% 60% at 45% 32%,
+      rgba(255, 255, 255, 0.055) 0%,
+      rgba(255, 255, 255, 0.013) 34%,
+      transparent 58%),
+    radial-gradient(150% 125% at 50% 44%,
+      transparent 50%,
+      rgba(0, 0, 0, 0.30) 82%,
+      rgba(0, 0, 0, 0.55) 100%);
+}
+
+/* the climbable surface container */
+.wall-inner {
+  position: relative;
+}
+
+/* ── rock face — two turbulence layers at different scales ──── */
+.wall-rock {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.55;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='r'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.011 0.026' numOctaves='4' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0.055 0 0 0 0 0.065 0 0 0 0 0.085 0 0 0 0.92 0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23r)'/%3E%3C/svg%3E");
+  background-size: 560px 560px;
+}
+.wall-rock::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.09' numOctaves='2' seed='31'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.52 0 0 0 0 0.56 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
+
+/* faint diagonal strata + horizontal sediment banding */
+.wall-strata {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.4;
+  background-image:
+    repeating-linear-gradient(101deg,
+      transparent 0px, transparent 52px,
+      rgba(255, 255, 255, 0.016) 53px,
+      rgba(0, 0, 0, 0.30) 55px,
+      transparent 59px),
+    repeating-linear-gradient(180deg,
+      transparent 0px, transparent 120px,
+      rgba(255, 255, 255, 0.010) 122px,
+      rgba(0, 0, 0, 0.22) 126px,
+      transparent 132px);
+}
+
+/* left rail where numbers live — machined channel */
+.wall-rail {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 58px;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0.18) 68%, transparent);
+  border-inline-end: 1px solid rgba(255, 255, 255, 0.055);
+  box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.6);
+}
+
+/* ── height bands ─────────────────────────────────────────── */
+.wall-band {
+  position: absolute;
+  inset-inline: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--metal-edge);
-  background: rgba(0, 0, 0, 0.25);
+  gap: 8px;
+  padding-inline: 8px 16px;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+.wall-band__line {
+  flex: 1;
+  height: 1px;
+}
+.wall-band--half { opacity: 0.62; }
+.wall-band--half .wall-band__line {
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.08) 0 2px, transparent 2px 10px);
+}
+.wall-band--full .wall-band__line {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.03));
+}
+.wall-band--entry .wall-band__line {
+  background: linear-gradient(90deg, var(--warn-2) 0%, rgba(232, 179, 65, 0.55) 40%, rgba(232, 179, 65, 0.08) 100%);
+  height: 2px;
+  box-shadow: 0 0 10px rgba(232, 179, 65, 0.28);
+}
+.wall-band--r .wall-band__line {
+  background: repeating-linear-gradient(90deg, var(--up-2) 0 6px, transparent 6px 14px);
+  opacity: 0.55;
+}
+.wall-band__tag {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  width: 44px;
+  text-align: start;
+  letter-spacing: 0.02em;
+}
+.wall-band--half .wall-band__tag { font-size: 9px; color: var(--muted-2); }
+.wall-band--full .wall-band__tag { font-size: 10.5px; color: var(--fg-dim); }
+.wall-band--entry .wall-band__tag {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--warn-2);
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 8px rgba(232, 179, 65, 0.4);
+}
+.wall-band--r .wall-band__tag {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--up-2);
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  border-radius: 4px;
+  padding: 1px 3px;
+  width: auto;
 }
 
-.wall-canvas {
-  position: relative;
-  width: 100%;
-  height: 76vh;
-  min-height: 460px;
-  touch-action: none;
-}
-
-/* focus panel — floats over the canvas, does not push layout */
-.wall-focus {
+/* scattered climbing holds — decorative, static, bouldering colours */
+.wall-hold {
   position: absolute;
-  inset-block-start: 16px;
-  inset-inline-end: 16px;
-  width: 290px;
-  max-width: calc(100% - 32px);
-  border-radius: 16px;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  z-index: 5;
-  backdrop-filter: blur(2px);
+  border-radius: 44% 56% 52% 48% / 54% 46% 56% 44%;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.04) 52%, transparent 70%),
+    var(--hold, #6b7280);
+  opacity: 0.46;
+  box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.55), 0 1px 2px rgba(0, 0, 0, 0.45);
 }
-@media (max-width: 640px) {
-  .wall-focus {
-    inset-inline: 12px;
-    inset-block-start: 12px;
-    width: auto;
-  }
+.wall-hold--b { border-radius: 50%; }
+.wall-hold--c { border-radius: 30% 70% 62% 38% / 42% 40% 60% 58%; }
+
+/* ── climber ──────────────────────────────────────────────── */
+.wall-climber {
+  position: absolute;
+  inset-inline-start: 72px;
+  top: 0;
+  will-change: transform;
+  transition: transform 0.75s cubic-bezier(0.33, 1.25, 0.62, 1), opacity 0.3s ease;
+  z-index: 3;
+}
+.wall-climber--dim { opacity: 0.2; }
+.wall-climber--focus { z-index: 6; }
+
+/* P&L aura — a positioned radial element, never a filter */
+.wall-halo {
+  position: absolute;
+  inset-inline-start: -13px;
+  top: -8px;
+  width: 48px;
+  height: 46px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0.55;
+  transition: opacity 0.4s ease, background 0.4s ease;
+}
+.wall-halo--up { background: radial-gradient(circle at 50% 46%, var(--up-glow) 0%, rgba(16, 185, 129, 0.08) 46%, transparent 72%); }
+.wall-halo--down { background: radial-gradient(circle at 50% 46%, var(--down-glow) 0%, rgba(239, 68, 68, 0.08) 46%, transparent 72%); }
+.wall-climber--focus .wall-halo { opacity: 0.85; }
+
+/* gentle "pull up" idle bob — figure only */
+@keyframes wall-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+.wall-figure {
+  position: relative;
+  animation: wall-bob 3.2s ease-in-out infinite;
+}
+.wall-climber:nth-child(3n) .wall-figure { animation-delay: -0.9s; }
+.wall-climber:nth-child(3n+1) .wall-figure { animation-delay: -1.7s; }
+.wall-climber:nth-child(4n) .wall-figure { animation-duration: 3.8s; }
+
+.wall-figure .wf-stroke { transition: stroke 0.4s ease; }
+.wall-figure .wf-body { transition: fill 0.4s ease; }
+.wall-figure--up  .wf-body   { fill: var(--up); }
+.wall-figure--up  .wf-stroke { stroke: var(--up-3); }
+.wall-figure--down .wf-body   { fill: var(--down); }
+.wall-figure--down .wf-stroke { stroke: var(--down-3); }
+.wall-figure .wf-chalk { fill: rgba(255, 255, 255, 0.9); }
+
+/* rope — hangs with a slight catenary sag (SVG path) */
+.wall-rope-svg {
+  position: absolute;
+  inset-inline-start: -2px;
+  width: 18px;
+  overflow: visible;
+  pointer-events: none;
+}
+.wall-rope-svg .rope-line {
+  fill: none;
+  stroke: rgba(226, 208, 170, 0.5);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.wall-rope-svg .rope-hi {
+  fill: none;
+  stroke: rgba(255, 246, 224, 0.28);
+  stroke-width: 0.7;
+  stroke-linecap: round;
 }
 
-/* ── locked state (no positions → no Canvas) ─────────────────── */
+/* protected span — shaded ribbon between climber and anchor */
+.wall-span {
+  position: absolute;
+  inset-inline-start: 1px;
+  width: 11px;
+  border-radius: 3px;
+  border-inline: 1px solid rgba(255, 255, 255, 0.04);
+}
+.wall-span--up   { background: linear-gradient(180deg, rgba(16, 185, 129, 0.03), rgba(16, 185, 129, 0.20)); }
+.wall-span--down { background: linear-gradient(180deg, rgba(239, 68, 68, 0.04), rgba(239, 68, 68, 0.20)); }
+
+/* the stop anchor — a carabiner clipped to a piton */
+.wall-anchor {
+  position: absolute;
+  inset-inline-start: -3px;
+  width: 20px;
+  height: 16px;
+  transform: translateY(-50%);
+  color: var(--down-2);
+}
+.wall-anchor .carabiner { fill: none; stroke: currentColor; stroke-width: 1.6; opacity: 0.95; }
+.wall-anchor .piton { fill: rgba(255, 255, 255, 0.32); }
+
+/* name flag — machined tag with a pennant notch */
+.wall-flag {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px 5px 9px;
+  border-radius: 7px;
+  border: 1px solid var(--metal-edge);
+  background: linear-gradient(180deg, var(--metal-2), var(--metal-1));
+  box-shadow: inset 0 1px 0 var(--metal-hi), 0 3px 8px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 0.16s ease, border-color 0.16s ease;
+}
+.wall-flag:hover { transform: translateX(2px); border-color: var(--border-hi); }
+.wall-flag::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: -4px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  transform: translateY(-50%) rotate(45deg);
+  background: var(--metal-2);
+  border-inline-start: 1px solid var(--metal-edge);
+  border-block-end: 1px solid var(--metal-edge);
+}
+.wall-climber--focus .wall-flag {
+  border-color: rgba(232, 179, 65, 0.55);
+  box-shadow: inset 0 1px 0 var(--metal-hi), 0 0 0 1px rgba(232, 179, 65, 0.28), 0 4px 16px rgba(0, 0, 0, 0.55);
+}
+.wall-flag__pct { font-size: 11px; }
+.wall-flag__r   { font-size: 10px; color: var(--muted-2); }
+.wall-flag__nostop { font-size: 9px; color: var(--warn-2); }
+
+/* colour flash on price update — opacity only */
+.wall-flash {
+  position: absolute;
+  inset: -3px;
+  border-radius: 9px;
+  pointer-events: none;
+  opacity: 0;
+}
+.wall-flash--up   { background: var(--up-glow); }
+.wall-flash--down { background: var(--down-glow); }
+@keyframes wall-flash-k { 0% { opacity: 0.5; } 100% { opacity: 0; } }
+.wall-flash--on { animation: wall-flash-k 0.75s ease-out; }
+
+/* milestone — flag planted when a climber crosses a whole % / R line */
+.wall-plant {
+  position: absolute;
+  inset-inline-start: 3px;
+  top: -13px;
+  width: 13px;
+  height: 15px;
+  color: var(--warn-2);
+  transform-origin: bottom left;
+  pointer-events: none;
+  animation: wall-plant-k 1.5s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+@keyframes wall-plant-k {
+  0%   { transform: scale(0) rotate(-28deg); opacity: 0; }
+  22%  { transform: scale(1.18) rotate(7deg); opacity: 1; }
+  38%  { transform: scale(1) rotate(0deg); opacity: 1; }
+  78%  { opacity: 1; }
+  100% { transform: translateY(-7px) scale(1); opacity: 0; }
+}
+.wall-plant__spark {
+  position: absolute;
+  inset-inline-start: -3px;
+  top: -3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(232, 179, 65, 0.55), transparent 68%);
+  animation: wall-spark-k 0.7s ease-out forwards;
+}
+@keyframes wall-spark-k {
+  0%   { transform: scale(0.2); opacity: 0.9; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+
+/* the trail — where a focused climber has been */
+.wall-trail {
+  position: absolute;
+  inset-inline-start: 78px;
+  width: 3px;
+  border-radius: 3px;
+  transform-origin: bottom center;
+  background: linear-gradient(180deg, var(--warn-2), rgba(232, 179, 65, 0.04));
+  opacity: 0.4;
+  z-index: 2;
+  animation: wall-trail-in 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.wall-trail::after {
+  content: "";
+  position: absolute;
+  inset-inline: -2px;
+  top: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(180deg, rgba(232, 179, 65, 0.5) 0 3px, transparent 3px 9px);
+}
+@keyframes wall-trail-in { from { transform: scaleY(0); opacity: 0; } to { transform: scaleY(1); opacity: 0.4; } }
+
+/* current-price line for the focused climber — static glow */
+.wall-priceline {
+  position: absolute;
+  inset-inline: 0;
+  height: 1px;
+  transform: translateY(-50%);
+  background: linear-gradient(90deg, rgba(232, 179, 65, 0.7), rgba(232, 179, 65, 0.06));
+  box-shadow: 0 0 8px rgba(232, 179, 65, 0.35);
+  z-index: 2;
+}
+
+/* ── the fall ─────────────────────────────────────────────── */
+@keyframes wall-fall {
+  0%   { transform: translateY(var(--fall-from, 0px)) rotate(0deg); opacity: 1; }
+  12%  { transform: translateY(calc(var(--fall-from, 0px) - 12px)) rotate(-10deg); opacity: 1; }
+  100% { transform: translateY(calc(var(--fall-from, 0px) + 1000px)) rotate(240deg); opacity: 0; }
+}
+.wall-climber[data-falling="true"] {
+  animation: wall-fall 1.5s cubic-bezier(0.5, 0, 0.9, 0.5) forwards;
+  z-index: 8;
+}
+.wall-climber[data-falling="true"] .wall-figure { animation: none; }
+.wall-climber[data-falling="true"] .wall-rope-svg,
+.wall-climber[data-falling="true"] .wall-span,
+.wall-climber[data-falling="true"] .wall-halo { opacity: 0; transition: opacity 0.2s; }
+
+/* ── locked state ─────────────────────────────────────────── */
 .wall-locked {
   position: relative;
   border-radius: 16px;
   overflow: hidden;
   border: 1px solid var(--metal-edge);
+  box-shadow: inset 0 1px 0 var(--metal-hi);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 30%),
-    linear-gradient(180deg, #0c0e12 0%, #08090c 60%, #060709 100%);
+    radial-gradient(120% 80% at 50% 0%, rgba(255, 255, 255, 0.025), transparent 42%),
+    linear-gradient(180deg, #0c0e12 0%, #08090c 60%, #050608 100%);
 }
-.wall-rock {
+.wall-locked .wall-rock { opacity: 0.4; }
+/* iron gate bars behind the content */
+.wall-bars {
   position: absolute;
   inset: 0;
   pointer-events: none;
   opacity: 0.5;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='r'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012 0.028' numOctaves='4' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0.06 0 0 0 0 0.07 0 0 0 0 0.09 0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23r)'/%3E%3C/svg%3E");
-  background-size: 520px 520px;
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent 0 46px,
+    rgba(255, 255, 255, 0.045) 46px 48px,
+    rgba(0, 0, 0, 0.5) 48px 52px,
+    rgba(255, 255, 255, 0.02) 52px 54px
+  );
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(180deg, transparent, #000 12%, #000 88%, transparent);
 }
 .wall-chain {
   position: absolute;
   inset-inline: -20px;
-  height: 20px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='20'%3E%3Cg fill='none' stroke='%23343840' stroke-width='4'%3E%3Cellipse cx='10' cy='10' rx='7' ry='9'/%3E%3Cellipse cx='30' cy='10' rx='7' ry='9'/%3E%3C/g%3E%3C/svg%3E");
-  background-size: 40px 20px;
+  height: 22px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='22'%3E%3Cg fill='none' stroke='%233a3e47' stroke-width='4'%3E%3Cellipse cx='11' cy='11' rx='8' ry='10'/%3E%3Cellipse cx='33' cy='11' rx='8' ry='10'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 44px 22px;
   opacity: 0.6;
 }
-.wall-chain--a { top: 34%; transform: rotate(-4deg); }
-.wall-chain--b { top: 63%; transform: rotate(3deg); }
+.wall-chain--a { top: 32%; transform: rotate(-4deg); }
+.wall-chain--b { top: 61%; transform: rotate(3deg); }
+.wall-padlock { color: var(--warn-2); }
+.wall-padlock .shackle { fill: none; stroke: #9aa0ab; stroke-width: 3.4; }
+.wall-padlock .body {
+  fill: url(#lockgrad);
+  stroke: rgba(255, 255, 255, 0.12);
+  stroke-width: 1;
+}
+.wall-padlock .keyhole { fill: rgba(0, 0, 0, 0.55); }
+
+@media (prefers-reduced-motion: reduce) {
+  .wall-figure,
+  .wall-trail,
+  .wall-plant,
+  .wall-plant__spark { animation: none !important; }
+  .wall-plant { opacity: 0; }
+  .wall-climber { transition: opacity 0.3s ease; }
+  .wall-flash--on { animation: none; }
+}
