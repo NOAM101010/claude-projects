@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Radar, Calculator, Star, Settings, BookOpen, Sparkles, BarChart3 } from "lucide-react";
+import { Home, Radar, Calculator, Star, Settings, BookOpen, Sparkles, BarChart3, Mountain } from "lucide-react";
 import { cn } from "@/lib/utils";
 import MarketClock from "./market-clock";
 
@@ -14,6 +14,7 @@ const NAV = [
   { href: "/journal", label: "יומן", icon: BookOpen },
   { href: "/reports", label: "ביצועים", icon: BarChart3 },
   { href: "/watchlist", label: "מעקב", icon: Star },
+  { href: "/wall", label: "הקיר", icon: Mountain },
 ];
 
 export default function PillNav() {
