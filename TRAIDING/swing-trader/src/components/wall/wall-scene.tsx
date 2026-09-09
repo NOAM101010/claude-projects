@@ -2,11 +2,11 @@
 
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, useGLTF } from "@react-three/drei";
+import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import Cliff from "./cliff";
 import Climber, { type ClimberData } from "./climber";
-import Mountains, { HERO_MOUNTAIN_URL, BG_MOUNTAIN_URL } from "./mountains";
+import Mountains from "./mountains";
 import { MAX_CLIMBERS, WALL_H, xFor, yFor, type Range } from "./wall-math";
 
 type Props = {
@@ -59,7 +59,7 @@ function CameraRig({
     if (clock.elapsedTime < activeUntil.current) {
       const gx = focusTarget ? focusTarget.x : 0;
       const gy = focusTarget ? focusTarget.y + 1 : DEFAULT_Y;
-      const gz = focusTarget ? 9 : 14;
+      const gz = focusTarget ? 9 : 16;
       camera.position.x = THREE.MathUtils.damp(camera.position.x, gx, 3, d);
       camera.position.y = THREE.MathUtils.damp(camera.position.y, gy, 3, d);
       camera.position.z = THREE.MathUtils.damp(camera.position.z, gz, 3, d);
@@ -67,6 +67,36 @@ function CameraRig({
     controls.update();
   });
 
+  return null;
+}
+
+/** paints a vertical sky gradient onto scene.background — built once */
+function SkyGradient() {
+  const scene = useThree((s) => s.scene);
+  const tex = useMemo(() => {
+    const c = document.createElement("canvas");
+    c.width = 8;
+    c.height = 256;
+    const ctx = c.getContext("2d")!;
+    const g = ctx.createLinearGradient(0, 0, 0, 256);
+    g.addColorStop(0, "#070a11"); // zenith
+    g.addColorStop(0.5, "#141b28");
+    g.addColorStop(0.8, "#33323b");
+    g.addColorStop(1, "#5a4b46"); // warm haze at the horizon
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 8, 256);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  }, []);
+  useEffect(() => {
+    const prev = scene.background;
+    scene.background = tex;
+    return () => {
+      scene.background = prev;
+      tex.dispose();
+    };
+  }, [scene, tex]);
   return null;
 }
 
@@ -85,13 +115,6 @@ function ResumeOnShow({ hidden }: { hidden: boolean }) {
 export default function WallScene({ climbers, focusId, range, hidden, onSelect }: Props) {
   const shown = useMemo(() => climbers.slice(0, MAX_CLIMBERS), [climbers]);
 
-  // free the GLB cache when the wall unmounts
-  useEffect(() => {
-    return () => {
-      useGLTF.clear(["/models/climber.glb", HERO_MOUNTAIN_URL, BG_MOUNTAIN_URL]);
-    };
-  }, []);
-
   const focusTarget = useMemo(() => {
     if (!focusId) return null;
     const idx = shown.findIndex((c) => c.id === focusId);
@@ -109,13 +132,16 @@ export default function WallScene({ climbers, focusId, range, hidden, onSelect }
       dpr={[1, 1.5]}
       gl={{ antialias: true, powerPreference: "high-performance" }}
       frameloop={hidden ? "never" : "always"}
-      camera={{ position: [0, DEFAULT_Y, 14], fov: 42 }}
+      camera={{ position: [0, DEFAULT_Y, 16], fov: 40 }}
     >
-      <color attach="background" args={["#0a0e15"]} />
-      <fog attach="fog" args={["#0a0e15", 13, 36]} />
+      <fog attach="fog" args={["#2b2b33", 18, 52]} />
+      <SkyGradient />
 
-      <hemisphereLight args={["#a9c7e8", "#3a2f26", 1.15]} />
-      <directionalLight position={[4, 12, 8]} intensity={1.1} color="#fff4e0" />
+      {/* warm key + cool fill + soft back-rim */}
+      <hemisphereLight args={["#c6d6ea", "#241f1a", 0.5]} />
+      <directionalLight position={[7, 10, 8]} intensity={1.7} color="#ffe6c4" />
+      <directionalLight position={[-8, 4, 5]} intensity={0.55} color="#5c7cb0" />
+      <directionalLight position={[0, 6, -9]} intensity={0.4} color="#ffd9b3" />
 
       <Cliff range={range} rLines={rLines} />
 

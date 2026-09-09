@@ -1,80 +1,71 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
-import { WALL_H, WALL_W } from "./wall-math";
+import { WALL_H, WALL_W, seededRng } from "./wall-math";
 
 /*
   Decorative backdrop only — never interactive, never the climb surface.
-  The procedural cliff in `cliff.tsx` stays as the surface the climbers hang on;
-  these optimised GLBs sit far behind it and are swallowed by the scene fog.
+  Procedural low-poly ridge silhouettes far behind the cliff, tinted misty
+  blue-grey so the scene fog dissolves them into the horizon.
 */
-export const HERO_MOUNTAIN_URL = "/models/hero_mountain.glb";
-export const BG_MOUNTAIN_URL = "/models/background_mountain.glb";
 
-type Opts = { targetW: number; y: number; z: number; tint: number };
+type Ridge = { z: number; y: number; width: number; height: number; color: string; seed: number };
 
-function prep(source: THREE.Object3D, opts: Opts, sink: THREE.Material[]) {
-  const root = source.clone(true);
-  const box = new THREE.Box3().setFromObject(root);
-  const size = new THREE.Vector3();
-  const center = new THREE.Vector3();
-  box.getSize(size);
-  box.getCenter(center);
-  const s = opts.targetW / (size.x || 1);
-  root.scale.setScalar(s);
-  root.position.set(-center.x * s, opts.y - center.y * s, opts.z);
-  root.traverse((o) => {
-    const m = o as THREE.Mesh;
-    if (!m.isMesh) return;
-    m.raycast = () => {};
-    m.frustumCulled = false;
-    m.castShadow = false;
-    m.receiveShadow = false;
-    const src = m.material as THREE.MeshStandardMaterial;
-    if (src && "color" in src) {
-      const mat = src.clone();
-      mat.color.multiplyScalar(opts.tint);
-      mat.metalness = 0;
-      mat.roughness = 1;
-      m.material = mat;
-      sink.push(mat);
-    }
-  });
-  return root;
+const RIDGES: Ridge[] = [
+  { z: -34, y: -1, width: WALL_W * 6, height: 7, color: "#3a4a63", seed: 11 },
+  { z: -46, y: -1.5, width: WALL_W * 10, height: 10, color: "#2b3850", seed: 29 },
+];
+
+function ridgeGeometry(r: Ridge): THREE.BufferGeometry {
+  const rnd = seededRng(r.seed);
+  const segments = 26;
+  const half = r.width / 2;
+  const baseY = r.y;
+  const pts: THREE.Vector2[] = [];
+  for (let i = 0; i <= segments; i++) {
+    const x = -half + (r.width * i) / segments;
+    const t = i / segments;
+    const env = Math.sin(t * Math.PI); // taper the ends down
+    const ridgeLine =
+      Math.sin(t * 7 + rnd() * 6) * 0.5 + Math.sin(t * 17 + rnd() * 6) * 0.25 + rnd() * 0.3;
+    const y = baseY + env * (r.height * (0.45 + 0.55 * (0.5 + 0.5 * ridgeLine)));
+    pts.push(new THREE.Vector2(x, y));
+  }
+  const shape = new THREE.Shape();
+  shape.moveTo(-half, baseY - 6);
+  pts.forEach((p) => shape.lineTo(p.x, p.y));
+  shape.lineTo(half, baseY - 6);
+  shape.closePath();
+  return new THREE.ShapeGeometry(shape, 1);
 }
 
 export default function Mountains() {
-  const hero = useGLTF(HERO_MOUNTAIN_URL);
-  const bg = useGLTF(BG_MOUNTAIN_URL);
-
-  const owned = useMemo<THREE.Material[]>(() => [], []);
-
-  const heroNode = useMemo(
-    () => prep(hero.scene, { targetW: WALL_W * 3.6, y: WALL_H * 0.45, z: -7, tint: 0.62 }, owned),
-    [hero.scene, owned]
-  );
-  const bgNode = useMemo(
-    () => prep(bg.scene, { targetW: WALL_W * 9, y: WALL_H * 0.5, z: -22, tint: 0.4 }, owned),
-    [bg.scene, owned]
+  const layers = useMemo(
+    () =>
+      RIDGES.map((r) => ({
+        geo: ridgeGeometry(r),
+        mat: new THREE.MeshBasicMaterial({ color: new THREE.Color(r.color), fog: true }),
+        z: r.z,
+      })),
+    []
   );
 
-  useEffect(() => {
-    return () => {
-      for (const m of owned) m.dispose();
-    };
-  }, [owned]);
+  useEffect(
+    () => () => {
+      for (const l of layers) {
+        l.geo.dispose();
+        l.mat.dispose();
+      }
+    },
+    [layers]
+  );
 
   return (
-    <group>
-      <primitive object={bgNode} />
-      <primitive object={heroNode} />
+    <group position={[0, WALL_H * 0.0, 0]}>
+      {layers.map((l, i) => (
+        <mesh key={i} geometry={l.geo} material={l.mat} position={[0, 0, l.z]} raycast={() => {}} />
+      ))}
     </group>
   );
-}
-
-if (typeof window !== "undefined") {
-  useGLTF.preload(HERO_MOUNTAIN_URL);
-  useGLTF.preload(BG_MOUNTAIN_URL);
 }
