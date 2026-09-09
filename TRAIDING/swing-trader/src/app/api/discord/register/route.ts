@@ -40,8 +40,8 @@ async function register(req: NextRequest) {
     );
   }
 
-  const appId = process.env.DISCORD_APP_ID;
-  const botToken = process.env.DISCORD_BOT_TOKEN;
+  const appId = process.env.DISCORD_APP_ID?.trim();
+  const botToken = process.env.DISCORD_BOT_TOKEN?.trim();
   const missing: string[] = [];
   if (!appId) missing.push("DISCORD_APP_ID");
   if (!botToken) missing.push("DISCORD_BOT_TOKEN");
@@ -52,7 +52,7 @@ async function register(req: NextRequest) {
     );
   }
 
-  const guildId = process.env.DISCORD_GUILD_ID;
+  const guildId = process.env.DISCORD_GUILD_ID?.trim();
   const url = guildId
     ? `https://discord.com/api/v10/applications/${appId}/guilds/${guildId}/commands`
     : `https://discord.com/api/v10/applications/${appId}/commands`;

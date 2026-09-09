@@ -39,8 +39,22 @@ function opt(
   return found?.value as string | number | undefined;
 }
 
+export async function GET(): Promise<Response> {
+  return Response.json({
+    ok: true,
+    note: "Discord interactions endpoint. POST only for real use.",
+    env: {
+      DISCORD_PUBLIC_KEY: !!process.env.DISCORD_PUBLIC_KEY,
+      DISCORD_PUBLIC_KEY_len: (process.env.DISCORD_PUBLIC_KEY ?? "").trim().length,
+      DISCORD_APP_ID: !!process.env.DISCORD_APP_ID,
+      DISCORD_BOT_TOKEN: !!process.env.DISCORD_BOT_TOKEN,
+      DISCORD_GUILD_ID: !!process.env.DISCORD_GUILD_ID,
+    },
+  });
+}
+
 async function editOriginal(token: string, embed: DiscordEmbed): Promise<void> {
-  const appId = process.env.DISCORD_APP_ID;
+  const appId = process.env.DISCORD_APP_ID?.trim();
   if (!appId) return;
   try {
     await fetch(
@@ -81,7 +95,7 @@ async function resolveCommandEmbed(
 }
 
 export async function POST(req: Request): Promise<Response> {
-  const publicKey = process.env.DISCORD_PUBLIC_KEY;
+  const publicKey = process.env.DISCORD_PUBLIC_KEY?.trim();
   const signature = req.headers.get("x-signature-ed25519");
   const timestamp = req.headers.get("x-signature-timestamp");
   const raw = await req.text();
