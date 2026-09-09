@@ -4,22 +4,25 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 export type AlertToast = {
   id: string;
+  kind: "alert" | "closed" | "stopAlert";
   symbol: string;
   targetPrice: number;
   currentPrice: number;
   direction: string;
   note: string | null;
+  pnl?: number;
 };
 
 const POLL_MS = 60_000;
 const POLL_IDLE_MS = 300_000;
 const TOAST_MS = 8_000;
+const TOAST_CLOSED_MS = 12_000;
 
 /**
  * בודק את /api/alerts/check כל 60ש' (רק כשהטאב גלוי). כשאין התראות פעילות
  * שנשארו (activeCount===0) מרווח הפולינג עולה ל-5 דקות, ויורד חזרה ל-60ש'
- * ברגע שיש התראה פעילה. התראות שהופעלו חוזרות כ-toasts שנעלמים לבד אחרי ~8ש'.
- * מנקה interval + טיימרים ב-unmount.
+ * ברגע שיש התראה פעילה. התראות שהופעלו חוזרות כ-toasts שנעלמים לבד אחרי ~8ש'
+ * (סגירת פוזיציה בסטופ — 12ש'). מנקה interval + טיימרים ב-unmount.
  */
 export function useAlertCheck() {
   const [toasts, setToasts] = useState<AlertToast[]>([]);
@@ -47,6 +50,16 @@ export function useAlertCheck() {
       interval = setInterval(check, ms);
     }
 
+    function push(fresh: AlertToast[]) {
+      if (fresh.length === 0) return;
+      setToasts((prev) => [...prev, ...fresh]);
+      for (const f of fresh) {
+        const ms = f.kind === "closed" ? TOAST_CLOSED_MS : TOAST_MS;
+        const tm = setTimeout(() => dismiss(f.id), ms);
+        localTimers.set(f.id, tm);
+      }
+    }
+
     async function check() {
       if (typeof document !== "undefined" && document.hidden) return;
       try {
@@ -55,20 +68,47 @@ export function useAlertCheck() {
         const json = await res.json();
         if (cancelled) return;
         schedule(json?.activeCount === 0 ? POLL_IDLE_MS : POLL_MS);
-        if (!Array.isArray(json?.triggered) || json.triggered.length === 0) return;
         const now = Date.now();
-        const fresh: AlertToast[] = json.triggered.map((t: any, i: number) => ({
-          id: `${now}-${i}-${t.symbol}`,
-          symbol: t.symbol,
-          targetPrice: t.targetPrice,
-          currentPrice: t.currentPrice,
-          direction: t.direction,
-          note: t.note ?? null,
-        }));
-        setToasts((prev) => [...prev, ...fresh]);
-        for (const f of fresh) {
-          const tm = setTimeout(() => dismiss(f.id), TOAST_MS);
-          localTimers.set(f.id, tm);
+
+        if (Array.isArray(json?.triggered)) {
+          push(
+            json.triggered.map((t: any, i: number) => ({
+              id: `${now}-a${i}-${t.symbol}`,
+              kind: "alert" as const,
+              symbol: t.symbol,
+              targetPrice: t.targetPrice,
+              currentPrice: t.currentPrice,
+              direction: t.direction,
+              note: t.note ?? null,
+            }))
+          );
+        }
+        if (Array.isArray(json?.closed)) {
+          push(
+            json.closed.map((c: any, i: number) => ({
+              id: `${now}-c${i}-${c.ticker}`,
+              kind: "closed" as const,
+              symbol: c.ticker,
+              targetPrice: c.stopPrice,
+              currentPrice: c.currentPrice,
+              direction: "stop",
+              note: null,
+              pnl: c.realizedPnl,
+            }))
+          );
+        }
+        if (Array.isArray(json?.alerted)) {
+          push(
+            json.alerted.map((a: any, i: number) => ({
+              id: `${now}-s${i}-${a.ticker}`,
+              kind: "stopAlert" as const,
+              symbol: a.ticker,
+              targetPrice: a.stopPrice,
+              currentPrice: a.currentPrice,
+              direction: "stop",
+              note: null,
+            }))
+          );
         }
       } catch {
         /* דלג בשקט */

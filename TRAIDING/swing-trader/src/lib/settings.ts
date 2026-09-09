@@ -10,6 +10,7 @@ export type SettingKey =
   | "discord_watchlist_message_id"
   | "morning_brief_enabled"
   | "premarket_alert_enabled"
+  | "auto_close_on_stop"
   | "account_size"
   | "cash_balance"
   | "finnhub_api_key";

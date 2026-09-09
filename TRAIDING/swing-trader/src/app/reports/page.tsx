@@ -7,10 +7,10 @@ export default function ReportsPage() {
   return (
     <PageContainer className="space-y-10">
       <section>
-        <Eyebrow>Reports</Eyebrow>
+        <Eyebrow>Performance</Eyebrow>
         <Display className="mt-3">
-          דוחות<br />
-          <span className="trend-up-glow">ביצועים.</span>
+          ביצועים<br />
+          <span className="trend-up-glow">ותוצאות.</span>
         </Display>
         <p className="text-sm text-[var(--fg-dim)] mt-4 max-w-lg">
           לוח שנה חודשי של רווח והפסד יומי, סטטיסטיקות לחודש הנבחר, וסיכומי שבוע —

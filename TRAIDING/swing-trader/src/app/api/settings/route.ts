@@ -10,6 +10,7 @@ const KEYS: SettingKey[] = [
   "discord_webhook_watchlist",
   "morning_brief_enabled",
   "premarket_alert_enabled",
+  "auto_close_on_stop",
   "account_size",
   "cash_balance",
   "finnhub_api_key",

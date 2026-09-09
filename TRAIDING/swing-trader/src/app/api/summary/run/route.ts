@@ -6,7 +6,7 @@ import { yf } from "@/lib/yf";
 import { sendToChannel, FOOTER, type DiscordEmbed } from "@/lib/discord";
 import { getMarketHoliday } from "@/lib/market-calendar";
 import { getCuratedNews } from "@/lib/news";
-import { runAlertCheck } from "@/lib/alerts";
+import { runAlertCheck, runStopCheck } from "@/lib/alerts";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -295,9 +295,43 @@ export async function GET(req: NextRequest) {
       /* דלג בשקט */
     }
 
+    // סטופ = מחיר יציאה — סוגר פוזיציות שנגעו בסטופ (או מתריע אם ההגדרה כבויה).
+    // עטוף try/catch כדי לא לשבור את הדוח.
+    let stopClosed: { ticker: string; realizedPnl: number }[] = [];
+    let stopAlerted: { ticker: string; stopPrice: number }[] = [];
+    try {
+      const { closed, alerted } = await runStopCheck();
+      stopClosed = closed.map((c) => ({ ticker: c.ticker, realizedPnl: c.realizedPnl }));
+      stopAlerted = alerted.map((a) => ({ ticker: a.ticker, stopPrice: a.stopPrice }));
+      if (closed.length || alerted.length) {
+        const lines: string[] = [];
+        for (const c of closed) {
+          lines.push(
+            `• **${c.ticker}** נסגרה בסטופ $${c.stopPrice} · P&L ${c.realizedPnl >= 0 ? "+" : "-"}$${Math.abs(c.realizedPnl).toFixed(0)}`
+          );
+        }
+        for (const a of alerted) {
+          lines.push(`• **${a.ticker}** נגעה בסטופ $${a.stopPrice} — לא נסגרה (ההגדרה כבויה)`);
+        }
+        await sendToChannel("updates", [
+          {
+            title: `🛑 סטופים · ${closed.length} נסגרו${alerted.length ? ` · ${alerted.length} התראות` : ""}`,
+            description: lines.join("\n"),
+            color: closed.length ? DOWN : AMBER,
+            footer: FOOTER,
+            timestamp: now.toISOString(),
+          },
+        ]).catch(() => {});
+      }
+    } catch {
+      /* דלג בשקט */
+    }
+
     return NextResponse.json({
       ok: true,
       alertsTriggered,
+      stopClosed,
+      stopAlerted,
       sent: !send.skipped,
       skipped: !!send.skipped,
       error: send.error ?? null,

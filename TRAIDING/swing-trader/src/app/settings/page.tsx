@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { PageContainer, Eyebrow, Display, Card, Button, Input } from "@/components/ui";
 import PushSetup from "@/components/push-setup";
 import ScannerProfilesEditor from "@/components/scanner-profiles-editor";
-import { MessageCircle, Bell, Radar, CheckCircle2, XCircle, Wallet } from "lucide-react";
+import { MessageCircle, Bell, Radar, CheckCircle2, XCircle, Wallet, ShieldCheck } from "lucide-react";
 
 type Settings = {
   discord_webhook_url: string | null;
@@ -16,6 +16,7 @@ type Settings = {
   account_size: string | null;
   cash_balance: string | null;
   finnhub_api_key: string | null;
+  auto_close_on_stop: string | null;
 };
 
 type DiscordChannel = {
@@ -44,6 +45,7 @@ export default function SettingsPage() {
   const [accountSize, setAccountSize] = useState("");
   const [cashBalance, setCashBalance] = useState("");
   const [finnhubKey, setFinnhubKey] = useState("");
+  const [autoCloseOnStop, setAutoCloseOnStop] = useState(true);
   const [savingFinnhub, setSavingFinnhub] = useState(false);
   const [savingAccount, setSavingAccount] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -66,6 +68,7 @@ export default function SettingsPage() {
       setAccountSize(json.settings.account_size ?? "");
       setCashBalance(json.settings.cash_balance ?? "");
       setFinnhubKey(json.settings.finnhub_api_key ?? "");
+      setAutoCloseOnStop(json.settings.auto_close_on_stop !== "false");
     }
   }
   useEffect(() => { load(); }, []);
@@ -140,6 +143,17 @@ export default function SettingsPage() {
     flash("מפתח Finnhub נשמר");
     await load();
     setSavingFinnhub(false);
+  }
+
+  async function saveAutoClose(next: boolean) {
+    setAutoCloseOnStop(next);
+    await fetch("/api/settings", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ settings: { auto_close_on_stop: next ? "true" : "false" } }),
+    });
+    flash(next ? "סגירה אוטומטית בסטופ — מופעל" : "סגירה אוטומטית בסטופ — כבוי");
+    await load();
   }
 
   async function testDiscord() {
@@ -251,6 +265,36 @@ export default function SettingsPage() {
         <p className="text-xs text-[var(--muted)] mt-3 leading-relaxed">
           בלי המפתח — עדיין מקבלים כותרות מ-Yahoo, פחות מקורות.
         </p>
+      </Card>
+
+      <Card className="p-6 md:p-8">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-11 h-11 rounded-xl bg-[var(--down)]/10 border border-[var(--down)]/30 flex items-center justify-center">
+            <ShieldCheck className="w-5 h-5 text-[var(--down)]" />
+          </div>
+          <div>
+            <h2 className="text-xl font-black">סטופ = מחיר יציאה</h2>
+            <div className="text-xs text-[var(--muted)] mt-0.5">
+              המחיר שנוגע בסטופ סוגר את הפוזיציה אוטומטית
+            </div>
+          </div>
+        </div>
+        <label className="rounded-xl border border-[var(--border)] bg-white/[0.02] p-4 flex items-start justify-between gap-3 cursor-pointer">
+          <span>
+            <span className="text-sm font-bold">סגירה אוטומטית של פוזיציה כשהמחיר נוגע בסטופ</span>
+            <span className="block text-[11px] text-[var(--muted)] mt-0.5">
+              כשמופעל — ברגע שמחיר השוק של מניה פתוחה נוגע במחיר הסטופ שרשמת, הפוזיציה נסגרת
+              במחיר הסטופ וכל הנתונים מתעדכנים. כשכבוי — הפוזיציה לא נסגרת אוטומטית, ולא
+              נשלחת התראה. עדיין תופיע אזהרת &quot;קרוב לסטופ&quot; בלוח הבקרה.
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            checked={autoCloseOnStop}
+            onChange={(e) => saveAutoClose(e.target.checked)}
+            className="w-4 h-4 accent-[var(--up)] mt-0.5"
+          />
+        </label>
       </Card>
 
       <Card className="p-6 md:p-8">

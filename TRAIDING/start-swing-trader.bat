@@ -1,18 +1,19 @@
 @echo off
-title Swing Trader Server
-cd /d "C:\CLAUDE AI\TRAIDING\swing-trader"
+title Swing Trader - LOCAL DEV (usually not needed)
 echo.
 echo ========================================
-echo   Swing Trader - Starting Server...
+echo   Swing Trader
 echo ========================================
 echo.
-echo Server: http://localhost:3000
-echo Browser will open automatically in 8 seconds...
+echo   The app now runs in the cloud:
+echo   https://claude-projects-delta.vercel.app
 echo.
-
-REM Open browser after 8 seconds (in background)
-start /min cmd /c "timeout /t 8 /nobreak >nul && start http://localhost:3000"
-
-REM Start the server
-npm run dev
+echo   This local server is only for development and
+echo   needs a valid Postgres DATABASE_URL in
+echo   swing-trader\.env  (Neon). Without it you'll
+echo   just get a Prisma error page.
+echo.
+echo   Auto-start on boot was removed on 2026-09-09.
+echo ========================================
+echo.
 pause

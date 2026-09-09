@@ -536,6 +536,11 @@ export default function JournalClient({
               <div>
                 <Label>מחיר סטופ (אופציונלי)</Label>
                 <Input type="number" step="0.01" value={form.stopPrice} onChange={(e) => setForm({ ...form, stopPrice: e.target.value })} placeholder="לחישוב R-Multiple" />
+                {!form.sellPrice && (
+                  <p className="text-[11px] text-[var(--muted)] mt-1 leading-snug">
+                    אם המחיר ייגע בסטופ, הפוזיציה תיסגר אוטומטית במחיר הזה (ניתן לכבות בהגדרות).
+                  </p>
+                )}
               </div>
               <div className="col-span-2">
                 <Label>סטאפ</Label>

@@ -98,7 +98,7 @@ export default function ReportsClient() {
           setYm(json.dailyPnl[json.dailyPnl.length - 1].date.slice(0, 7));
         }
       } catch {
-        if (alive) setError("לא הצלחתי לטעון את הדוחות");
+        if (alive) setError("לא הצלחתי לטעון את הביצועים");
       } finally {
         if (alive) setLoading(false);
       }
@@ -213,7 +213,7 @@ export default function ReportsClient() {
       <Card className="p-12 text-center">
         <div className="display-serif text-2xl mb-2">אין עדיין טריידים סגורים</div>
         <p className="text-sm text-[var(--fg-dim)]">
-          הוסף וסגור טרייד ביומן — והדוחות יתחילו להיבנות כאן.
+          הוסף וסגור טרייד ביומן — והביצועים יתחילו להיבנות כאן.
         </p>
       </Card>
     );

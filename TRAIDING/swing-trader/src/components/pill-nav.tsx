@@ -12,7 +12,7 @@ const NAV = [
   { href: "/analyze", label: "ניתוח", icon: Sparkles },
   { href: "/calculator", label: "מחשבון", icon: Calculator },
   { href: "/journal", label: "יומן", icon: BookOpen },
-  { href: "/reports", label: "דוחות", icon: BarChart3 },
+  { href: "/reports", label: "ביצועים", icon: BarChart3 },
   { href: "/watchlist", label: "מעקב", icon: Star },
 ];
 
