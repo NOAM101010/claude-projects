@@ -1,26 +1,32 @@
 /**
- * סקריפט חד-פעמי: מייצר PNG סטטיים אמיתיים ל-public/icon-192.png ו-
- * public/icon-512.png (מ-`next/og` ImageResponse, מריץ satori ב-node ישירות,
- * בלי שרת Next רץ). ה-manifest.json של ה-PWA צריך קבצים סטטיים אמיתיים —
- * ה-metadata route (src/app/icon.tsx) לא מספיק לבד עבור אנדרואיד maskable icons.
+ * סקריפט חד-פעמי: מייצר את כל גדלי האייקון (192, 512, apple-touch 180)
+ * מתוך קובץ המקור שהמשתמש סיפק ב-public/uploads/icon-source.png/*.png,
+ * ומעתיק אותם ל-public/ ול-src/app/ (מוסכמת ה-static icons של Next.js).
  * הרצה: npx tsx scripts/generate-icons.ts
  */
-import { writeFileSync } from "node:fs";
+import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { ImageResponse } from "next/og";
-import { CandleIcon } from "../src/lib/icon-design";
+import sharp from "sharp";
 
-async function writeIcon(size: number, filename: string) {
-  const res = new ImageResponse(CandleIcon({ size }), { width: size, height: size });
-  const buf = Buffer.from(await res.arrayBuffer());
-  const outPath = join(__dirname, "..", "public", filename);
-  writeFileSync(outPath, buf);
-  console.log(`wrote ${outPath} (${buf.length} bytes)`);
+const SOURCE_DIR = join(__dirname, "..", "public", "uploads", "icon-source.png");
+const sourceFile = readdirSync(SOURCE_DIR).find((f) => f.endsWith(".png"));
+if (!sourceFile) throw new Error(`No PNG found in ${SOURCE_DIR}`);
+const sourcePath = join(SOURCE_DIR, sourceFile);
+
+async function writeSize(size: number, outPath: string) {
+  await sharp(sourcePath).resize(size, size).png().toFile(outPath);
+  console.log(`wrote ${outPath} (${size}x${size})`);
 }
 
 async function main() {
-  await writeIcon(192, "icon-192.png");
-  await writeIcon(512, "icon-512.png");
+  const publicDir = join(__dirname, "..", "public");
+  const appDir = join(__dirname, "..", "src", "app");
+
+  await writeSize(192, join(publicDir, "icon-192.png"));
+  await writeSize(512, join(publicDir, "icon-512.png"));
+  // מוסכמת Next.js: קובץ סטטי בשם icon.png / apple-icon.png בתוך app/ נתפס אוטומטית
+  await writeSize(512, join(appDir, "icon.png"));
+  await writeSize(180, join(appDir, "apple-icon.png"));
 }
 
 main().catch((e) => {
