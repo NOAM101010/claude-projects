@@ -110,35 +110,51 @@ export async function sendDiscordTo(
 /**
  * Formatted scanner-results embed for Discord.
  */
+type ScannerMatchItem = {
+  symbol: string;
+  price: number | null;
+  changePercent: number | null;
+  volumeRatio: number | null;
+  grade: string | null;
+  setups: string[];
+};
+
+function formatMatchLine(m: ScannerMatchItem, index: number): string {
+  const chg =
+    m.changePercent != null
+      ? `${m.changePercent >= 0 ? "▲" : "▼"} ${m.changePercent.toFixed(1)}%`
+      : "";
+  const vol = m.volumeRatio ? `Vol ${m.volumeRatio.toFixed(1)}x` : "";
+  const grade = m.grade ? `\`${m.grade}\`` : "";
+  const setups = m.setups.slice(0, 2).join(" · ");
+  return `**${index + 1}. [${m.symbol}](https://www.tradingview.com/chart/?symbol=${m.symbol})** ${grade} — ${chg}  ${vol}\n${setups}`;
+}
+
 export function scannerResultsEmbed(opts: {
   title: string;
-  matches: {
-    symbol: string;
-    price: number | null;
-    changePercent: number | null;
-    volumeRatio: number | null;
-    grade: string | null;
-    setups: string[];
-  }[];
+  matches: ScannerMatchItem[];
   totalScanned: number;
   scanType: string;
+  /** קבוצות לפי סטאפ — כשמסופק, מוצג עם כותרת קטנה לכל סטאפ במקום top-10 שטוח. */
+  groups?: { label: string; matches: ScannerMatchItem[] }[];
 }): DiscordEmbed {
-  const { title, matches, totalScanned } = opts;
-  const top = matches.slice(0, 10);
+  const { title, matches, totalScanned, groups } = opts;
 
-  const description = top.length
-    ? top
-        .map((m, i) => {
-          const chg = m.changePercent != null
-            ? `${m.changePercent >= 0 ? "▲" : "▼"} ${m.changePercent.toFixed(1)}%`
-            : "";
-          const vol = m.volumeRatio ? `Vol ${m.volumeRatio.toFixed(1)}x` : "";
-          const grade = m.grade ? `\`${m.grade}\`` : "";
-          const setups = m.setups.slice(0, 2).join(" · ");
-          return `**${i + 1}. [${m.symbol}](https://www.tradingview.com/chart/?symbol=${m.symbol})** ${grade} — ${chg}  ${vol}\n${setups}`;
-        })
-        .join("\n\n")
-    : "אין תוצאות עם הקריטריונים הנוכחיים.";
+  let description: string;
+  if (groups && groups.length > 0) {
+    let counter = 0;
+    description = groups
+      .map((g) => {
+        const lines = g.matches.map((m) => formatMatchLine(m, counter++));
+        return `__**${g.label}**__\n${lines.join("\n\n")}`;
+      })
+      .join("\n\n");
+  } else {
+    const top = matches.slice(0, 10);
+    description = top.length
+      ? top.map((m, i) => formatMatchLine(m, i)).join("\n\n")
+      : "אין תוצאות עם הקריטריונים הנוכחיים.";
+  }
 
   return {
     title,

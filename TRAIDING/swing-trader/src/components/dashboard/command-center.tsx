@@ -602,12 +602,7 @@ export default function CommandCenter() {
                           <tr key={p.id} className="border-t border-[var(--border)] row-hover">
                             <td className="py-3 ticker">
                               <span className="inline-flex items-center gap-2 flex-wrap">
-                                <Link
-                                  href={`/wall?focus=${p.id}`}
-                                  className="hover:text-[var(--warn-2)] transition-colors"
-                                >
-                                  {p.ticker}
-                                </Link>
+                                <span>{p.ticker}</span>
                                 {edays != null && edays >= 0 && edays <= 14 && (
                                   <span className="det-chip">📅 רווחים בעוד {edays}d</span>
                                 )}

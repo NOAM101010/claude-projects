@@ -22,5 +22,27 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "סורק",
+      "short_name": "סורק",
+      "url": "/scanner"
+    },
+    {
+      "name": "יומן",
+      "short_name": "יומן",
+      "url": "/journal"
+    },
+    {
+      "name": "ביצועים",
+      "short_name": "ביצועים",
+      "url": "/reports"
+    },
+    {
+      "name": "מעקב",
+      "short_name": "מעקב",
+      "url": "/watchlist"
+    }
   ]
 }

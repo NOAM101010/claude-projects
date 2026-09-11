@@ -7,6 +7,8 @@ import { sendToChannel, FOOTER, type DiscordEmbed } from "@/lib/discord";
 import { getMarketHoliday } from "@/lib/market-calendar";
 import { getCuratedNews } from "@/lib/news";
 import { runAlertCheck, runStopCheck } from "@/lib/alerts";
+import { groupTopBySetup, flattenGrouped } from "@/lib/setup-grouping";
+import { SETUPS } from "@/lib/setups";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -131,7 +133,8 @@ export async function GET(req: NextRequest) {
       seen.add(r.symbol);
       uniqueScans.push(r);
     }
-    const top3 = uniqueScans.slice(0, 3);
+    const setupGroups = groupTopBySetup(uniqueScans, 2);
+    const top3 = flattenGrouped(setupGroups, 14);
 
     const regimeLine = regime
       ? `${regime.label} · ${regime.score >= 0 ? "+" : ""}${regime.score}`
@@ -159,15 +162,20 @@ export async function GET(req: NextRequest) {
         {
           name: `סריקה היום · ${uniqueScans.length} מניות`,
           value:
-            top3.length > 0
-              ? top3
+            setupGroups.length > 0
+              ? setupGroups
                   .map(
-                    (r) =>
-                      `**${r.symbol}**${r.grade ? ` \`${r.grade}\`` : ""}${
-                        r.score != null ? ` · ${Math.round(r.score)}` : ""
-                      }`
+                    (g) =>
+                      `**${SETUPS[g.setupId].label}**: ${g.items
+                        .map(
+                          (r) =>
+                            `${r.symbol}${r.grade ? ` \`${r.grade}\`` : ""}${
+                              r.score != null ? ` · ${Math.round(r.score)}` : ""
+                            }`
+                        )
+                        .join(" · ")}`
                   )
-                  .join(" · ")
+                  .join("\n")
               : "—",
         },
       ],

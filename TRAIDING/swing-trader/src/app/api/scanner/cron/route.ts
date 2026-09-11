@@ -11,6 +11,7 @@ import { prisma } from "@/lib/prisma";
 import { ensureBuiltinProfiles, parseProfileConfig, parseUniverse } from "@/lib/scanner-profiles";
 import { getMarketHoliday, nextOpenTextHe } from "@/lib/market-calendar";
 import { SETUPS } from "@/lib/setups";
+import { groupTopBySetup, flattenGrouped } from "@/lib/setup-grouping";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -44,7 +45,8 @@ export async function GET(req: NextRequest) {
     const universe = parseUniverse(profile?.universe);
 
     const result = await runScanner("morning", profileConfig, universe, profile?.name);
-    const top = result.matches.slice(0, 10);
+    const groups = groupTopBySetup(result.matches, 2);
+    const top = flattenGrouped(groups, 14);
 
     if (top.length > 0) {
       const body = top
@@ -60,18 +62,24 @@ export async function GET(req: NextRequest) {
         url: "/scanner",
       }).catch(() => {});
 
+      const toMatchItem = (t: (typeof top)[number]) => ({
+        symbol: t.symbol,
+        price: t.price,
+        changePercent: t.changePercent,
+        volumeRatio: t.volumeRatio,
+        grade: t.grade,
+        setups: t.matchedSetups,
+      });
+
       const embed = scannerResultsEmbed({
         title: `סריקת בוקר — ${result.matches.length} תוצאות`,
-        matches: top.map((t) => ({
-          symbol: t.symbol,
-          price: t.price,
-          changePercent: t.changePercent,
-          volumeRatio: t.volumeRatio,
-          grade: t.grade,
-          setups: t.matchedSetups,
-        })),
+        matches: top.map(toMatchItem),
         totalScanned: result.totalScanned,
         scanType: "morning",
+        groups: groups.map((g) => ({
+          label: SETUPS[g.setupId].label,
+          matches: g.items.map(toMatchItem),
+        })),
       });
       await sendToChannel("scan", [embed]).catch(() => {});
     }
