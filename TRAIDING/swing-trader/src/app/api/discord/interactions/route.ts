@@ -7,6 +7,9 @@ import {
   scanEmbed,
   performanceEmbed,
   createAlertEmbed,
+  analyzeEmbed,
+  watchlistCommandEmbed,
+  newsEmbed,
   helpEmbed,
   errorEmbed,
 } from "@/lib/discord-bot";
@@ -27,6 +30,9 @@ const DEFERRED_COMMANDS = new Set([
   "סריקה",
   "ביצועים",
   "התראה",
+  "נתח",
+  "מעקב",
+  "חדשות",
 ]);
 
 type CommandOption = { name: string; value: string | number | boolean };
@@ -89,6 +95,17 @@ async function resolveCommandEmbed(
         Number(opt(options, "מחיר")),
         String(opt(options, "כיוון") ?? "")
       );
+    case "נתח":
+      return analyzeEmbed(String(opt(options, "symbol") ?? ""));
+    case "מעקב":
+      return watchlistCommandEmbed(
+        String(opt(options, "פעולה") ?? ""),
+        String(opt(options, "symbol") ?? "")
+      );
+    case "חדשות": {
+      const sym = opt(options, "symbol");
+      return newsEmbed(sym != null ? String(sym) : undefined);
+    }
     default:
       return errorEmbed("פקודה לא מוכרת.");
   }

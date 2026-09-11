@@ -5,7 +5,10 @@
 import { prisma } from "@/lib/prisma";
 import { yf } from "@/lib/yf";
 import { computeStats, type TradeRow } from "@/lib/trade-stats";
-import { FOOTER, type DiscordEmbed } from "@/lib/discord";
+import { FOOTER, type DiscordEmbed, stockAnalysisEmbed } from "@/lib/discord";
+import { analyzeStock } from "@/lib/stock-analyzer";
+import { addToWatchlist, removeFromWatchlist } from "@/lib/watchlist";
+import { fetchYahooRss, getCuratedNews } from "@/lib/news";
 
 const AMBER = 0xe8b341;
 const UP = 0x4ade80;
@@ -288,6 +291,99 @@ export async function createAlertEmbed(
   };
 }
 
+// ==================== נתח ====================
+
+export async function analyzeEmbed(rawSymbol: string): Promise<DiscordEmbed> {
+  const symbol = rawSymbol.toUpperCase().trim();
+  if (!symbol) return errorEmbed("לא הוזן סימבול.");
+
+  const result = await analyzeStock(symbol);
+  if ("error" in result) return errorEmbed(result.error);
+
+  return stockAnalysisEmbed({
+    symbol: result.symbol,
+    name: result.name,
+    price: result.price,
+    changePercent: result.changePercent,
+    grade: result.grade,
+    score: result.score,
+    verdict: result.verdict,
+    signals: result.signals,
+    suggestedStop: result.keyLevels.suggestedStop,
+    setupLabel: result.setupLabel,
+    patternValid: result.patternValid,
+  });
+}
+
+// ==================== מעקב ====================
+
+export async function watchlistCommandEmbed(
+  action: string,
+  rawSymbol: string
+): Promise<DiscordEmbed> {
+  const symbol = rawSymbol.toUpperCase().trim();
+  if (!symbol) return errorEmbed("לא הוזן סימבול.");
+
+  if (action === "add") {
+    const { created } = await addToWatchlist(symbol);
+    return {
+      title: created ? "✅ נוסף למעקב" : "ℹ️ כבר ברשימה",
+      description: created
+        ? `**${symbol}** נוסף לרשימת המעקב.`
+        : `**${symbol}** כבר נמצא ברשימת המעקב.`,
+      color: UP,
+      footer: FOOTER,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  if (action === "remove") {
+    await removeFromWatchlist({ symbol });
+    return {
+      title: "🗑️ הוסר ממעקב",
+      description: `**${symbol}** הוסר מרשימת המעקב.`,
+      color: AMBER,
+      footer: FOOTER,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  return errorEmbed('פעולה לא מוכרת. השתמש ב-"add" או "remove".');
+}
+
+// ==================== חדשות ====================
+
+export async function newsEmbed(rawSymbol?: string): Promise<DiscordEmbed> {
+  const symbol = rawSymbol?.toUpperCase().trim();
+
+  const items = symbol
+    ? (await fetchYahooRss(symbol)).slice(0, 5)
+    : (await getCuratedNews()).items.slice(0, 5);
+
+  if (items.length === 0) {
+    return {
+      title: symbol ? `📰 חדשות · ${symbol}` : "📰 חדשות",
+      description: "לא נמצאו כותרות חדשות.",
+      color: AMBER,
+      footer: FOOTER,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  return {
+    title: symbol ? `📰 חדשות · ${symbol}` : "📰 כותרות עדכניות",
+    description: items
+      .map(
+        (n) =>
+          `• [${n.title}](${n.url})${n.symbol ? ` \`${n.symbol}\`` : ""} — ${n.source}`
+      )
+      .join("\n"),
+    color: AMBER,
+    footer: FOOTER,
+    timestamp: new Date().toISOString(),
+  };
+}
+
 // ==================== עזרה ====================
 
 export function helpEmbed(): DiscordEmbed {
@@ -299,6 +395,9 @@ export function helpEmbed(): DiscordEmbed {
       "`/סריקה` — תוצאות הסריקה האחרונה.",
       "`/ביצועים` — P&L והצלחה החודש.",
       "`/התראה symbol מחיר כיוון` — צור התראת מחיר.",
+      "`/נתח symbol` — ניתוח מניה מלא.",
+      "`/מעקב פעולה symbol` — הוסף/הסר ממעקב.",
+      "`/חדשות [symbol]` — כותרות חדשות.",
       "`/עזרה` — ההודעה הזו.",
     ].join("\n"),
     color: AMBER,

@@ -63,4 +63,50 @@ export const DISCORD_COMMANDS = [
     name: "עזרה",
     description: "רשימת הפקודות של Swing Terminal.",
   },
+  {
+    name: "נתח",
+    description: "ניתוח מניה מלא — ציון, גרייד, סטופ מוצע, אותות.",
+    options: [
+      {
+        type: STRING,
+        name: "symbol",
+        description: "סימבול המניה (למשל AAPL)",
+        required: true,
+      },
+    ],
+  },
+  {
+    name: "מעקב",
+    description: "הוסף או הסר מניה מרשימת המעקב.",
+    options: [
+      {
+        type: STRING,
+        name: "פעולה",
+        description: "הוסף או הסר",
+        required: true,
+        choices: [
+          { name: "הוסף", value: "add" },
+          { name: "הסר", value: "remove" },
+        ],
+      },
+      {
+        type: STRING,
+        name: "symbol",
+        description: "סימבול המניה",
+        required: true,
+      },
+    ],
+  },
+  {
+    name: "חדשות",
+    description: "כותרות חדשות — למניה ספציפית או פיד מצטבר.",
+    options: [
+      {
+        type: STRING,
+        name: "symbol",
+        description: "סימבול המניה (רשות — ריק = פיד מצטבר)",
+        required: false,
+      },
+    ],
+  },
 ];
