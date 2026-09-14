@@ -36,6 +36,10 @@ Verified across both: `tsc --noEmit` clean, 225/225 Vitest tests pass, `npm run 
 
 This closes out the full backlog from the original 22-section redesign brief plus everything that accumulated from live testing along the way.
 
+**Language selection unlocked — done, committed**: `LOCK_LANGUAGE_TO_ENGLISH` flipped to `false` (same reversible pattern as the currency unlock) — the `LanguageSwitcher` in the header now works, all 4 languages (en/he/es/fr incl. RTL for Hebrew) were already fully built. Kept English as the actual default regardless of browser locale though — `LanguageContext.tsx` no longer auto-detects from `navigator.language` on first visit (a Hebrew/Spanish/French-locale browser used to silently switch the whole app for a first-time visitor); a user's own explicit choice via the switcher is still remembered via `localStorage` as before.
+
+**Everything currently pushed to `origin/trading`** as of this session — nothing outstanding locally. Next real milestone whenever the user is ready: actual deployment (domain + Cloudflare Pages or similar), which per the project's own stated priorities was deliberately deferred until the product itself felt finished — which, as of this session, it does.
+
 **Phase 1 — done, committed** (first-ever commit for this project, since the whole folder was untracked in git until now):
 - "Delete Account" replaced with **"Clear Trading Data"** (`clearAccountTradingData` in `accountApi.ts`) — wipes trades/watchlist/chart-images across all of the account's workspaces, keeps account/tier/access-code intact. 2-step typed confirmation, no more full account teardown.
 - Calendar Share button no longer overlaps the month-nav arrow at any width (`MonthlyCalendar.module.css` `.heroNav` moved from absolute-positioned overlay to a `1fr auto 1fr` grid).
