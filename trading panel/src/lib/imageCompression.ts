@@ -40,7 +40,7 @@ function loadImage(file: File): Promise<HTMLImageElement> {
     }
     img.onerror = () => {
       URL.revokeObjectURL(url)
-      reject(new Error('טעינת קובץ התמונה נכשלה'))
+      reject(new Error('Failed to load the image file'))
     }
     img.src = url
   })
@@ -69,7 +69,7 @@ export async function compressImage(
 
   return new Promise((resolve, reject) => {
     canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error('דחיסת תמונה נכשלה'))),
+      (blob) => (blob ? resolve(blob) : reject(new Error('Failed to compress the image'))),
       'image/jpeg',
       quality,
     )

@@ -42,10 +42,10 @@ const supabaseRateCache: RateCacheStore = { read: readCachedRate, write: writeCa
 /** שולף שער חליפין היסטורי מ-Frankfurter (API חינמי, בלי מפתח). `date` בפורמט YYYY-MM-DD. */
 export async function fetchRateFromApi(date: string, from: string, to: string): Promise<number> {
   const res = await fetch(`https://api.frankfurter.app/${date}?from=${from}&to=${to}`)
-  if (!res.ok) throw new Error(`שליפת שער חליפין נכשלה (${res.status})`)
+  if (!res.ok) throw new Error(`Failed to fetch exchange rate (${res.status})`)
   const data = (await res.json()) as { rates?: Record<string, number> }
   const rate = data.rates?.[to]
-  if (typeof rate !== 'number') throw new Error(`לא נמצא שער חליפין מ-${from} ל-${to} בתאריך ${date}`)
+  if (typeof rate !== 'number') throw new Error(`No exchange rate found from ${from} to ${to} on ${date}`)
   return rate
 }
 

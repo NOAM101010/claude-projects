@@ -23,7 +23,7 @@ interface PushPayload {
   url?: string
 }
 
-const DEFAULT_PUSH_PAYLOAD: PushPayload = { title: 'TradePanel', body: 'התראה חדשה' }
+const DEFAULT_PUSH_PAYLOAD: PushPayload = { title: 'TradePanel', body: 'New notification' }
 
 /**
  * Push notifications - תשתית בסיסית בלבד (subscribe + שליחת התראת בדיקה ידנית,

@@ -83,6 +83,7 @@
   color: var(--text-dim);
   white-space: nowrap;
   cursor: pointer;
+  transition: color 0.16s ease;
 }
 .navButton[data-active='true'] {
   color: var(--accent-2);
@@ -109,6 +110,7 @@
   border-radius: 11px;
   color: var(--text-dim);
   cursor: pointer;
+  transition: color 0.16s ease;
 }
 .settingsButton[data-active='true'] {
   color: var(--accent-2);

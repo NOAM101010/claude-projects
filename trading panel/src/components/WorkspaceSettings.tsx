@@ -63,6 +63,7 @@ export function WorkspaceSettings({
     fee: t('common.fee'),
     notes: t('common.notes'),
     setup: t('tradeForm.setupLabel'),
+    requireExactTime: t('workspaceSettings.requireExactTimeLabel'),
   }
 
   const TIER_LABELS: Record<AccountTier, string> = {
@@ -321,6 +322,7 @@ export function WorkspaceSettings({
             </label>
           ))}
         </div>
+        <p className={styles.hint}>{t('workspaceSettings.requireExactTimeHint')}</p>
         <p className={styles.status}>{error ?? ''}</p>
       </div>
 
@@ -383,7 +385,7 @@ export function WorkspaceSettings({
         </div>
         {importStatus && (
           <div
-            className={`${styles.importResult} ${
+            className={`${styles.importResult} count-in ${
               importTone === 'success'
                 ? styles.importResultSuccess
                 : importTone === 'error'
@@ -413,12 +415,12 @@ export function WorkspaceSettings({
             <button type="button" className={styles.dangerButton} onClick={startClear}>
               {t('workspaceSettings.clearDataButton')}
             </button>
-            {clearSuccess && <p className={styles.successBanner}>{t('workspaceSettings.clearDataSuccess')}</p>}
+            {clearSuccess && <p className={`${styles.successBanner} count-in`}>{t('workspaceSettings.clearDataSuccess')}</p>}
           </>
         )}
 
         {clearStep === 1 && (
-          <div className={styles.confirmBox}>
+          <div className={`${styles.confirmBox} count-in`}>
             <p>{t('workspaceSettings.clearDataConfirmStep1')}</p>
             <div className={styles.actions}>
               <button type="button" className={styles.dangerButton} onClick={() => setClearStep(2)}>
@@ -432,7 +434,7 @@ export function WorkspaceSettings({
         )}
 
         {clearStep === 2 && (
-          <div className={styles.confirmBox}>
+          <div className={`${styles.confirmBox} count-in`}>
             <p>{t('workspaceSettings.clearDataConfirmStep2', { word: CLEAR_CONFIRM_WORD })}</p>
             <input
               className={styles.textInput}
@@ -453,7 +455,7 @@ export function WorkspaceSettings({
                 {t('common.cancel')}
               </button>
             </div>
-            {clearError && <p className={styles.status}>{clearError}</p>}
+            {clearError && <p className={`${styles.status} count-in`}>{clearError}</p>}
           </div>
         )}
       </div>

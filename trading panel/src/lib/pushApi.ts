@@ -75,6 +75,6 @@ export async function sendTestPush(accessToken: string): Promise<void> {
   })
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as { error?: string }
-    throw new Error(data.error ?? `שליחת התראת בדיקה נכשלה (${res.status})`)
+    throw new Error(data.error ?? `Failed to send test notification (${res.status})`)
   }
 }

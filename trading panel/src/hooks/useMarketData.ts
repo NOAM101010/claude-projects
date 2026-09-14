@@ -1,11 +1,9 @@
 /**
- * שולף+מרענן תקופתית מדדי מניות (כולל ETF-proxy/סקטורים) וקריפטו+Fear&Greed - חולץ
- * מ-`Home.tsx` (שלב G בתוכנית ה-redesign) כדי ש-`Home.tsx` וגם `MarketRail.tsx` (הרצועה
- * הצדדית בדסקטופ) ישתמשו באותו מנגנון fetch/polling במקום שני `setInterval` נפרדים
- * שקוראים לאותן Edge Function/CoinGecko - שני polling loops זהים זה בזבוז מיותר של
- * מכסת הקריאות ל-Finnhub/CoinGecko. בפועל Home ו-MarketRail אף פעם לא מוצגים יחד
- * (הרצועה מוסתרת במסך הבית עצמו), כך שבפועל תמיד רק צריכן אחד פעיל - אבל השיתוף
- * עדיין מונע שכפול קוד ומבטיח שהתנהגות הרענון זהה בשני המקומות.
+ * שולף+מרענן תקופתית מדדי מניות (כולל ETF-proxy/סקטורים) וקריפטו+Fear&Greed.
+ * נקרא מ-`App.tsx` ברמה העליונה (לא מתוך `Home.tsx`) כדי שה-state ישרוד מעברי טאב -
+ * `Home` מתפרק/נבנה מחדש בכל מעבר טאב (רינדור מותנה ב-App), ואם ה-hook היה שם
+ * המצב היה מתאפס (loading:true, indices:null) בכל חזרה למסך הבית. `Home.tsx` מקבל
+ * את הפלט של ה-hook הזה כ-props.
  */
 import { useEffect, useState } from 'react'
 import { fetchCryptoPrices, fetchFearGreedIndex, fetchStockIndices } from '../lib/marketData'

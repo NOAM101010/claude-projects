@@ -89,6 +89,10 @@ export function MonthlyCalendar({ trades, baseCurrency }: MonthlyCalendarProps) 
   const goPrev = () => setCursor((c) => (c.month === 0 ? { year: c.year - 1, month: 11 } : { year: c.year, month: c.month - 1 }))
   const goNext = () => setCursor((c) => (c.month === 11 ? { year: c.year + 1, month: 0 } : { year: c.year, month: c.month + 1 }))
 
+  const today = new Date()
+  const isCurrentMonth = cursor.year === today.getFullYear() && cursor.month === today.getMonth()
+  const goToday = () => setCursor({ year: today.getFullYear(), month: today.getMonth() })
+
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [sharing, setSharing] = useState(false)
 
@@ -141,6 +145,11 @@ export function MonthlyCalendar({ trades, baseCurrency }: MonthlyCalendarProps) 
             <button type="button" className={`${styles.navButton} btn-metal`} onClick={goPrev} aria-label={t('monthlyCalendar.prevMonth')}>
               <ChevronLeft size={18} />
             </button>
+            {!isCurrentMonth && (
+              <button type="button" className={`${styles.todayButton} btn-metal`} onClick={goToday}>
+                {t('monthlyCalendar.todayButton')}
+              </button>
+            )}
           </div>
           <div className={styles.heroCenter}>
             <span className={`eyebrow ${styles.eyebrow}`}>{t('nav.calendar')}</span>

@@ -279,14 +279,14 @@ describe('statsBySymbol / statsBySetup', () => {
     ])
   })
 
-  it('groups by setup and falls back to "ללא הגדרה" when unset', () => {
+  it('groups by setup and falls back to "No setup" when unset', () => {
     const trades = [
       makeTrade({ setup: 'Swing', entryPrice: 100, exitPrice: 110 }), // +100
       makeTrade({ setup: undefined, entryPrice: 100, exitPrice: 120 }), // +200
     ]
     const result = statsBySetup(trades)
     expect(result).toEqual([
-      { key: 'ללא הגדרה', trades: 1, winRate: 100, pnl: 200 },
+      { key: 'No setup', trades: 1, winRate: 100, pnl: 200 },
       { key: 'Swing', trades: 1, winRate: 100, pnl: 100 },
     ])
   })

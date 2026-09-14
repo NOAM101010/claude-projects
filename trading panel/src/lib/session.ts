@@ -59,7 +59,7 @@ async function callFunction<T>(name: string, body: unknown): Promise<T> {
   })
   const data = (await res.json()) as T & { error?: string }
   if (!res.ok) {
-    throw new Error(data.error ?? `קריאה ל-${name} נכשלה (${res.status})`)
+    throw new Error(data.error ?? `Call to ${name} failed (${res.status})`)
   }
   return data
 }

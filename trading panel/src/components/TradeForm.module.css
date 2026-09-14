@@ -200,6 +200,51 @@
   border-color: var(--border-hi) !important;
 }
 
+.fileInputRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Visually hidden (not display:none) so the native input stays focusable/keyboard-activatable -
+   the <label for="chartImage"> below triggers it via the native for/id association, no JS needed. */
+.fileInputHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.fileInputButton {
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: rgba(var(--overlay-tint), 0.03);
+  color: var(--text-h);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  white-space: nowrap;
+}
+
+.fileInputButton:hover {
+  border-color: var(--border-hi);
+}
+
+.fileInputName {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .imagePreviewWrap {
   display: flex;
   align-items: center;

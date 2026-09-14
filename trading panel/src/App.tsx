@@ -4,6 +4,7 @@ import { AccessCodeModal } from './components/AccessCodeModal'
 import { DemoBanner, DemoLimitBlock } from './components/DemoStatus'
 import { DesktopStatBar } from './components/DesktopStatBar'
 import { Footer } from './components/Footer'
+import { HeaderClock } from './components/HeaderClock'
 import { Home } from './components/Home'
 import { InstallBanner } from './components/InstallBanner'
 import { Journal } from './components/Journal'
@@ -16,10 +17,12 @@ import type { Tab } from './components/PillNav'
 import { ThemeSwitcher } from './components/ThemeSwitcher'
 import { Tools } from './components/Tools'
 import { TradeForm } from './components/TradeForm'
+import { UndoToast } from './components/UndoToast'
 import { WorkspaceSettings } from './components/WorkspaceSettings'
 import { WorkspaceSwitcher } from './components/WorkspaceSwitcher'
 import { LOCK_LANGUAGE_TO_ENGLISH, REQUIRE_ACCESS_CODE_GATE, SHOW_INTRO_SPLASH } from './config/locks'
 import type { RedeemResult } from './hooks/useRedeemCode'
+import { useMarketData } from './hooks/useMarketData'
 import { useTranslation } from './i18n/LanguageContext'
 import { canCreateTrade, getAccount } from './lib/accountApi'
 import type { AccountTier } from './lib/accountApi'
@@ -33,6 +36,14 @@ import type { Trade } from './types/trade'
 import './App.css'
 
 const ACTIVE_WORKSPACE_KEY = 'tradepanel_active_workspace_id'
+/** חלון הזמן שבו "Undo" זמין אחרי מחיקת טרייד, לפני שהמחיקה בפועל (Supabase + ניקוי תמונה) קורית. */
+const DELETE_UNDO_WINDOW_MS = 7000
+
+interface PendingDelete {
+  id: string
+  trade: Trade
+  timeoutId: number
+}
 
 export interface TradeFilter {
   type: 'symbol' | 'setup'
@@ -50,12 +61,18 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [tradesLoading, setTradesLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
+  // ברמת App כדי לשרוד מעברי טאב (Home נכנס/יוצא מה-DOM) - ראה תיעוד ב-useMarketData.ts.
+  const marketData = useMarketData()
 
   const [tab, setTab] = useState<Tab>('home')
   const [journalSubTab, setJournalSubTab] = useState<JournalSubTab>('trades')
   const [editingTrade, setEditingTrade] = useState<Trade | undefined>(undefined)
   const [showForm, setShowForm] = useState(false)
   const [filter, setFilter] = useState<TradeFilter | null>(null)
+  // מחיקות "ממתינות": הטרייד כבר הוסר אופטימית מ-`trades` (למטה), אבל ה-delete בפועל
+  // (Supabase + ניקוי תמונה) נדחה עד שחלון ה-Undo פג - ראה `handleDelete`/`handleUndoDelete`.
+  // כל מחיקה עצמאית (מערך, לא ערך יחיד) כדי שכמה מחיקות ברצף לא ידרסו זו את זו.
+  const [pendingDeletes, setPendingDeletes] = useState<PendingDelete[]>([])
   const [showAccessModal, setShowAccessModal] = useState(false)
   const [accessModalHint, setAccessModalHint] = useState<string | null>(null)
   const [codeVerified, setCodeVerified] = useState(() => isCodeVerified())
@@ -135,14 +152,55 @@ function App() {
     closeForm()
   }
 
-  const handleDelete = async (id: string) => {
-    const trade = trades.find((t) => t.id === id)
-    await deleteTrade(id)
-    setTrades((prev) => prev.filter((t) => t.id !== id))
-    if (trade?.chartImageUrl) {
-      // מוחק גם את קובץ התמונה מה-Storage כדי לא להשאיר קבצים יתומים ולא "לתפוס" מקום ממגבלת ה-50.
-      await deleteChartImage(trade.chartImageUrl).catch(() => {})
+  /** מבצע את המחיקה האמיתית אחרי שחלון ה-Undo פג - זהה למה שהיה קורה מיד לפני הוספת Undo. */
+  const finalizeDelete = async (id: string, trade: Trade) => {
+    try {
+      await deleteTrade(id)
+      if (trade.chartImageUrl) {
+        // מוחק גם את קובץ התמונה מה-Storage כדי לא להשאיר קבצים יתומים ולא "לתפוס" מקום ממגבלת ה-50.
+        await deleteChartImage(trade.chartImageUrl).catch(() => {})
+      }
+    } finally {
+      setPendingDeletes((prev) => prev.filter((p) => p.id !== id))
     }
+  }
+
+  /**
+   * מבצע מיד את כל המחיקות הממתינות (Undo עדיין לא פג) - נקרא לפני מעבר workspace, כדי
+   * שטרייד שנמחק ב-workspace אחד לעולם לא "יחזור" בטעות ל-workspace אחר דרך handleUndoDelete
+   * (ש-restore-ת תמיד לתוך ה-trades הנוכחי, בלי לדעת מאיזה workspace הטרייד המקורי הגיע).
+   */
+  const finalizeAllPendingDeletes = () => {
+    setPendingDeletes((prev) => {
+      for (const p of prev) {
+        window.clearTimeout(p.timeoutId)
+        void finalizeDelete(p.id, p.trade)
+      }
+      return prev
+    })
+  }
+
+  /** הסרה אופטימית מיידית מהרשימה + טיימר שמריץ את המחיקה האמיתית בשרת רק אם לא בוטל. */
+  const handleDelete = (id: string) => {
+    const trade = trades.find((t) => t.id === id)
+    if (!trade) return
+    setTrades((prev) => prev.filter((t) => t.id !== id))
+    const timeoutId = window.setTimeout(() => {
+      void finalizeDelete(id, trade)
+    }, DELETE_UNDO_WINDOW_MS)
+    setPendingDeletes((prev) => [...prev, { id, trade, timeoutId }])
+  }
+
+  /** מבטל מחיקה ממתינה - מחזיר את הטרייד לרשימה בלי שום קריאת API, כי המחיקה בפועל טרם קרתה. */
+  const handleUndoDelete = (id: string) => {
+    setPendingDeletes((prev) => {
+      const pending = prev.find((p) => p.id === id)
+      if (pending) {
+        window.clearTimeout(pending.timeoutId)
+        setTrades((current) => [pending.trade, ...current])
+      }
+      return prev.filter((p) => p.id !== id)
+    })
   }
 
   const handleFieldSettingsChange = (fieldSettings: FieldSettings) => {
@@ -156,6 +214,7 @@ function App() {
   const switchWorkspace = async (id: string) => {
     if (id === activeWorkspaceId) return
     closeForm()
+    finalizeAllPendingDeletes()
     setTradesLoading(true)
     setLoadError(null)
     try {
@@ -306,6 +365,7 @@ function App() {
               />
               {!LOCK_LANGUAGE_TO_ENGLISH && <LanguageSwitcher />}
               <ThemeSwitcher />
+              <HeaderClock />
             </>
           }
         />
@@ -330,7 +390,15 @@ function App() {
               onCancel={closeForm}
             />
           ) : tab === 'home' ? (
-            <Home />
+            <Home
+              indices={marketData.indices}
+              indicesLoading={marketData.indicesLoading}
+              indicesFailed={marketData.indicesFailed}
+              crypto={marketData.crypto}
+              cryptoLoading={marketData.cryptoLoading}
+              cryptoFailed={marketData.cryptoFailed}
+              fearGreed={marketData.fearGreed}
+            />
           ) : tab === 'journal' ? (
             <Journal
               trades={trades}
@@ -367,6 +435,10 @@ function App() {
         </main>
       </div>
       {tab !== 'calendar' && <Footer />}
+      <UndoToast
+        items={pendingDeletes.map((p) => ({ id: p.id, symbol: p.trade.symbol }))}
+        onUndo={handleUndoDelete}
+      />
       {showAccessModal && (
         <AccessCodeModal
           contextHint={accessModalHint}

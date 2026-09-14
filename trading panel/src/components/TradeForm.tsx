@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { useLanguage } from '../i18n/LanguageContext'
 import { computePnl } from '../lib/stats'
 import { formatCurrency, isoToLocalInputValue, localInputValueToIso } from '../lib/format'
@@ -41,7 +42,9 @@ interface FormState {
   setup: string // '' = ללא הגדרה
 }
 
-function toFormState(trade: Trade | undefined): FormState {
+/** `dateOnly` תואם `!fieldSettings.requireExactTime` - קובע אם entryAt/exitAt מוצגים/נשמרים
+ * כ-YYYY-MM-DD (input[type=date]) או כ-datetime-local מלא, ראה isoToLocalInputValue ב-format.ts. */
+function toFormState(trade: Trade | undefined, dateOnly: boolean): FormState {
   if (!trade) {
     return {
       symbol: '',
@@ -62,12 +65,12 @@ function toFormState(trade: Trade | undefined): FormState {
   return {
     symbol: trade.symbol,
     direction: trade.direction,
-    entryAt: isoToLocalInputValue(trade.entryAt),
+    entryAt: isoToLocalInputValue(trade.entryAt, dateOnly),
     entryPrice: String(trade.entryPrice),
     quantity: String(trade.quantity),
     stopLoss: trade.stopLoss !== null ? String(trade.stopLoss) : '',
     takeProfit: trade.takeProfit !== null ? String(trade.takeProfit) : '',
-    exitAt: isoToLocalInputValue(trade.exitAt),
+    exitAt: isoToLocalInputValue(trade.exitAt, dateOnly),
     exitPrice: trade.exitPrice !== null ? String(trade.exitPrice) : '',
     currency: trade.currency,
     fee: trade.fee !== null ? String(trade.fee) : '',
@@ -91,7 +94,8 @@ export function TradeForm({
   onCancel,
 }: TradeFormProps) {
   const { t, locale } = useLanguage()
-  const [form, setForm] = useState<FormState>(() => toFormState(initialTrade))
+  const dateOnly = !fieldSettings.requireExactTime
+  const [form, setForm] = useState<FormState>(() => toFormState(initialTrade, dateOnly))
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -190,12 +194,12 @@ export function TradeForm({
       return
     }
 
-    const entryAtIso = localInputValueToIso(form.entryAt)
+    const entryAtIso = localInputValueToIso(form.entryAt, dateOnly)
     if (!entryAtIso) {
       setError(t('tradeForm.errorEntryDateInvalid'))
       return
     }
-    const exitAtIso = localInputValueToIso(form.exitAt)
+    const exitAtIso = localInputValueToIso(form.exitAt, dateOnly)
     const exitPrice = parseOptionalNumber(form.exitPrice)
     const fee = parseOptionalNumber(form.fee)
 
@@ -255,7 +259,7 @@ export function TradeForm({
   }
 
   return (
-    <form className={styles.form} onSubmit={handleSubmit}>
+    <form className={`${styles.form} count-in`} onSubmit={handleSubmit}>
       <div className={styles.row}>
         <div className={styles.field}>
           <label htmlFor="symbol">{t('tradeForm.symbolLabel')}</label>
@@ -296,7 +300,7 @@ export function TradeForm({
           <label htmlFor="entryAt">{t('tradeForm.entryDateLabel')}</label>
           <input
             id="entryAt"
-            type="datetime-local"
+            type={dateOnly ? 'date' : 'datetime-local'}
             value={form.entryAt}
             onChange={(e) => update('entryAt', e.target.value)}
             required
@@ -373,7 +377,12 @@ export function TradeForm({
           <label htmlFor="exitAt">
             {t('tradeForm.exitDateLabel')} <span className={styles.optional}>{t('tradeForm.exitDateHint')}</span>
           </label>
-          <input id="exitAt" type="datetime-local" value={form.exitAt} onChange={(e) => update('exitAt', e.target.value)} />
+          <input
+            id="exitAt"
+            type={dateOnly ? 'date' : 'datetime-local'}
+            value={form.exitAt}
+            onChange={(e) => update('exitAt', e.target.value)}
+          />
         </div>
         <div className={styles.field}>
           <label htmlFor="exitPrice">{t('tradeForm.exitPriceLabel')}</label>
@@ -425,7 +434,20 @@ export function TradeForm({
         <label htmlFor="chartImage">
           {t('tradeForm.chartImageLabel')} <span className={styles.optional}>{t('common.optional')}</span>
         </label>
-        <input id="chartImage" type="file" accept="image/*" onChange={handleFileChange} disabled={saving} />
+        <div className={styles.fileInputRow}>
+          <input
+            id="chartImage"
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            disabled={saving}
+            className={styles.fileInputHidden}
+          />
+          <label htmlFor="chartImage" className={styles.fileInputButton} aria-disabled={saving}>
+            {t('tradeForm.chooseFileButton')}
+          </label>
+          <span className={styles.fileInputName}>{newImageFile ? newImageFile.name : t('tradeForm.noFileChosen')}</span>
+        </div>
         {previewLoading && <p className={styles.optional}>{t('tradeForm.previewLoading')}</p>}
         {previewUrl && !removeExistingImage && (
           <div className={styles.imagePreviewWrap}>
@@ -440,10 +462,16 @@ export function TradeForm({
         {imageError && <p className={styles.error}>{imageError}</p>}
       </div>
 
-      {showFullImage && previewUrl && (
-        <div className={styles.lightboxOverlay} onClick={() => setShowFullImage(false)} role="dialog" aria-modal="true">
-          <img src={previewUrl} alt={t('tradeForm.fullImageAlt')} className={styles.lightboxImage} />
-        </div>
+      {showFullImage && previewUrl && createPortal(
+        <div
+          className={`${styles.lightboxOverlay} modal-overlay-in`}
+          onClick={() => setShowFullImage(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <img src={previewUrl} alt={t('tradeForm.fullImageAlt')} className={`${styles.lightboxImage} modal-panel-in`} />
+        </div>,
+        document.body,
       )}
 
       {error && <p className={styles.error}>{error}</p>}

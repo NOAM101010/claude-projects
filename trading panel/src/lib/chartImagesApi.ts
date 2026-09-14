@@ -40,7 +40,7 @@ export async function uploadChartImage(accountId: string, blob: Blob): Promise<s
 export async function getChartImageUrl(path: string): Promise<string> {
   const supabase = getSupabase()
   const { data, error } = await supabase.storage.from(CHART_IMAGES_BUCKET).createSignedUrl(path, 60 * 60)
-  if (error || !data) throw error ?? new Error('יצירת קישור לתמונה נכשלה')
+  if (error || !data) throw error ?? new Error('Failed to create the image link')
   return data.signedUrl
 }
 

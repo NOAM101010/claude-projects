@@ -207,7 +207,8 @@
   padding: 8px 0;
 }
 
-.shareButton {
+.shareButton,
+.todayButton {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -252,5 +253,10 @@
   }
   .shareButton {
     padding: 6px 8px;
+  }
+  /* Same crowding concern applies to the Today button on the opposite (start) side. */
+  .todayButton {
+    padding: 6px 8px;
+    font-size: 10.5px;
   }
 }

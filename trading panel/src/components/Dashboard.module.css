@@ -82,8 +82,12 @@
 }
 
 .kpiHeroChipMuted {
-  border-color: var(--border-hi);
-  color: var(--text-dim);
+  border-color: rgba(255, 255, 255, 0.16);
+  /* fixed dim cream, not var(--text-dim) - .det-chip's own background stays a
+     near-black rgba(6,8,13,0.75) in both themes on purpose, but --text-dim
+     darkens for light-theme body text, which made this go dark-on-dark
+     (same class of bug as .det-chip--up/--down, see index.css). */
+  color: rgba(245, 225, 190, 0.55);
 }
 
 /* קבוצות KPI: כל קבוצה = כותרת eyebrow + מרווח נשימה משלה - לא קיר אחיד של תאים זהים. */

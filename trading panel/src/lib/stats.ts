@@ -278,9 +278,9 @@ export function statsBySymbol(trades: Trade[]): GroupStats[] {
   return groupClosedBy(trades, (t) => t.symbol)
 }
 
-/** פילוח טריידים סגורים לפי style/setup, ממוין לפי P&L מצטבר יורד. טריידים בלי setup מקובצים תחת "ללא הגדרה". */
+/** פילוח טריידים סגורים לפי style/setup, ממוין לפי P&L מצטבר יורד. טריידים בלי setup מקובצים תחת "No setup". */
 export function statsBySetup(trades: Trade[]): GroupStats[] {
-  return groupClosedBy(trades, (t) => t.setup ?? 'ללא הגדרה')
+  return groupClosedBy(trades, (t) => t.setup ?? 'No setup')
 }
 
 export function bestTrade(trades: Trade[]): Trade | null {

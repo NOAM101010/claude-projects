@@ -27,8 +27,8 @@ export function AccessCodeModal({ contextHint, onRedeemed, onClose }: AccessCode
   }
 
   return (
-    <div className={styles.overlay} role="dialog" aria-modal="true">
-      <form className={`${styles.dialog} metal-panel holo-edge holo-edge--amber`} onSubmit={handleSubmit}>
+    <div className={`${styles.overlay} modal-overlay-in`} role="dialog" aria-modal="true">
+      <form className={`${styles.dialog} metal-panel holo-edge holo-edge--amber modal-panel-in`} onSubmit={handleSubmit}>
         <h2>{t('accessCode.title')}</h2>
         {contextHint && <p className={styles.contextHint}>{contextHint}</p>}
         <p className={styles.hint}>{t('accessCode.hint')}</p>

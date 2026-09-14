@@ -1,7 +1,6 @@
-import { TrendingDown, TrendingUp } from 'lucide-react'
+import { ExternalLink, TrendingDown, TrendingUp } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
-import { useMarketData } from '../hooks/useMarketData'
 import { formatDurationHHMM, getMarketStatus } from '../lib/marketHours'
 import type { CryptoPrices, FearGreedIndex, IndexQuote, StockIndices } from '../lib/marketData'
 import {
@@ -14,6 +13,7 @@ import {
 } from '../lib/homeWidgets'
 import { SectorHeatmap } from './SectorHeatmap'
 import type { TranslationKey } from '../i18n/translations'
+import { tradingViewUrl } from '../lib/tradingView'
 import styles from './Home.module.css'
 
 const MARKET_STATUS_REFRESH_MS = 30_000
@@ -26,15 +26,35 @@ function getGreetingKey(hour: number): TranslationKey {
   return 'home.greetingNight'
 }
 
+export interface HomeProps {
+  indices: StockIndices | null
+  indicesLoading: boolean
+  indicesFailed: boolean
+  crypto: CryptoPrices | null
+  cryptoLoading: boolean
+  cryptoFailed: boolean
+  fearGreed: FearGreedIndex | null
+}
+
 /**
  * מסך "בית" - טאב ראשון, לפני "טריידים". מאז שלב A בתוכנית ה-redesign מציג תמיד
  * הכל (מניות+מפת חום סקטורים+קריפטו) לכל המשתמשים - אין יותר תלות בסגנון workspace
  * (נמחק לגמרי). אין שימוש ב-Supabase כאן - הכל state מקומי + חישוב טהור/fetch ציבורי.
+ * נתוני השוק (indices/crypto/fearGreed) מגיעים כ-props מ-`App.tsx` (שם חי ה-hook
+ * `useMarketData`) כדי לשרוד מעברי טאב - Home נכנס/יוצא מה-DOM בכל מעבר טאב, ואם
+ * ה-hook היה כאן, המצב היה מתאפס (loading:true) בכל חזרה למסך. ראה useMarketData.ts.
  */
-export function Home() {
+export function Home({
+  indices,
+  indicesLoading,
+  indicesFailed,
+  crypto,
+  cryptoLoading,
+  cryptoFailed,
+  fearGreed,
+}: HomeProps) {
   const { t, locale } = useLanguage()
   const [now, setNow] = useState(() => new Date())
-  const marketData = useMarketData()
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), MARKET_STATUS_REFRESH_MS)
@@ -55,16 +75,12 @@ export function Home() {
         </div>
       </section>
 
-      <StockSection
-        indices={marketData.indices}
-        loading={marketData.indicesLoading}
-        failed={marketData.indicesFailed}
-      />
+      <StockSection indices={indices} loading={indicesLoading} failed={indicesFailed} />
       <CryptoPricesSection
-        prices={marketData.crypto}
-        fearGreed={marketData.fearGreed}
-        loading={marketData.cryptoLoading}
-        failed={marketData.cryptoFailed}
+        prices={crypto}
+        fearGreed={fearGreed}
+        loading={cryptoLoading}
+        failed={cryptoFailed}
       />
     </div>
   )
@@ -101,12 +117,15 @@ function MarketStatusChip({ now, locale }: { now: Date; locale: string }) {
 /** תא מחיר יחיד - כרטיס glass נפרד עם label, אייקון מגמה (אופציונלי, VIX בלי), מחיר גדול, אחוז שינוי צבעוני. */
 function PriceTile({
   label,
+  symbol,
   price,
   changePercent,
   showTrend,
   priceFormatter,
 }: {
   label: string
+  /** טיקר ETF/מדד אמיתי לקישור TradingView - כשמסופק, `label` הופך ללינק חיצוני (ראה tradingView.ts). */
+  symbol?: string
   price: number | null
   changePercent: number | null
   showTrend: boolean
@@ -118,7 +137,14 @@ function PriceTile({
   return (
     <div className={`${styles.tile} glass glass-hover`}>
       <div className={styles.tileHeader}>
-        <span className={styles.tileLabel}>{label}</span>
+        {symbol ? (
+          <a href={tradingViewUrl(symbol)} target="_blank" rel="noopener noreferrer" className={styles.tileLabelLink}>
+            {label}
+            <ExternalLink size={10} className={styles.externalIcon} />
+          </a>
+        ) : (
+          <span className={styles.tileLabel}>{label}</span>
+        )}
         {showTrend && price != null && (up ? <TrendingUp size={14} className={styles.up} /> : <TrendingDown size={14} className={styles.down} />)}
       </div>
       {price == null ? (
@@ -275,6 +301,7 @@ function StockSection({
                 <PriceTile
                   key={symbol}
                   label={symbol}
+                  symbol={symbol}
                   price={meta.quote(indices)?.price ?? null}
                   changePercent={meta.quote(indices)?.changePercent ?? null}
                   showTrend={meta.showTrend}
@@ -297,6 +324,7 @@ function StockSection({
                   <PriceTile
                     key={symbol}
                     label={t(meta.labelKey)}
+                    symbol={symbol}
                     price={meta.quote(indices)?.price ?? null}
                     changePercent={meta.quote(indices)?.changePercent ?? null}
                     showTrend
@@ -316,6 +344,7 @@ function StockSection({
                   <PriceTile
                     key={symbol}
                     label={t(meta.labelKey)}
+                    symbol={symbol}
                     price={meta.quote(indices)?.price ?? null}
                     changePercent={meta.quote(indices)?.changePercent ?? null}
                     showTrend

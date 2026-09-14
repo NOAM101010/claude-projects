@@ -73,6 +73,181 @@
   border-color: var(--border-hi);
 }
 
+.filterBar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.searchInput {
+  flex: 1 1 200px;
+  min-width: 140px;
+  font: inherit;
+  padding: 9px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(var(--overlay-tint), 0.03);
+  color: var(--text-h);
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--accent-border);
+  background: rgba(var(--amber-rgb), 0.05);
+}
+
+.segmented {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(var(--overlay-tint), 0.02);
+}
+
+.segmented button {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 11px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.segmented button[data-active='true'] {
+  background: var(--accent-bg);
+  color: var(--accent-2);
+}
+
+.dateSelect {
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(var(--overlay-tint), 0.03);
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.clearFiltersButton {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 9px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--pnl-neg-2);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.clearFiltersButton:hover {
+  border-color: rgba(239, 68, 68, 0.55);
+  background: rgba(239, 68, 68, 0.14);
+}
+
+.customRangeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.customRangeRow label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.customRangeRow input {
+  font: inherit;
+  padding: 8px 11px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: rgba(var(--overlay-tint), 0.03);
+  color: var(--text-h);
+}
+
+.resultCount {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+
+.summaryStrip {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  margin-bottom: 16px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+@media (min-width: 720px) {
+  .summaryStrip {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .summaryStrip[data-count='3'] {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.summaryStat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px;
+  background: rgba(var(--overlay-tint), 0.015);
+}
+
+.summaryLabel {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  font-family: var(--mono);
+}
+
+.summaryValue {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-h);
+  font-family: var(--mono);
+}
+
+.summaryPositive {
+  color: var(--pnl-pos-2);
+}
+
+.summaryNegative {
+  color: var(--pnl-neg-2);
+}
+
 .empty {
   text-align: center;
   padding: 56px 16px;
@@ -243,6 +418,41 @@
   gap: 9px;
 }
 
+/* Table cell wrapper: symbol link + chart-image icon (when present) side by side. */
+.symbolCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Links out to TradingView - reset default <a> color/underline so it reads identically
+   to plain text, with just a subtle hover affordance to hint it's clickable. */
+.symbolLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.symbolLink:hover {
+  text-decoration: underline;
+}
+
+/* Small persistent cue that the ticker opens TradingView - muted until hover so it
+   doesn't compete with the symbol itself. */
+.externalIcon {
+  flex-shrink: 0;
+  opacity: 0.45;
+  color: var(--text-dim);
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.symbolLink:hover .externalIcon {
+  opacity: 0.9;
+  color: var(--accent-2);
+}
+
 .symbol {
   font-weight: 700;
   color: var(--text-h);
@@ -360,4 +570,14 @@
 
 .deleteButton:hover {
   border-color: rgba(239, 68, 68, 0.55) !important;
+}
+
+.deleteButtonConfirm {
+  background: rgba(239, 68, 68, 0.85) !important;
+  border-color: rgba(239, 68, 68, 0.85) !important;
+  color: #fff !important;
+}
+
+.deleteButtonConfirm:hover {
+  background: rgba(239, 68, 68, 1) !important;
 }

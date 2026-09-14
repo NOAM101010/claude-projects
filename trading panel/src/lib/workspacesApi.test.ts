@@ -9,6 +9,7 @@ describe('DEFAULT_FIELD_SETTINGS', () => {
       fee: true,
       notes: true,
       setup: true,
+      requireExactTime: true,
     })
   })
 })

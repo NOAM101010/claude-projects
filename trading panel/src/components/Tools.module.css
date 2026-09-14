@@ -315,10 +315,29 @@
 }
 
 .watchlistSymbol {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-family: var(--mono);
   font-weight: 800;
   font-size: 16px;
   color: var(--text-h);
+  text-decoration: none;
+}
+
+.watchlistSymbol:hover {
+  text-decoration: underline;
+}
+
+/* Small persistent cue that the ticker opens TradingView - muted until hover. */
+.watchlistSymbol .externalIcon {
+  flex-shrink: 0;
+  opacity: 0.4;
+  transition: opacity 0.15s ease;
+}
+
+.watchlistSymbol:hover .externalIcon {
+  opacity: 0.85;
 }
 
 .watchlistPriceBlock {

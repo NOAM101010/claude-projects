@@ -27,7 +27,7 @@ export async function getAccount(accountId: string): Promise<Account> {
     .select('id, tier, demo_trades_created')
     .eq('id', accountId)
     .single()
-  if (error || !data) throw error ?? new Error('טעינת חשבון נכשלה')
+  if (error || !data) throw error ?? new Error('Failed to load account')
   const row = data as AccountRow
   return { id: row.id, tier: row.tier, demoTradesCreated: row.demo_trades_created }
 }

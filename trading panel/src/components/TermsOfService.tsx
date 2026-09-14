@@ -12,8 +12,8 @@ interface TermsOfServiceProps {
 export function TermsOfService({ onClose }: TermsOfServiceProps) {
   const { t } = useLanguage()
   return (
-    <div className={styles.overlay} role="dialog" aria-modal="true" onClick={onClose}>
-      <div className={`${styles.dialog} metal-panel holo-edge`} onClick={(e) => e.stopPropagation()}>
+    <div className={`${styles.overlay} modal-overlay-in`} role="dialog" aria-modal="true" onClick={onClose}>
+      <div className={`${styles.dialog} metal-panel holo-edge modal-panel-in`} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
           <h2>{t('terms.title')}</h2>
           <button type="button" className={styles.closeButton} onClick={onClose} aria-label={t('common.close')}>

@@ -9,15 +9,20 @@ export interface FieldSettings {
   fee: boolean
   notes: boolean
   setup: boolean
+  /** true = טופס הטרייד דורש שעה מדויקת (datetime-local) לכניסה/יציאה, כמו שהיה תמיד.
+   * false = תאריך בלבד (type=date), עם 12:00 בצהריים כזמן ברירת מחדל בשמירה - ראה TradeForm.tsx. */
+  requireExactTime: boolean
 }
 
-/** ברירת מחדל: כל השדות האופציונליים דלוקים (סימבול/כיוון/כניסה/יציאה/כמות/מטבע תמיד חובה, לא ב-toggle). */
+/** ברירת מחדל: כל השדות האופציונליים דלוקים (סימבול/כיוון/כניסה/יציאה/כמות/מטבע תמיד חובה, לא ב-toggle).
+ * requireExactTime=true שומר על ההתנהגות הקיימת (שעה מדויקת חובה) לכל המשתמשים הקיימים. */
 export const DEFAULT_FIELD_SETTINGS: FieldSettings = {
   stopLoss: true,
   takeProfit: true,
   fee: true,
   notes: true,
   setup: true,
+  requireExactTime: true,
 }
 
 export interface Workspace {
@@ -71,7 +76,7 @@ export async function ensureWorkspace(accountId: string): Promise<Workspace> {
     .insert({ account_id: accountId, name: 'Main', field_settings: DEFAULT_FIELD_SETTINGS })
     .select('*')
     .single()
-  if (insertError || !created) throw insertError ?? new Error('יצירת workspace נכשלה')
+  if (insertError || !created) throw insertError ?? new Error('Failed to create workspace')
   return fromRow(created as WorkspaceRow)
 }
 
@@ -164,7 +169,7 @@ export async function createWorkspace(accountId: string, tier: AccountTier, name
     .insert({ account_id: accountId, name, style: null, field_settings: DEFAULT_FIELD_SETTINGS })
     .select('*')
     .single()
-  if (error || !data) throw error ?? new Error('יצירת מרחב עבודה נכשלה')
+  if (error || !data) throw error ?? new Error('Failed to create workspace')
   return fromRow(data as WorkspaceRow)
 }
 

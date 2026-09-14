@@ -86,7 +86,7 @@ export async function createTrade(workspaceId: string, accountId: string, trade:
     .insert({ id: trade.id, workspace_id: workspaceId, account_id: accountId, ...tradeInputToRow(input) })
     .select('*')
     .single()
-  if (error || !data) throw error ?? new Error('יצירת טרייד נכשלה')
+  if (error || !data) throw error ?? new Error('Failed to create trade')
   return rowToTrade(data as TradeRow)
 }
 
@@ -94,7 +94,7 @@ export async function updateTrade(id: string, trade: Trade): Promise<Trade> {
   const supabase = getSupabase()
   const { id: _ignoredId, ...input } = trade
   const { data, error } = await supabase.from('trades').update(tradeInputToRow(input)).eq('id', id).select('*').single()
-  if (error || !data) throw error ?? new Error('עדכון טרייד נכשל')
+  if (error || !data) throw error ?? new Error('Failed to update trade')
   return rowToTrade(data as TradeRow)
 }
 

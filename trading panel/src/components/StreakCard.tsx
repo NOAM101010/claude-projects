@@ -32,7 +32,7 @@ export function StreakCard({ streakInfo, size = 'default' }: StreakCardProps) {
 
   if (size === 'lg') {
     return (
-      <div className={`${styles.card} ${styles.cardLg} metal-panel holo-edge holo-edge--amber`}>
+      <div className={`${styles.card} ${styles.cardLg} metal-panel holo-edge holo-edge--amber glass-hover`}>
         <span className={`${styles.flame} ${styles.flameLg} ${hasStreak ? (isWin ? styles.flameWin : styles.flameLoss) : styles.flameNone}`}>
           {icon}
         </span>
@@ -46,7 +46,7 @@ export function StreakCard({ streakInfo, size = 'default' }: StreakCardProps) {
   }
 
   return (
-    <div className={`${styles.card} metal-panel holo-edge`}>
+    <div className={`${styles.card} metal-panel holo-edge glass-hover`}>
       <div className={styles.top}>
         <span className={`${styles.flame} ${hasStreak ? (isWin ? styles.flameWin : styles.flameLoss) : styles.flameNone}`}>{icon}</span>
         <span className={styles.label}>{t('dashboard.kpiCurrentStreak')}</span>

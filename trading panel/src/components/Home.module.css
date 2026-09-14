@@ -144,6 +144,40 @@
   color: var(--text-dim);
 }
 
+/* Links out to TradingView - reset default <a> styling so it reads identically to
+   .tileLabel, with just a subtle hover affordance to hint it's clickable. */
+.tileLabelLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.tileLabelLink:hover {
+  color: var(--accent-2);
+  text-decoration: underline;
+}
+
+/* Hover/focus-only cue that the label opens TradingView - hidden at rest since
+   every single tile on this screen has one; showing them all at once read as
+   visual noise. The wrapping <a>'s cursor:pointer still signals clickability. */
+.externalIcon {
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.tileLabelLink:hover .externalIcon,
+.tileLabelLink:focus-visible .externalIcon {
+  opacity: 0.9;
+}
+
 .tilePrice {
   font-size: 20px;
   font-weight: 800;

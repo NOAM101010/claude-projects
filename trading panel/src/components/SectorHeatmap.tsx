@@ -1,6 +1,8 @@
+import { ExternalLink } from 'lucide-react'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { TranslationKey } from '../i18n/translations'
 import type { SectorEtf, SectorQuote } from '../lib/marketData'
+import { tradingViewUrl } from '../lib/tradingView'
 import styles from './SectorHeatmap.module.css'
 
 interface SectorHeatmapProps {
@@ -51,7 +53,10 @@ export function SectorHeatmap({ sectors, loading }: SectorHeatmapProps) {
           ? Array.from({ length: 11 }).map((_, i) => <div key={i} className={`${styles.cell} shimmer`} />)
           : sorted.map((s) => (
               <div key={s.etf} className={`${styles.cell} ${heatClass(s.changePercent)}`} title={t(SECTOR_NAME_KEY[s.etf])}>
-                <span className={styles.etf}>{s.etf}</span>
+                <a href={tradingViewUrl(s.etf)} target="_blank" rel="noopener noreferrer" className={styles.etf}>
+                  {s.etf}
+                  <ExternalLink size={8} className={styles.externalIcon} />
+                </a>
                 <span className={`${styles.pct} num`}>
                   {s.changePercent != null ? `${s.changePercent >= 0 ? '+' : ''}${s.changePercent.toFixed(2)}%` : '—'}
                 </span>

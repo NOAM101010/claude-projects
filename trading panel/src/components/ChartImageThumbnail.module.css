@@ -37,6 +37,40 @@
   height: 100%;
 }
 
+/* Compact icon-only variant - used in the dense desktop trade table where a full
+   64x44 thumbnail would crowd the row. Same lightbox, just a subtle "has a chart"
+   affordance until clicked. */
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  padding: 0;
+  /* resting state needs to read as "there's a chart here" against a dark row,
+     not just on hover - a faint amber tint (border + fill + icon color) ties
+     it to the app's existing accent instead of blending into --border/--text-dim */
+  border: 1px solid rgba(var(--amber-rgb), 0.35);
+  border-radius: 7px;
+  background: rgba(var(--amber-rgb), 0.1);
+  color: var(--accent-2);
+  cursor: zoom-in;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.iconButton:hover {
+  border-color: rgba(var(--amber-rgb), 0.6);
+  background: rgba(var(--amber-rgb), 0.18);
+  color: var(--accent-2);
+  transform: translateY(-1px);
+}
+
+.iconButton:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
 .overlay {
   position: fixed;
   inset: 0;

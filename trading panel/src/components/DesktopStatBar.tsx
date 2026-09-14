@@ -43,23 +43,23 @@ export function DesktopStatBar({ trades, baseCurrency }: DesktopStatBarProps) {
     <div className={`${styles.bar} metal-panel`} aria-hidden={false}>
       <div className={styles.stat}>
         <span className={styles.label}>{t('dashboard.kpiTotalPnl')}</span>
-        <span className={`${styles.value} num ${total >= 0 ? styles.pos : styles.neg}`}>
+        <span key={total} className={`${styles.value} num value-pop ${total >= 0 ? styles.pos : styles.neg}`}>
           {formatCurrency(total, baseCurrency, locale)}
         </span>
       </div>
       <div className={styles.stat}>
         <span className={styles.label}>{t('desktopStatBar.todayPnl')}</span>
-        <span className={`${styles.value} num ${today >= 0 ? styles.pos : styles.neg}`}>
+        <span key={today} className={`${styles.value} num value-pop ${today >= 0 ? styles.pos : styles.neg}`}>
           {formatCurrency(today, baseCurrency, locale)}
         </span>
       </div>
       <div className={styles.stat}>
         <span className={styles.label}>{t('dashboard.kpiWinRate')}</span>
-        <span className={`${styles.value} num`}>{wr.toFixed(1)}%</span>
+        <span key={wr} className={`${styles.value} num value-pop`}>{wr.toFixed(1)}%</span>
       </div>
       <div className={styles.stat}>
         <span className={styles.label}>{t('desktopStatBar.openPositions')}</span>
-        <span className={`${styles.value} num`}>{openCount}</span>
+        <span key={openCount} className={`${styles.value} num value-pop`}>{openCount}</span>
       </div>
     </div>
   )

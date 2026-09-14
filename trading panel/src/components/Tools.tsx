@@ -1,8 +1,10 @@
+import { ExternalLink } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
 import { calculatePnl, calculatePositionSize } from '../lib/calculators'
 import { formatCurrency } from '../lib/format'
 import { fetchWatchlistPrices, type WatchlistQuote } from '../lib/marketData'
+import { tradingViewUrl } from '../lib/tradingView'
 import {
   MAX_WATCHLIST_ALERTS,
   canAddWatchlistAlert,
@@ -119,24 +121,24 @@ function PositionSizeCalculator() {
         {riskRewardRatio !== undefined && (
           <div className={styles.field}>
             <label>{t('tools.positionSize.riskRewardLabel')}</label>
-            <span className={styles.rrChip}>{`1 : ${riskRewardRatio.toFixed(2)}`}</span>
+            <span key={riskRewardRatio} className={`${styles.rrChip} value-pop`}>{`1 : ${riskRewardRatio.toFixed(2)}`}</span>
           </div>
         )}
       </div>
 
       {hasRequiredInputs ? (
-        <div className={styles.resultsGrid}>
+        <div className={`${styles.resultsGrid} count-in`}>
           <div className={`${styles.resultCard} ${styles.resultCardPrimary} det-frame`}>
             <span className={styles.resultLabel}>{t('tools.positionSize.resultShares')}</span>
-            <span className={`num ${styles.resultValuePrimary}`}>{result.shares}</span>
+            <span key={result.shares} className={`num ${styles.resultValuePrimary} value-pop`}>{result.shares}</span>
           </div>
           <div className={styles.resultCard}>
             <span className={styles.resultLabel}>{t('tools.positionSize.resultDollarRisk')}</span>
-            <span className={`num ${styles.resultValue} ${styles.negative}`}>{formatCurrency(result.dollarRisk, 'USD', locale)}</span>
+            <span key={result.dollarRisk} className={`num ${styles.resultValue} ${styles.negative} value-pop`}>{formatCurrency(result.dollarRisk, 'USD', locale)}</span>
           </div>
           <div className={styles.resultCard}>
             <span className={styles.resultLabel}>{t('tools.positionSize.resultPercentRisked')}</span>
-            <span className={`num ${styles.resultValue}`}>{result.percentOfAccountRisked.toFixed(2)}%</span>
+            <span key={result.percentOfAccountRisked} className={`num ${styles.resultValue} value-pop`}>{result.percentOfAccountRisked.toFixed(2)}%</span>
           </div>
         </div>
       ) : (
@@ -224,16 +226,22 @@ function PnlCalculatorTool() {
       </div>
 
       {hasRequiredInputs ? (
-        <div className={styles.resultsGrid}>
+        <div className={`${styles.resultsGrid} count-in`}>
           <div className={`${styles.resultCard} ${styles.resultCardWide} ${styles.resultCardPrimary} det-frame`}>
             <span className={styles.resultLabel}>{t('tools.pnl.resultProfitLoss')}</span>
-            <span className={`num ${styles.resultValuePrimary} ${result.profitLoss >= 0 ? styles.positive : styles.negative}`}>
+            <span
+              key={result.profitLoss}
+              className={`num ${styles.resultValuePrimary} value-pop ${result.profitLoss >= 0 ? styles.positive : styles.negative}`}
+            >
               {formatCurrency(result.profitLoss, 'USD', locale)}
             </span>
           </div>
           <div className={styles.resultCard}>
             <span className={styles.resultLabel}>{t('tools.pnl.resultProfitLossPercent')}</span>
-            <span className={`num ${styles.resultValue} ${result.profitLossPercent >= 0 ? styles.positive : styles.negative}`}>
+            <span
+              key={result.profitLossPercent}
+              className={`num ${styles.resultValue} value-pop ${result.profitLossPercent >= 0 ? styles.positive : styles.negative}`}
+            >
               {result.profitLossPercent >= 0 ? '+' : ''}
               {result.profitLossPercent.toFixed(2)}%
             </span>
@@ -404,7 +412,15 @@ function Watchlist({ accountId }: { accountId: string }) {
               return (
                 <li key={alert.id} className={`${styles.watchlistRow} det-frame`}>
                   <div className={styles.watchlistSymbolBlock}>
-                    <span className={styles.watchlistSymbol}>{alert.symbol}</span>
+                    <a
+                      href={tradingViewUrl(alert.symbol)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.watchlistSymbol}
+                    >
+                      {alert.symbol}
+                      <ExternalLink size={12} className={styles.externalIcon} />
+                    </a>
                     <span className={styles.hint}>
                       {t('tools.watchlist.targetLabel')}: {alert.direction === 'above' ? '≥' : '≤'}{' '}
                       {formatCurrency(alert.targetPrice, 'USD', locale)}
