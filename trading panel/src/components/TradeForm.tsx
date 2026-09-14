@@ -260,6 +260,7 @@ export function TradeForm({
 
   return (
     <form className={`${styles.form} count-in`} onSubmit={handleSubmit}>
+      <h2 className={styles.formTitle}>{initialTrade ? t('tradeForm.editTitle') : t('tradeForm.addTitle')}</h2>
       <div className={styles.row}>
         <div className={styles.field}>
           <label htmlFor="symbol">{t('tradeForm.symbolLabel')}</label>

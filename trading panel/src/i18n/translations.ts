@@ -52,6 +52,8 @@ const en = {
   'access.enterCode': 'Already have a Pro code? Enter it here',
 
   // TradeForm
+  'tradeForm.addTitle': 'Add Trade',
+  'tradeForm.editTitle': 'Edit Trade',
   'tradeForm.symbolLabel': 'Symbol',
   'tradeForm.directionLabel': 'Direction',
   'tradeForm.entryDateLabel': 'Entry date & time',
@@ -404,6 +406,7 @@ const en = {
   'home.greetingEvening': 'Good evening',
   'home.greetingNight': 'Good night',
   'home.overviewEyebrow': 'Market overview',
+  'home.quickLinksLabel': 'Quick links',
   'home.sectorHeatmapTitle': 'Sector heatmap',
   'home.fearGreedCardTitle': 'Fear & Greed Index',
   'home.fearGreedLoading': 'Loading sentiment...',
@@ -490,6 +493,7 @@ const en = {
   'tools.watchlist.activeSectionTitle': 'Active Alerts',
   'tools.watchlist.statusLabel': 'Status',
   'tools.watchlist.statusActive': 'Active',
+  'tools.watchlist.statusWatching': 'Watching',
   'tools.watchlist.createdLabel': 'Created',
   'tools.watchlist.historyTitle': 'Alert History',
   'tools.watchlist.historyHint': 'Alerts that already triggered stay here until you clear them.',
@@ -612,6 +616,8 @@ const he: Record<TranslationKey, string> = {
 
   'access.enterCode': 'יש לך כבר קוד Pro? הזן אותו כאן',
 
+  'tradeForm.addTitle': 'הוספת טרייד',
+  'tradeForm.editTitle': 'עריכת טרייד',
   'tradeForm.symbolLabel': 'סימבול',
   'tradeForm.directionLabel': 'כיוון',
   'tradeForm.entryDateLabel': 'תאריך ושעת כניסה',
@@ -946,6 +952,7 @@ const he: Record<TranslationKey, string> = {
   'home.greetingEvening': 'ערב טוב',
   'home.greetingNight': 'לילה טוב',
   'home.overviewEyebrow': 'סקירת שוק',
+  'home.quickLinksLabel': 'ניווט מהיר',
   'home.sectorHeatmapTitle': 'מפת חום סקטורים',
   'home.fearGreedCardTitle': 'מדד פחד ותאוות בצע',
   'home.fearGreedLoading': 'טוען סנטימנט...',
@@ -1029,6 +1036,7 @@ const he: Record<TranslationKey, string> = {
   'tools.watchlist.activeSectionTitle': 'התראות פעילות',
   'tools.watchlist.statusLabel': 'סטטוס',
   'tools.watchlist.statusActive': 'פעיל',
+  'tools.watchlist.statusWatching': 'במעקב',
   'tools.watchlist.createdLabel': 'נוצר',
   'tools.watchlist.historyTitle': 'היסטוריית התראות',
   'tools.watchlist.historyHint': 'התראות שכבר נורו נשארות כאן עד שתנקה אותן.',
@@ -1145,6 +1153,8 @@ const es: Record<TranslationKey, string> = {
 
   'access.enterCode': '¿Ya tienes un código Pro? Ingrésalo aquí',
 
+  'tradeForm.addTitle': 'Agregar operación',
+  'tradeForm.editTitle': 'Editar operación',
   'tradeForm.symbolLabel': 'Símbolo',
   'tradeForm.directionLabel': 'Dirección',
   'tradeForm.entryDateLabel': 'Fecha y hora de entrada',
@@ -1482,6 +1492,7 @@ const es: Record<TranslationKey, string> = {
   'home.greetingEvening': 'Buenas noches',
   'home.greetingNight': 'Buenas noches',
   'home.overviewEyebrow': 'Resumen del mercado',
+  'home.quickLinksLabel': 'Enlaces rápidos',
   'home.sectorHeatmapTitle': 'Mapa de calor por sector',
   'home.fearGreedCardTitle': 'Índice de miedo y codicia',
   'home.fearGreedLoading': 'Cargando sentimiento...',
@@ -1565,6 +1576,7 @@ const es: Record<TranslationKey, string> = {
   'tools.watchlist.activeSectionTitle': 'Alertas activas',
   'tools.watchlist.statusLabel': 'Estado',
   'tools.watchlist.statusActive': 'Activa',
+  'tools.watchlist.statusWatching': 'En seguimiento',
   'tools.watchlist.createdLabel': 'Creada',
   'tools.watchlist.historyTitle': 'Historial de alertas',
   'tools.watchlist.historyHint': 'Las alertas ya disparadas quedan aquí hasta que las borres.',
@@ -1681,6 +1693,8 @@ const fr: Record<TranslationKey, string> = {
 
   'access.enterCode': 'Vous avez déjà un code Pro ? Entrez-le ici',
 
+  'tradeForm.addTitle': 'Ajouter un trade',
+  'tradeForm.editTitle': 'Modifier le trade',
   'tradeForm.symbolLabel': 'Symbole',
   'tradeForm.directionLabel': 'Direction',
   'tradeForm.entryDateLabel': "Date et heure d'entrée",
@@ -2024,6 +2038,7 @@ const fr: Record<TranslationKey, string> = {
   'home.greetingEvening': 'Bonsoir',
   'home.greetingNight': 'Bonne nuit',
   'home.overviewEyebrow': 'Aperçu du marché',
+  'home.quickLinksLabel': 'Liens rapides',
   'home.sectorHeatmapTitle': 'Carte thermique des secteurs',
   'home.fearGreedCardTitle': 'Indice de peur et de cupidité',
   'home.fearGreedLoading': 'Chargement du sentiment...',
@@ -2107,6 +2122,7 @@ const fr: Record<TranslationKey, string> = {
   'tools.watchlist.activeSectionTitle': 'Alertes actives',
   'tools.watchlist.statusLabel': 'Statut',
   'tools.watchlist.statusActive': 'Active',
+  'tools.watchlist.statusWatching': 'Suivi',
   'tools.watchlist.createdLabel': 'Créée',
   'tools.watchlist.historyTitle': 'Historique des alertes',
   'tools.watchlist.historyHint': 'Les alertes déjà déclenchées restent ici jusqu\'à ce que vous les effaciez.',

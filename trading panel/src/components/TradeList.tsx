@@ -1,5 +1,6 @@
 import { ExternalLink } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import type { Dispatch, SetStateAction } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
 import { formatCurrency, formatDate, formatDateTime } from '../lib/format'
 import { profitFactor, totalPnl, winRate } from '../lib/stats'
@@ -17,15 +18,19 @@ interface TradeListProps {
   onAdd: () => void
   onEdit: (trade: Trade) => void
   onDelete: (id: string) => void
+  /** בעלות המצב הועברה ל-`Journal.tsx` (ולא `useState` מקומי כאן) כדי שהחיפוש/פילטרים
+   * ישרדו מעבר בין תת-טאבים (Trades/Dashboard/Positions) - `TradeList` נכנס/יוצא מה-DOM
+   * בכל מעבר כזה (ראה `Journal.tsx`), אז state מקומי כאן היה מתאפס בכל חזרה ל-Trades. */
+  advFilters: TradeFiltersState
+  setAdvFilters: Dispatch<SetStateAction<TradeFiltersState>>
 }
 
 const DATE_PRESETS: DateRangePreset[] = ['all', 'today', 'thisWeek', 'thisMonth', 'last3Months', 'thisYear', 'custom']
 /** זמן שבו כפתור המחיקה נשאר במצב "לאשר?" לפני שחוזר אוטומטית למצב הרגיל. */
 const DELETE_CONFIRM_TIMEOUT_MS = 4000
 
-export function TradeList({ trades, filter, onClearFilter, onAdd, onEdit, onDelete }: TradeListProps) {
+export function TradeList({ trades, filter, onClearFilter, onAdd, onEdit, onDelete, advFilters, setAdvFilters }: TradeListProps) {
   const { t, locale } = useLanguage()
-  const [advFilters, setAdvFilters] = useState<TradeFiltersState>(DEFAULT_TRADE_FILTERS)
   // מחיקה דורשת אישור-לחיצה-שנייה קלה (לא ה-2-שלבים הכבד של Clear Trading Data - זה טרייד
   // בודד והפיך דרך ה-Undo toast ב-App.tsx). לחיצה שנייה על אותה שורה תוך `DELETE_CONFIRM_TIMEOUT_MS`
   // מבצעת בפועל; אחרת חוזר למצב רגיל. שורה אחת בלבד יכולה להיות במצב אישור בו-זמנית.

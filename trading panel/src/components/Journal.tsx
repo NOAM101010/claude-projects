@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
 import { Dashboard } from './Dashboard'
 import { OpenPositions } from './OpenPositions'
 import { TradeList } from './TradeList'
+import { DEFAULT_TRADE_FILTERS, type TradeFiltersState } from '../lib/tradeFilters'
 import type { TradeFilter } from '../App'
 import type { CurrencyCode, Trade } from '../types/trade'
 import styles from './Journal.module.css'
@@ -42,6 +44,9 @@ export function Journal({
   onSelectSetup,
 }: JournalProps) {
   const { t } = useLanguage()
+  // ראה TradeList.tsx: המצב הועבר לכאן (במקום useState מקומי בתוך TradeList) כדי לשרוד
+  // מעבר בין תת-הטאבים (TradeList נכנס/יוצא מה-DOM בכל מעבר subTab).
+  const [advFilters, setAdvFilters] = useState<TradeFiltersState>(DEFAULT_TRADE_FILTERS)
 
   return (
     <div className={styles.wrapper}>
@@ -58,7 +63,16 @@ export function Journal({
       </div>
 
       {subTab === 'trades' ? (
-        <TradeList trades={trades} filter={filter} onClearFilter={onClearFilter} onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} />
+        <TradeList
+          trades={trades}
+          filter={filter}
+          onClearFilter={onClearFilter}
+          onAdd={onAdd}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          advFilters={advFilters}
+          setAdvFilters={setAdvFilters}
+        />
       ) : subTab === 'dashboard' ? (
         <Dashboard trades={trades} baseCurrency={baseCurrency} onSelectSymbol={onSelectSymbol} onSelectSetup={onSelectSetup} />
       ) : (

@@ -40,34 +40,67 @@
   margin: 0;
 }
 
+/* De-emphasized vs. the global `.hero-title` scale (36-76px/900) - the greeting is a nice
+   touch, not the reason a trader opened the app. Market status (below) now leads instead. */
 .heroTitle {
   margin: 0;
+  font-size: clamp(18px, 2.4vw, 24px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: var(--text-dim);
 }
 
 .heroMeta {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 4px;
+  gap: 14px;
 }
 
 .statusGroup {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
+/* The market-open/closed chip itself (`det-chip--up`/`--down`) is intentionally bumped up
+   in this one spot via a scoped override - it's the single most-checked fact on this
+   screen and needs to read before anything else, first thing on load. */
+.statusGroup :global(.det-chip) {
+  font-size: 13px;
+  padding: 6px 14px;
+  letter-spacing: 0.1em;
+}
+
 .statusText {
-  font-size: 13.5px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
   color: var(--text-h);
 }
 
 .dateLabel {
   font-size: 13px;
   color: var(--text-dim);
+}
+
+/* ==== quick links — small navigation aid, deliberately restrained (not a new hero) ==== */
+.quickLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.quickLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-h);
+  cursor: pointer;
 }
 
 /* ==== sections (crypto prices / indices) ==== */

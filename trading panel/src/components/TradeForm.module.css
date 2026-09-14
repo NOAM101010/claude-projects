@@ -8,6 +8,11 @@
   box-sizing: border-box;
 }
 
+.formTitle {
+  margin: 0 0 -6px;
+  font-size: var(--text-h2-page);
+}
+
 .row {
   display: grid;
   grid-template-columns: 1fr 1fr;

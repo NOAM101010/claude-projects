@@ -401,6 +401,15 @@
   align-self: flex-end;
 }
 
+/* watch-only row (no target price set yet) - deliberately neutral, not the same
+   green as an armed alert, so it never reads as "an alert is active" (see
+   `tools.watchlist.statusWatching` - was a real bug, this chip used to always
+   say "Active" even when `noAlertSet` was showing right next to it). */
+.statusChipWatching {
+  background: var(--metal-mid);
+  color: var(--text-dim);
+}
+
 .historyHeader {
   display: flex;
   align-items: flex-start;

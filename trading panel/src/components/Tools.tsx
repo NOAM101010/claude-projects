@@ -508,7 +508,11 @@ function Watchlist({ accountId, focusSignal }: { accountId: string; focusSignal?
         ) : activeAlerts.length === 0 ? (
           <div className={styles.watchlistEmptyState}>
             <p className={styles.hint}>{t('tools.watchlist.empty')}</p>
-            <button type="button" className="btn-metal" onClick={() => symbolInputRef.current?.focus()}>
+            <button
+              type="button"
+              className={`${styles.watchlistAddButton} btn-metal`}
+              onClick={() => symbolInputRef.current?.focus()}
+            >
               {t('tools.watchlist.addButton')}
             </button>
           </div>
@@ -541,7 +545,13 @@ function Watchlist({ accountId, focusSignal }: { accountId: string; focusSignal?
                     </span>
                   </div>
                   <div className={styles.watchlistPriceBlock}>
-                    <span className={styles.statusChip}>{t('tools.watchlist.statusActive')}</span>
+                    {alert.targetPrice !== null && alert.direction !== null ? (
+                      <span className={styles.statusChip}>{t('tools.watchlist.statusActive')}</span>
+                    ) : (
+                      <span className={`${styles.statusChip} ${styles.statusChipWatching}`}>
+                        {t('tools.watchlist.statusWatching')}
+                      </span>
+                    )}
                     <span className={styles.resultLabel}>{t('tools.watchlist.currentPriceLabel')}</span>
                     <span className={`num ${styles.resultValue}`}>
                       {quote ? formatCurrency(quote.price, 'USD', locale) : t('tools.watchlist.unavailable')}
