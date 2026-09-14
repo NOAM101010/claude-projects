@@ -1,0 +1,44 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+}
+
+/* PillNav's header and DesktopStatBar (Wide Console) each had their own
+   independent position:sticky;top:0 - since sticky offsets are computed
+   against the viewport independently per element, both would "stick" at the
+   same y:0 once scrolled, overlapping instead of stacking below one another.
+   Wrapping both in a single sticky group fixes that: the pair sticks as one
+   unit and the stat bar naturally sits below the nav, no overlap possible. */
+.stickyHeader {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.appBody {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.appMain {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Phase G's two-column grid (main content + MarketRail) was removed per user
+   feedback (confusing, and broke MonthlyCalendar's height-fill sizing via
+   align-items:start). Back to a single centered column for now - desktop
+   layout is being revisited separately, after the core product is polished. */
+
+.loadingState {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--text-dim);
+}

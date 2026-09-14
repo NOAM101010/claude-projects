@@ -1,0 +1,241 @@
+.section {
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.header h3 {
+  margin: 0;
+}
+
+.shareButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.shareButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.empty {
+  text-align: center;
+  color: var(--text-dim);
+  padding: 28px 0;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  padding: 26px 20px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+}
+
+.chart {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.chartLinePos {
+  stroke: var(--pnl-pos-2);
+  stroke-width: 0.8;
+  vector-effect: non-scaling-stroke;
+}
+
+.chartLineNeg {
+  stroke: var(--pnl-neg-2);
+  stroke-width: 0.8;
+  vector-effect: non-scaling-stroke;
+}
+
+.chartDotPos {
+  fill: var(--pnl-pos-2);
+}
+
+.chartDotNeg {
+  fill: var(--pnl-neg-2);
+}
+
+.month {
+  position: relative;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  z-index: 1;
+}
+
+.symbol {
+  position: relative;
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: clamp(30px, 6vw, 46px);
+  color: var(--text-h);
+  z-index: 1;
+}
+
+.pnl {
+  position: relative;
+  font-family: var(--mono);
+  font-weight: 800;
+  font-size: clamp(26px, 5vw, 38px);
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  unicode-bidi: isolate;
+  z-index: 1;
+}
+
+.pct {
+  position: relative;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 15px;
+  direction: ltr;
+  unicode-bidi: isolate;
+  z-index: 1;
+}
+
+.bestOf {
+  position: relative;
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 4px;
+  z-index: 1;
+}
+
+.divider {
+  position: relative;
+  width: 60%;
+  height: 1px;
+  background: var(--border);
+  margin: 10px 0;
+  z-index: 1;
+}
+
+.meta {
+  position: relative;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--text-dim);
+  z-index: 1;
+}
+
+.positive {
+  color: var(--pnl-pos-2);
+}
+
+.negative {
+  color: var(--pnl-neg-2);
+}
+
+/* גרסה מצומצמת - שורה אחת, ל-MonthlyCalendar ששביר לגובה מסך יחיד (בלי SVG רקע/מפריד/meta). */
+.compactSection {
+  border-radius: 12px;
+  padding: 9px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.compactRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.compactSymbol {
+  font-family: var(--serif);
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--text-h);
+}
+
+.compactPnl {
+  font-family: var(--mono);
+  font-weight: 800;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.compactPct {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 12.5px;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.compactBestOf {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-inline-start: auto;
+  white-space: nowrap;
+}
+
+.compactShareButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  color: var(--text-h);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.compactShareButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.compactEmptyText {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+@media (max-width: 480px) {
+  .compactBestOf {
+    display: none;
+  }
+}
+
+.hiddenCanvas {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}

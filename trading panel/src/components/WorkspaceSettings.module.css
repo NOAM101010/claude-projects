@@ -1,0 +1,257 @@
+.wrapper {
+  padding: 24px;
+  max-width: 640px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* דסקטופ: קצת יותר נשימה, אבל נשאר טופס-מבנה קריא (לא נמתח לרוחב מסך שלם) */
+@media (min-width: 1024px) {
+  .wrapper {
+    max-width: 760px;
+    padding: 32px 24px;
+  }
+}
+
+.wrapper h2 {
+  margin: 0;
+}
+
+.hint {
+  margin: -8px 0 0;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.toggleRow span {
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.toggleRow input[type='checkbox'] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.status {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  min-height: 16px;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.block:first-of-type {
+  padding-top: 0;
+  border-top: none;
+}
+
+.block h3 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text-h);
+}
+
+.fieldRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fieldRow span {
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.textInput {
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-h);
+  min-width: 160px;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.actions button {
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-h);
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.actions button:hover {
+  border-color: var(--border-hi);
+}
+
+.dangerBlock {
+  border-top: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.dangerButton {
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 9px 18px;
+  border-radius: 9px;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--pnl-neg-2);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  align-self: flex-start;
+}
+
+.dangerButton:hover {
+  border-color: rgba(239, 68, 68, 0.65);
+  background: rgba(239, 68, 68, 0.14);
+}
+
+.dangerButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.confirmBox {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.confirmBox p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.importResult {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.importResultText {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.importResultList {
+  margin: 0;
+  padding-inline-start: 18px;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.importResultSuccess {
+  border-color: rgba(34, 197, 94, 0.35);
+  background: var(--pnl-pos-bg);
+}
+
+.importResultSuccess .importResultText {
+  color: var(--pnl-pos-2);
+}
+
+.importResultPartial {
+  border-color: rgba(var(--amber-rgb), 0.4);
+  background: rgba(var(--amber-rgb), 0.1);
+}
+
+.importResultPartial .importResultText {
+  color: var(--accent-2);
+}
+
+.importResultError {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: var(--pnl-neg-bg);
+}
+
+.importResultError .importResultText {
+  color: var(--pnl-neg-2);
+}
+
+.formatList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formatItem {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.formatName {
+  flex: 0 0 auto;
+  font-weight: 700;
+  color: var(--text-h);
+}
+
+.formatDesc {
+  color: var(--text-dim);
+}
+
+.successBanner {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  background: var(--pnl-pos-bg);
+  color: var(--pnl-pos-2);
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+}

@@ -1,0 +1,143 @@
+.header {
+  /* stickiness lives on the shared .stickyHeader wrapper in App.css, together
+     with DesktopStatBar - see the comment there for why. */
+  padding: 12px 16px;
+  background: linear-gradient(180deg, rgba(7, 8, 11, 0.9), rgba(7, 8, 11, 0.7));
+  border-bottom: 1px solid var(--border);
+}
+
+.inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-shrink: 0;
+  padding: 6px 14px 6px 8px;
+  border-radius: 13px;
+}
+
+.logo {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  padding: 2px;
+  background: conic-gradient(from 140deg, var(--accent-2), #5a4522, var(--accent-2), #3a2e18, var(--accent-2));
+}
+
+.logoInner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--metal-1);
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 13px;
+  color: var(--accent-2);
+}
+
+.brandText {
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  color: var(--text-h);
+  white-space: nowrap;
+}
+
+.nav {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 5px;
+  border-radius: 13px;
+  border: 1px solid var(--metal-edge);
+  background: rgba(21, 24, 29, 0.75);
+  overflow-x: auto;
+}
+.nav::-webkit-scrollbar {
+  display: none;
+}
+
+.navButton {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.navButton[data-active='true'] {
+  color: var(--accent-2);
+}
+.navButton:hover:not([data-active='true']) {
+  color: var(--text-h);
+}
+
+.navIcon {
+  flex-shrink: 0;
+}
+
+.navLabel {
+  display: none;
+}
+
+.settingsButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 11px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.settingsButton[data-active='true'] {
+  color: var(--accent-2);
+}
+.settingsButton:hover:not([data-active='true']) {
+  color: var(--text-h);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+  .navLabel {
+    display: inline;
+  }
+}
+
+@media (max-width: 480px) {
+  .brandText {
+    display: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  .header {
+    padding: 16px 40px;
+  }
+}

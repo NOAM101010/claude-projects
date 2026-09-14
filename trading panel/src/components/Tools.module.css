@@ -1,0 +1,347 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px;
+  max-width: 720px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+/* Wide Console (desktop-only): a bit more room so the results grid can breathe
+   into an extra column instead of just centering a narrow phone-width form. */
+@media (min-width: 1280px) {
+  .wrapper {
+    max-width: 960px;
+  }
+}
+
+.subNav {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 13px;
+}
+
+.subNav button {
+  flex: 1;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 10px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.subNav button[data-active='true'] {
+  background: linear-gradient(180deg, rgba(232, 179, 65, 0.14) 0%, rgba(232, 179, 65, 0.05) 100%);
+  color: var(--accent-2);
+}
+
+.card {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card h2 {
+  font-size: 20px;
+}
+
+.hint {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 560px) {
+  .row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.field label {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-dim);
+}
+
+.field input {
+  font: inherit;
+  padding: 11px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-h);
+  box-sizing: border-box;
+  width: 100%;
+  direction: ltr;
+  text-align: right;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.field input:hover {
+  border-color: var(--border-hi);
+}
+
+.field input:focus {
+  outline: none;
+  border-color: var(--accent-border);
+  background: rgba(217, 154, 43, 0.05);
+}
+
+.modeToggle,
+.directionToggle {
+  display: flex;
+  gap: 8px;
+}
+
+.modeToggle button,
+.directionToggle button {
+  flex: 1;
+  padding: 11px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.modeToggle button:hover,
+.directionToggle button:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-hi);
+}
+
+.modeToggle button[data-active='true'] {
+  background: var(--accent-bg);
+  color: var(--accent-2);
+  border-color: var(--accent-border);
+}
+
+.directionToggle button[data-active='true'][data-dir='long'] {
+  background: var(--pnl-pos-bg);
+  color: var(--pnl-pos-2);
+  border-color: rgba(34, 197, 94, 0.45);
+}
+
+.directionToggle button[data-active='true'][data-dir='short'] {
+  background: var(--pnl-neg-bg);
+  color: var(--pnl-neg-2);
+  border-color: rgba(239, 68, 68, 0.45);
+}
+
+.resultsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.resultCard {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+}
+
+.resultCardWide {
+  grid-column: 1 / -1;
+}
+
+/* The primary result (shares to buy / profit-loss) gets extra visual weight on top
+   of the existing det-frame "wide" card - bigger number, stronger accent color. */
+.resultCardPrimary {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+}
+
+.resultValuePrimary {
+  font-size: 34px;
+  font-weight: 800;
+  color: var(--accent-2);
+}
+
+.resultsPlaceholder {
+  margin: 0;
+  padding: 20px 14px;
+  border-radius: 12px;
+  border: 1px dashed var(--border);
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.subGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+}
+
+.subGroupLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+
+.rrChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--accent-2);
+  font-family: var(--mono);
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.resultLabel {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.resultValue {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-h);
+}
+
+.positive {
+  color: var(--pnl-pos-2);
+}
+
+.negative {
+  color: var(--pnl-neg-2);
+}
+
+.watchlistWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.watchlistAddRow {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.watchlistAddButton {
+  padding: 11px 20px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+.watchlistAddButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.watchlistError {
+  font-size: 12.5px;
+  color: var(--pnl-neg-2);
+}
+
+.watchlistList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+}
+
+.watchlistRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  flex-wrap: wrap;
+}
+
+.watchlistSymbolBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 90px;
+}
+
+.watchlistSymbol {
+  font-family: var(--mono);
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--text-h);
+}
+
+.watchlistPriceBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+}
+
+.watchlistDeleteBtn {
+  padding: 8px 14px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--pnl-neg-2);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.watchlistDeleteBtn:hover {
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(239, 68, 68, 0.45);
+}

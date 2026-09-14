@@ -1,0 +1,50 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+/* אותו דפוס segmented control של `Tools.module.css`'s .subNav, אבל ברוחב שמתאים
+   ל-max-width הקיים של TradeList/Dashboard (900px נייד, 1400px דסקטופ) כדי שהכל יתיישר. */
+.subNav {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 13px;
+  max-width: 900px;
+  width: calc(100% - 40px);
+  margin: 20px auto 0;
+  box-sizing: border-box;
+}
+
+.subNav button {
+  flex: 1;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 10px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.subNav button[data-active='true'] {
+  background: linear-gradient(180deg, rgba(232, 179, 65, 0.14) 0%, rgba(232, 179, 65, 0.05) 100%);
+  color: var(--accent-2);
+}
+
+@media (min-width: 1024px) {
+  .subNav {
+    max-width: 1400px;
+  }
+}
+
+/* matches the #root 1600px step in index.css so the sub-nav pill stays
+   aligned with the widened TradeList/Dashboard content below it. */
+@media (min-width: 1600px) {
+  .subNav {
+    max-width: 1880px;
+  }
+}

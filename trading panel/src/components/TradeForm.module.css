@@ -1,0 +1,266 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px;
+  max-width: 640px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 560px) {
+  .row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.field label {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-dim);
+}
+
+.optional {
+  font-weight: 400;
+  color: var(--text-dim);
+  font-size: 11.5px;
+}
+
+.field input,
+.field select,
+.field textarea {
+  font: inherit;
+  padding: 11px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-h);
+  box-sizing: border-box;
+  width: 100%;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.field input:hover,
+.field select:hover,
+.field textarea:hover {
+  border-color: var(--border-hi);
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: var(--accent-border);
+  background: rgba(217, 154, 43, 0.05);
+}
+
+/* symbol + numeric price/qty fields read as LTR ticker data even inside the RTL form */
+.field input[type='text'],
+.field input[type='number'] {
+  direction: ltr;
+  text-align: right;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 76px;
+  font-family: var(--sans);
+  direction: rtl;
+  text-align: right;
+}
+
+.directionToggle {
+  display: flex;
+  gap: 8px;
+}
+
+.directionToggle button {
+  flex: 1;
+  padding: 11px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.directionToggle button:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-hi);
+}
+
+.directionToggle button[data-active='true'][data-dir='long'] {
+  background: var(--pnl-pos-bg);
+  color: var(--pnl-pos-2);
+  border-color: rgba(34, 197, 94, 0.45);
+  box-shadow: inset 0 0 20px -10px rgba(34, 197, 94, 0.5);
+}
+
+.directionToggle button[data-active='true'][data-dir='short'] {
+  background: var(--pnl-neg-bg);
+  color: var(--pnl-neg-2);
+  border-color: rgba(239, 68, 68, 0.45);
+  box-shadow: inset 0 0 20px -10px rgba(239, 68, 68, 0.5);
+}
+
+.pnlPreview {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  color: var(--text-dim);
+}
+
+.pnlPreview strong {
+  font-size: 19px;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.pnlPositive {
+  color: var(--pnl-pos-2);
+}
+
+.pnlNegative {
+  color: var(--pnl-neg-2);
+}
+
+.error {
+  color: var(--pnl-neg-2);
+  font-size: 13px;
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.actions button {
+  font: inherit;
+  font-weight: 700;
+  padding: 13px 18px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  flex: 1;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+.actions button:hover {
+  transform: translateY(-1px);
+}
+
+.actions button:active {
+  transform: translateY(0);
+}
+
+.submit {
+  background: linear-gradient(180deg, var(--accent-2), var(--accent));
+  color: #16110a;
+  box-shadow: 0 10px 24px -12px rgba(217, 154, 43, 0.55);
+}
+
+.submit:hover {
+  filter: brightness(1.06);
+}
+
+.cancel {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-h);
+  border: 1px solid var(--border) !important;
+}
+
+.cancel:hover {
+  border-color: var(--border-hi) !important;
+}
+
+.imagePreviewWrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.imagePreviewButton {
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: none;
+  cursor: zoom-in;
+  overflow: hidden;
+  line-height: 0;
+  transition: border-color 0.15s ease;
+}
+
+.imagePreviewButton:hover {
+  border-color: var(--border-hi);
+}
+
+.imagePreview {
+  display: block;
+  width: 96px;
+  height: 64px;
+  object-fit: cover;
+}
+
+.removeImageButton {
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 9px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.06);
+  color: var(--pnl-neg-2);
+  cursor: pointer;
+}
+
+.removeImageButton:hover {
+  border-color: rgba(239, 68, 68, 0.55);
+}
+
+.lightboxOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(4, 5, 7, 0.85);
+  backdrop-filter: blur(4px);
+  cursor: zoom-out;
+}
+
+.lightboxImage {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 10px;
+  box-shadow: 0 24px 60px -18px rgba(0, 0, 0, 0.7);
+}

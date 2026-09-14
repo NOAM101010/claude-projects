@@ -1,0 +1,177 @@
+.wrapper {
+  padding: 20px;
+  max-width: 900px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+@media (min-width: 1024px) {
+  .wrapper {
+    max-width: 1080px;
+  }
+}
+
+/* Wide Console (desktop-only): one more grid column once there's real room for it. */
+@media (min-width: 1280px) {
+  .wrapper {
+    max-width: 1320px;
+  }
+}
+
+/* matches the #root 1600px step in index.css (common 1920x1080 monitor). */
+@media (min-width: 1600px) {
+  .wrapper {
+    max-width: 1880px;
+  }
+}
+
+/* ==== hero — dynamic greeting ==== */
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 8px;
+}
+
+.eyebrow {
+  margin: 0;
+}
+
+.heroTitle {
+  margin: 0;
+}
+
+.heroMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.statusGroup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.statusText {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.dateLabel {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+/* ==== sections (crypto prices / indices) ==== */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  font-family: var(--mono);
+}
+
+.note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+/* ==== price tiles grid ==== */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* matches the #root 1600px step in index.css (common 1920x1080 monitor) - one
+   more column so the price/sector/crypto tiles keep filling the wider row
+   instead of just stretching wider individually. */
+@media (min-width: 1600px) {
+  .grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+.tile {
+  border-radius: 14px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tileHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tileLabel {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.tilePrice {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-h);
+}
+
+.tileChange {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.up {
+  color: var(--pnl-pos-2);
+}
+
+.down {
+  color: var(--pnl-neg-2);
+}
+
+.neutral {
+  color: var(--text-h);
+}
+
+/* ==== fear & greed card (crypto only) - same glass tile, taller for the disclaimer note ==== */
+.fearGreedTile {
+  gap: 4px;
+}
+
+.fearGreedTile .tilePrice {
+  font-size: 28px;
+}

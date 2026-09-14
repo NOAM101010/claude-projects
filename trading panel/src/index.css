@@ -1,0 +1,399 @@
+:root {
+  color-scheme: dark;
+
+  /* Deep dark, cool-neutral base */
+  --bg: #07080b;
+  --bg-2: #0b0d12;
+  --card: rgba(255, 255, 255, 0.035);
+  --card-hi: rgba(255, 255, 255, 0.06);
+
+  --border: rgba(255, 255, 255, 0.09);
+  --border-hi: rgba(255, 255, 255, 0.17);
+
+  --text: #a3a3ab;
+  --text-h: #f2f2f4;
+  --text-dim: #74747c;
+
+  /* Trading semantics — green up / red down, used consistently for Long/Short + P&L */
+  --pnl-pos: #22c55e;
+  --pnl-pos-2: #4ade80;
+  --pnl-pos-bg: rgba(34, 197, 94, 0.14);
+  --pnl-neg: #ef4444;
+  --pnl-neg-2: #f87171;
+  --pnl-neg-bg: rgba(239, 68, 68, 0.14);
+
+  /* Amber — the single warm accent: brand + generic money figures only */
+  --accent: #d99a2b;
+  --accent-2: #e8b341;
+  --accent-bg: rgba(217, 154, 43, 0.14);
+  --accent-border: rgba(217, 154, 43, 0.4);
+
+  --code-bg: rgba(255, 255, 255, 0.045);
+  --shadow: 0 18px 40px -22px rgba(0, 0, 0, 0.75);
+
+  /* Titanium / charcoal metal — machined console surfaces */
+  --metal-1: #0c0e11;
+  --metal-2: #15181d;
+  --metal-edge: rgba(255, 255, 255, 0.08);
+  --metal-hi: rgba(255, 255, 255, 0.06);
+  --amber-rgb: 217, 154, 43;
+  --amber-hot-rgb: 232, 179, 65;
+
+  --sans: 'Heebo', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --serif: 'Frank Ruhl Libre', Georgia, 'Times New Roman', serif;
+  --mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+
+  font: 16px/1.55 var(--sans);
+  letter-spacing: 0.1px;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  border-color: var(--border);
+}
+
+html,
+body {
+  background: var(--bg);
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(ellipse 900px 500px at 15% -5%, rgba(217, 154, 43, 0.05), transparent 55%),
+    radial-gradient(ellipse 800px 600px at 100% 100%, rgba(34, 197, 94, 0.04), transparent 55%),
+    radial-gradient(ellipse 700px 500px at 50% 40%, rgba(239, 68, 68, 0.02), transparent 60%),
+    var(--bg);
+}
+
+#root {
+  max-width: 1080px;
+  margin: 0 auto;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  border-inline: 1px solid var(--border);
+}
+
+/* Phase G widened #root to 1400px for the (now-removed) two-column MarketRail
+   layout - reverted back to a single centered column at 1080px everywhere.
+   "Wide Console" (desktop-only, chosen concept B): on genuinely wide desktop
+   viewports only, give the single centered column more breathing room. Mobile
+   and mid-size/laptop viewports (<1280px, incl. the Calendar's fragile height
+   chain - see progress.md) are completely untouched.
+   Two desktop steps: 1280px (small desktop/laptop) gets a modest bump, and
+   1600px+ (the common 1920x1080 monitor) gets a much wider column so the
+   content actually fills the screen instead of leaving large black margins -
+   explicit user feedback that 1400px still looked too narrow on 1920x1080. */
+@media (min-width: 1280px) {
+  #root {
+    max-width: 1600px;
+  }
+}
+@media (min-width: 1600px) {
+  #root {
+    max-width: 1880px;
+  }
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--serif);
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  color: var(--text-h);
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+code {
+  font-family: var(--mono);
+  display: inline-flex;
+  border-radius: 4px;
+  color: var(--text-h);
+  font-size: 13px;
+  padding: 4px 8px;
+  background: var(--code-bg);
+}
+
+/* numbers/symbols keep LTR shape inside RTL flow */
+.num {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* glass surface — the base card language across the app */
+.glass {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045) 0%, rgba(255, 255, 255, 0.015) 100%), var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), var(--shadow);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  border: 2px solid var(--bg);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+select option,
+select optgroup {
+  background: #0d0f14;
+  color: var(--text-h);
+}
+
+/* ==== row hover wash — subtle green tint sweeping in from the reading edge ==== */
+.row-hover {
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.row-hover:hover {
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.045), transparent 65%);
+}
+
+/* ==== glass hover lift — the base card interaction across the app ==== */
+.glass-hover {
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.2s ease, background 0.2s ease;
+}
+.glass-hover:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-hi);
+  background: var(--card-hi);
+}
+
+/* expensive real blur — reserve for header / a handful of standout surfaces */
+.glass-blur {
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+}
+
+/* ==== eyebrow — titanium underline label above a heading ==== */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  font-family: var(--mono);
+}
+.eyebrow::before {
+  content: '';
+  width: 22px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--accent-2), transparent);
+}
+
+/* ==== machined titanium panel — the console surface language ==== */
+.metal-panel {
+  position: relative;
+  border: 1px solid var(--metal-edge);
+  border-radius: 14px;
+  background: linear-gradient(180deg, var(--metal-2) 0%, #101317 55%, var(--metal-1) 100%);
+  box-shadow: inset 0 1px 0 var(--metal-hi), 0 18px 40px -26px rgba(0, 0, 0, 0.8);
+}
+
+/* thin machined highlight along the very top edge of a panel */
+.holo-edge {
+  position: relative;
+  isolation: isolate;
+}
+.holo-edge::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 28%, transparent 58%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0.7;
+  transition: opacity 0.25s ease;
+  z-index: 1;
+}
+.holo-edge:hover::after {
+  opacity: 1;
+}
+.holo-edge--amber::after {
+  background: linear-gradient(
+    180deg,
+    rgba(var(--amber-hot-rgb), 0.35) 0%,
+    rgba(var(--amber-rgb), 0.06) 32%,
+    transparent 60%
+  );
+}
+
+/* ==== detection-frame corners — HUD language for hero surfaces ==== */
+.det-frame {
+  position: relative;
+}
+.det-frame::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  pointer-events: none;
+  z-index: 1;
+  background: linear-gradient(rgba(var(--amber-hot-rgb), 0.45) 0 0) 0 0 / 10px 1px no-repeat,
+    linear-gradient(rgba(var(--amber-hot-rgb), 0.45) 0 0) 0 0 / 1px 10px no-repeat,
+    linear-gradient(rgba(var(--amber-hot-rgb), 0.45) 0 0) 100% 0 / 10px 1px no-repeat,
+    linear-gradient(rgba(var(--amber-hot-rgb), 0.45) 0 0) 100% 0 / 1px 10px no-repeat,
+    linear-gradient(rgba(var(--amber-hot-rgb), 0.45) 0 0) 0 100% / 10px 1px no-repeat,
+    linear-gradient(rgba(var(--amber-hot-rgb), 0.45) 0 0) 0 100% / 1px 10px no-repeat,
+    linear-gradient(rgba(var(--amber-hot-rgb), 0.45) 0 0) 100% 100% / 10px 1px no-repeat,
+    linear-gradient(rgba(var(--amber-hot-rgb), 0.45) 0 0) 100% 100% / 1px 10px no-repeat;
+  opacity: 0.45;
+  transition: opacity 0.3s ease;
+}
+.det-frame:hover::before {
+  opacity: 0.9;
+}
+
+/* ==== mono label chip — "BEST · +$412" ==== */
+.det-chip {
+  direction: ltr;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border: 1px solid rgba(var(--amber-rgb), 0.4);
+  background: rgba(6, 8, 13, 0.75);
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(245, 225, 190, 0.86);
+  white-space: nowrap;
+}
+.det-chip--up {
+  border-color: rgba(34, 197, 94, 0.45);
+  color: var(--pnl-pos-2);
+}
+.det-chip--down {
+  border-color: rgba(239, 68, 68, 0.45);
+  color: var(--pnl-neg-2);
+}
+
+/* ==== section divider with a glow at the middle ==== */
+.divider-glow {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(34, 197, 94, 0.35), transparent);
+}
+
+/* ==== gentle entrance for panels/rows as they mount ==== */
+@keyframes count-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.count-in {
+  animation: count-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .count-in {
+    animation: none;
+  }
+}
+
+/* ==== hero title — huge display headline for the home screen greeting ==== */
+.hero-title {
+  font-size: clamp(36px, 7vw, 76px);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 0.98;
+  color: var(--text-h);
+}
+
+/* ==== metal nav key — hardware button on a trading console (pill-nav, etc.) ==== */
+.btn-metal {
+  border: 1px solid var(--metal-edge);
+  border-radius: 11px;
+  background: linear-gradient(180deg, var(--metal-2) 0%, #101216 55%, var(--metal-1) 100%);
+  box-shadow: inset 0 1px 0 var(--metal-hi), inset 0 -10px 16px -12px rgba(0, 0, 0, 0.75), 0 1px 2px rgba(0, 0, 0, 0.5);
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, color 0.16s ease;
+}
+.btn-metal:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.11), inset 0 -10px 16px -12px rgba(0, 0, 0, 0.7), 0 5px 12px -3px rgba(0, 0, 0, 0.55);
+}
+.btn-metal--active {
+  background: linear-gradient(180deg, rgba(232, 179, 65, 0.14) 0%, rgba(232, 179, 65, 0.055) 55%, rgba(232, 179, 65, 0.03) 100%);
+  border-color: rgba(232, 179, 65, 0.32);
+  color: var(--accent-2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 0 22px -8px rgba(232, 179, 65, 0.35);
+}
+
+/* ==== shimmer — loading placeholder shimmer sweep ==== */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+.shimmer {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0.06) 50%, rgba(255, 255, 255, 0.02) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2.5s ease-in-out infinite;
+}
+
+/* ==== sector heatmap heat scale (green=up / red=down, by magnitude) ==== */
+.heat-pos3 { background: rgba(34, 197, 94, 0.35); border-color: rgba(34, 197, 94, 0.5); color: #ecfdf5; }
+.heat-pos2 { background: rgba(34, 197, 94, 0.2); border-color: rgba(34, 197, 94, 0.35); color: #6ee7b7; }
+.heat-pos1 { background: rgba(34, 197, 94, 0.1); border-color: rgba(34, 197, 94, 0.2); color: #a7f3d0; }
+.heat-neu { background: rgba(255, 255, 255, 0.03); color: var(--text-dim); }
+.heat-neg1 { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: #fecaca; }
+.heat-neg2 { background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.35); color: #fca5a5; }
+.heat-neg3 { background: rgba(239, 68, 68, 0.35); border-color: rgba(239, 68, 68, 0.5); color: #fef2f2; }

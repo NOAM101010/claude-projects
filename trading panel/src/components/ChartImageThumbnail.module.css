@@ -1,0 +1,60 @@
+.thumbButton {
+  position: relative;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  cursor: zoom-in;
+  overflow: hidden;
+  line-height: 0;
+  width: 64px;
+  height: 44px;
+  flex-shrink: 0;
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.thumbButton:hover {
+  border-color: rgba(var(--amber-rgb), 0.5);
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 18px -10px rgba(var(--amber-rgb), 0.5);
+}
+
+.thumbButton:disabled {
+  cursor: default;
+}
+
+.thumb {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.placeholder {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(4, 5, 7, 0.85);
+  backdrop-filter: blur(6px);
+  cursor: zoom-out;
+}
+
+.full {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--metal-edge);
+  box-shadow: 0 24px 60px -18px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(0, 0, 0, 0.3);
+  animation: count-in 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}

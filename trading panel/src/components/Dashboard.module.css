@@ -1,0 +1,347 @@
+.wrapper {
+  padding: 20px;
+  max-width: 900px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.headerRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.eyebrow {
+  margin-bottom: 2px;
+}
+
+.heroTitle {
+  font-size: clamp(22px, 4.4vw, 36px);
+  margin: 0;
+}
+
+.note {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.kpiHero {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 22px 24px;
+  overflow: hidden;
+}
+
+.kpiHero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 140% at 100% 0%, rgba(var(--amber-hot-rgb), 0.14), transparent 55%);
+  pointer-events: none;
+}
+
+.kpiHeroTop {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.kpiHeroValue {
+  position: relative;
+  z-index: 1;
+  font-size: clamp(28px, 5vw, 44px);
+  font-weight: 800;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  unicode-bidi: isolate;
+  line-height: 1;
+}
+
+.kpiHeroChips {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-self: flex-start;
+}
+
+.kpiHeroChip {
+  position: relative;
+  z-index: 1;
+}
+
+.kpiHeroChipMuted {
+  border-color: var(--border-hi);
+  color: var(--text-dim);
+}
+
+/* קבוצות KPI: כל קבוצה = כותרת eyebrow + מרווח נשימה משלה - לא קיר אחיד של תאים זהים. */
+.kpiGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.kpiGroupTitle {
+  margin: 0;
+}
+
+.performanceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .performanceGrid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+}
+
+.behaviorGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .behaviorGrid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+}
+
+/* מספרים "שמספרים סיפור" (רצף נוכחי, Max Drawdown) - שורה מלאה, לא תא זהה לשאר. */
+.kpiCardWide {
+  grid-column: 1 / -1;
+  padding: 20px 26px;
+}
+
+.kpiValueLg {
+  position: relative;
+  z-index: 1;
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 800;
+  color: var(--text-h);
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.kpiCard {
+  position: relative;
+  border-radius: 14px;
+  padding: 17px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+  transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.kpiCard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(140% 100% at 0% 0%, rgba(255, 255, 255, 0.04), transparent 60%);
+  pointer-events: none;
+}
+
+.kpiCard:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-hi);
+}
+
+.kpiLabel,
+.kpiValue,
+.kpiUnit {
+  position: relative;
+  z-index: 1;
+}
+
+.kpiLabel {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.kpiValue {
+  font-size: 21px;
+  font-weight: 700;
+  color: var(--text-h);
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.positive {
+  color: var(--pnl-pos-2);
+}
+
+.negative {
+  color: var(--pnl-neg-2);
+}
+
+.kpiUnit {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-dim);
+}
+
+.section {
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.section h3 {
+  margin: 0 0 14px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  font-family: var(--mono);
+}
+
+.chartEmpty {
+  text-align: center;
+  color: var(--text-dim);
+  padding: 28px 0;
+}
+
+.num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.groupTable {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.groupHeaderRow,
+.groupRow {
+  display: grid;
+  grid-template-columns: 1.6fr 0.8fr 0.8fr 1.2fr;
+  gap: 8px;
+  align-items: center;
+  padding: 9px 12px;
+  text-align: start;
+}
+
+.groupHeaderRow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.groupRow {
+  font: inherit;
+  font-size: 13.5px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-h);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.groupRow:hover:not(:disabled) {
+  border-color: var(--border-hi);
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.05), transparent 60%);
+}
+
+.groupRow:disabled {
+  cursor: default;
+}
+
+.groupKey {
+  font-family: var(--mono);
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .groupHeaderRow,
+  .groupRow {
+    grid-template-columns: 1.4fr 0.7fr 0.7fr 1fr;
+    font-size: 12px;
+  }
+}
+
+.chartsGrid,
+.groupsGrid {
+  display: contents;
+}
+
+/* דסקטופ אמיתי: משתמשים ברוחב הפנוי - יותר עמודות KPI, גרפים/פילוחים זה-לצד-זה */
+@media (min-width: 1024px) {
+  .wrapper {
+    max-width: 1400px;
+  }
+
+  .performanceGrid,
+  .behaviorGrid {
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  }
+
+  .kpiHero {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 28px;
+    padding: 24px 32px;
+  }
+
+  .kpiHeroTop {
+    flex-direction: column-reverse;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .chartsGrid,
+  .groupsGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+
+  .chartsGrid > .section,
+  .groupsGrid > .section {
+    margin: 0;
+  }
+}
+
+/* matches the #root 1600px step in index.css (common 1920x1080 monitor) - the
+   two KPI groups get more room per group instead of one long uniform wall. */
+@media (min-width: 1600px) {
+  .wrapper {
+    max-width: 1880px;
+  }
+
+  .performanceGrid,
+  .behaviorGrid {
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  }
+}

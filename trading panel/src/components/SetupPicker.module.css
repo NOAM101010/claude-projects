@@ -1,0 +1,46 @@
+.wrapper {
+  position: relative;
+}
+
+.input {
+  font: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dropdown {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #0d0f14;
+  box-shadow: var(--shadow);
+}
+
+.option {
+  padding: 8px 10px;
+  border-radius: 7px;
+  font-size: 13.5px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.option.highlighted {
+  background: var(--card-hi);
+  color: var(--text-h);
+}
+
+.noneOption {
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+  border-radius: 7px 7px 0 0;
+  margin-bottom: 4px;
+}

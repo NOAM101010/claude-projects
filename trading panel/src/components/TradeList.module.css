@@ -1,0 +1,363 @@
+.wrapper {
+  padding: 20px;
+  max-width: 900px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  gap: 12px;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 21px;
+}
+
+.addButton {
+  font: inherit;
+  font-weight: 700;
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(180deg, var(--accent-2), var(--accent));
+  color: #16110a;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 10px 22px -12px rgba(217, 154, 43, 0.55);
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.addButton:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+}
+
+.filterBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--text-h);
+  font-size: 13px;
+}
+
+.filterBanner strong {
+  font-family: var(--mono);
+}
+
+.filterBanner button {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-h);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s ease;
+}
+
+.filterBanner button:hover {
+  border-color: var(--border-hi);
+}
+
+.empty {
+  text-align: center;
+  padding: 56px 16px;
+  color: var(--text-dim);
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* טבלה מיועדת לדסקטופ בלבד - מוסתרת במובייל/טאבלט, הכרטיסים למעלה נשארים שם */
+.tableWrapper {
+  display: none;
+}
+
+/* דסקטופ אמיתי: משתמשים ברוחב הפנוי - טבלה פשוטה במקום כרטיסים */
+@media (min-width: 1024px) {
+  .wrapper {
+    max-width: 1400px;
+  }
+
+  .cards {
+    display: none;
+  }
+
+  .tableWrapper {
+    display: block;
+  }
+}
+
+/* matches the #root 1600px step in index.css (common 1920x1080 monitor) */
+@media (min-width: 1600px) {
+  .wrapper {
+    max-width: 1880px;
+  }
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table thead th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  padding: 0 14px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.table thead th.num {
+  text-align: right;
+}
+
+.row td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13.5px;
+  color: var(--text);
+  vertical-align: middle;
+}
+
+.row:last-child td {
+  border-bottom: none;
+}
+
+.row td:first-child {
+  border-left: 3px solid transparent;
+}
+
+.rowPositive td:first-child {
+  border-left-color: var(--pnl-pos-2);
+}
+
+.rowNegative td:first-child {
+  border-left-color: var(--pnl-neg-2);
+}
+
+.rowNeutral td:first-child {
+  border-left-color: transparent;
+}
+
+.mono {
+  font-family: var(--mono);
+  color: var(--text-dim);
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.rowActions {
+  display: flex;
+  gap: 8px;
+}
+
+.rowActions button {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-h);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.rowActions button:hover {
+  border-color: var(--border-hi);
+}
+
+.sizeTrack {
+  width: 90px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.sizeFill {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.sizePositive {
+  background: var(--pnl-pos-2);
+}
+
+.sizeNegative {
+  background: var(--pnl-neg-2);
+}
+
+.sizeNeutral {
+  background: var(--text-dim);
+}
+
+.card {
+  position: relative;
+  border-radius: 14px;
+  padding: 15px 17px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  transition: transform 0.18s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.symbolGroup {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.symbol {
+  font-weight: 700;
+  color: var(--text-h);
+  font-size: 16px;
+  font-family: var(--mono);
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border: 1px solid transparent;
+  font-family: var(--mono);
+}
+
+.badgeLong {
+  background: var(--pnl-pos-bg);
+  color: var(--pnl-pos-2);
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.badgeShort {
+  background: var(--pnl-neg-bg);
+  color: var(--pnl-neg-2);
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.pnl {
+  font-weight: 700;
+  font-size: 15px;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.pnlPositive {
+  color: var(--pnl-pos-2);
+}
+
+.pnlNegative {
+  color: var(--pnl-neg-2);
+}
+
+.pnlOpen {
+  color: var(--text-dim);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-family: var(--mono);
+}
+
+.body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  flex: 1;
+  min-width: 0;
+}
+
+.meta span {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.notes {
+  font-size: 13px;
+  color: var(--text);
+  direction: rtl;
+}
+
+.cardActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-start;
+  margin-top: 2px;
+}
+
+.cardActions button {
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 13px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-h);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.cardActions button:hover {
+  border-color: var(--border-hi);
+}
+
+.deleteButton {
+  color: var(--pnl-neg-2) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+.deleteButton:hover {
+  border-color: rgba(239, 68, 68, 0.55) !important;
+}

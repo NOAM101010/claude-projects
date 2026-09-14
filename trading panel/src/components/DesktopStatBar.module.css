@@ -1,0 +1,58 @@
+/* Desktop-only ("Wide Console") sticky stat strip under the nav. Hidden below
+   1024px entirely via display:none - the component always renders, CSS decides
+   visibility, so there's no JS layout thrash/measurement on mobile. */
+.bar {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    margin: 12px 20px 0;
+    padding: 0;
+    border-radius: 14px;
+    /* stickiness lives on the shared .stickyHeader wrapper in App.css,
+       together with PillNav - see the comment there for why. */
+  }
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 20px;
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.stat:first-child {
+  border-radius: 14px 0 0 14px;
+}
+
+.stat:last-child {
+  border-radius: 0 14px 14px 0;
+}
+
+.label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  font-family: var(--mono);
+}
+
+.value {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--text-h);
+}
+
+.pos {
+  color: var(--pnl-pos-2);
+}
+
+.neg {
+  color: var(--pnl-neg-2);
+}

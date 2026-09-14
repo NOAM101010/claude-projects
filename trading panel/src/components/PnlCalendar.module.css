@@ -1,0 +1,159 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.summary {
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+
+.summaryValue {
+  font-weight: 700;
+}
+
+.years {
+  display: flex;
+  gap: 6px;
+}
+
+.years button {
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.years button:hover {
+  color: var(--text-h);
+  border-color: var(--border-hi);
+}
+
+.years button[data-active='true'] {
+  border-color: rgba(34, 197, 94, 0.4);
+  background: var(--pnl-pos-bg);
+  color: var(--pnl-pos-2);
+}
+
+.gridScroll {
+  overflow-x: auto;
+}
+
+.gridInner {
+  display: inline-block;
+  min-width: max-content;
+}
+
+.monthRow {
+  position: relative;
+  height: 18px;
+  margin-bottom: 4px;
+}
+
+.monthLabel {
+  position: absolute;
+  top: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.gridBody {
+  display: flex;
+  gap: 5px;
+}
+
+.dowColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-inline-end: 2px;
+}
+
+.dowCell {
+  width: 16px;
+  height: 18px;
+  font-size: 11px;
+  line-height: 18px;
+  color: var(--text-dim);
+}
+
+.weekColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.dayCell {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  cursor: default;
+}
+
+.dayCell:hover {
+  transform: scale(1.2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 0 0 1px rgba(var(--amber-rgb), 0.5);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.hoverInfo {
+  font-size: 12px;
+  color: var(--text-dim);
+  min-height: 16px;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+
+.legendSwatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.positive {
+  color: var(--pnl-pos-2);
+  font-weight: 700;
+}
+
+.negative {
+  color: var(--pnl-neg-2);
+  font-weight: 700;
+}
+
+.empty {
+  text-align: center;
+  color: var(--text-dim);
+  padding: 28px 0;
+}

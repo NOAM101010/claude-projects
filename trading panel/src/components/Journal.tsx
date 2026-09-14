@@ -1,0 +1,63 @@
+import { useLanguage } from '../i18n/LanguageContext'
+import { Dashboard } from './Dashboard'
+import { TradeList } from './TradeList'
+import type { TradeFilter } from '../App'
+import type { CurrencyCode, Trade } from '../types/trade'
+import styles from './Journal.module.css'
+
+export type JournalSubTab = 'trades' | 'dashboard'
+
+interface JournalProps {
+  trades: Trade[]
+  baseCurrency: CurrencyCode
+  subTab: JournalSubTab
+  onSubTabChange: (tab: JournalSubTab) => void
+  filter: TradeFilter | null
+  onClearFilter: () => void
+  onAdd: () => void
+  onEdit: (trade: Trade) => void
+  onDelete: (id: string) => void
+  onSelectSymbol: (symbol: string) => void
+  onSelectSetup: (setup: string) => void
+}
+
+/**
+ * מסך "Journal": sub-nav פנימי בין Trades/Dashboard (אותו דפוס segmented control כמו
+ * `Tools.tsx`). מקפל את `TradeList`/`Dashboard` הקיימים - הזרימה של לחיצה על שורת
+ * סימבול/setup ב-Dashboard שמסננת את Trades (`goToFilteredTrades` ב-`App.tsx`) לא השתנתה,
+ * רק ה-subTab עצמו מנוהל כאן ולא כ-tab עליון נפרד.
+ */
+export function Journal({
+  trades,
+  baseCurrency,
+  subTab,
+  onSubTabChange,
+  filter,
+  onClearFilter,
+  onAdd,
+  onEdit,
+  onDelete,
+  onSelectSymbol,
+  onSelectSetup,
+}: JournalProps) {
+  const { t } = useLanguage()
+
+  return (
+    <div className={styles.wrapper}>
+      <div className={`${styles.subNav} btn-metal`}>
+        <button type="button" data-active={subTab === 'trades'} onClick={() => onSubTabChange('trades')}>
+          {t('nav.trades')}
+        </button>
+        <button type="button" data-active={subTab === 'dashboard'} onClick={() => onSubTabChange('dashboard')}>
+          {t('nav.dashboard')}
+        </button>
+      </div>
+
+      {subTab === 'trades' ? (
+        <TradeList trades={trades} filter={filter} onClearFilter={onClearFilter} onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} />
+      ) : (
+        <Dashboard trades={trades} baseCurrency={baseCurrency} onSelectSymbol={onSelectSymbol} onSelectSetup={onSelectSetup} />
+      )}
+    </div>
+  )
+}

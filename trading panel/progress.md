@@ -1,0 +1,93 @@
+# TradePanel — Progress
+
+**Last updated:** 2026-09-14
+
+## Current status
+The product works end-to-end and has been verified live (not just tsc/build/test) against the real Supabase project: no-signup identity, adding/editing/deleting trades, a full stats dashboard, a monthly calendar, calculators, a watchlist with automatic push alerts, Excel import of a real external journal, and two shareable-image features (Trade of the Month, Calendar export) — all confirmed working against the real database. **Not deployed to the internet yet** — runs only on `localhost:5201` (production build via `npm run build && npx vite preview --port 5201 --host 0.0.0.0`; the dev server on 5200 never registers a Service Worker, so Push/PWA testing must use the preview build). Per the user's explicit request, focus stays on finishing/polishing the product itself before any step that costs money (domain, Gumroad) — those are deliberately deferred, not forgotten.
+
+**Every time you (a future session) change something, restart the preview server if it's not already running (`netstat -ano | grep :5201`; if nothing's listening, `cd "C:\CLAUDE AI\trading panel" && npm run build` then start `npx vite preview --port 5201 --host 0.0.0.0` in the background), and always give the user both the URL and the access code — they lose track without it and end up confused, thinking things "don't work" when it's actually a dead server or a session that never got past the access gate.**
+
+## The one canonical access code to use — read this before touching access_codes
+The Supabase project has ~15+ Basic/Pro codes left over from earlier development, most already redeemed by throwaway test accounts with zero trades. **This caused real user confusion for an entire session** (user kept re-entering different codes, each landing on a different empty account, looking like "my data keeps disappearing"). To avoid repeating that:
+- **The user's real working code is `DEVP-WRYQ-SQTW-YL2U`** (Pro tier, `unlimited_devices=true`, tied to account `708c848f-62cd-4112-be36-23066583ae83`). Always hand them this exact code, every time, on every device.
+- A second dev code exists, `DEVB-GKKH-TW4N-GUCD` (Basic) — its account currently holds 62 real trades imported from the user's actual Excel file during testing (see below). Don't casually redeem/discard this account; ask the user before touching it.
+- If `unlimited_devices` ever seems to stop working again, check that `supabase/functions/redeem/index.ts`'s deployed version actually matches the checked-in source — it was fixed in code once already but not redeployed for a while (see "Round 4" history below), which itself caused a 403 block.
+
+## What's done (all verified live against the real Supabase project, not just code)
+
+### Identity / infra
+- No signup: fixed `account_id` + custom JWT (`sub`=account_id) minted by `demo-start`/`redeem` Edge Functions (not Supabase Auth). RLS isolates every customer.
+- `APP_JWT_SECRET` = the project's "Legacy JWT Secret" (Settings→API→JWT Keys) — **never click Revoke on it**, it would break every existing customer's identity. Token expiry is 1 year (`mintAccessToken` in `_shared/jwt.ts`), not a source of the "keeps resetting" issue described above.
+- 3-devices-per-code limit works correctly now that `redeem` is redeployed with the `unlimited_devices` bypass live.
+- Demo-trade counter is DB-trigger-backed, tamper-resistant.
+- All 12 SQL migrations (001–012) have been run for real against the live project (`osxzjswbasniwmuhwjyc`), via `supabase db query --linked -f <file>` — not just written. `012_fix_delete_account_fk.sql` (see Known issues) was written but **blocked by the safety classifier**, not yet applied.
+- 6 Edge Functions deployed and working: `demo-start`, `redeem`, `send-test-push`, `market-indices`, `watchlist-prices`, `check-price-alerts`.
+
+### Home — unified, no style picker
+Every visitor sees everything together: an NYSE clock in **their own local timezone**, 22+ live indices via Finnhub (SPY/QQQ/DIA/IWM + DXY/oil/gold/silver/bonds as clearly-labeled ETF proxies), an 11-sector heatmap, crypto (BTC/ETH/SOL/XRP/BNB) + Fear&Greed. Individual symbols occasionally show "N/A" from Finnhub's free-tier rate limit — a `market_data_cache` DB table (migration 011, confirmed live) now falls back **per-field** to the last good value instead of the whole response failing, so a single rate-limited symbol no longer blanks out the whole card group.
+
+### Journal (Trades + Dashboard)
+- Full add/edit form (symbol/direction/entry/exit/SL/TP/fee/notes/chart image), searchable **Setup** field (26 known setups).
+- **Desktop trade list is now a table** (≥1024px; mobile keeps the original cards, untouched): Symbol/Side/Entry/Exit/P&L/Date/Size/Actions, with a colored left-edge border (win/loss/open) and a "Size" bar showing each trade's entry-value relative to the largest one currently displayed.
+- **Dashboard redesigned** into two labeled groups with real spacing instead of one dense 9-tile wall: "Performance" (Profit Factor, Expectancy, Avg Win/Loss, Risk:Reward) and "Behavior & Patterns" (Current Streak as a full-width banner, Longest Streaks, Avg Hold Time, Max Drawdown as its own wide row). `StreakCard` shows 🔥 for a win streak, **❄️ (not 🔥) for a loss streak** — a losing streak was tonally wrong to celebrate with fire — and ⏸️ when there's no active streak. `BestWorstSpotlight` always shows the true best/worst trade, even a loss, since it's a raw stat, not a highlight.
+- **"Trade of the Month" lives on the Calendar page now, not Dashboard** (moved after user feedback that Dashboard felt cramped/generic and the Calendar already had "a natural place for it"). It only ever shows a real **winning** trade — if the best trade closed this month is a loss (or there are none), it says so plainly ("No winning trade to feature yet this month (best so far: X -$Y)") instead of presenting a loss as an achievement. Has its own Share button (see Calendar below) and follows whichever month is being navigated to in the calendar (`referenceDate` = the viewed month, not always "today").
+- Export JSON/CSV. Import: JSON (own round-trip format, dedupe by symbol+entryAt+entry+qty) **and .xlsx** — see "Excel import" below.
+
+### Excel import (`src/lib/importExcel.ts` + `src/lib/mergeImport.ts`)
+Handles the user's real external journal, which turned out to have a genuinely different structure than assumed (see "History" below for the full story). Supports two header shapes: a plain single header row (generic external journals, multilingual Hebrew/English matching), and a "buy/sell block" format (3-row spread header, entry+exit columns side by side, no direction column — direction defaults to `'long'`) detected dynamically by cell content, never hardcoded column numbers. Matching an existing trade **only fills empty fields, never overwrites a real value** (including 0); multiple existing matches for one imported row are skipped as `ambiguous` rather than guessed. A broken row goes to an error list; import continues. Verified end-to-end with the user's actual file (62/75 rows imported correctly, 13 legitimately incomplete rows skipped) — both via a direct parser test and by injecting the real file into the actual `<input type="file">` in the running app.
+
+**Critical bug found and fixed here**: `parseTradesExcel` originally called `XLSX.read(buffer, { cellDates: true })`. In the `Asia/Jerusalem` timezone, SheetJS's own date pre-conversion anchors through the *local* Date constructor at the 1899 Excel epoch, and Jerusalem's historical Local Mean Time (before standard time) was UTC+2:00:40, not a round +2:00 — so every imported date came out shifted by a constant -2h00m40, sometimes crossing midnight and landing on the wrong calendar day. Fix: dropped `cellDates:true` entirely; the code's own `XLSX.SSF.parse_date_code()` + `Date.UTC()` path (already correct, just never reached before) now handles all date cells. Verified clean against the real file's serials.
+
+### Calendar
+Separate screen — monthly grid with navigation, real P&L per cell, month total, **now also Win Rate / Trading Days / Best Day / Worst Day in a summary strip**, plus the compact "Trade of the Month" strip (see above). Has a **Share button** that exports the whole card as a PNG (canvas-drawn, no new library) including the summary strip and day grid, with the app's disclaimer baked into the exported image footer only. **Fits exactly one screen, no scrolling, by design** (meant for screenshots) — this is fragile: it depends on `.appMain{flex:1}` in the height chain, and every layout addition here (the Trade of the Month strip included) had to be checked live to confirm it still fits without scrolling. Always re-check this after any App.css/index.css layout change.
+
+### Tools
+Position Size + P&L calculators (pure math) + Watchlist (up to 15 symbols, live price, automatic push alert on price cross, 2-min cron). Deliberately kept at its original ~960px width even on wide desktop screens — a calculator's input fields shouldn't stretch edge-to-edge; this was a conscious choice, not an oversight, when the rest of the app went wide.
+
+### Access code screen
+Redesigned: bigger hero-scale heading, `det-frame` HUD corners, a subtle amber glow, and a **static** (not animated/canvas) candle-motif background reusing the LaunchScreen's visual language without duplicating its animated canvas. No live ticker here — there's no real market data available pre-login, and the rule throughout this project is to never show fabricated numbers.
+
+**Also fixed here**: entering an access code that's already tied to a *different* account now shows an unmissable native alert ("This code is already linked to a different account...") before switching — this used to happen silently, which was the real root cause of the multi-session "my data disappears" confusion (the user was landing on different accounts without any indication a switch had happened).
+
+### Push Notifications — working, with the same 3 traps as before
+1. `npm run dev` never registers a Service Worker at all (injectManifest strategy) — test Push only against `npm run build && npm run preview`.
+2. An old installed PWA can get stuck on a stale Service Worker — test in a regular browser tab.
+3. Windows blocks notifications at the OS level even when the code/server report success — Settings→System→Notifications→Chrome must be on.
+4. My own automated browser tool cannot register a Service Worker at all — never trust it for Push verification, that's the user's job only.
+
+**PWA auto-update fixed**: was `registerType:'prompt'` (a native `confirm()` dialog a non-technical user could miss and get stuck on an old cached build forever, with no recovery short of manually unregistering the Service Worker in devtools). Now `registerType:'autoUpdate'` — a new build activates and reloads automatically, no user action needed, no dialog to miss. Trade-off noted in `vite.config.ts`'s own comment: a real production deploy could in theory auto-reload while someone has an unsaved trade form open — rare, worth reconsidering before real paying customers, not just during active development.
+
+### Temporary locks (reversible, `src/config/locks.ts`)
+- `LOCK_LANGUAGE_TO_ENGLISH` — English only for now (full 4-language i18n infrastructure stays intact underneath, just hidden — every new feature this session still got proper en/he/es/fr translation keys).
+- `LOCK_CURRENCY_TO_USD` — USD only for now.
+- `REQUIRE_ACCESS_CODE_GATE` — no transparent demo; every visitor must enter a code first.
+- `SHOW_INTRO_SPLASH` — launch screen (animated candles) shown on every load, not just once.
+- `HIDE_NEW_WORKSPACE_BUTTON` — "+ New workspace" hidden per user request; "Upgrade to Pro" itself stays visible.
+
+### Design language
+"Cinematic Terminal" (metal-panel/glass/holo-edge/det-frame/count-in in `src/index.css`), inspired by `C:\CLAUDE AI\TRAIDING\swing-trader` but not identical. Desktop layout is "Wide Console": `#root` widens from 1080px (mobile/tablet, untouched) to 1600px (≥1280px) to 1880px (≥1600px, fills a real 1920 screen with small margins) — chosen from 3 sketches shown to the user as an Artifact after they explicitly said 1400px still left too much black space on their actual 1920×1080 monitor. `DesktopStatBar` (Total P&L/Today's P&L/Win Rate/Open Positions — there is no "Equity/Account Size" concept in this product, don't invent one) sits under the nav, both wrapped in one shared `.stickyHeader` (`position:sticky` on the wrapper only, not on each child separately — two independent sticky elements were overlapping each other before this fix). Mobile/tablet layout has been carefully preserved untouched through every desktop-focused change this whole session; always verify mobile after any layout edit.
+
+New "special" widgets this session (inspired by tradinjournal.com's dashboard, explicitly not copied — different palette, no shared code): the Streak card, the Best/Worst spotlight, and Trade of the Month. All three deliberately real-data-only: no fabricated tickers, no invented account balances, no celebrating a loss.
+
+## What's left / next steps (roughly in order)
+1. Keep polishing UI/UX per whatever the user asks for next — they've explicitly said "finish building everything exactly how I want it" before moving to paid/business steps.
+2. **Real device testing** (iPhone/Android) — PWA install, Safari/iOS, real Push on a phone — still not done at all. If the user wants this, the practical path (already explained to them once): same Wi-Fi network, `npx vite preview --host 0.0.0.0`, open `http://<PC-LAN-IP>:5201` on the phone's own browser. Don't over-explain devtools-heavy steps to this user — they've said clearly they don't know how and get frustrated when asked to.
+3. Placeholder email addresses in `TermsOfService.tsx`/`PrivacyPolicy.tsx` still need real ones.
+4. **Only after everything above is approved by the user** — the deliberately-deferred business steps: domain (user buys) + Cloudflare Pages (free tier, explicitly chosen over Vercel), Gumroad (2 products, Basic $9.99/Pro $19.99, unique-code-per-sale), a fresh batch of real access codes (many of the pre-generated ones are now burned from testing — recount before any real sale), UptimeRobot ping so the Supabase project doesn't sleep.
+
+## Key decisions & context (don't relitigate without a real reason)
+- Supabase (not Vercel) for data; Cloudflare Pages for static hosting later (explicit cost decision — 0/month).
+- One-time payment model (not subscription) — a deliberate competitive angle.
+- A trade's P&L is **never recomputed** once set — currency/ETF-proxy conversions are display-only. This applies equally to the new Excel import merge logic (only fills empty fields) and to every stats/canvas-export feature added this session.
+- Workspace field-toggle changes never touch existing trade data.
+- All locks (`locks.ts`) are reversible, in one file — no infrastructure was deleted, only hidden.
+- The "no fabricated data, ever" rule (established by the P&L-immutability principle above) got explicitly extended this session to cover *presentation*, not just calculation: no fake ticker numbers on the access screen, no invented multi-point equity chart on the shareable trade card (only the two real entry/exit prices), and no framing a loss as a "best trade" achievement.
+- This repo is a monorepo (`C:\CLAUDE AI`, one git repository, many unrelated projects) — always `git add "trading panel/..."` with explicit paths, never `-A`. **`trading panel/` is currently entirely untracked in git** — no commits have been made for any of this session's work; the user has not asked for one yet.
+
+## Known issues / open questions
+- **`012_fix_delete_account_fk.sql` is written but not applied.** Real bug found live: any account that ever redeemed an access code cannot delete itself — `access_codes.redeemed_by` references `accounts(id)` with no `ON DELETE` clause (default RESTRICT), so Postgres refuses the delete. The fix (`ON DELETE SET NULL` — frees the code back up for reuse instead of destroying the code record) is written at `supabase/012_fix_delete_account_fk.sql` but the ALTER TABLE was blocked by the session's safety classifier ("Modify Shared Resources"). Needs the user's explicit go-ahead to apply, or they can paste it into the Supabase SQL editor themselves.
+- **Orphaned test data exists in the live database** from this session's live verification work: account `f91a7769-...` (code `DEVB-GKKH-TW4N-GUCD`) holds 62 real trades imported from the user's actual Excel file during testing — not fake data, but not meant to be a permanent fixture either. Several other empty demo/basic accounts and burned test codes also exist from earlier development. None of this affects the user's real working account (`DEVP`), but worth cleaning up before any real customer data would share the same table space conceptually (it won't, RLS isolates everything — this is just database tidiness, not a security issue).
+- Individual symbols on Home can still show "N/A" transiently (Finnhub free-tier rate limit) — expected, not a bug; the per-field DB fallback (migration 011) reduces how often this happens but doesn't eliminate rate limiting itself.
+- Push has only been tested on desktop Windows, never a real mobile device.
+- The `workspaces.style` column/field exists in the schema but is fully dead — no UI reads or writes it anymore (removed in an earlier redesign phase).
+- Several sketches were shown to the user as published Artifacts during this session (desktop layout, journal table concepts, growth/sharing concepts) with in-page "pick this" buttons wired to `sendPrompt()` — these buttons did not reliably work for the user (possibly artifact-viewing-context-dependent); the user ended up just stating their choice in chat instead each time, which worked fine. Don't rely on those buttons working; a text fallback message was added to at least one artifact, but the safer assumption for future sketch rounds is to just ask the user to reply in chat.

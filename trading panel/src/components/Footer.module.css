@@ -1,0 +1,41 @@
+.footer {
+  padding: 20px 22px 22px;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
+.footer > div {
+  margin-bottom: 16px;
+}
+
+.footer p {
+  margin: 0;
+}
+
+.links {
+  margin-top: 6px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.linkButton {
+  font: inherit;
+  font-size: 11.5px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: var(--border-hi);
+  cursor: pointer;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+
+.linkButton:hover {
+  color: var(--accent-2);
+  text-decoration-color: var(--accent-border);
+}
