@@ -1,0 +1,31 @@
+# Edge Functions — verify_jwt לכל פונקציה (ראה supabase/functions/README.md + הערות
+# ה-verify_jwt בראש כל index.ts לנימוק המלא של כל שורה כאן). קובץ זה לא היה קיים עד
+# עכשיו - נוצר כדי לתעד/לאכוף את מה שכבר סוכם בהערות הקוד, לא לשנות התנהגות.
+#
+# demo-start/redeem: false - מנפיקות זהות (JWT) בעצמן, אין להן JWT קיים לבדוק מראש.
+# check-price-alerts: false - מופעלת ע"י pg_cron (net.http_post לא נושא JWT משתמש),
+#   מאומתת בעצמה מול CRON_SECRET (header ייעודי, לא APP_JWT_SECRET).
+# send-test-push/market-indices/watchlist-prices/open-positions-prices: true (ברירת
+#   המחדל) - כולן דורשות Authorization: Bearer <access token> תקף שמונפק ע"י
+#   demo-start/redeem, ו-Gateway של Supabase מאמת את החתימה לפני שהבקשה מגיעה לקוד.
+
+[functions.demo-start]
+verify_jwt = false
+
+[functions.redeem]
+verify_jwt = false
+
+[functions.check-price-alerts]
+verify_jwt = false
+
+[functions.send-test-push]
+verify_jwt = true
+
+[functions.market-indices]
+verify_jwt = true
+
+[functions.watchlist-prices]
+verify_jwt = true
+
+[functions.open-positions-prices]
+verify_jwt = true

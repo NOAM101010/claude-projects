@@ -77,7 +77,12 @@ Deno.serve(async (req) => {
         if (appendError) throw appendError
       }
     } else {
-      const { error: claimError } = await admin
+      // .select('id') כדי לדעת אם ה-UPDATE בפועל פגע בשורה - `.is('redeemed_by', null)`
+      // גם מונע דריסה של תפיסה קודמת, אבל update() בלי select() תמיד מחזיר error=null גם
+      // כשהתנאי לא תאם אף שורה (0 rows matched). בלי הבדיקה הזו, בקשה מפסידה במרוץ (שני
+      // requests שניסו לתפוס בו-זמנית את אותו קוד) הייתה ממשיכה בשקט ומשדרגת גם את
+      // currentAccountId שלה - כלומר קוד חד-פעמי אחד משדרג שני חשבונות שונים.
+      const { data: claimedRow, error: claimError } = await admin
         .from('access_codes')
         .update({
           redeemed_by: currentAccountId,
@@ -86,13 +91,47 @@ Deno.serve(async (req) => {
         })
         .eq('code', code)
         .is('redeemed_by', null)
+        .select('id')
+        .maybeSingle()
       if (claimError) throw claimError
 
-      const { error: upgradeError } = await admin
-        .from('accounts')
-        .update({ tier: codeRow.tier })
-        .eq('id', currentAccountId)
-      if (upgradeError) throw upgradeError
+      if (!claimedRow) {
+        // הפסדנו במרוץ - request אחר תפס את הקוד בין ה-select לעיל לבין ה-update הזה.
+        // מתנהגים בדיוק כמו הענף "כבר מומש" למעלה: מחזירים את החשבון שבאמת תפס את
+        // הקוד, בלי לשדרג את currentAccountId ובלי ליצור/לשנות דבר.
+        const { data: refetched, error: refetchError } = await admin
+          .from('access_codes')
+          .select('redeemed_by, redeemed_devices, unlimited_devices')
+          .eq('code', code)
+          .single()
+        if (refetchError || !refetched?.redeemed_by) throw refetchError ?? new Error('קוד גישה לא נמצא')
+
+        targetAccountId = refetched.redeemed_by
+
+        const redeemedDevices = (refetched.redeemed_devices as string[] | null) ?? []
+        if (!redeemedDevices.includes(deviceId)) {
+          if (!refetched.unlimited_devices && redeemedDevices.length >= MAX_DEVICES_PER_CODE) {
+            return jsonResponse(
+              {
+                error:
+                  'This access code is already active on the maximum number of devices (3). Contact support if you need help.',
+              },
+              403,
+            )
+          }
+          const { error: appendError } = await admin
+            .from('access_codes')
+            .update({ redeemed_devices: [...redeemedDevices, deviceId] })
+            .eq('code', code)
+          if (appendError) throw appendError
+        }
+      } else {
+        const { error: upgradeError } = await admin
+          .from('accounts')
+          .update({ tier: codeRow.tier })
+          .eq('id', currentAccountId)
+        if (upgradeError) throw upgradeError
+      }
     }
 
     const { data: account, error: accountError } = await admin
