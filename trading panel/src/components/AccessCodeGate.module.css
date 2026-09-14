@@ -1,7 +1,7 @@
 .wrapper {
   position: fixed;
   inset: 0;
-  z-index: 30;
+  z-index: var(--z-gate);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -54,11 +54,11 @@
 
 .input {
   font: inherit;
-  font-size: 16px;
+  font-size: 15px;
   letter-spacing: 0.06em;
-  padding: 12px 14px;
+  padding: 10px 12px;
   border-radius: 9px;
-  border: 1px solid var(--accent-border);
+  border: 1px solid var(--border);
   background: rgba(var(--overlay-tint), 0.02);
   color: var(--text-h);
   text-transform: uppercase;

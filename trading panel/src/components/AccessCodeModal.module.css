@@ -1,7 +1,7 @@
 .overlay {
   position: fixed;
   inset: 0;
-  z-index: 20;
+  z-index: var(--z-modal);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -21,7 +21,7 @@
 }
 
 .dialog h2 {
-  font-size: 18px;
+  font-size: var(--text-h2-modal);
 }
 
 .hint {

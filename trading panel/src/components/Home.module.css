@@ -5,7 +5,7 @@
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: var(--space-section);
 }
 
 @media (min-width: 1024px) {

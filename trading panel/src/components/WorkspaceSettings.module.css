@@ -18,6 +18,7 @@
 
 .wrapper h2 {
   margin: 0;
+  font-size: var(--text-h2-page);
 }
 
 .hint {

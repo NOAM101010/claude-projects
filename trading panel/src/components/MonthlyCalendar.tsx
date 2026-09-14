@@ -270,7 +270,12 @@ export function MonthlyCalendar({ trades, baseCurrency, onEditTrade }: MonthlyCa
         ))}
       </div>
 
-      {monthEntries.length === 0 && <p className={styles.empty}>{t('monthlyCalendar.noTradesInMonth')}</p>}
+      {monthEntries.length === 0 && (
+        <div className={styles.empty}>
+          <p className={styles.emptyTitle}>{t('monthlyCalendar.noTradesInMonth')}</p>
+          <p className={styles.emptyHint}>{t('monthlyCalendar.noTradesInMonthHint')}</p>
+        </div>
+      )}
 
       <canvas ref={canvasRef} className={styles.hiddenCanvas} aria-hidden="true" />
 

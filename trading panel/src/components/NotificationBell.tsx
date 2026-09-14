@@ -166,7 +166,10 @@ export function NotificationBell({ accountId, onOpenWatchlist }: { accountId: st
           </div>
 
           {notifications.length === 0 ? (
-            <p className={styles.empty}>{t('notifications.empty')}</p>
+            <div className={styles.empty}>
+              <p className={styles.emptyTitle}>{t('notifications.empty')}</p>
+              <p className={styles.emptyHint}>{t('notifications.emptyHint')}</p>
+            </div>
           ) : (
             <ul className={styles.list}>
               {notifications.map((notification) => (

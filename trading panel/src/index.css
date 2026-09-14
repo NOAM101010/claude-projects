@@ -79,6 +79,28 @@
   --serif: 'Frank Ruhl Libre', Georgia, 'Times New Roman', serif;
   --mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
 
+  /* heading-size scale - the two ad-hoc h2 sizes that recur across the app
+     (dialog/modal headings vs. page/section headings), so components stop
+     hand-rolling 18/20/21px/inherited-default one-offs. */
+  --text-h2-modal: 18px;
+  --text-h2-page: 21px;
+
+  /* section-gap scale - the vertical gap between major blocks on a page-level
+     wrapper (Home/Dashboard/OpenPositions). Density-tight screens (e.g. Tools'
+     calculator layout) intentionally opt out, not every gap has to match. */
+  --space-section: 24px;
+
+  /* z-index scale - one coherent stacking order for every fixed/absolute
+     overlay in the app: in-page dropdowns sit above normal content but below
+     any modal; modals sit above the gate... except the full-screen access gate
+     itself, which can appear over a stale modal on a slow reconnect and must
+     win; the undo toast always floats above everything, including an open
+     modal, since it's a fire-and-forget confirmation the user shouldn't miss. */
+  --z-dropdown: 30;
+  --z-modal: 40;
+  --z-gate: 50;
+  --z-toast: 60;
+
   font: 16px/1.55 var(--sans);
   letter-spacing: 0.1px;
   color: var(--text);

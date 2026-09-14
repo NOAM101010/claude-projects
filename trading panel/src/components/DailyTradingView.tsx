@@ -54,7 +54,10 @@ export function DailyTradingView({ date, dayTrades, locale, onClose, onEditTrade
         </div>
 
         {dayTrades.length === 0 ? (
-          <p className={styles.empty}>{t('monthlyCalendar.dailyView.noneClosed')}</p>
+          <div className={styles.empty}>
+            <p className={styles.emptyTitle}>{t('monthlyCalendar.dailyView.noneClosed')}</p>
+            <p className={styles.emptyHint}>{t('monthlyCalendar.dailyView.noneClosedHint')}</p>
+          </div>
         ) : (
           <>
             <div className={styles.summary}>

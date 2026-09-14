@@ -51,7 +51,7 @@
 }
 
 .card h2 {
-  font-size: 20px;
+  font-size: var(--text-h2-page);
 }
 
 .hint {
@@ -373,9 +373,9 @@
 .sectionTitle {
   margin: 0;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.03em;
   color: var(--text-dim);
 }
 

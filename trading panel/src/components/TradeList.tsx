@@ -209,7 +209,10 @@ export function TradeList({ trades, filter, onClearFilter, onAdd, onEdit, onDele
       )}
 
       {sorted.length === 0 ? (
-        <p className={styles.empty}>{filter || advActive ? t('tradeList.emptyFiltered') : t('tradeList.emptyAll')}</p>
+        <div className={styles.empty}>
+          <p className={styles.emptyTitle}>{filter || advActive ? t('tradeList.emptyFiltered') : t('tradeList.emptyAll')}</p>
+          <p className={styles.emptyHint}>{filter || advActive ? t('tradeList.emptyFilteredHint') : t('tradeList.emptyAllHint')}</p>
+        </div>
       ) : (
         <>
           <div className={styles.tableWrapper}>

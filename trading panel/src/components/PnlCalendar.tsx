@@ -81,7 +81,12 @@ export function PnlCalendar({ dailyPnl }: PnlCalendarProps) {
   const yearTradingDays = yearEntries.length
 
   if (dailyPnl.length === 0) {
-    return <p className={styles.empty}>{t('dashboard.noClosedTradesChart')}</p>
+    return (
+      <div className={styles.empty}>
+        <p className={styles.emptyTitle}>{t('dashboard.noClosedTradesChart')}</p>
+        <p className={styles.emptyHint}>{t('dashboard.noClosedTradesChartHint')}</p>
+      </div>
+    )
   }
 
   return (

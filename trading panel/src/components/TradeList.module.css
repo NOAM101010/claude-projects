@@ -15,7 +15,7 @@
 
 .header h2 {
   margin: 0;
-  font-size: 21px;
+  font-size: var(--text-h2-page);
 }
 
 .addButton {
@@ -251,9 +251,22 @@
 .empty {
   text-align: center;
   padding: 56px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.emptyTitle {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text-h);
+}
+
+.emptyHint {
   color: var(--text-dim);
-  border: 1px dashed var(--border);
-  border-radius: 14px;
+  font-size: 13px;
+  max-width: 42ch;
 }
 
 .cards {
@@ -563,21 +576,25 @@
   border-color: var(--border-hi);
 }
 
-.deleteButton {
-  color: var(--pnl-neg-2) !important;
-  border-color: rgba(239, 68, 68, 0.3) !important;
+.cardActions .deleteButton,
+.rowActions .deleteButton {
+  color: var(--pnl-neg-2);
+  border-color: rgba(239, 68, 68, 0.3);
 }
 
-.deleteButton:hover {
-  border-color: rgba(239, 68, 68, 0.55) !important;
+.cardActions .deleteButton:hover,
+.rowActions .deleteButton:hover {
+  border-color: rgba(239, 68, 68, 0.55);
 }
 
-.deleteButtonConfirm {
-  background: rgba(239, 68, 68, 0.85) !important;
-  border-color: rgba(239, 68, 68, 0.85) !important;
-  color: #fff !important;
+.cardActions .deleteButtonConfirm,
+.rowActions .deleteButtonConfirm {
+  background: var(--pnl-neg);
+  border-color: var(--pnl-neg);
+  color: #fff;
 }
 
-.deleteButtonConfirm:hover {
-  background: rgba(239, 68, 68, 1) !important;
+.cardActions .deleteButtonConfirm:hover,
+.rowActions .deleteButtonConfirm:hover {
+  background: var(--pnl-neg-2);
 }

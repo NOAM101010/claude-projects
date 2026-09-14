@@ -75,7 +75,10 @@ export function TradeOfTheMonthCard({ trades, locale, referenceDate, compact = f
     return (
       <div className={`${styles.section} metal-panel holo-edge`}>
         <h3 className="eyebrow">{t('dashboard.tradeOfTheMonthTitle')}</h3>
-        <p className={styles.empty}>{emptyText}</p>
+        <div className={styles.empty}>
+          <p className={styles.emptyTitle}>{emptyText}</p>
+          <p className={styles.emptyHint}>{t('dashboard.tradeOfTheMonthEmptyHint')}</p>
+        </div>
       </div>
     )
   }
@@ -155,7 +158,7 @@ export function TradeOfTheMonthCard({ trades, locale, referenceDate, compact = f
         </button>
       </div>
 
-      <div className={styles.card}>
+      <div className={`${styles.card} glass`}>
         <svg className={styles.chart} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           <line x1="8" y1={yFor(entry)} x2="92" y2={yFor(exit)} className={positive ? styles.chartLinePos : styles.chartLineNeg} />
           <circle cx="8" cy={yFor(entry)} r="2" className={positive ? styles.chartDotPos : styles.chartDotNeg} />
