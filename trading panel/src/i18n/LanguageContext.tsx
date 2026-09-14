@@ -1,13 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { LOCK_LANGUAGE_TO_ENGLISH } from '../config/locks'
-import {
-  LOCALE_BY_LANGUAGE,
-  RTL_LANGUAGES,
-  TRANSLATIONS,
-  detectDefaultLanguage,
-  interpolate,
-} from './translations'
+import { LOCALE_BY_LANGUAGE, RTL_LANGUAGES, TRANSLATIONS, interpolate } from './translations'
 import type { Language, TranslationKey } from './translations'
 
 const STORAGE_KEY = 'tradepanel_language'
@@ -36,8 +30,11 @@ function readStoredLanguage(): Language | null {
  * לגעת ב-localStorage/navigator.language בכלל. תשתית ה-i18n עצמה נשארת שלמה.
  */
 export function LanguageProvider({ children }: { children: ReactNode }) {
+  // ברירת המחדל היא תמיד English - לא מזהים לפי navigator.language (שפת דפדפן/מערכת
+  // הפעלה) יותר, כדי שמבקר ראשון עם דפדפן בעברית/ספרדית/צרפתית לא "יופתע" בשפה שלא
+  // ביקש. מי שכבר בחר שפה ב-LanguageSwitcher עדיין מקבל אותה (readStoredLanguage).
   const [language, setLanguageState] = useState<Language>(() =>
-    LOCK_LANGUAGE_TO_ENGLISH ? 'en' : readStoredLanguage() ?? detectDefaultLanguage(navigator.language),
+    LOCK_LANGUAGE_TO_ENGLISH ? 'en' : readStoredLanguage() ?? 'en',
   )
 
   useEffect(() => {
