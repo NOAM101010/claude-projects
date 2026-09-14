@@ -195,6 +195,7 @@ const en = {
   'workspaceSettings.proHint':
     'Pro unlocks up to 5 separate workspaces, each with its own trades and stats - useful if you trade in several styles and want each one’s stats to stay accurate separately.',
   'workspaceSettings.workspaceTitle': 'Workspace',
+  'workspaceSettings.languageLabel': 'Language',
   'workspaceSettings.baseCurrencyLabel': 'Dashboard base currency',
   'workspaceSettings.baseCurrencyHint':
     'The base currency determines which currency the aggregated dashboard is shown in. Trades logged in another currency are converted for display only, using the historical rate on the entry/exit date - the P&L stored on each trade does not change.',
@@ -553,6 +554,9 @@ const en = {
   'notifications.title': 'Notifications',
   'notifications.empty': "You're all caught up",
   'notifications.markAllRead': 'Mark all as read',
+  'notifications.clearAll': 'Clear all',
+  'notifications.clearAllConfirm': 'Confirm?',
+  'notifications.deleteOne': 'Delete notification',
   'notifications.viewInWatchlist': 'View in Watchlist',
 } as const
 
@@ -740,6 +744,7 @@ const he: Record<TranslationKey, string> = {
   'workspaceSettings.proHint':
     'Pro פותח עד 5 מרחבי עבודה נפרדים, כל אחד עם הטריידים והסטטיסטיקות שלו - שימושי אם את/ה סוחר/ת בכמה סגנונות ורוצה שהסטטיסטיקות של כל אחד יישארו נכונות בנפרד.',
   'workspaceSettings.workspaceTitle': 'מרחב העבודה',
+  'workspaceSettings.languageLabel': 'שפה',
   'workspaceSettings.baseCurrencyLabel': 'מטבע בסיס לדשבורד',
   'workspaceSettings.baseCurrencyHint':
     'מטבע הבסיס קובע באיזה מטבע מוצג הדשבורד המצטבר. טריידים שנרשמו במטבע אחר מומרים בתצוגה בלבד לפי השער ההיסטורי ליום הכניסה/יציאה - ה-P&L השמור על כל טרייד לא משתנה.',
@@ -1077,6 +1082,9 @@ const he: Record<TranslationKey, string> = {
   'notifications.title': 'התראות',
   'notifications.empty': 'הכל מעודכן, אין חדש',
   'notifications.markAllRead': 'סמן הכל כנקרא',
+  'notifications.clearAll': 'נקה הכל',
+  'notifications.clearAllConfirm': 'לאשר?',
+  'notifications.deleteOne': 'מחק התראה',
   'notifications.viewInWatchlist': 'צפייה ברשימת המעקב',
 }
 
@@ -1263,6 +1271,7 @@ const es: Record<TranslationKey, string> = {
   'workspaceSettings.proHint':
     'Pro desbloquea hasta 5 espacios de trabajo separados, cada uno con sus propias operaciones y estadísticas - útil si operas en varios estilos y quieres que las estadísticas de cada uno se mantengan correctas por separado.',
   'workspaceSettings.workspaceTitle': 'Espacio de trabajo',
+  'workspaceSettings.languageLabel': 'Idioma',
   'workspaceSettings.baseCurrencyLabel': 'Moneda base del panel',
   'workspaceSettings.baseCurrencyHint':
     'La moneda base determina en qué moneda se muestra el panel agregado. Las operaciones registradas en otra moneda se convierten solo para la visualización, usando el tipo de cambio histórico del día de entrada/salida - el P&L guardado en cada operación no cambia.',
@@ -1602,6 +1611,9 @@ const es: Record<TranslationKey, string> = {
   'notifications.title': 'Notificaciones',
   'notifications.empty': 'Estás al día',
   'notifications.markAllRead': 'Marcar todo como leído',
+  'notifications.clearAll': 'Borrar todo',
+  'notifications.clearAllConfirm': '¿Confirmar?',
+  'notifications.deleteOne': 'Eliminar notificación',
   'notifications.viewInWatchlist': 'Ver en la lista de seguimiento',
 }
 
@@ -1789,6 +1801,7 @@ const fr: Record<TranslationKey, string> = {
   'workspaceSettings.proHint':
     "Pro débloque jusqu'à 5 espaces de travail séparés, chacun avec ses propres trades et statistiques - utile si vous tradez selon plusieurs styles et voulez que les statistiques de chacun restent exactes séparément.",
   'workspaceSettings.workspaceTitle': 'Espace de travail',
+  'workspaceSettings.languageLabel': 'Langue',
   'workspaceSettings.baseCurrencyLabel': 'Devise de base du tableau de bord',
   'workspaceSettings.baseCurrencyHint':
     "La devise de base détermine dans quelle devise le tableau de bord agrégé est affiché. Les trades enregistrés dans une autre devise sont convertis uniquement pour l'affichage, selon le taux historique du jour d'entrée/sortie - le P&L enregistré sur chaque trade ne change pas.",
@@ -2133,6 +2146,9 @@ const fr: Record<TranslationKey, string> = {
   'notifications.title': 'Notifications',
   'notifications.empty': 'Vous êtes à jour',
   'notifications.markAllRead': 'Tout marquer comme lu',
+  'notifications.clearAll': 'Tout effacer',
+  'notifications.clearAllConfirm': 'Confirmer ?',
+  'notifications.deleteOne': 'Supprimer la notification',
   'notifications.viewInWatchlist': 'Voir dans la liste de suivi',
 }
 

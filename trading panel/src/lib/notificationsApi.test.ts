@@ -1,5 +1,9 @@
-import { describe, expect, it } from 'vitest'
-import { countUnread, type AppNotification } from './notificationsApi'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { clearAllNotifications, countUnread, deleteNotification, type AppNotification } from './notificationsApi'
+
+vi.mock('./supabase', () => ({
+  getSupabase: vi.fn(),
+}))
 
 function makeNotification(overrides: Partial<AppNotification>): AppNotification {
   return {
@@ -28,5 +32,53 @@ describe('countUnread', () => {
   it('מחזירה 0 כשהכל כבר נקרא', () => {
     const notifications = [makeNotification({ readAt: '2026-09-14T11:00:00.000Z' })]
     expect(countUnread(notifications)).toBe(0)
+  })
+})
+
+describe('deleteNotification', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('מוחקת התראה בודדת לפי id', async () => {
+    const eq = vi.fn(async () => ({ error: null }))
+    const del = vi.fn(() => ({ eq }))
+    const from = vi.fn(() => ({ delete: del }))
+    const { getSupabase } = await import('./supabase')
+    vi.mocked(getSupabase).mockReturnValue({ from } as unknown as ReturnType<typeof getSupabase>)
+
+    await deleteNotification('notif-1')
+
+    expect(from).toHaveBeenCalledWith('notifications')
+    expect(eq).toHaveBeenCalledWith('id', 'notif-1')
+  })
+
+  it('זורקת שגיאה אם השרת מחזיר error', async () => {
+    const eq = vi.fn(async () => ({ error: new Error('boom') }))
+    const del = vi.fn(() => ({ eq }))
+    const from = vi.fn(() => ({ delete: del }))
+    const { getSupabase } = await import('./supabase')
+    vi.mocked(getSupabase).mockReturnValue({ from } as unknown as ReturnType<typeof getSupabase>)
+
+    await expect(deleteNotification('notif-1')).rejects.toThrow('boom')
+  })
+})
+
+describe('clearAllNotifications', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('מוחקת את כל ההתראות של החשבון לפי account_id', async () => {
+    const eq = vi.fn(async () => ({ error: null }))
+    const del = vi.fn(() => ({ eq }))
+    const from = vi.fn(() => ({ delete: del }))
+    const { getSupabase } = await import('./supabase')
+    vi.mocked(getSupabase).mockReturnValue({ from } as unknown as ReturnType<typeof getSupabase>)
+
+    await clearAllNotifications('acc-1')
+
+    expect(from).toHaveBeenCalledWith('notifications')
+    expect(eq).toHaveBeenCalledWith('account_id', 'acc-1')
   })
 })

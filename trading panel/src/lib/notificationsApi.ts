@@ -67,3 +67,18 @@ export async function markAllNotificationsRead(accountId: string): Promise<void>
     .is('read_at', null)
   if (error) throw error
 }
+
+/** מוחקת התראה בודדת (כפתור מחיקה בדרופדאון הפעמון). דורש RLS policy למחיקה -
+ * ראה 015_notifications_delete.sql. */
+export async function deleteNotification(id: string): Promise<void> {
+  const supabase = getSupabase()
+  const { error } = await supabase.from('notifications').delete().eq('id', id)
+  if (error) throw error
+}
+
+/** מוחקת את כל ההתראות של החשבון ("Clear all"). */
+export async function clearAllNotifications(accountId: string): Promise<void> {
+  const supabase = getSupabase()
+  const { error } = await supabase.from('notifications').delete().eq('account_id', accountId)
+  if (error) throw error
+}

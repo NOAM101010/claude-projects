@@ -1,9 +1,11 @@
-import { Bell } from 'lucide-react'
+import { Bell, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
 import { formatDateTime } from '../lib/format'
 import {
+  clearAllNotifications,
   countUnread,
+  deleteNotification,
   listNotifications,
   markAllNotificationsRead,
   markNotificationRead,
@@ -18,14 +20,20 @@ import styles from './NotificationBell.module.css'
  * ~2 דקות) + רענון מיידי על focus/mount - בלי לולאת polling עצמאית ותכופה יותר, לפי
  * הנחיית הביצועים המפורשת בספק.
  */
+/** זמן שבו כפתור "Clear all" נשאר במצב "לאשר?" - אותו אישור-קליק-שני-קל כמו
+ * Clear History ב-Tools.tsx (CLEAR_HISTORY_CONFIRM_TIMEOUT_MS), לא אישור כבד. */
+const CLEAR_ALL_CONFIRM_TIMEOUT_MS = 4000
+
 export function NotificationBell({ accountId, onOpenWatchlist }: { accountId: string; onOpenWatchlist?: () => void }) {
   const { t, locale } = useLanguage()
   const [notifications, setNotifications] = useState<AppNotification[]>([])
   const [open, setOpen] = useState(false)
   const [justArrived, setJustArrived] = useState(false)
+  const [confirmingClearAll, setConfirmingClearAll] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const knownIdsRef = useRef<Set<string>>(new Set())
   const firstLoadRef = useRef(true)
+  const clearAllTimerRef = useRef<number | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -91,6 +99,37 @@ export function NotificationBell({ accountId, onOpenWatchlist }: { accountId: st
     }
   }
 
+  /** מחיקת התראה בודדת - עדכון אופטימי, משחזר את הרשימה אם השרת נכשל. */
+  async function handleDelete(id: string) {
+    const previous = notifications
+    setNotifications((prev) => prev.filter((n) => n.id !== id))
+    try {
+      await deleteNotification(id)
+    } catch {
+      setNotifications(previous)
+    }
+  }
+
+  /** "Clear all" - אישור-קליק-שני-קל (לא מודאל), אותו דפוס כמו Clear History ב-Tools.tsx. */
+  function requestClearAll() {
+    if (confirmingClearAll) {
+      if (clearAllTimerRef.current) window.clearTimeout(clearAllTimerRef.current)
+      setConfirmingClearAll(false)
+      const previous = notifications
+      setNotifications([])
+      clearAllNotifications(accountId).catch(() => setNotifications(previous))
+      return
+    }
+    setConfirmingClearAll(true)
+    clearAllTimerRef.current = window.setTimeout(() => setConfirmingClearAll(false), CLEAR_ALL_CONFIRM_TIMEOUT_MS)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (clearAllTimerRef.current) window.clearTimeout(clearAllTimerRef.current)
+    }
+  }, [])
+
   return (
     <div className={styles.wrapper} ref={wrapperRef}>
       <button
@@ -112,11 +151,18 @@ export function NotificationBell({ accountId, onOpenWatchlist }: { accountId: st
         <div className={`${styles.dropdown} metal-panel holo-edge count-in`}>
           <div className={styles.header}>
             <span className={styles.title}>{t('notifications.title')}</span>
-            {unreadCount > 0 && (
-              <button type="button" className={styles.markAllButton} onClick={handleMarkAllRead}>
-                {t('notifications.markAllRead')}
-              </button>
-            )}
+            <div className={styles.headerActions}>
+              {unreadCount > 0 && (
+                <button type="button" className={styles.markAllButton} onClick={handleMarkAllRead}>
+                  {t('notifications.markAllRead')}
+                </button>
+              )}
+              {notifications.length > 0 && (
+                <button type="button" className={styles.clearAllButton} onClick={requestClearAll}>
+                  {confirmingClearAll ? t('notifications.clearAllConfirm') : t('notifications.clearAll')}
+                </button>
+              )}
+            </div>
           </div>
 
           {notifications.length === 0 ? (
@@ -124,7 +170,7 @@ export function NotificationBell({ accountId, onOpenWatchlist }: { accountId: st
           ) : (
             <ul className={styles.list}>
               {notifications.map((notification) => (
-                <li key={notification.id}>
+                <li key={notification.id} className={styles.itemRow}>
                   <button
                     type="button"
                     className={`${styles.item} ${notification.readAt === null ? styles.itemUnread : ''}`}
@@ -142,6 +188,15 @@ export function NotificationBell({ accountId, onOpenWatchlist }: { accountId: st
                       <span className={styles.itemMessage}>{notification.message}</span>
                       <span className={styles.itemTime}>{formatDateTime(notification.createdAt, locale)}</span>
                     </div>
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.deleteButton}
+                    onClick={() => handleDelete(notification.id)}
+                    aria-label={t('notifications.deleteOne')}
+                    title={t('notifications.deleteOne')}
+                  >
+                    <X size={13} />
                   </button>
                 </li>
               ))}
