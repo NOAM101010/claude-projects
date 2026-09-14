@@ -286,6 +286,24 @@
   white-space: nowrap;
 }
 
+.groupExpandBtn {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.groupExpandBtn:hover {
+  color: var(--text-h);
+}
+
 @media (max-width: 560px) {
   .groupHeaderRow,
   .groupRow {

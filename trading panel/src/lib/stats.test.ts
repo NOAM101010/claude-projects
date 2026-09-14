@@ -6,10 +6,12 @@ import {
   bestTrade,
   computePnl,
   dailyPnl,
+  drawdownCurve,
   equityCurve,
   expectancy,
   maxDrawdown,
   profitFactor,
+  statsByDayOfWeek,
   statsBySetup,
   statsBySymbol,
   streaks,
@@ -252,6 +254,41 @@ describe('maxDrawdown', () => {
   })
 })
 
+describe('drawdownCurve', () => {
+  it('stays at zero drawdown when the equity curve only makes new highs', () => {
+    const trades = [
+      makeTrade({ id: 'a', exitAt: '2026-01-01T00:00:00.000Z', entryPrice: 100, exitPrice: 110 }), // +100
+      makeTrade({ id: 'b', exitAt: '2026-01-02T00:00:00.000Z', entryPrice: 100, exitPrice: 120 }), // +200
+    ]
+    const curve = drawdownCurve(trades)
+    expect(curve.every((p) => p.drawdownAmount === 0 && p.drawdownPercent === 0)).toBe(true)
+  })
+
+  it('digs down from the peak and recovers back to zero', () => {
+    const trades = [
+      makeTrade({ id: 'a', exitAt: '2026-01-01T00:00:00.000Z', entryPrice: 100, exitPrice: 200 }), // +1000, peak
+      makeTrade({ id: 'b', exitAt: '2026-01-02T00:00:00.000Z', entryPrice: 100, exitPrice: 70 }), // -300, cumulative 700
+      makeTrade({ id: 'c', exitAt: '2026-01-03T00:00:00.000Z', entryPrice: 100, exitPrice: 150 }), // +500, cumulative 1200, new peak
+    ]
+    const curve = drawdownCurve(trades)
+    expect(curve[0]).toEqual({ date: trades[0].exitAt, drawdownAmount: 0, drawdownPercent: 0 })
+    expect(curve[1].drawdownAmount).toBe(300)
+    expect(curve[1].drawdownPercent).toBeCloseTo(30, 5)
+    expect(curve[2]).toEqual({ date: trades[2].exitAt, drawdownAmount: 0, drawdownPercent: 0 })
+  })
+
+  it('reaches the same maximum as maxDrawdown() on the same trades (cross-check, never drift apart)', () => {
+    const trades = [
+      makeTrade({ id: 'a', exitAt: '2026-01-01T00:00:00.000Z', entryPrice: 100, exitPrice: 200 }),
+      makeTrade({ id: 'b', exitAt: '2026-01-02T00:00:00.000Z', entryPrice: 100, exitPrice: 70 }),
+      makeTrade({ id: 'c', exitAt: '2026-01-03T00:00:00.000Z', entryPrice: 100, exitPrice: 95 }),
+      makeTrade({ id: 'd', exitAt: '2026-01-04T00:00:00.000Z', entryPrice: 100, exitPrice: 150 }),
+    ]
+    const curveMax = Math.max(...drawdownCurve(trades).map((p) => p.drawdownAmount))
+    expect(curveMax).toBe(maxDrawdown(trades).amount)
+  })
+})
+
 describe('dailyPnl', () => {
   it('groups closed trades by exit date (UTC)', () => {
     const trades = [
@@ -289,5 +326,29 @@ describe('statsBySymbol / statsBySetup', () => {
       { key: 'No setup', trades: 1, winRate: 100, pnl: 200 },
       { key: 'Swing', trades: 1, winRate: 100, pnl: 100 },
     ])
+  })
+})
+
+describe('statsByDayOfWeek', () => {
+  const WEEKDAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+  const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+  it('always returns the 5 weekdays in calendar order, even with no trades on most of them', () => {
+    const trades = [makeTrade({ exitAt: '2026-01-01T10:00:00.000Z', entryPrice: 100, exitPrice: 110 })]
+    const result = statsByDayOfWeek(trades)
+    expect(result.map((r) => r.key)).toEqual(WEEKDAY_NAMES)
+    expect(result.every((r) => r.trades === 0 || r.trades === 1)).toBe(true)
+    expect(result.reduce((sum, r) => sum + r.trades, 0)).toBe(1)
+  })
+
+  it('groups closed trades by local exit day of week', () => {
+    const exitAt = '2026-01-01T10:00:00.000Z'
+    const localDay = DAY_NAMES[new Date(exitAt).getDay()]
+    const trades = [
+      makeTrade({ id: 'a', exitAt, entryPrice: 100, exitPrice: 110 }), // +100
+      makeTrade({ id: 'b', exitAt, entryPrice: 100, exitPrice: 90 }), // -100
+    ]
+    const bucket = statsByDayOfWeek(trades).find((r) => r.key === localDay)
+    expect(bucket).toEqual({ key: localDay, trades: 2, winRate: 50, pnl: 0 })
   })
 })

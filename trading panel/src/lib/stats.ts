@@ -200,23 +200,49 @@ export interface DrawdownInfo {
   percent: number
 }
 
-/** Max Drawdown: הירידה המקסימלית מהשיא לאורך עקומת ההון המצטברת. */
+/**
+ * Max Drawdown: הירידה המקסימלית מהשיא לאורך עקומת ההון המצטברת - הנקודה עם ה-`drawdownAmount`
+ * הגדול ביותר ב-`drawdownCurve` (אותה לוגיקת מעקב-שיא, לא כפולה - ראה שם).
+ */
 export function maxDrawdown(trades: Trade[]): DrawdownInfo {
-  const curve = equityCurve(trades)
-  let peak = 0
   let amount = 0
   let percent = 0
 
-  for (const point of curve) {
-    if (point.cumulative > peak) peak = point.cumulative
-    const dd = peak - point.cumulative
-    if (dd > amount) {
-      amount = dd
-      percent = peak !== 0 ? (dd / Math.abs(peak)) * 100 : 0
+  for (const point of drawdownCurve(trades)) {
+    if (point.drawdownAmount > amount) {
+      amount = point.drawdownAmount
+      percent = point.drawdownPercent
     }
   }
 
   return { amount, percent }
+}
+
+export interface DrawdownPoint {
+  date: string
+  drawdownAmount: number
+  drawdownPercent: number
+}
+
+/**
+ * עקומת Drawdown ("underwater curve"): בכל נקודה בזמן, כמה רחוק המשתמש מהשיא שקדם לה
+ * (השיא הרץ פחות המצטבר הנוכחי, גם כ-$ וגם כ-% מהשיא). מבוססת על אותה `equityCurve`
+ * שמ-Max Drawdown משתמש בה, כדי ששתי הפונקציות לעולם לא יתפצלו זו מזו - ראה בדיקת
+ * ה-cross-check ב-stats.test.ts.
+ */
+export function drawdownCurve(trades: Trade[]): DrawdownPoint[] {
+  const curve = equityCurve(trades)
+  let peak = 0
+
+  return curve.map((point) => {
+    if (point.cumulative > peak) peak = point.cumulative
+    const dd = peak - point.cumulative
+    return {
+      date: point.date,
+      drawdownAmount: dd,
+      drawdownPercent: peak !== 0 ? (dd / Math.abs(peak)) * 100 : 0,
+    }
+  })
 }
 
 export interface DailyPnl {
@@ -281,6 +307,20 @@ export function statsBySymbol(trades: Trade[]): GroupStats[] {
 /** פילוח טריידים סגורים לפי style/setup, ממוין לפי P&L מצטבר יורד. טריידים בלי setup מקובצים תחת "No setup". */
 export function statsBySetup(trades: Trade[]): GroupStats[] {
   return groupClosedBy(trades, (t) => t.setup ?? 'No setup')
+}
+
+const DAY_OF_WEEK_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+/** ימי המסחר בלבד (שני-שישי) - שבת/ראשון תמיד ריקים אצל המשתמש ולא מוצגים בטבלה. */
+const WEEKDAY_NAMES = DAY_OF_WEEK_NAMES.slice(1, 6)
+
+/**
+ * פילוח טריידים סגורים לפי יום בשבוע (זמן מקומי) של תאריך היציאה - רק ימי המסחר
+ * (שני-שישי) מוצגים תמיד, בסדר קלנדרי (גם ימים בלי טריידים, עם 0/סטטיסטיקה ריקה),
+ * ולא ממוין לפי P&L כמו `groupClosedBy` הרגיל - כאן הסדר הקבוע יותר שימושי.
+ */
+export function statsByDayOfWeek(trades: Trade[]): GroupStats[] {
+  const grouped = new Map(groupClosedBy(trades, (t) => DAY_OF_WEEK_NAMES[new Date(t.exitAt as string).getDay()]).map((g) => [g.key, g]))
+  return WEEKDAY_NAMES.map((name) => grouped.get(name) ?? { key: name, trades: 0, winRate: 0, pnl: 0 })
 }
 
 export function bestTrade(trades: Trade[]): Trade | null {

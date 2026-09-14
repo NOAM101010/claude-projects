@@ -13,7 +13,7 @@ import {
   expectancy,
   maxDrawdown,
   profitFactor,
-  statsBySetup,
+  statsByDayOfWeek,
   statsBySymbol,
   streaks,
   tradesCountByMonth,
@@ -33,6 +33,9 @@ interface DashboardProps {
   trades: Trade[]
   baseCurrency: CurrencyCode
   onSelectSymbol?: (symbol: string) => void
+  /** לא נצרך כאן יותר - ה"By Setup" table הוסרה מהמסך הזה בכוונה, אבל ה-prop נשאר כדי
+   * לא לגעת בשרשרת ה-`goToFilteredTrades`/`TradeFilter` הכללית (App.tsx -> Journal.tsx),
+   * שתומכת גם בסוג `'setup'` באופן גנרי יחד עם `'symbol'` (ראה `TradeList.tsx`). */
   onSelectSetup?: (setup: string) => void
 }
 
@@ -98,14 +101,19 @@ function GroupTable({
   baseCurrency,
   locale,
   onSelect,
+  maxRows,
 }: {
   title: string
   rows: GroupStats[]
   baseCurrency: CurrencyCode
   locale: string
   onSelect?: (key: string) => void
+  /** אם מוגדר ויש יותר שורות ממנו - מציג רק את ה-N הראשונות + כפתור "הצג הכל" שמרחיב במקום.
+   * לא מוגדר = כל השורות מוצגות תמיד (התנהגות מקורית, כמו ב"By Day of Week"). */
+  maxRows?: number
 }) {
   const { t } = useLanguage()
+  const [expanded, setExpanded] = useState(false)
   if (rows.length === 0) {
     return (
       <div className={`${styles.section} metal-panel holo-edge`}>
@@ -114,6 +122,8 @@ function GroupTable({
       </div>
     )
   }
+  const isCapped = maxRows !== undefined && rows.length > maxRows
+  const visibleRows = isCapped && !expanded ? rows.slice(0, maxRows) : rows
   return (
     <div className={`${styles.section} metal-panel holo-edge`}>
       <h3 className="eyebrow">{title}</h3>
@@ -124,7 +134,7 @@ function GroupTable({
           <span>{t('dashboard.colWinRate')}</span>
           <span>{t('dashboard.colCumPnl')}</span>
         </div>
-        {rows.map((r) => (
+        {visibleRows.map((r) => (
           <button
             type="button"
             key={r.key}
@@ -141,11 +151,16 @@ function GroupTable({
           </button>
         ))}
       </div>
+      {isCapped && (
+        <button type="button" className={`btn-metal ${styles.groupExpandBtn}`} onClick={() => setExpanded((v) => !v)}>
+          {expanded ? t('dashboard.showLessRows') : t('dashboard.showAllRows', { count: rows.length })}
+        </button>
+      )}
     </div>
   )
 }
 
-export function Dashboard({ trades, baseCurrency, onSelectSymbol, onSelectSetup }: DashboardProps) {
+export function Dashboard({ trades, baseCurrency, onSelectSymbol }: DashboardProps) {
   const { t, locale } = useLanguage()
   const { convertedTrades, converting, conversionError } = useConvertedTrades(trades, baseCurrency)
 
@@ -163,7 +178,7 @@ export function Dashboard({ trades, baseCurrency, onSelectSymbol, onSelectSetup 
   const drawdown = maxDrawdown(convertedTrades)
   const calendarData = dailyPnl(convertedTrades)
   const bySymbol = statsBySymbol(convertedTrades)
-  const bySetup = statsBySetup(convertedTrades)
+  const byDayOfWeek = statsByDayOfWeek(convertedTrades)
 
   return (
     <div className={styles.wrapper}>
@@ -328,8 +343,15 @@ export function Dashboard({ trades, baseCurrency, onSelectSymbol, onSelectSetup 
       </div>
 
       <div className={styles.groupsGrid}>
-        <GroupTable title={t('dashboard.bySymbolTitle')} rows={bySymbol} baseCurrency={baseCurrency} locale={locale} onSelect={onSelectSymbol} />
-        <GroupTable title={t('dashboard.bySetupTitle')} rows={bySetup} baseCurrency={baseCurrency} locale={locale} onSelect={onSelectSetup} />
+        <GroupTable
+          title={t('dashboard.bySymbolTitle')}
+          rows={bySymbol}
+          baseCurrency={baseCurrency}
+          locale={locale}
+          onSelect={onSelectSymbol}
+          maxRows={6}
+        />
+        <GroupTable title={t('dashboard.byDayOfWeekTitle')} rows={byDayOfWeek} baseCurrency={baseCurrency} locale={locale} />
       </div>
     </div>
   )

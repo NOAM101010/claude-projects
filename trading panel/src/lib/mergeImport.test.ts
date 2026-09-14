@@ -105,4 +105,35 @@ describe('importOrUpdateTrades', () => {
     expect(result.unchanged).toBe(0)
     expect(updateTrade).not.toHaveBeenCalled()
   })
+
+  it('שתי שורות שונות באמת (symbol+יום+מחיר+כמות זהים, מחיר/תאריך יציאה שונים) באותה ריצת ייבוא - נוצרים שני טריידים נפרדים, לא נבלעים זה בזה', async () => {
+    const rowA: ParsedExcelRow = { ...matchingRow, exitAt: '2026-01-05T15:00:00.000Z', exitPrice: 155, pnl: 50 }
+    const rowB: ParsedExcelRow = { ...matchingRow, exitAt: '2026-01-05T16:30:00.000Z', exitPrice: 160, pnl: 100 }
+    const result = await importOrUpdateTrades('ws1', 'acc1', [rowA, rowB], [])
+    expect(result.created).toBe(2)
+    expect(result.updated).toBe(0)
+    expect(result.ambiguous).toBe(0)
+    expect(result.createdTrades).toHaveLength(2)
+    const exitPrices = result.createdTrades.map((t) => t.exitPrice).sort()
+    expect(exitPrices).toEqual([155, 160])
+  })
+
+  it('ריאימפורט: קובץ עם שתי שורות זהות (אותו symbol/יום/מחיר/כמות, מחירי יציאה שונים) שכבר תואמות שני טריידים קיימים נפרדים - מעדכן כל אחד לטרייד הנכון שלו, לא ambiguous ולא מתבלבל ביניהם', async () => {
+    const { updateTrade } = await import('./tradesApi')
+    const existingA: Trade = { ...existingTrade, id: 'existing-a', exitAt: '2026-01-05T15:00:00.000Z', exitPrice: 155, pnl: 50, fee: null }
+    const existingB: Trade = { ...existingTrade, id: 'existing-b', exitAt: '2026-01-05T16:30:00.000Z', exitPrice: 160, pnl: 100, fee: null }
+    const rowA: ParsedExcelRow = { ...matchingRow, exitAt: '2026-01-05T15:00:00.000Z', exitPrice: 155, pnl: 50, fee: 1 }
+    const rowB: ParsedExcelRow = { ...matchingRow, exitAt: '2026-01-05T16:30:00.000Z', exitPrice: 160, pnl: 100, fee: 2 }
+    const result = await importOrUpdateTrades('ws1', 'acc1', [rowA, rowB], [existingA, existingB])
+    expect(result.ambiguous).toBe(0)
+    expect(result.created).toBe(0)
+    expect(result.updated).toBe(2)
+    const calls = vi.mocked(updateTrade).mock.calls
+    const patchedA = calls.find((c) => c[0] === 'existing-a')?.[1]
+    const patchedB = calls.find((c) => c[0] === 'existing-b')?.[1]
+    expect(patchedA?.fee).toBe(1)
+    expect(patchedA?.exitPrice).toBe(155) // still its own exit data, not swapped with B
+    expect(patchedB?.fee).toBe(2)
+    expect(patchedB?.exitPrice).toBe(160)
+  })
 })

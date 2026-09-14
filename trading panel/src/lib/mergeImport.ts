@@ -23,6 +23,30 @@ function isEmpty(value: unknown): boolean {
 /** שדות שמותר להשלים (לא כולל id/symbol/direction/entryAt/entryPrice/quantity - אלה חלק מהמפתח הטבעי, לא "משלימים" אותם). */
 const FILLABLE_FIELDS = ['stopLoss', 'takeProfit', 'exitAt', 'exitPrice', 'pnl', 'fee', 'notes', 'setup'] as const
 
+/** שדות "זהות" - עובדות קונקרטיות על איך הטרייד הספציפי הזה התנהל (איפה/מתי יצא, מה התוכנית/הערות
+ * עליו) שהבדל בהן מוכיח חד-משמעית שמדובר בשני טריידים שונים. **לא** כולל pnl/fee בכוונה: אלה ערכים
+ * מחושבים/משתנים (עיגולי עמלה, חישובי רווח שונים בין מקורות) שיכולים להשתנות בין ייבוא לייבוא
+ * לאותו טרייד בדיוק - הבדל בהם לבד לא אומר שזה טרייד אחר, וממילא pnl קיים אף פעם לא נדרס (immutability). */
+const DISTINGUISHING_FIELDS = ['stopLoss', 'takeProfit', 'exitAt', 'exitPrice', 'notes', 'setup'] as const
+
+/** true אם לשני הצדדים יש ערך לא-ריק אבל שונה - סימן חד-משמעי ששתי השורות הן טריידים שונים,
+ * לא אותו טרייד. (אם צד אחד ריק - אין סתירה, פשוט אין מידע להשוואה). */
+function valuesConflict(a: unknown, b: unknown): boolean {
+  if (isEmpty(a) || isEmpty(b)) return false
+  return a !== b
+}
+
+/** true אם למועמד יש שדה מזהה (מחיר/תאריך יציאה, סטופ/יעד, הערות/סטאפ) שסותר את הערך המקביל
+ * בשורה המיובאת - כלומר זה בוודאות טרייד אחר ולא אותו טרייד, למרות שיתוף המפתח הטבעי הגס
+ * (symbol+יום+מחיר כניסה+כמות). זו ההגנה מפני שני טריידים אמיתיים ושונים (למשל שתי כניסות
+ * AAPL עוקבות באותו יום באותו גודל פוזיציה) שהתאבכו בטעות בעבר לטרייד אחד. */
+function hasDistinguishingConflict(
+  row: Partial<Pick<Trade, (typeof DISTINGUISHING_FIELDS)[number]>>,
+  candidate: Trade,
+): boolean {
+  return DISTINGUISHING_FIELDS.some((field) => valuesConflict(candidate[field], row[field]))
+}
+
 export interface MergeImportResult {
   created: number
   updated: number
@@ -64,9 +88,14 @@ export async function importOrUpdateTrades(
 
   for (const row of rows) {
     const key = naturalKey(row)
-    const matches = byKey.get(key)
+    const bucket = byKey.get(key) ?? []
+    // מבין כל הטריידים שחולקים את המפתח הגס (symbol+יום+מחיר כניסה+כמות), משאירים רק את אלה
+    // שלא סותרים את השורה הנוכחית בשדה FILLABLE כלשהו (מחיר/תאריך יציאה, הערות וכו') - סתירה
+    // בשדה כזה מוכיחה חד-משמעית שזה טרייד אחר, לא אותו טרייד. ראה hasDistinguishingConflict.
+    const candidates = bucket.filter((candidate) => !hasDistinguishingConflict(row, candidate))
 
-    if (!matches || matches.length === 0) {
+    if (candidates.length === 0) {
+      // אין טרייד קיים (או שכל מי שחולק את המפתח הגס נסתר בפועל ע"י שדה מבדיל) - טרייד חדש.
       const newTrade: Trade = {
         id: crypto.randomUUID(),
         symbol: row.symbol,
@@ -86,18 +115,20 @@ export async function importOrUpdateTrades(
       }
       const result = await createTrade(workspaceId, accountId, newTrade)
       createdTrades.push(result)
-      byKey.set(key, [result])
+      // מוסיפים לדלי הקיים (לא מחליפים אותו!) - כדי ששורה נוספת באותו ריצת ייבוא שחולקת את
+      // אותו מפתח גס עדיין תראה גם את הטריידים הקודמים שחלקו אותו, ולא רק את זה שנוצר עכשיו.
+      byKey.set(key, [...bucket, result])
       created += 1
       continue
     }
 
-    if (matches.length > 1) {
-      // כמה טריידים קיימים תואמים לאותו מפתח - לא ברור איזה לעדכן, לא מנחשים. דלג ותסמן ambiguous.
+    if (candidates.length > 1) {
+      // כמה טריידים קיימים תואמים לאותו מפתח בלי סתירה מבדילה - לא ברור איזה לעדכן, לא מנחשים.
       ambiguous += 1
       continue
     }
 
-    const existing = matches[0]
+    const existing = candidates[0]
     const patch: Partial<Trade> = {}
     for (const field of FILLABLE_FIELDS) {
       const existingValue = existing[field]
@@ -116,7 +147,9 @@ export async function importOrUpdateTrades(
     const merged: Trade = { ...existing, ...patch }
     const result = await updateTrade(existing.id, merged)
     updatedTrades.push(result)
-    byKey.set(key, [result])
+    // מחליפים רק את הרשומה הספציפית שעודכנה בתוך הדלי - לא את כל הדלי - כדי לשמר טריידים
+    // אחרים שחולקים את אותו מפתח גס (לצורך שורות נוספות באותה ריצת ייבוא).
+    byKey.set(key, bucket.map((candidate) => (candidate === existing ? result : candidate)))
     updated += 1
   }
 
