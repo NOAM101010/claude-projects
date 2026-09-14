@@ -12,7 +12,7 @@
   padding: 7px 11px;
   border-radius: 9px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--overlay-tint), 0.03);
   color: var(--text-h);
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease;
@@ -62,7 +62,7 @@
   padding: 8px 10px;
   border-radius: 8px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(var(--overlay-tint), 0.02);
   color: var(--text-h);
   transition: border-color 0.15s ease;
 }
@@ -83,7 +83,7 @@
   padding: 6px 14px;
   border-radius: 8px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--overlay-tint), 0.03);
   color: var(--text-h);
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease;

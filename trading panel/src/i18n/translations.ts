@@ -462,6 +462,10 @@ const en = {
 
   // Language switcher
   'language.label': 'Language',
+
+  // Theme switcher
+  'theme.switchToLight': 'Switch to light theme',
+  'theme.switchToDark': 'Switch to dark theme',
 } as const
 
 export type TranslationKey = keyof typeof en
@@ -897,6 +901,9 @@ const he: Record<TranslationKey, string> = {
   'tools.pnl.resultProfitLossPercent': 'רווח / הפסד %',
 
   'language.label': 'שפה',
+
+  'theme.switchToLight': 'החלף לערכת נושא בהירה',
+  'theme.switchToDark': 'החלף לערכת נושא כהה',
 }
 
 const es: Record<TranslationKey, string> = {
@@ -1333,6 +1340,9 @@ const es: Record<TranslationKey, string> = {
   'tools.pnl.resultProfitLossPercent': 'Ganancia / Pérdida %',
 
   'language.label': 'Idioma',
+
+  'theme.switchToLight': 'Cambiar a tema claro',
+  'theme.switchToDark': 'Cambiar a tema oscuro',
 }
 
 const fr: Record<TranslationKey, string> = {
@@ -1775,6 +1785,9 @@ const fr: Record<TranslationKey, string> = {
   'tools.pnl.resultProfitLossPercent': 'Profit / Perte %',
 
   'language.label': 'Langue',
+
+  'theme.switchToLight': 'Passer au thème clair',
+  'theme.switchToDark': 'Passer au thème sombre',
 }
 
 export type Language = 'en' | 'he' | 'es' | 'fr'

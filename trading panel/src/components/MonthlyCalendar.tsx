@@ -25,7 +25,7 @@ interface DayCell {
 
 /** צבע התא (רקע) לפי עוצמת ה-P&L היחסית למקסימום בחודש המוצג - אותה נוסחה כמו `PnlCalendar`, אך גוון עמוק יותר כי התא כאן גדול ומציג ספרה בפועל. */
 function backgroundFor(pnl: number, maxAbs: number): string {
-  if (maxAbs === 0 || pnl === 0) return 'rgba(255, 255, 255, 0.03)'
+  if (maxAbs === 0 || pnl === 0) return 'rgba(var(--overlay-tint), 0.03)'
   const intensity = Math.min(Math.abs(pnl) / maxAbs, 1)
   const alpha = (0.12 + intensity * 0.55).toFixed(2)
   return pnl > 0 ? `rgba(34, 197, 94, ${alpha})` : `rgba(239, 68, 68, ${alpha})`

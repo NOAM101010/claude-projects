@@ -1,0 +1,15 @@
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.button:hover {
+  color: var(--accent-2);
+}

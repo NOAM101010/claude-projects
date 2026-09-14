@@ -34,7 +34,7 @@
   padding: 5px 12px;
   border-radius: 999px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(var(--overlay-tint), 0.02);
   color: var(--text-dim);
   cursor: pointer;
   transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
@@ -104,14 +104,14 @@
   width: 18px;
   height: 18px;
   border-radius: 4px;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 0 1px rgba(var(--overlay-tint), 0.04);
   transition: transform 0.12s ease, box-shadow 0.12s ease;
   cursor: default;
 }
 
 .dayCell:hover {
   transform: scale(1.2);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 0 0 1px rgba(var(--amber-rgb), 0.5);
+  box-shadow: inset 0 0 0 1px rgba(var(--overlay-tint), 0.04), 0 0 0 1px rgba(var(--amber-rgb), 0.5);
 }
 
 .footer {

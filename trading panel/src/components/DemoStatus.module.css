@@ -6,7 +6,7 @@
   padding: 9px 22px;
   font-size: 12.5px;
   color: var(--text);
-  background: linear-gradient(180deg, rgba(217, 154, 43, 0.09), rgba(217, 154, 43, 0.03));
+  background: linear-gradient(180deg, rgba(var(--amber-rgb), 0.09), rgba(var(--amber-rgb), 0.03));
   border-bottom: 1px solid var(--accent-border);
 }
 
@@ -32,11 +32,20 @@
   font-weight: 700;
   font-size: 11.5px;
   letter-spacing: 0.02em;
-  color: var(--accent-2);
+  /* fixed-bright, not var(--accent-2): this chip's rgba(6, 8, 13, 0.4)
+     background composites to a medium-dark tone in both themes (it never
+     lightens to match light-theme's paper bg), but --accent-2 darkens to a
+     deep ink amber in light mode for use on plain text - together that was
+     dark-amber-on-dark-chip, ~2:1 contrast */
+  color: var(--chip-accent);
   padding: 2px 7px;
   border-radius: 999px;
   border: 1px solid var(--accent-border);
-  background: rgba(6, 8, 13, 0.4);
+  /* alpha raised 0.4 -> 0.75 (matches .det-chip's badge) - at 0.4 this only
+     composited to a medium gray over the light-theme amber banner wash,
+     which is too pale for --chip-accent to reach 4.5:1 against; at 0.75 it's
+     genuinely dark in both themes, so the fixed-bright text works reliably */
+  background: rgba(6, 8, 13, 0.75);
 }
 
 .cta {
@@ -46,7 +55,7 @@
   padding: 6px 14px;
   border-radius: 8px;
   border: 1px solid var(--accent-border);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--overlay-tint), 0.04);
   color: var(--text-h);
   cursor: pointer;
   flex-shrink: 0;

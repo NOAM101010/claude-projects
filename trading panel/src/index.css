@@ -3,12 +3,23 @@
 
   /* Deep dark, cool-neutral base */
   --bg: #07080b;
+  --bg-rgb: 7, 8, 11;
   --bg-2: #0b0d12;
-  --card: rgba(255, 255, 255, 0.035);
-  --card-hi: rgba(255, 255, 255, 0.06);
 
-  --border: rgba(255, 255, 255, 0.09);
-  --border-hi: rgba(255, 255, 255, 0.17);
+  /* `--overlay-tint` is the single "state layer" tint used for every subtle
+     structural white-on-dark wash (card fill, hairline borders, hover washes,
+     scrollbar, select options, etc.) across index.css AND every component's
+     .module.css. Flipping this one triplet in `[data-theme="light"]` below
+     turns every one of those washes into a dark-on-light tint automatically -
+     the same "state layer" idea Material uses (onSurface color at low alpha,
+     white in dark mode / near-black in light mode), so most of the app
+     re-themes without touching each component file individually. */
+  --overlay-tint: 255, 255, 255;
+  --card: rgba(var(--overlay-tint), 0.035);
+  --card-hi: rgba(var(--overlay-tint), 0.06);
+
+  --border: rgba(var(--overlay-tint), 0.09);
+  --border-hi: rgba(var(--overlay-tint), 0.17);
 
   --text: #a3a3ab;
   --text-h: #f2f2f4;
@@ -22,22 +33,47 @@
   --pnl-neg-2: #f87171;
   --pnl-neg-bg: rgba(239, 68, 68, 0.14);
 
+  /* Fixed-bright variants for text drawn on permanently-dark chip/badge
+     backgrounds (e.g. .det-chip, DemoStatus's mono chip) that never lighten
+     in the light theme - these must NOT be redeclared inside
+     [data-theme='light'], or the dark badge behind them turns illegible. */
+  --chip-pos: #4ade80;
+  --chip-neg: #f87171;
+  --chip-accent: #e8b341;
+
   /* Amber — the single warm accent: brand + generic money figures only */
   --accent: #d99a2b;
   --accent-2: #e8b341;
   --accent-bg: rgba(217, 154, 43, 0.14);
   --accent-border: rgba(217, 154, 43, 0.4);
+  /* text drawn directly on top of the amber accent gradient (buttons) - dark
+     ink reads fine on dark-theme's bright amber; light theme's amber is
+     deepened for contrast against paper, so it needs light text instead */
+  --on-accent: #16110a;
 
-  --code-bg: rgba(255, 255, 255, 0.045);
+  --code-bg: rgba(var(--overlay-tint), 0.045);
   --shadow: 0 18px 40px -22px rgba(0, 0, 0, 0.75);
 
   /* Titanium / charcoal metal — machined console surfaces */
   --metal-1: #0c0e11;
+  --metal-1-rgb: 12, 14, 17;
   --metal-2: #15181d;
-  --metal-edge: rgba(255, 255, 255, 0.08);
-  --metal-hi: rgba(255, 255, 255, 0.06);
+  --metal-mid: #101216;
+  --metal-edge: rgba(var(--overlay-tint), 0.08);
+  --metal-hi: rgba(var(--overlay-tint), 0.06);
   --amber-rgb: 217, 154, 43;
   --amber-hot-rgb: 232, 179, 65;
+  /* genuine cast-shadow ink (never flips to white like --overlay-tint) - just
+     warms up for the light theme instead of staying pure black */
+  --ink-rgb: 0, 0, 0;
+
+  /* Ambient background system (see body::before/::after below) */
+  --wash-1: rgba(217, 154, 43, 0.05);
+  --wash-2: rgba(34, 197, 94, 0.04);
+  --wash-3: rgba(239, 68, 68, 0.02);
+  --grid-line: rgba(255, 255, 255, 0.035);
+  --grid-dot: rgba(217, 154, 43, 0.07);
+  --sweep-color: rgba(217, 154, 43, 0.05);
 
   --sans: 'Heebo', system-ui, 'Segoe UI', Roboto, sans-serif;
   --serif: 'Frank Ruhl Libre', Georgia, 'Times New Roman', serif;
@@ -53,6 +89,84 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ==== Light theme — "titanium/paper", not a stark inverted white dashboard ====
+   Toggled via `data-theme="light"` on <html> (see src/theme/ThemeContext.tsx),
+   never via prefers-color-scheme alone - the user controls this explicitly.
+   Every token below is the light counterpart of the dark one defined in :root
+   above; component code never branches on theme, it only ever reads these
+   custom properties, so the cascade does all the work. */
+[data-theme='light'] {
+  color-scheme: light;
+
+  --bg: #f2efe6;
+  --bg-rgb: 242, 239, 230;
+  --bg-2: #e4ddc8;
+
+  /* warm dark-ink tint instead of white, for every "state layer" wash */
+  --overlay-tint: 32, 27, 16;
+  /* raised from 0.035/0.065 - at that strength a card composited to within a
+     few rgb points of --bg (~7/255 per channel), so panels read as the same
+     flat wash as the page instead of a distinct "raised" surface */
+  --card: rgba(var(--overlay-tint), 0.065);
+  --card-hi: rgba(var(--overlay-tint), 0.11);
+
+  /* raised from 0.14/0.26 so the hairline is actually visible against paper,
+     not just implied */
+  --border: rgba(var(--overlay-tint), 0.24);
+  --border-hi: rgba(var(--overlay-tint), 0.4);
+
+  --text: #5c5646;
+  --text-h: #221f16;
+  /* darkened from #8c8571 (~3.2:1 on --bg, fails AA) to #6b6454 (~5:1 on
+     --bg, ~4.8:1 on --card) so eyebrow/stat labels stay comfortably above
+     the 4.5:1 AA floor for normal-size text */
+  --text-dim: #6b6454;
+
+  /* same hues, deepened for AA contrast against a light, warm background */
+  --pnl-pos: #157a3d;
+  --pnl-pos-2: #0f5e30;
+  --pnl-pos-bg: rgba(21, 122, 61, 0.13);
+  --pnl-neg: #c1272b;
+  --pnl-neg-2: #9c1c1f;
+  --pnl-neg-bg: rgba(193, 39, 43, 0.11);
+
+  --accent: #a06b1c;
+  --accent-2: #7e5314;
+  --accent-bg: rgba(160, 107, 28, 0.14);
+  --accent-border: rgba(160, 107, 28, 0.4);
+  --on-accent: #fbf3e2;
+
+  --code-bg: rgba(var(--overlay-tint), 0.055);
+  /* dark-mode shadows read as depth against black; a warm brown shadow on
+     paper read as a dirt smudge, so this is a soft cool-gray (slate) instead
+     - still low-opacity/high-blur, but a hint darker so a panel edge actually
+     casts visible depth instead of disappearing into the page */
+  --shadow: 0 16px 32px -16px rgba(15, 23, 42, 0.22);
+
+  /* light titanium panel - warm ivory metal, not cool gray. Range widened
+     (was e7e0cd/f8f4e8/f0ebdb, a ~17-point spread that landed within a few
+     points of --bg #f2efe6) so the gradient reads as a distinct machined
+     surface instead of blending into the page. */
+  --metal-1: #ddd2b4;
+  --metal-1-rgb: 221, 210, 180;
+  --metal-2: #fbf8ef;
+  --metal-mid: #eee6d2;
+  --metal-edge: rgba(var(--overlay-tint), 0.26);
+  /* the top-edge specular catch on a machined panel is still a real highlight
+     (brighter than the surface itself) regardless of theme - kept bright */
+  --metal-hi: rgba(255, 255, 255, 0.7);
+  --amber-rgb: 160, 107, 28;
+  --amber-hot-rgb: 126, 83, 20;
+  --ink-rgb: 40, 32, 16;
+
+  --wash-1: rgba(160, 107, 28, 0.06);
+  --wash-2: rgba(21, 122, 61, 0.045);
+  --wash-3: rgba(193, 39, 43, 0.02);
+  --grid-line: rgba(32, 27, 16, 0.05);
+  --grid-dot: rgba(160, 107, 28, 0.08);
+  --sweep-color: rgba(160, 107, 28, 0.06);
+}
+
 * {
   border-color: var(--border);
 }
@@ -65,11 +179,63 @@ body {
 
 body {
   margin: 0;
+  position: relative;
   background:
-    radial-gradient(ellipse 900px 500px at 15% -5%, rgba(217, 154, 43, 0.05), transparent 55%),
-    radial-gradient(ellipse 800px 600px at 100% 100%, rgba(34, 197, 94, 0.04), transparent 55%),
-    radial-gradient(ellipse 700px 500px at 50% 40%, rgba(239, 68, 68, 0.02), transparent 60%),
+    radial-gradient(ellipse 900px 500px at 15% -5%, var(--wash-1), transparent 55%),
+    radial-gradient(ellipse 800px 600px at 100% 100%, var(--wash-2), transparent 55%),
+    radial-gradient(ellipse 700px 500px at 50% 40%, var(--wash-3), transparent 60%),
     var(--bg);
+}
+
+/* ==== ambient background system — "instrument panel at rest", not a gradient blob ====
+   Two fixed, GPU-cheap layers behind #root's content (no canvas, no JS, no
+   re-renders): a faint terminal/HUD grid + dot field (static, pure
+   background-image), and a very slow ambient light sweep (the only animated
+   piece, transform-only + respects prefers-reduced-motion). Both fade toward
+   the page edges via a mask so they read as ambient depth, not a hard pattern. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+    radial-gradient(var(--grid-dot) 1px, transparent 1.4px);
+  background-size: 64px 64px, 64px 64px, 26px 26px;
+  background-position: -1px -1px, -1px -1px, 4px 4px;
+  -webkit-mask-image: radial-gradient(ellipse 85% 70% at 50% 15%, #000 40%, transparent 90%);
+  mask-image: radial-gradient(ellipse 85% 70% at 50% 15%, #000 40%, transparent 90%);
+  opacity: 0.6;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: -25% 0 auto 0;
+  height: 150%;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent 0%, var(--sweep-color) 46%, transparent 62%);
+  animation: ambient-sweep 48s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes ambient-sweep {
+  0%,
+  100% {
+    transform: translateY(-5%);
+  }
+  50% {
+    transform: translateY(5%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::after {
+    animation: none;
+  }
 }
 
 #root {
@@ -137,10 +303,10 @@ code {
 
 /* glass surface — the base card language across the app */
 .glass {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045) 0%, rgba(255, 255, 255, 0.015) 100%), var(--bg-2);
+  background: linear-gradient(180deg, rgba(var(--overlay-tint), 0.045) 0%, rgba(var(--overlay-tint), 0.015) 100%), var(--bg-2);
   border: 1px solid var(--border);
   border-radius: 14px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), var(--shadow);
+  box-shadow: inset 0 1px 0 rgba(var(--overlay-tint), 0.05), var(--shadow);
 }
 
 ::-webkit-scrollbar {
@@ -151,12 +317,12 @@ code {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(var(--overlay-tint), 0.1);
   border-radius: 6px;
   border: 2px solid var(--bg);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(var(--overlay-tint), 0.18);
 }
 
 input[type='number']::-webkit-outer-spin-button,
@@ -178,7 +344,7 @@ textarea:focus-visible {
 
 select option,
 select optgroup {
-  background: #0d0f14;
+  background: var(--metal-1);
   color: var(--text-h);
 }
 
@@ -230,8 +396,8 @@ select optgroup {
   position: relative;
   border: 1px solid var(--metal-edge);
   border-radius: 14px;
-  background: linear-gradient(180deg, var(--metal-2) 0%, #101317 55%, var(--metal-1) 100%);
-  box-shadow: inset 0 1px 0 var(--metal-hi), 0 18px 40px -26px rgba(0, 0, 0, 0.8);
+  background: linear-gradient(180deg, var(--metal-2) 0%, var(--metal-mid) 55%, var(--metal-1) 100%);
+  box-shadow: inset 0 1px 0 var(--metal-hi), var(--shadow);
 }
 
 /* thin machined highlight along the very top edge of a panel */
@@ -246,7 +412,7 @@ select optgroup {
   border-radius: inherit;
   padding: 1px;
   pointer-events: none;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 28%, transparent 58%);
+  background: linear-gradient(180deg, rgba(var(--overlay-tint), 0.1) 0%, rgba(var(--overlay-tint), 0.02) 28%, transparent 58%);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -311,11 +477,14 @@ select optgroup {
 }
 .det-chip--up {
   border-color: rgba(34, 197, 94, 0.45);
-  color: var(--pnl-pos-2);
+  /* fixed-bright, not var(--pnl-pos-2) - .det-chip's own background stays a
+     near-black rgba(6,8,13,0.75) in both themes on purpose, but --pnl-pos-2
+     darkens for light-theme body text, which made this go dark-on-dark */
+  color: var(--chip-pos);
 }
 .det-chip--down {
   border-color: rgba(239, 68, 68, 0.45);
-  color: var(--pnl-neg-2);
+  color: var(--chip-neg);
 }
 
 /* ==== section divider with a glow at the middle ==== */
@@ -358,20 +527,30 @@ select optgroup {
 .btn-metal {
   border: 1px solid var(--metal-edge);
   border-radius: 11px;
-  background: linear-gradient(180deg, var(--metal-2) 0%, #101216 55%, var(--metal-1) 100%);
-  box-shadow: inset 0 1px 0 var(--metal-hi), inset 0 -10px 16px -12px rgba(0, 0, 0, 0.75), 0 1px 2px rgba(0, 0, 0, 0.5);
+  background: linear-gradient(180deg, var(--metal-2) 0%, var(--metal-mid) 55%, var(--metal-1) 100%);
+  box-shadow: inset 0 1px 0 var(--metal-hi), inset 0 -10px 16px -12px rgba(var(--ink-rgb), 0.75), 0 1px 2px rgba(var(--ink-rgb), 0.5);
   transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, color 0.16s ease;
 }
 .btn-metal:hover {
   transform: translateY(-1px);
-  border-color: rgba(255, 255, 255, 0.15);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.11), inset 0 -10px 16px -12px rgba(0, 0, 0, 0.7), 0 5px 12px -3px rgba(0, 0, 0, 0.55);
+  border-color: var(--border-hi);
+  box-shadow: inset 0 1px 0 rgba(var(--overlay-tint), 0.11), inset 0 -10px 16px -12px rgba(var(--ink-rgb), 0.7), 0 5px 12px -3px rgba(var(--ink-rgb), 0.55);
 }
 .btn-metal--active {
-  background: linear-gradient(180deg, rgba(232, 179, 65, 0.14) 0%, rgba(232, 179, 65, 0.055) 55%, rgba(232, 179, 65, 0.03) 100%);
-  border-color: rgba(232, 179, 65, 0.32);
+  background: linear-gradient(180deg, rgba(var(--amber-hot-rgb), 0.14) 0%, rgba(var(--amber-hot-rgb), 0.055) 55%, rgba(var(--amber-hot-rgb), 0.03) 100%);
+  border-color: rgba(var(--amber-hot-rgb), 0.32);
   color: var(--accent-2);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 0 22px -8px rgba(232, 179, 65, 0.35);
+  box-shadow: inset 0 1px 0 rgba(var(--overlay-tint), 0.08), inset 0 0 22px -8px rgba(var(--amber-hot-rgb), 0.35);
+}
+
+[data-theme='light'] .btn-metal {
+  /* the same box-shadow recipe reads as depth on near-black; on a warm paper
+     button it just looks dirty, so the cast-shadow layers are softened here
+     rather than reused at full strength */
+  box-shadow: inset 0 1px 0 var(--metal-hi), inset 0 -8px 14px -12px rgba(var(--ink-rgb), 0.16), 0 1px 2px rgba(var(--ink-rgb), 0.1);
+}
+[data-theme='light'] .btn-metal:hover {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), inset 0 -8px 14px -12px rgba(var(--ink-rgb), 0.14), 0 4px 10px -4px rgba(var(--ink-rgb), 0.16);
 }
 
 /* ==== shimmer — loading placeholder shimmer sweep ==== */
@@ -384,16 +563,28 @@ select optgroup {
   }
 }
 .shimmer {
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0.06) 50%, rgba(255, 255, 255, 0.02) 100%);
+  background: linear-gradient(90deg, rgba(var(--overlay-tint), 0.02) 0%, rgba(var(--overlay-tint), 0.06) 50%, rgba(var(--overlay-tint), 0.02) 100%);
   background-size: 200% 100%;
   animation: shimmer 2.5s ease-in-out infinite;
 }
 
-/* ==== sector heatmap heat scale (green=up / red=down, by magnitude) ==== */
+/* ==== sector heatmap heat scale (green=up / red=down, by magnitude) ====
+   Backgrounds/borders keep the same hue+alpha in both themes (a translucent
+   green/red wash reads fine over either paper or near-black) - only the
+   foreground text swaps to a dark-on-tint shade for light theme, since the
+   very light mint/pink text used on dark backgrounds has poor contrast once
+   the ambient bg turns light. */
 .heat-pos3 { background: rgba(34, 197, 94, 0.35); border-color: rgba(34, 197, 94, 0.5); color: #ecfdf5; }
 .heat-pos2 { background: rgba(34, 197, 94, 0.2); border-color: rgba(34, 197, 94, 0.35); color: #6ee7b7; }
 .heat-pos1 { background: rgba(34, 197, 94, 0.1); border-color: rgba(34, 197, 94, 0.2); color: #a7f3d0; }
-.heat-neu { background: rgba(255, 255, 255, 0.03); color: var(--text-dim); }
+.heat-neu { background: rgba(var(--overlay-tint), 0.03); color: var(--text-dim); }
 .heat-neg1 { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: #fecaca; }
 .heat-neg2 { background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.35); color: #fca5a5; }
 .heat-neg3 { background: rgba(239, 68, 68, 0.35); border-color: rgba(239, 68, 68, 0.5); color: #fef2f2; }
+
+[data-theme='light'] .heat-pos3 { color: #064e2f; }
+[data-theme='light'] .heat-pos2 { color: #0a6b3d; }
+[data-theme='light'] .heat-pos1 { color: #146b41; }
+[data-theme='light'] .heat-neg1 { color: #7f1d1f; }
+[data-theme='light'] .heat-neg2 { color: #6f1416; }
+[data-theme='light'] .heat-neg3 { color: #4a0e10; }

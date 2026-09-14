@@ -21,7 +21,7 @@
   list-style: none;
   border-radius: 10px;
   border: 1px solid var(--border);
-  background: #0d0f14;
+  background: var(--metal-1);
   box-shadow: var(--shadow);
 }
 

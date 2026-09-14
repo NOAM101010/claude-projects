@@ -282,7 +282,7 @@ export function Dashboard({ trades, baseCurrency, onSelectSymbol, onSelectSetup 
                   formatter={(value) => formatBase(Number(value), baseCurrency, locale)}
                   contentStyle={{
                     fontSize: 13,
-                    background: '#0d0f14',
+                    background: 'var(--metal-1)',
                     border: '1px solid var(--border-hi)',
                     borderRadius: 10,
                     color: 'var(--text-h)',
@@ -308,7 +308,7 @@ export function Dashboard({ trades, baseCurrency, onSelectSymbol, onSelectSetup 
                 <Tooltip
                   contentStyle={{
                     fontSize: 13,
-                    background: '#0d0f14',
+                    background: 'var(--metal-1)',
                     border: '1px solid var(--border-hi)',
                     borderRadius: 10,
                     color: 'var(--text-h)',

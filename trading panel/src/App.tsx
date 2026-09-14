@@ -13,6 +13,7 @@ import { LaunchScreen } from './components/LaunchScreen'
 import { MonthlyCalendar } from './components/MonthlyCalendar'
 import { PillNav } from './components/PillNav'
 import type { Tab } from './components/PillNav'
+import { ThemeSwitcher } from './components/ThemeSwitcher'
 import { Tools } from './components/Tools'
 import { TradeForm } from './components/TradeForm'
 import { WorkspaceSettings } from './components/WorkspaceSettings'
@@ -304,11 +305,12 @@ function App() {
                 onOpenAccessCode={() => openAccessModal(t('workspaceSwitcher.modalHint'))}
               />
               {!LOCK_LANGUAGE_TO_ENGLISH && <LanguageSwitcher />}
+              <ThemeSwitcher />
             </>
           }
         />
-        <DesktopStatBar trades={trades} baseCurrency={workspace.baseCurrency} />
       </div>
+      <DesktopStatBar trades={trades} baseCurrency={workspace.baseCurrency} />
 
       <div className="appBody">
         <main className="appMain">

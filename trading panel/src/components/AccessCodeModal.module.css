@@ -44,7 +44,7 @@
   padding: 10px 12px;
   border-radius: 9px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(var(--overlay-tint), 0.02);
   color: var(--text-h);
   text-transform: uppercase;
 }

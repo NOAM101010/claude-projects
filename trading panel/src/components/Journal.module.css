@@ -31,7 +31,7 @@
 }
 
 .subNav button[data-active='true'] {
-  background: linear-gradient(180deg, rgba(232, 179, 65, 0.14) 0%, rgba(232, 179, 65, 0.05) 100%);
+  background: linear-gradient(180deg, rgba(var(--amber-hot-rgb), 0.14) 0%, rgba(var(--amber-hot-rgb), 0.05) 100%);
   color: var(--accent-2);
 }
 

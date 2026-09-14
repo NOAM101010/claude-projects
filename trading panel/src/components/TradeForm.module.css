@@ -47,7 +47,7 @@
   padding: 11px 13px;
   border-radius: 10px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--overlay-tint), 0.03);
   color: var(--text-h);
   box-sizing: border-box;
   width: 100%;
@@ -65,7 +65,7 @@
 .field textarea:focus {
   outline: none;
   border-color: var(--accent-border);
-  background: rgba(217, 154, 43, 0.05);
+  background: rgba(var(--amber-rgb), 0.05);
 }
 
 /* symbol + numeric price/qty fields read as LTR ticker data even inside the RTL form */
@@ -95,7 +95,7 @@
   padding: 11px;
   border-radius: 10px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(var(--overlay-tint), 0.02);
   color: var(--text);
   font: inherit;
   font-weight: 700;
@@ -182,8 +182,8 @@
 
 .submit {
   background: linear-gradient(180deg, var(--accent-2), var(--accent));
-  color: #16110a;
-  box-shadow: 0 10px 24px -12px rgba(217, 154, 43, 0.55);
+  color: var(--on-accent);
+  box-shadow: 0 10px 24px -12px rgba(var(--amber-rgb), 0.55);
 }
 
 .submit:hover {
@@ -191,7 +191,7 @@
 }
 
 .cancel {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--overlay-tint), 0.03);
   color: var(--text-h);
   border: 1px solid var(--border) !important;
 }

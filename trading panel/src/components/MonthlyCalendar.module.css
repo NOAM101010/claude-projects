@@ -157,7 +157,7 @@
   min-height: 0;
   min-width: 0;
   border-radius: clamp(6px, 1vh, 10px);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(var(--overlay-tint), 0.05);
   padding: clamp(3px, 1vh, 7px);
   display: flex;
   flex-direction: column;
@@ -167,7 +167,7 @@
 }
 
 .dayCell:hover {
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 0 0 1px rgba(var(--amber-rgb), 0.4);
+  box-shadow: inset 0 0 0 1px rgba(var(--overlay-tint), 0.05), 0 0 0 1px rgba(var(--amber-rgb), 0.4);
   transform: translateY(-1px);
 }
 

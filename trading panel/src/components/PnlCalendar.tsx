@@ -10,7 +10,7 @@ interface PnlCalendarProps {
 
 /** צבע התא לפי עוצמת הרווח/הפסד היחסית למקסימום בשנה המוצגת. */
 function colorFor(pnl: number, maxAbs: number): string {
-  if (maxAbs === 0 || pnl === 0) return 'rgba(255, 255, 255, 0.06)'
+  if (maxAbs === 0 || pnl === 0) return 'rgba(var(--overlay-tint), 0.06)'
   const intensity = Math.min(Math.abs(pnl) / maxAbs, 1)
   const alpha = (0.15 + intensity * 0.75).toFixed(2)
   return pnl > 0 ? `rgba(34, 197, 94, ${alpha})` : `rgba(239, 68, 68, ${alpha})`
@@ -164,7 +164,7 @@ export function PnlCalendar({ dailyPnl }: PnlCalendarProps) {
         <span className={styles.legend}>
           <span>{t('common.loss')}</span>
           <span className={styles.legendSwatch} style={{ background: 'rgba(239, 68, 68, 0.8)' }} />
-          <span className={styles.legendSwatch} style={{ background: 'rgba(255, 255, 255, 0.06)' }} />
+          <span className={styles.legendSwatch} style={{ background: 'rgba(var(--overlay-tint), 0.06)' }} />
           <span className={styles.legendSwatch} style={{ background: 'rgba(34, 197, 94, 0.8)' }} />
           <span>{t('common.profit')}</span>
         </span>

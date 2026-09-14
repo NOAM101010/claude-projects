@@ -4,12 +4,12 @@
   min-height: 100svh;
 }
 
-/* PillNav's header and DesktopStatBar (Wide Console) each had their own
-   independent position:sticky;top:0 - since sticky offsets are computed
-   against the viewport independently per element, both would "stick" at the
-   same y:0 once scrolled, overlapping instead of stacking below one another.
-   Wrapping both in a single sticky group fixes that: the pair sticks as one
-   unit and the stat bar naturally sits below the nav, no overlap possible. */
+/* Sticky wrapper for PillNav only, so the top nav stays pinned while
+   scrolling. DesktopStatBar (Wide Console) used to live in here too, which
+   caused both elements' independent position:sticky;top:0 to "stick" at the
+   same y:0 and overlap. DesktopStatBar has since moved back to normal
+   document flow (it scrolls away with the page), so that overlap can't
+   recur - this wrapper now only needs to handle PillNav. */
 .stickyHeader {
   position: sticky;
   top: 0;
