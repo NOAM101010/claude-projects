@@ -1,4 +1,4 @@
-import { ExternalLink, Eye, LayoutList, ListChecks, TrendingDown, TrendingUp } from 'lucide-react'
+import { ExternalLink, TrendingDown, TrendingUp } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
 import { formatDurationHHMM, getMarketStatus } from '../lib/marketHours'
@@ -26,10 +26,6 @@ function getGreetingKey(hour: number): TranslationKey {
   return 'home.greetingNight'
 }
 
-/** יעדי הניווט המהיר מ-Home - כל אחד מיפוי ישיר לתת-טאב קיים (ראה `onNavigate` ב-`App.tsx`),
- * לא מסך/יכולת חדשים. */
-export type HomeQuickLink = 'openPositions' | 'trades' | 'watchlist'
-
 export interface HomeProps {
   indices: StockIndices | null
   indicesLoading: boolean
@@ -38,7 +34,6 @@ export interface HomeProps {
   cryptoLoading: boolean
   cryptoFailed: boolean
   fearGreed: FearGreedIndex | null
-  onNavigate: (target: HomeQuickLink) => void
 }
 
 /**
@@ -57,7 +52,6 @@ export function Home({
   cryptoLoading,
   cryptoFailed,
   fearGreed,
-  onNavigate,
 }: HomeProps) {
   const { t, locale } = useLanguage()
   const [now, setNow] = useState(() => new Date())
@@ -84,8 +78,6 @@ export function Home({
         <h1 className={`hero-title ${styles.heroTitle}`}>{greeting}</h1>
       </section>
 
-      <QuickLinks onNavigate={onNavigate} />
-
       <StockSection indices={indices} loading={indicesLoading} failed={indicesFailed} />
       <CryptoPricesSection
         prices={crypto}
@@ -94,34 +86,6 @@ export function Home({
         failed={cryptoFailed}
       />
     </div>
-  )
-}
-
-/**
- * שורת ניווט-מהיר - עוזר-ניווט קטן ומאופק (לא hero חדש), לא יכולת חדשה: כל כפתור רק
- * מקפיץ ישר לתת-טאב קיים (Journal->Positions/Trades, Tools->Watchlist) באמצעות אותו
- * מנגנון tab/subTab שכבר קיים ב-App.tsx - ראה `onNavigate`. נועד לקצר את המסלול
- * מ-2 קליקים (Journal ואז תת-הטאב) לקליק אחד, ולתת גישה ישירה ל-Watchlist בלי לעבור
- * דרך Tools' calculators שהם קטגוריה מנטלית שונה.
- */
-function QuickLinks({ onNavigate }: { onNavigate: (target: HomeQuickLink) => void }) {
-  const { t } = useLanguage()
-
-  return (
-    <nav className={styles.quickLinks} aria-label={t('home.quickLinksLabel')}>
-      <button type="button" className={`${styles.quickLink} btn-metal`} onClick={() => onNavigate('openPositions')}>
-        <ListChecks size={14} />
-        {t('nav.openPositions')}
-      </button>
-      <button type="button" className={`${styles.quickLink} btn-metal`} onClick={() => onNavigate('trades')}>
-        <LayoutList size={14} />
-        {t('nav.trades')}
-      </button>
-      <button type="button" className={`${styles.quickLink} btn-metal`} onClick={() => onNavigate('watchlist')}>
-        <Eye size={14} />
-        {t('tools.watchlistTab')}
-      </button>
-    </nav>
   )
 }
 

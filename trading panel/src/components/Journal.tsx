@@ -1,14 +1,13 @@
 import { useState } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
 import { Dashboard } from './Dashboard'
-import { OpenPositions } from './OpenPositions'
 import { TradeList } from './TradeList'
 import { DEFAULT_TRADE_FILTERS, type TradeFiltersState } from '../lib/tradeFilters'
 import type { TradeFilter } from '../App'
 import type { CurrencyCode, Trade } from '../types/trade'
 import styles from './Journal.module.css'
 
-export type JournalSubTab = 'trades' | 'dashboard' | 'openPositions'
+export type JournalSubTab = 'trades' | 'dashboard'
 
 interface JournalProps {
   trades: Trade[]
@@ -25,10 +24,11 @@ interface JournalProps {
 }
 
 /**
- * מסך "Journal": sub-nav פנימי בין Trades/Dashboard/Open Positions (אותו דפוס segmented
- * control כמו `Tools.tsx`). מקפל את `TradeList`/`Dashboard`/`OpenPositions` - הזרימה של
- * לחיצה על שורת סימבול/setup ב-Dashboard שמסננת את Trades (`goToFilteredTrades` ב-`App.tsx`)
- * לא השתנתה, רק ה-subTab עצמו מנוהל כאן ולא כ-tab עליון נפרד.
+ * מסך "Journal": sub-nav פנימי בין Trades/Dashboard (אותו דפוס segmented control כמו
+ * `Tools.tsx`). מקפל את `TradeList`/`Dashboard` - הזרימה של לחיצה על שורת סימבול/setup
+ * ב-Dashboard שמסננת את Trades (`goToFilteredTrades` ב-`App.tsx`) לא השתנתה, רק ה-subTab
+ * עצמו מנוהל כאן ולא כ-tab עליון נפרד. Open Positions קודם היה תת-טאב שלישי כאן - קיבל
+ * טאב עליון משלו (ראה `PillNav.tsx` tab='positions') כי המשתמש רצה גישה ישירה מ-Home.
  */
 export function Journal({
   trades,
@@ -57,9 +57,6 @@ export function Journal({
         <button type="button" data-active={subTab === 'dashboard'} onClick={() => onSubTabChange('dashboard')}>
           {t('nav.dashboard')}
         </button>
-        <button type="button" data-active={subTab === 'openPositions'} onClick={() => onSubTabChange('openPositions')}>
-          {t('nav.openPositions')}
-        </button>
       </div>
 
       {subTab === 'trades' ? (
@@ -73,10 +70,8 @@ export function Journal({
           advFilters={advFilters}
           setAdvFilters={setAdvFilters}
         />
-      ) : subTab === 'dashboard' ? (
-        <Dashboard trades={trades} baseCurrency={baseCurrency} onSelectSymbol={onSelectSymbol} onSelectSetup={onSelectSetup} />
       ) : (
-        <OpenPositions trades={trades} baseCurrency={baseCurrency} />
+        <Dashboard trades={trades} baseCurrency={baseCurrency} onSelectSymbol={onSelectSymbol} onSelectSetup={onSelectSetup} />
       )}
     </div>
   )

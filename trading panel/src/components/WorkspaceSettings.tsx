@@ -1,10 +1,9 @@
 import { useRef, useState } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
-import { LANGUAGES } from '../i18n/translations'
-import type { Language } from '../i18n/translations'
 import { clearAccountTradingData } from '../lib/accountApi'
 import type { AccountTier } from '../lib/accountApi'
 import { HIDE_WORKSPACE_NAME_UI, LOCK_CURRENCY_TO_USD, LOCK_LANGUAGE_TO_ENGLISH } from '../config/locks'
+import { LanguageSwitcher } from './LanguageSwitcher'
 import { exportAsCsv, exportAsJson } from '../lib/exportData'
 import { importTrades, parseTradesJson } from '../lib/importData'
 import { parseTradesExcel } from '../lib/importExcel'
@@ -57,7 +56,7 @@ export function WorkspaceSettings({
   onTradesUpdated,
   onOpenAccessCode,
 }: WorkspaceSettingsProps) {
-  const { t, language, setLanguage } = useLanguage()
+  const { t } = useLanguage()
 
   const FIELD_LABELS: Record<keyof FieldSettings, string> = {
     stopLoss: t('tradeForm.stopLossLabel'),
@@ -289,13 +288,7 @@ export function WorkspaceSettings({
         {!LOCK_LANGUAGE_TO_ENGLISH && (
           <label className={styles.fieldRow}>
             <span>{t('workspaceSettings.languageLabel')}</span>
-            <select className={styles.textInput} value={language} onChange={(e) => setLanguage(e.target.value as Language)}>
-              {LANGUAGES.map((l) => (
-                <option key={l.code} value={l.code}>
-                  {l.flag} {l.label}
-                </option>
-              ))}
-            </select>
+            <LanguageSwitcher className={styles.textInput} />
           </label>
         )}
         {!LOCK_CURRENCY_TO_USD && (

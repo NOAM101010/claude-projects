@@ -1,11 +1,11 @@
-import { BookOpen, Calculator, Calendar, Home, Settings } from 'lucide-react'
+import { BookOpen, Calculator, Calendar, Home, Radar, Settings } from 'lucide-react'
 import type { ComponentType } from 'react'
 import type { ReactNode } from 'react'
 import { useTranslation } from '../i18n/LanguageContext'
 import type { TranslationKey } from '../i18n/translations'
 import styles from './PillNav.module.css'
 
-export type Tab = 'home' | 'journal' | 'tools' | 'calendar' | 'settings'
+export type Tab = 'home' | 'journal' | 'positions' | 'tools' | 'calendar' | 'settings'
 
 interface NavItem {
   tab: Tab
@@ -17,6 +17,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { tab: 'home', labelKey: 'nav.home', icon: Home },
   { tab: 'journal', labelKey: 'nav.journal', icon: BookOpen },
+  { tab: 'positions', labelKey: 'nav.openPositions', icon: Radar },
   { tab: 'tools', labelKey: 'nav.tools', icon: Calculator },
   { tab: 'calendar', labelKey: 'nav.calendar', icon: Calendar },
 ]
@@ -24,7 +25,7 @@ const NAV_ITEMS: NavItem[] = [
 interface PillNavProps {
   tab: Tab
   onChangeTab: (tab: Tab) => void
-  /** תוכן חופשי לקצה השני של הפס - כרגע WorkspaceSwitcher + LanguageSwitcher (ראה App.tsx). */
+  /** תוכן חופשי לקצה השני של הפס - כרגע WorkspaceSwitcher/ThemeSwitcher/NotificationBell/HeaderClock (ראה App.tsx). */
   actions?: ReactNode
 }
 

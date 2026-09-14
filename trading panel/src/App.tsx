@@ -6,11 +6,10 @@ import { DesktopStatBar } from './components/DesktopStatBar'
 import { Footer } from './components/Footer'
 import { HeaderClock } from './components/HeaderClock'
 import { Home } from './components/Home'
-import type { HomeQuickLink } from './components/Home'
 import { InstallBanner } from './components/InstallBanner'
 import { Journal } from './components/Journal'
 import type { JournalSubTab } from './components/Journal'
-import { LanguageSwitcher } from './components/LanguageSwitcher'
+import { OpenPositions } from './components/OpenPositions'
 import { LaunchScreen } from './components/LaunchScreen'
 import { MonthlyCalendar } from './components/MonthlyCalendar'
 import { NotificationBell } from './components/NotificationBell'
@@ -22,7 +21,7 @@ import { TradeForm } from './components/TradeForm'
 import { UndoToast } from './components/UndoToast'
 import { WorkspaceSettings } from './components/WorkspaceSettings'
 import { WorkspaceSwitcher } from './components/WorkspaceSwitcher'
-import { LOCK_LANGUAGE_TO_ENGLISH, REQUIRE_ACCESS_CODE_GATE, SHOW_INTRO_SPLASH } from './config/locks'
+import { REQUIRE_ACCESS_CODE_GATE, SHOW_INTRO_SPLASH } from './config/locks'
 import type { RedeemResult } from './hooks/useRedeemCode'
 import { useMarketData } from './hooks/useMarketData'
 import { useTranslation } from './i18n/LanguageContext'
@@ -282,19 +281,6 @@ function App() {
     await handleRedeemed(result)
   }
 
-  /** Home's quick-links row (see Home.tsx `QuickLinks`) - deep-links straight into an
-   * existing tab/sub-tab, reusing the exact same state (`journalSubTab`/`focusWatchlistSignal`)
-   * NotificationBell's "open watchlist" link already uses, not a new navigation mechanism. */
-  const handleHomeQuickLink = (target: HomeQuickLink) => {
-    if (target === 'watchlist') {
-      handleChangeTab('tools')
-      setFocusWatchlistSignal((s) => s + 1)
-      return
-    }
-    handleChangeTab('journal')
-    setJournalSubTab(target === 'openPositions' ? 'openPositions' : 'trades')
-  }
-
   const goToFilteredTrades = (next: TradeFilter) => {
     closeForm()
     setFilter(next)
@@ -382,7 +368,6 @@ function App() {
                 onCreate={handleCreateWorkspace}
                 onOpenAccessCode={() => openAccessModal(t('workspaceSwitcher.modalHint'))}
               />
-              {!LOCK_LANGUAGE_TO_ENGLISH && <LanguageSwitcher />}
               <ThemeSwitcher />
               <NotificationBell
                 accountId={accountId}
@@ -424,8 +409,9 @@ function App() {
               cryptoLoading={marketData.cryptoLoading}
               cryptoFailed={marketData.cryptoFailed}
               fearGreed={marketData.fearGreed}
-              onNavigate={handleHomeQuickLink}
             />
+          ) : tab === 'positions' ? (
+            <OpenPositions trades={trades} baseCurrency={workspace.baseCurrency} />
           ) : tab === 'journal' ? (
             <Journal
               trades={trades}
