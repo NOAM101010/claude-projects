@@ -268,6 +268,46 @@ export function dailyPnl(trades: Trade[]): DailyPnl[] {
   return Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date))
 }
 
+export type DayActivityLevel = 'low' | 'normal' | 'high'
+
+/**
+ * רמת פעילות יומית ("כמה יום זה חריג ביחס להרגלי המסחר של החשבון הזה") - נגזרת
+ * מהנתונים בפועל, לא מסף קבוע (למשל "3+ טריידים = high" היה שרירותי ולא מתחשב
+ * בזה שחשבון אחד עושה בממוצע טרייד ביום ואחר עושה 10). לוקחים רק ימים "פעילים"
+ * (≥1 טרייד סגור) לבסיס הממוצע/סטיית-התקן - ימי אפס לא אמורים למשוך את הממוצע
+ * למטה ולהפוך כל יום רגיל ל"high" מלאכותית. עם פחות מ-2 ימים פעילים (או סטיית
+ * תקן 0, כשכל הימים הפעילים זהים) אין בסיס סטטיסטי משמעותי - הכל 'normal',
+ * לא NaN/קריסה.
+ */
+export function dayActivityLevel(trades: Trade[]): Map<string, DayActivityLevel> {
+  const daily = dailyPnl(trades)
+  const result = new Map<string, DayActivityLevel>()
+  if (daily.length === 0) return result
+
+  const counts = daily.map((d) => d.trades)
+  const mean = counts.reduce((s, c) => s + c, 0) / counts.length
+  const variance = counts.reduce((s, c) => s + (c - mean) ** 2, 0) / counts.length
+  const stddev = Math.sqrt(variance)
+
+  const canDifferentiate = daily.length >= 2 && stddev > 0
+  const lowCutoff = mean - 0.5 * stddev
+  const highCutoff = mean + 0.5 * stddev
+
+  for (const d of daily) {
+    if (!canDifferentiate) {
+      result.set(d.date, 'normal')
+    } else if (d.trades < lowCutoff) {
+      result.set(d.date, 'low')
+    } else if (d.trades > highCutoff) {
+      result.set(d.date, 'high')
+    } else {
+      result.set(d.date, 'normal')
+    }
+  }
+
+  return result
+}
+
 export interface GroupStats {
   key: string
   trades: number

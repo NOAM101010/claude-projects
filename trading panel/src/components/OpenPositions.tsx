@@ -170,9 +170,11 @@ export function OpenPositions({ trades, baseCurrency }: OpenPositionsProps) {
 
               {(hasStop || hasTarget) && (
                 <div className={styles.slTpBar}>
+                  <span className={styles.slTpCaption}>{t('openPositions.slTpBarLabel')}</span>
                   <div className={styles.slTpTrack}>
                     {hasStop && (
                       <div className={styles.slTpSide} title={`${t('openPositions.stopLoss')} ${progress.toStopPercent?.toFixed(0) ?? 0}%`}>
+                        <span className={styles.slTpEndLabelStop}>{t('openPositions.stopLoss')}</span>
                         {progress.toStopPercent !== null && (
                           <>
                             <div className={styles.slTpFillStop} style={{ width: `${progress.toStopPercent}%` }} />
@@ -190,6 +192,7 @@ export function OpenPositions({ trades, baseCurrency }: OpenPositionsProps) {
                             <div className={styles.slTpMarkerTarget} style={{ left: `${progress.toTargetPercent}%` }} />
                           </>
                         )}
+                        <span className={styles.slTpEndLabelTarget}>{t('openPositions.takeProfit')}</span>
                       </div>
                     )}
                   </div>

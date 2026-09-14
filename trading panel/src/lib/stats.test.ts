@@ -6,6 +6,7 @@ import {
   bestTrade,
   computePnl,
   dailyPnl,
+  dayActivityLevel,
   drawdownCurve,
   equityCurve,
   expectancy,
@@ -300,6 +301,40 @@ describe('dailyPnl', () => {
       { date: '2026-01-01', pnl: 0, trades: 2 },
       { date: '2026-01-02', pnl: 200, trades: 1 },
     ])
+  })
+})
+
+describe('dayActivityLevel', () => {
+  it('reads "normal" for every active day when trade counts are uniform', () => {
+    const trades = [
+      makeTrade({ id: 'a', exitAt: '2026-01-01T10:00:00.000Z' }),
+      makeTrade({ id: 'b', exitAt: '2026-01-02T10:00:00.000Z' }),
+      makeTrade({ id: 'c', exitAt: '2026-01-03T10:00:00.000Z' }),
+      makeTrade({ id: 'd', exitAt: '2026-01-04T10:00:00.000Z' }),
+    ]
+    const levels = dayActivityLevel(trades)
+    expect(Array.from(levels.values())).toEqual(['normal', 'normal', 'normal', 'normal'])
+  })
+
+  it('flags a day with a wildly higher trade count than usual as "high"', () => {
+    const trades = [
+      makeTrade({ id: 'a', exitAt: '2026-01-01T10:00:00.000Z' }),
+      makeTrade({ id: 'b', exitAt: '2026-01-02T10:00:00.000Z' }),
+      makeTrade({ id: 'c', exitAt: '2026-01-03T10:00:00.000Z' }),
+      // 2026-01-04: 8 trades in one day - way above the account's usual 1/day
+      ...Array.from({ length: 8 }, (_, i) => makeTrade({ id: `d${i}`, exitAt: '2026-01-04T10:00:00.000Z' })),
+    ]
+    const levels = dayActivityLevel(trades)
+    expect(levels.get('2026-01-04')).toBe('high')
+    expect(levels.get('2026-01-01')).not.toBe('high')
+  })
+
+  it('degrades gracefully with too little data (0-1 active days) - no NaN/crash', () => {
+    expect(Array.from(dayActivityLevel([]).values())).toEqual([])
+
+    const oneDay = [makeTrade({ id: 'a', exitAt: '2026-01-01T10:00:00.000Z' })]
+    const levels = dayActivityLevel(oneDay)
+    expect(levels.get('2026-01-01')).toBe('normal')
   })
 })
 

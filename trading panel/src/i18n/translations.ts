@@ -448,6 +448,17 @@ const en = {
   'monthlyCalendar.worstDay': 'Worst day',
   'monthlyCalendar.noTradesInMonth': 'No closed trades in this month',
   'monthlyCalendar.dayTradesCount': '{{count}} trades',
+  'monthlyCalendar.noTrades': 'No trades',
+  'monthlyCalendar.totalTrades': 'Total trades',
+  'monthlyCalendar.avgPerDay': 'Avg / trading day',
+  'monthlyCalendar.dailyView.title': 'Day summary',
+  'monthlyCalendar.dailyView.netPnl': 'Net P&L',
+  'monthlyCalendar.dailyView.tradeCount': 'Trades',
+  'monthlyCalendar.dailyView.winRate': 'Win rate',
+  'monthlyCalendar.dailyView.bestTrade': 'Best trade',
+  'monthlyCalendar.dailyView.worstTrade': 'Worst trade',
+  'monthlyCalendar.dailyView.noneClosed': 'No closed trades on this day',
+  'monthlyCalendar.dailyView.close': 'Close day view',
 
   // Tools (Calculators - Watchlist ships in a future round)
   'tools.positionSizeTab': 'Position Size',
@@ -520,6 +531,7 @@ const en = {
   'openPositions.timeInTrade': 'Time in trade',
   'openPositions.rMultiple': 'Live R-multiple (unrealized P&L vs. initial risk)',
   'openPositions.todayChange': 'Today:',
+  'openPositions.slTpBarLabel': 'Distance to stop / target',
 } as const
 
 export type TranslationKey = keyof typeof en
@@ -943,6 +955,17 @@ const he: Record<TranslationKey, string> = {
   'monthlyCalendar.worstDay': 'היום הכי גרוע',
   'monthlyCalendar.noTradesInMonth': 'אין טריידים סגורים בחודש הזה',
   'monthlyCalendar.dayTradesCount': '{{count}} טריידים',
+  'monthlyCalendar.noTrades': 'אין טריידים',
+  'monthlyCalendar.totalTrades': 'סה"כ טריידים',
+  'monthlyCalendar.avgPerDay': 'ממוצע ליום מסחר',
+  'monthlyCalendar.dailyView.title': 'סיכום יום',
+  'monthlyCalendar.dailyView.netPnl': 'רווח/הפסד נטו',
+  'monthlyCalendar.dailyView.tradeCount': 'טריידים',
+  'monthlyCalendar.dailyView.winRate': 'אחוז הצלחה',
+  'monthlyCalendar.dailyView.bestTrade': 'הטרייד הכי טוב',
+  'monthlyCalendar.dailyView.worstTrade': 'הטרייד הכי גרוע',
+  'monthlyCalendar.dailyView.noneClosed': 'אין טריידים סגורים ביום הזה',
+  'monthlyCalendar.dailyView.close': 'סגירת תצוגת יום',
 
   'tools.positionSizeTab': 'גודל פוזיציה',
   'tools.pnlTab': 'מחשבון P&L',
@@ -1011,6 +1034,7 @@ const he: Record<TranslationKey, string> = {
   'openPositions.timeInTrade': 'זמן בפוזיציה',
   'openPositions.rMultiple': 'מכפיל R חי (רווח/הפסד לא ממומש מול הסיכון ההתחלתי)',
   'openPositions.todayChange': 'היום:',
+  'openPositions.slTpBarLabel': 'מרחק מהסטופ / מהיעד',
 }
 
 const es: Record<TranslationKey, string> = {
@@ -1435,6 +1459,17 @@ const es: Record<TranslationKey, string> = {
   'monthlyCalendar.worstDay': 'Peor día',
   'monthlyCalendar.noTradesInMonth': 'No hay operaciones cerradas este mes',
   'monthlyCalendar.dayTradesCount': '{{count}} operaciones',
+  'monthlyCalendar.noTrades': 'Sin operaciones',
+  'monthlyCalendar.totalTrades': 'Total de operaciones',
+  'monthlyCalendar.avgPerDay': 'Prom. / día de trading',
+  'monthlyCalendar.dailyView.title': 'Resumen del día',
+  'monthlyCalendar.dailyView.netPnl': 'P&L neto',
+  'monthlyCalendar.dailyView.tradeCount': 'Operaciones',
+  'monthlyCalendar.dailyView.winRate': 'Tasa de acierto',
+  'monthlyCalendar.dailyView.bestTrade': 'Mejor operación',
+  'monthlyCalendar.dailyView.worstTrade': 'Peor operación',
+  'monthlyCalendar.dailyView.noneClosed': 'No hay operaciones cerradas este día',
+  'monthlyCalendar.dailyView.close': 'Cerrar vista del día',
 
   'tools.positionSizeTab': 'Tamaño de posición',
   'tools.pnlTab': 'Calculadora P&L',
@@ -1503,6 +1538,7 @@ const es: Record<TranslationKey, string> = {
   'openPositions.timeInTrade': 'Tiempo en la operación',
   'openPositions.rMultiple': 'Múltiplo R en vivo (P&L no realizado vs. riesgo inicial)',
   'openPositions.todayChange': 'Hoy:',
+  'openPositions.slTpBarLabel': 'Distancia al stop / objetivo',
 }
 
 const fr: Record<TranslationKey, string> = {
@@ -1933,6 +1969,17 @@ const fr: Record<TranslationKey, string> = {
   'monthlyCalendar.worstDay': 'Pire jour',
   'monthlyCalendar.noTradesInMonth': 'Aucun trade clôturé ce mois-ci',
   'monthlyCalendar.dayTradesCount': '{{count}} trades',
+  'monthlyCalendar.noTrades': 'Aucun trade',
+  'monthlyCalendar.totalTrades': 'Total des trades',
+  'monthlyCalendar.avgPerDay': 'Moy. / jour de trading',
+  'monthlyCalendar.dailyView.title': 'Résumé du jour',
+  'monthlyCalendar.dailyView.netPnl': 'P&L net',
+  'monthlyCalendar.dailyView.tradeCount': 'Trades',
+  'monthlyCalendar.dailyView.winRate': 'Taux de réussite',
+  'monthlyCalendar.dailyView.bestTrade': 'Meilleur trade',
+  'monthlyCalendar.dailyView.worstTrade': 'Pire trade',
+  'monthlyCalendar.dailyView.noneClosed': 'Aucun trade clôturé ce jour-là',
+  'monthlyCalendar.dailyView.close': 'Fermer la vue du jour',
 
   'tools.positionSizeTab': 'Taille de position',
   'tools.pnlTab': 'Calculatrice P&L',
@@ -2001,6 +2048,7 @@ const fr: Record<TranslationKey, string> = {
   'openPositions.timeInTrade': 'Temps en position',
   'openPositions.rMultiple': 'Multiple R en direct (P&L latent vs. risque initial)',
   'openPositions.todayChange': "Aujourd'hui :",
+  'openPositions.slTpBarLabel': 'Distance au stop / à l\'objectif',
 }
 
 export type Language = 'en' | 'he' | 'es' | 'fr'

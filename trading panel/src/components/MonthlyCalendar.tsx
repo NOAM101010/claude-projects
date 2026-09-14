@@ -3,10 +3,11 @@ import { useMemo, useRef, useState } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
 import { CALENDAR_DOW, MONTH_NAMES } from '../i18n/translations'
 import { formatCurrency } from '../lib/format'
-import { dailyPnl, winRate } from '../lib/stats'
+import { dailyPnl, dayActivityLevel, winRate } from '../lib/stats'
 import type { DailyPnl } from '../lib/stats'
 import { shareOrDownloadCanvas } from '../lib/canvasExport'
 import { renderMonthlyCalendarToCanvas } from '../lib/monthlyCalendarCanvas'
+import { DailyTradingView } from './DailyTradingView'
 import { TradeOfTheMonthCard } from './TradeOfTheMonthCard'
 import type { CurrencyCode, Trade } from '../types/trade'
 import styles from './MonthlyCalendar.module.css'
@@ -14,6 +15,8 @@ import styles from './MonthlyCalendar.module.css'
 interface MonthlyCalendarProps {
   trades: Trade[]
   baseCurrency: CurrencyCode
+  /** פותח את אותו טופס עריכה קיים (App.tsx's `openEditForm`) - נקרא מתוך `DailyTradingView`. */
+  onEditTrade: (trade: Trade) => void
 }
 
 interface DayCell {
@@ -38,7 +41,7 @@ function backgroundFor(pnl: number, maxAbs: number): string {
  * דאטה: אותה שכבת אגרגציה `dailyPnl` מ-`stats.ts` שכבר צורכת `PnlCalendar`, מסוננת
  * בצד קליינט לחודש הנבחר בלבד - בלי fetch חדש (הטריידים כבר נטענים ב-`App.tsx`).
  */
-export function MonthlyCalendar({ trades, baseCurrency }: MonthlyCalendarProps) {
+export function MonthlyCalendar({ trades, baseCurrency, onEditTrade }: MonthlyCalendarProps) {
   const { t, language, locale } = useLanguage()
   const DOW = CALENDAR_DOW[language]
   const MONTHS = MONTH_NAMES[language]
@@ -47,6 +50,8 @@ export function MonthlyCalendar({ trades, baseCurrency }: MonthlyCalendarProps) 
     const now = new Date()
     return { year: now.getFullYear(), month: now.getMonth() }
   })
+  // "YYYY-MM-DD" של היום שה-Daily Trading View פתוח עבורו כרגע, או null כשהתצוגה סגורה.
+  const [openDayKey, setOpenDayKey] = useState<string | null>(null)
 
   const allDaily = useMemo(() => dailyPnl(trades), [trades])
   const dataMap = useMemo(() => {
@@ -54,6 +59,7 @@ export function MonthlyCalendar({ trades, baseCurrency }: MonthlyCalendarProps) 
     for (const d of allDaily) m.set(d.date, d)
     return m
   }, [allDaily])
+  const activityMap = useMemo(() => dayActivityLevel(trades), [trades])
 
   const monthKey = `${cursor.year}-${String(cursor.month + 1).padStart(2, '0')}`
   // נגזר מ-cursor (לא ה-"today" האמיתי) - כך ש"טרייד החודש" בלוח מתעדכן כשמנווטים חודש אחורה/קדימה.
@@ -85,6 +91,17 @@ export function MonthlyCalendar({ trades, baseCurrency }: MonthlyCalendarProps) 
   const monthTotal = monthEntries.reduce((s, d) => s + d.pnl, 0)
   const bestDay = monthEntries.length ? monthEntries.reduce((best, d) => (d.pnl > best.pnl ? d : best)) : null
   const worstDay = monthEntries.length ? monthEntries.reduce((worst, d) => (d.pnl < worst.pnl ? d : worst)) : null
+  // Total Trades = סה"כ טריידים בחודש (סכום, לא ספירת ימים כמו Trading Days).
+  const totalTradesInMonth = monthEntries.reduce((s, d) => s + d.trades, 0)
+  const avgPnlPerTradingDay = monthEntries.length > 0 ? monthTotal / monthEntries.length : 0
+
+  // הטריידים הסגורים של היום הפתוח כרגע ב-Daily Trading View (כל ההיסטוריה, לא רק החודש
+  // המוצג - כך שלחיצה על צ'יפ Best/Worst Day תמיד עובדת גם אם הוא לא מתאים לחודש הנוכחי).
+  const openDayTrades = useMemo(() => {
+    if (!openDayKey) return []
+    return trades.filter((tr) => tr.pnl !== null && tr.exitAt && (tr.exitAt as string).slice(0, 10) === openDayKey)
+  }, [trades, openDayKey])
+  const openDayDate = openDayKey ? new Date(`${openDayKey}T00:00:00`) : null
 
   const goPrev = () => setCursor((c) => (c.month === 0 ? { year: c.year - 1, month: 11 } : { year: c.year, month: c.month - 1 }))
   const goNext = () => setCursor((c) => (c.month === 11 ? { year: c.year + 1, month: 0 } : { year: c.year, month: c.month + 1 }))
@@ -179,17 +196,27 @@ export function MonthlyCalendar({ trades, baseCurrency }: MonthlyCalendarProps) 
             <span className={`num ${styles.heroStatValue}`}>{monthEntries.length}</span>
             <span className={styles.heroStatLabel}>{t('monthlyCalendar.tradingDays', { count: monthEntries.length })}</span>
           </div>
+          <div className={styles.heroStat}>
+            <span className={`num ${styles.heroStatValue}`}>{totalTradesInMonth}</span>
+            <span className={styles.heroStatLabel}>{t('monthlyCalendar.totalTrades')}</span>
+          </div>
+          <div className={styles.heroStat}>
+            <span className={`num ${styles.heroStatValue} ${avgPnlPerTradingDay >= 0 ? styles.positive : styles.negative}`}>
+              {formatCurrency(avgPnlPerTradingDay, baseCurrency, locale)}
+            </span>
+            <span className={styles.heroStatLabel}>{t('monthlyCalendar.avgPerDay')}</span>
+          </div>
           {bestDay && (
-            <div className={styles.heroStat}>
+            <button type="button" className={`${styles.heroStat} ${styles.heroStatButton}`} onClick={() => setOpenDayKey(bestDay.date)}>
               <span className={`det-chip det-chip--up ${styles.heroChip}`}>{t('monthlyCalendar.bestDay')}</span>
               <span className={`num ${styles.heroStatValue} ${styles.positive}`}>{formatCurrency(bestDay.pnl, baseCurrency, locale)}</span>
-            </div>
+            </button>
           )}
           {worstDay && (
-            <div className={styles.heroStat}>
+            <button type="button" className={`${styles.heroStat} ${styles.heroStatButton}`} onClick={() => setOpenDayKey(worstDay.date)}>
               <span className={`det-chip det-chip--down ${styles.heroChip}`}>{t('monthlyCalendar.worstDay')}</span>
               <span className={`num ${styles.heroStatValue} ${styles.negative}`}>{formatCurrency(worstDay.pnl, baseCurrency, locale)}</span>
-            </div>
+            </button>
           )}
         </div>
       </div>
@@ -209,25 +236,34 @@ export function MonthlyCalendar({ trades, baseCurrency }: MonthlyCalendarProps) 
             {week.map((day, di) => {
               const idx = wi * 7 + di
               const hasData = day.inMonth && day.data
+              const activity = hasData ? activityMap.get(day.key) : undefined
+              const isSelected = openDayKey === day.key
               return (
-                <div
+                <button
                   key={day.key}
-                  className={`${styles.dayCell} ${day.inMonth ? '' : styles.outMonth} count-in`}
+                  type="button"
+                  disabled={!hasData}
+                  onClick={() => hasData && setOpenDayKey(day.key)}
+                  className={`${styles.dayCell} ${day.inMonth ? '' : styles.outMonth} ${hasData ? styles.dayCellClickable : ''} ${
+                    isSelected ? styles.dayCellSelected : ''
+                  } ${activity === 'high' ? styles.activityHigh : activity === 'low' ? styles.activityLow : ''} count-in`}
                   style={{
                     background: hasData ? backgroundFor(day.data!.pnl, maxAbs) : undefined,
                     animationDelay: `${idx * 8}ms`,
                   }}
                 >
                   <span className={styles.dayNumber}>{day.date.getDate()}</span>
-                  {hasData && (
+                  {hasData ? (
                     <>
                       <span className={`num ${styles.dayPnl} ${day.data!.pnl >= 0 ? styles.positive : styles.negative}`}>
                         {formatCurrency(day.data!.pnl, baseCurrency, locale)}
                       </span>
                       <span className={styles.dayTrades}>{t('monthlyCalendar.dayTradesCount', { count: day.data!.trades })}</span>
                     </>
+                  ) : (
+                    day.inMonth && <span className={styles.dayEmpty}>{t('monthlyCalendar.noTrades')}</span>
                   )}
-                </div>
+                </button>
               )
             })}
           </div>
@@ -237,6 +273,16 @@ export function MonthlyCalendar({ trades, baseCurrency }: MonthlyCalendarProps) 
       {monthEntries.length === 0 && <p className={styles.empty}>{t('monthlyCalendar.noTradesInMonth')}</p>}
 
       <canvas ref={canvasRef} className={styles.hiddenCanvas} aria-hidden="true" />
+
+      {openDayDate && (
+        <DailyTradingView
+          date={openDayDate}
+          dayTrades={openDayTrades}
+          locale={locale}
+          onClose={() => setOpenDayKey(null)}
+          onEditTrade={onEditTrade}
+        />
+      )}
     </div>
   )
 }

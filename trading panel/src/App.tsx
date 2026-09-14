@@ -416,7 +416,7 @@ function App() {
           ) : tab === 'tools' ? (
             <Tools accountId={accountId} />
           ) : tab === 'calendar' ? (
-            <MonthlyCalendar trades={trades} baseCurrency={workspace.baseCurrency} />
+            <MonthlyCalendar trades={trades} baseCurrency={workspace.baseCurrency} onEditTrade={openEditForm} />
           ) : (
             <WorkspaceSettings
               workspace={workspace}

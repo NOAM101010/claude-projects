@@ -243,13 +243,24 @@
 .slTpBar {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+}
+
+.slTpCaption {
+  font-size: 9.5px;
+  font-family: var(--mono);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  opacity: 0.75;
 }
 
 .slTpTrack {
   display: flex;
   align-items: center;
   height: 8px;
+  margin-top: 11px;
   direction: ltr;
   unicode-bidi: isolate;
 }
@@ -262,6 +273,27 @@
   border-radius: 4px;
   background: color-mix(in srgb, var(--border) 70%, transparent);
   overflow: visible;
+}
+
+.slTpEndLabelStop,
+.slTpEndLabelTarget {
+  position: absolute;
+  top: -11px;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  line-height: 1;
+}
+
+.slTpEndLabelStop {
+  right: 0;
+  color: var(--pnl-neg-2);
+}
+
+.slTpEndLabelTarget {
+  left: 0;
+  color: var(--pnl-pos-2);
 }
 
 .slTpFillStop {
