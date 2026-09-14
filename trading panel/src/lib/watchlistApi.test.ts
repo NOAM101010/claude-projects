@@ -1,7 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  MAX_WATCHLIST_ALERTS,
-  canAddWatchlistAlert,
   clearAlertHistory,
   createWatchlistAlert,
   deleteAllWatchlistAlerts,
@@ -13,17 +11,8 @@ vi.mock('./supabase', () => ({
   getSupabase: vi.fn(),
 }))
 
-describe('canAddWatchlistAlert', () => {
-  it('מאפשר הוספה כל עוד לא הגיעו למגבלת 15 הסימבולים הפעילים', () => {
-    expect(canAddWatchlistAlert(0)).toBe(true)
-    expect(canAddWatchlistAlert(MAX_WATCHLIST_ALERTS - 1)).toBe(true)
-  })
-
-  it('חוסם הוספה בהגיעו למגבלה (תואם לטריגר בשרת ב-010_watchlist.sql)', () => {
-    expect(canAddWatchlistAlert(MAX_WATCHLIST_ALERTS)).toBe(false)
-    expect(canAddWatchlistAlert(MAX_WATCHLIST_ALERTS + 1)).toBe(false)
-  })
-})
+// מגבלות הסימבולים/ההתראות התלויות-דרגה (canAddWatchlistSymbol/canSetWatchlistAlert)
+// עברו ל-tierLimits.ts/tierLimits.test.ts.
 
 describe('deleteAllWatchlistAlerts', () => {
   beforeEach(() => {
@@ -93,7 +82,7 @@ describe('createWatchlistAlert', () => {
     const { getSupabase } = await import('./supabase')
     vi.mocked(getSupabase).mockReturnValue({ from } as unknown as ReturnType<typeof getSupabase>)
 
-    const result = await createWatchlistAlert('acc-1', 'aapl', undefined, undefined, 0)
+    const result = await createWatchlistAlert('acc-1', 'basic', 'aapl', undefined, undefined, 0, 0)
 
     expect(insert).toHaveBeenCalledWith(
       expect.objectContaining({ account_id: 'acc-1', symbol: 'AAPL', target_price: null, direction: null }),
@@ -113,12 +102,24 @@ describe('createWatchlistAlert', () => {
     const { getSupabase } = await import('./supabase')
     vi.mocked(getSupabase).mockReturnValue({ from } as unknown as ReturnType<typeof getSupabase>)
 
-    const result = await createWatchlistAlert('acc-1', 'aapl', 200, 'above', 0)
+    const result = await createWatchlistAlert('acc-1', 'basic', 'aapl', 200, 'above', 0, 0)
 
     expect(insert).toHaveBeenCalledWith(
       expect.objectContaining({ target_price: 200, direction: 'above' }),
     )
     expect(result.targetPrice).toBe(200)
+  })
+
+  it('זורקת כשהוגעה מגבלת הסימבולים הפעילים של הדרגה', async () => {
+    await expect(createWatchlistAlert('acc-1', 'demo', 'aapl', undefined, undefined, 2, 0)).rejects.toThrow(
+      'Watchlist limit of 2 active symbols reached',
+    )
+  })
+
+  it('זורקת כשהוגעה מגבלת ההתראות של הדרגה, גם אם עדיין יש מקום לסימבולים', async () => {
+    await expect(createWatchlistAlert('acc-1', 'demo', 'aapl', 200, 'above', 0, 0)).rejects.toThrow(
+      'Watchlist alert limit of 0 reached',
+    )
   })
 })
 
@@ -134,7 +135,7 @@ describe('setWatchlistAlert', () => {
     const { getSupabase } = await import('./supabase')
     vi.mocked(getSupabase).mockReturnValue({ from } as unknown as ReturnType<typeof getSupabase>)
 
-    await setWatchlistAlert('id-1', 150, 'below')
+    await setWatchlistAlert('id-1', 'basic', 150, 'below', 0)
 
     expect(from).toHaveBeenCalledWith('watchlist')
     expect(update).toHaveBeenCalledWith({ target_price: 150, direction: 'below' })
@@ -147,7 +148,11 @@ describe('setWatchlistAlert', () => {
     const { getSupabase } = await import('./supabase')
     vi.mocked(getSupabase).mockReturnValue({ from } as unknown as ReturnType<typeof getSupabase>)
 
-    await expect(setWatchlistAlert('id-1', 150, 'below')).rejects.toThrow('boom')
+    await expect(setWatchlistAlert('id-1', 'basic', 150, 'below', 0)).rejects.toThrow('boom')
+  })
+
+  it('זורקת כשהוגעה מגבלת ההתראות של הדרגה, לפני קריאה לשרת', async () => {
+    await expect(setWatchlistAlert('id-1', 'demo', 150, 'below', 0)).rejects.toThrow('Watchlist alert limit of 0 reached')
   })
 })
 

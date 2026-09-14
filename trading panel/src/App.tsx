@@ -396,7 +396,9 @@ function App() {
               initialTrade={editingTrade}
               fieldSettings={workspace.fieldSettings}
               accountId={accountId}
+              tier={tier}
               chartImageCount={chartImageCount}
+              onOpenAccessCode={() => openAccessModal(t('tradeForm.modalHint'))}
               onSave={handleSave}
               onCancel={closeForm}
             />
@@ -427,7 +429,12 @@ function App() {
               onSelectSetup={(setup) => goToFilteredTrades({ type: 'setup', value: setup })}
             />
           ) : tab === 'tools' ? (
-            <Tools accountId={accountId} focusWatchlistSignal={focusWatchlistSignal} />
+            <Tools
+              accountId={accountId}
+              tier={tier}
+              focusWatchlistSignal={focusWatchlistSignal}
+              onOpenAccessCode={() => openAccessModal(t('tools.watchlist.modalHint'))}
+            />
           ) : tab === 'calendar' ? (
             <MonthlyCalendar trades={trades} baseCurrency={workspace.baseCurrency} onEditTrade={openEditForm} />
           ) : (

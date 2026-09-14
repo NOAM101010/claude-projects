@@ -1,13 +1,13 @@
 import { ExternalLink } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
+import type { AccountTier } from '../lib/accountApi'
 import { calculatePnl, calculatePositionSize } from '../lib/calculators'
 import { formatCurrency, formatDateTime } from '../lib/format'
 import { LIVE_PRICE_REFRESH_MS, fetchWatchlistPrices, type WatchlistQuote } from '../lib/marketData'
+import { canAddWatchlistSymbol, canSetWatchlistAlert, getWatchlistAlertLimit, getWatchlistSymbolLimit } from '../lib/tierLimits'
 import { tradingViewUrl } from '../lib/tradingView'
 import {
-  MAX_WATCHLIST_ALERTS,
-  canAddWatchlistAlert,
   clearAlertHistory,
   createWatchlistAlert,
   deleteAlertHistoryItem,
@@ -261,8 +261,18 @@ function PnlCalculatorTool() {
  * של "Clear Trading Data" - זו כאן פעולה על היסטוריה בלבד, כבר לא הפיכה יותר משהיא. */
 const CLEAR_HISTORY_CONFIRM_TIMEOUT_MS = 4000
 
-function Watchlist({ accountId, focusSignal }: { accountId: string; focusSignal?: number }) {
+interface WatchlistProps {
+  accountId: string
+  tier: AccountTier
+  focusSignal?: number
+  /** פותח את מודל קוד הגישה (שדרוג) - מוצג כשמגיעים למגבלת סימבולים/התראות של הדרגה. */
+  onOpenAccessCode: () => void
+}
+
+function Watchlist({ accountId, tier, focusSignal, onOpenAccessCode }: WatchlistProps) {
   const { t, locale } = useLanguage()
+  const symbolLimit = getWatchlistSymbolLimit(tier)
+  const alertLimit = getWatchlistAlertLimit(tier)
   const [alerts, setAlerts] = useState<WatchlistAlert[]>([])
   const [history, setHistory] = useState<WatchlistAlert[]>([])
   const [historyLoading, setHistoryLoading] = useState(true)
@@ -286,6 +296,10 @@ function Watchlist({ accountId, focusSignal }: { accountId: string; focusSignal?
   const [setAlertSubmitting, setSetAlertSubmitting] = useState(false)
 
   const activeAlerts = alerts.filter((a) => a.active)
+  // כמה מהשורות הפעילות כבר עם התראת מחיר (target_price לא-null) - נספר בנפרד ממספר
+  // הסימבולים הפעילים, לאכיפת מגבלת ההתראות התלוית-דרגה (WATCHLIST_ALERT_LIMIT_BY_TIER).
+  const activeAlertCount = activeAlerts.filter((a) => a.targetPrice !== null).length
+  const atAlertLimit = !canSetWatchlistAlert(tier, activeAlertCount)
 
   useEffect(() => {
     let cancelled = false
@@ -358,8 +372,12 @@ function Watchlist({ accountId, focusSignal }: { accountId: string; focusSignal?
     // (target_price/direction = null, ראה 014_watchlist_optional_alert.sql).
     const price = parseField(targetPrice)
     if (!trimmedSymbol) return
-    if (!canAddWatchlistAlert(activeAlerts.length)) {
-      setError(t('tools.watchlist.limitReached', { max: MAX_WATCHLIST_ALERTS }))
+    if (!canAddWatchlistSymbol(tier, activeAlerts.length)) {
+      setError(t('tools.watchlist.limitReached', { max: symbolLimit }))
+      return
+    }
+    if (price !== undefined && atAlertLimit) {
+      setError(alertLimit === 0 ? t('tools.watchlist.alertsRequireUpgrade') : t('tools.watchlist.alertLimitReached', { max: alertLimit }))
       return
     }
 
@@ -367,10 +385,12 @@ function Watchlist({ accountId, focusSignal }: { accountId: string; focusSignal?
     try {
       const created = await createWatchlistAlert(
         accountId,
+        tier,
         trimmedSymbol,
         price !== undefined ? price : undefined,
         price !== undefined ? direction : undefined,
         activeAlerts.length,
+        activeAlertCount,
       )
       setAlerts((prev) => [created, ...prev])
       setSymbol('')
@@ -386,9 +406,13 @@ function Watchlist({ accountId, focusSignal }: { accountId: string; focusSignal?
     setError(null)
     const price = parseField(setAlertPrice)
     if (price === undefined) return
+    if (atAlertLimit) {
+      setError(alertLimit === 0 ? t('tools.watchlist.alertsRequireUpgrade') : t('tools.watchlist.alertLimitReached', { max: alertLimit }))
+      return
+    }
     setSetAlertSubmitting(true)
     try {
-      await setWatchlistAlert(id, price, setAlertDirection)
+      await setWatchlistAlert(id, tier, price, setAlertDirection, activeAlertCount)
       setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, targetPrice: price, direction: setAlertDirection } : a)))
       setSettingAlertId(null)
       setSetAlertPrice('')
@@ -435,13 +459,16 @@ function Watchlist({ accountId, focusSignal }: { accountId: string; focusSignal?
     }
   }
 
-  const atLimit = !canAddWatchlistAlert(activeAlerts.length)
+  const atSymbolLimit = !canAddWatchlistSymbol(tier, activeAlerts.length)
+  // שדות היעד/כיוון נחסמים גם כשעדיין יש מקום לסימבול נוסף אבל אין יותר מקום להתראות -
+  // כדי לא לתת למשתמש למלא אותם ואז להיתקל בדחייה רק בשליחה.
+  const alertFieldsDisabled = atSymbolLimit || atAlertLimit
 
   return (
     <div className={styles.watchlistWrapper}>
       <div className={`${styles.card} metal-panel holo-edge`}>
         <h2>{t('tools.watchlistTab')}</h2>
-        <p className={styles.hint}>{t('tools.watchlist.hint', { max: MAX_WATCHLIST_ALERTS })}</p>
+        <p className={styles.hint}>{t('tools.watchlist.hint', { max: symbolLimit })}</p>
 
         <form onSubmit={handleAdd} className={styles.row}>
           <div className={styles.field}>
@@ -454,7 +481,7 @@ function Watchlist({ accountId, focusSignal }: { accountId: string; focusSignal?
               onChange={(e) => setSymbol(e.target.value.toUpperCase())}
               placeholder="AAPL"
               maxLength={10}
-              disabled={atLimit}
+              disabled={atSymbolLimit}
             />
           </div>
           <div className={styles.field}>
@@ -464,7 +491,7 @@ function Watchlist({ accountId, focusSignal }: { accountId: string; focusSignal?
               type="number"
               value={targetPrice}
               onChange={(e) => setTargetPrice(e.target.value)}
-              disabled={atLimit}
+              disabled={alertFieldsDisabled}
             />
           </div>
           <div className={styles.field}>
@@ -475,7 +502,7 @@ function Watchlist({ accountId, focusSignal }: { accountId: string; focusSignal?
                 data-dir="long"
                 data-active={direction === 'above'}
                 onClick={() => setDirection('above')}
-                disabled={atLimit}
+                disabled={alertFieldsDisabled}
               >
                 {t('tools.watchlist.directionAbove')}
               </button>
@@ -484,19 +511,35 @@ function Watchlist({ accountId, focusSignal }: { accountId: string; focusSignal?
                 data-dir="short"
                 data-active={direction === 'below'}
                 onClick={() => setDirection('below')}
-                disabled={atLimit}
+                disabled={alertFieldsDisabled}
               >
                 {t('tools.watchlist.directionBelow')}
               </button>
             </div>
           </div>
           <div className={styles.watchlistAddRow}>
-            <button type="submit" className={`${styles.watchlistAddButton} btn-metal`} disabled={atLimit || submitting || !symbol.trim()}>
+            <button
+              type="submit"
+              className={`${styles.watchlistAddButton} btn-metal`}
+              disabled={atSymbolLimit || submitting || !symbol.trim()}
+            >
               {submitting ? t('tools.watchlist.adding') : t('tools.watchlist.addButton')}
             </button>
-            <span className={styles.hint}>{t('tools.watchlist.countLabel', { count: activeAlerts.length, max: MAX_WATCHLIST_ALERTS })}</span>
+            <span className={styles.hint}>{t('tools.watchlist.countLabel', { count: activeAlerts.length, max: symbolLimit })}</span>
+            {alertLimit > 0 && (
+              <span className={styles.hint}>{t('tools.watchlist.alertCountLabel', { count: activeAlertCount, max: alertLimit })}</span>
+            )}
           </div>
         </form>
+
+        {atAlertLimit && (
+          <p className={styles.upgradeHint}>
+            {alertLimit === 0 ? t('tools.watchlist.alertsRequireUpgrade') : t('tools.watchlist.alertLimitReached', { max: alertLimit })}{' '}
+            <button type="button" onClick={onOpenAccessCode}>
+              {t('access.enterCode')}
+            </button>
+          </p>
+        )}
 
         {error && <p className={styles.watchlistError}>{error}</p>}
       </div>
@@ -575,41 +618,54 @@ function Watchlist({ accountId, focusSignal }: { accountId: string; focusSignal?
                   </button>
                   {settingAlertId === alert.id && (
                     <div className={styles.watchlistSetAlertForm}>
-                      <div className={styles.field}>
-                        <label htmlFor={`wl-set-target-${alert.id}`}>{t('tools.watchlist.targetPriceLabel')}</label>
-                        <input
-                          id={`wl-set-target-${alert.id}`}
-                          type="number"
-                          value={setAlertPrice}
-                          onChange={(e) => setSetAlertPrice(e.target.value)}
-                        />
-                      </div>
-                      <div className={styles.directionToggle}>
-                        <button
-                          type="button"
-                          data-dir="long"
-                          data-active={setAlertDirection === 'above'}
-                          onClick={() => setSetAlertDirection('above')}
-                        >
-                          {t('tools.watchlist.directionAbove')}
-                        </button>
-                        <button
-                          type="button"
-                          data-dir="short"
-                          data-active={setAlertDirection === 'below'}
-                          onClick={() => setSetAlertDirection('below')}
-                        >
-                          {t('tools.watchlist.directionBelow')}
-                        </button>
-                      </div>
-                      <button
-                        type="button"
-                        className={`${styles.watchlistAddButton} btn-metal`}
-                        disabled={setAlertSubmitting || parseField(setAlertPrice) === undefined}
-                        onClick={() => handleSetAlert(alert.id)}
-                      >
-                        {setAlertSubmitting ? t('tools.watchlist.adding') : t('tools.watchlist.setAlertButton')}
-                      </button>
+                      {atAlertLimit ? (
+                        <p className={styles.upgradeHint}>
+                          {alertLimit === 0
+                            ? t('tools.watchlist.alertsRequireUpgrade')
+                            : t('tools.watchlist.alertLimitReached', { max: alertLimit })}{' '}
+                          <button type="button" onClick={onOpenAccessCode}>
+                            {t('access.enterCode')}
+                          </button>
+                        </p>
+                      ) : (
+                        <>
+                          <div className={styles.field}>
+                            <label htmlFor={`wl-set-target-${alert.id}`}>{t('tools.watchlist.targetPriceLabel')}</label>
+                            <input
+                              id={`wl-set-target-${alert.id}`}
+                              type="number"
+                              value={setAlertPrice}
+                              onChange={(e) => setSetAlertPrice(e.target.value)}
+                            />
+                          </div>
+                          <div className={styles.directionToggle}>
+                            <button
+                              type="button"
+                              data-dir="long"
+                              data-active={setAlertDirection === 'above'}
+                              onClick={() => setSetAlertDirection('above')}
+                            >
+                              {t('tools.watchlist.directionAbove')}
+                            </button>
+                            <button
+                              type="button"
+                              data-dir="short"
+                              data-active={setAlertDirection === 'below'}
+                              onClick={() => setSetAlertDirection('below')}
+                            >
+                              {t('tools.watchlist.directionBelow')}
+                            </button>
+                          </div>
+                          <button
+                            type="button"
+                            className={`${styles.watchlistAddButton} btn-metal`}
+                            disabled={setAlertSubmitting || parseField(setAlertPrice) === undefined}
+                            onClick={() => handleSetAlert(alert.id)}
+                          >
+                            {setAlertSubmitting ? t('tools.watchlist.adding') : t('tools.watchlist.setAlertButton')}
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
                 </li>
@@ -680,7 +736,15 @@ function Watchlist({ accountId, focusSignal }: { accountId: string; focusSignal?
  * המחשבונים מחשבים חי תוך כדי הקלדה בלי קריאות רשת; ה-Watchlist היחיד שקורא לשרת
  * (רשימת ההתראות + מחירים חיים כל 2 דקות, ראה Watchlist למעלה).
  */
-export function Tools({ accountId, focusWatchlistSignal }: { accountId: string; focusWatchlistSignal?: number }) {
+interface ToolsProps {
+  accountId: string
+  tier: AccountTier
+  focusWatchlistSignal?: number
+  /** פותח את מודל קוד הגישה (שדרוג) - מועבר עד ה-Watchlist, מוצג כשמגיעים למגבלת סימבולים/התראות של הדרגה. */
+  onOpenAccessCode: () => void
+}
+
+export function Tools({ accountId, tier, focusWatchlistSignal, onOpenAccessCode }: ToolsProps) {
   const { t } = useLanguage()
   const [tab, setTab] = useState<ToolsTab>('positionSize')
 
@@ -706,7 +770,9 @@ export function Tools({ accountId, focusWatchlistSignal }: { accountId: string; 
 
       {tab === 'positionSize' && <PositionSizeCalculator />}
       {tab === 'pnl' && <PnlCalculatorTool />}
-      {tab === 'watchlist' && <Watchlist accountId={accountId} focusSignal={focusWatchlistSignal} />}
+      {tab === 'watchlist' && (
+        <Watchlist accountId={accountId} tier={tier} focusSignal={focusWatchlistSignal} onOpenAccessCode={onOpenAccessCode} />
+      )}
     </div>
   )
 }

@@ -3,19 +3,6 @@ import { getSupabase } from './supabase'
 /** שם ה-bucket ב-Supabase Storage (לא public, ראה supabase/006_chart_images_storage.sql). */
 export const CHART_IMAGES_BUCKET = 'chart-images'
 
-/** מגבלה קשיחה לכל workspace, לפי trading-journal-plan.md ("תמונת גרף (upload)"). */
-export const CHART_IMAGE_LIMIT = 50
-
-/**
- * האם מותר להעלות תמונת גרף נוספת ל-workspace. אם לטרייד הנוכחי (עריכה) כבר יש
- * תמונה משלו - החלפתה לא נספרת כתמונה "נוספת", ולכן מותרת גם מעל המגבלה. פונקציה
- * טהורה - מכוסה ישירות ב-Vitest.
- */
-export function canUploadChartImage(currentImageCount: number, hasImageOnThisTradeAlready: boolean): boolean {
-  if (hasImageOnThisTradeAlready) return true
-  return currentImageCount < CHART_IMAGE_LIMIT
-}
-
 /** בונה את נתיב הקובץ ב-bucket: תיקיית-שורש = account_id (כפי ש-RLS על storage.objects דורש), שם קובץ ייחודי. */
 export function buildChartImagePath(accountId: string, fileId: string): string {
   return `${accountId}/${fileId}.jpg`
@@ -51,7 +38,8 @@ export async function deleteChartImage(path: string): Promise<void> {
   if (error) throw error
 }
 
-/** סופר כמה טריידים ב-workspace כבר כוללים תמונת גרף, לאכיפת מגבלת `CHART_IMAGE_LIMIT`. */
+/** סופר כמה טריידים ב-workspace כבר כוללים תמונת גרף, לאכיפת המגבלה התלויית-דרגה
+ * (`CHART_IMAGE_LIMIT_BY_TIER`/`canUploadChartImage` ב-tierLimits.ts). */
 export async function countWorkspaceChartImages(workspaceId: string): Promise<number> {
   const supabase = getSupabase()
   const { count, error } = await supabase

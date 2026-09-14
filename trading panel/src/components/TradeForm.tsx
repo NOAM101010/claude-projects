@@ -8,7 +8,9 @@ import { CURRENCIES, SETUPS } from '../types/trade'
 import type { CurrencyCode, Direction, Trade } from '../types/trade'
 import { DEFAULT_FIELD_SETTINGS } from '../lib/workspacesApi'
 import type { FieldSettings } from '../lib/workspacesApi'
-import { canUploadChartImage, deleteChartImage, getChartImageUrl, uploadChartImage } from '../lib/chartImagesApi'
+import type { AccountTier } from '../lib/accountApi'
+import { deleteChartImage, getChartImageUrl, uploadChartImage } from '../lib/chartImagesApi'
+import { canUploadChartImage, getChartImageLimit } from '../lib/tierLimits'
 import { compressImage } from '../lib/imageCompression'
 import { SetupPicker } from './SetupPicker'
 import styles from './TradeForm.module.css'
@@ -20,8 +22,12 @@ interface TradeFormProps {
   fieldSettings?: FieldSettings
   /** נדרש להעלאת תמונת גרף (נתיב הקובץ ב-Storage מתחיל ב-accountId/). */
   accountId: string
-  /** כמה טריידים ב-workspace הנוכחי כבר כוללים תמונת גרף - לאכיפת מגבלת 50 (`canUploadChartImage`). */
+  /** קובעת את מגבלת תמונות הגרף בפועל (`getChartImageLimit`/`canUploadChartImage` ב-tierLimits.ts). */
+  tier: AccountTier
+  /** כמה טריידים ב-workspace הנוכחי כבר כוללים תמונת גרף - לאכיפת המגבלה התלוית-דרגה. */
   chartImageCount: number
+  /** פותח את מודל קוד הגישה (שדרוג) - מוצג כשמגיעים למגבלת תמונות הגרף של הדרגה. */
+  onOpenAccessCode: () => void
   onSave: (trade: Trade) => void | Promise<void>
   onCancel: () => void
 }
@@ -89,7 +95,9 @@ export function TradeForm({
   initialTrade,
   fieldSettings = DEFAULT_FIELD_SETTINGS,
   accountId,
+  tier,
   chartImageCount,
+  onOpenAccessCode,
   onSave,
   onCancel,
 }: TradeFormProps) {
@@ -98,6 +106,10 @@ export function TradeForm({
   const [form, setForm] = useState<FormState>(() => toFormState(initialTrade, dateOnly))
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const chartImageLimit = getChartImageLimit(tier)
+  // true כשההעלאה נחסמה ספציפית בגלל מגבלת הדרגה (להבדיל משגיאה כללית כמו preview
+  // שנכשל) - מוצג עם כפתור שדרוג, לא רק טקסט שגיאה סתמי.
+  const [imageLimitReached, setImageLimitReached] = useState(false)
 
   // תמונת גרף: הנתיב הקיים (אם עריכה), קובץ חדש שנבחר (טרם הועלה), preview לתצוגה, וסימון הסרה.
   const existingImagePath = initialTrade?.chartImageUrl ?? null
@@ -140,10 +152,11 @@ export function TradeForm({
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null
     setImageError(null)
+    setImageLimitReached(false)
     if (!file) return
     const hasImageOnThisTradeAlready = Boolean(existingImagePath) && !removeExistingImage
-    if (!canUploadChartImage(chartImageCount, hasImageOnThisTradeAlready)) {
-      setImageError(t('tradeForm.errorImageLimit'))
+    if (!canUploadChartImage(tier, chartImageCount, hasImageOnThisTradeAlready)) {
+      setImageLimitReached(true)
       e.target.value = ''
       return
     }
@@ -156,6 +169,7 @@ export function TradeForm({
     setPreviewUrl(null)
     setRemoveExistingImage(true)
     setImageError(null)
+    setImageLimitReached(false)
   }
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => {
@@ -174,6 +188,7 @@ export function TradeForm({
     e.preventDefault()
     setError(null)
     setImageError(null)
+    setImageLimitReached(false)
 
     if (!form.symbol.trim()) {
       setError(t('tradeForm.errorSymbolRequired'))
@@ -212,8 +227,8 @@ export function TradeForm({
 
       if (newImageFile) {
         const hasImageOnThisTradeAlready = Boolean(existingImagePath)
-        if (!canUploadChartImage(chartImageCount, hasImageOnThisTradeAlready)) {
-          setImageError(t('tradeForm.errorImageLimit'))
+        if (!canUploadChartImage(tier, chartImageCount, hasImageOnThisTradeAlready)) {
+          setImageLimitReached(true)
           setSaving(false)
           return
         }
@@ -459,6 +474,16 @@ export function TradeForm({
               {t('tradeForm.removeImage')}
             </button>
           </div>
+        )}
+        {imageLimitReached && (
+          <p className={styles.upgradeHint}>
+            {t('tradeForm.errorImageLimit', { limit: chartImageLimit })}{' '}
+            {tier !== 'pro' && (
+              <button type="button" onClick={onOpenAccessCode}>
+                {t('access.enterCode')}
+              </button>
+            )}
+          </p>
         )}
         {imageError && <p className={styles.error}>{imageError}</p>}
       </div>

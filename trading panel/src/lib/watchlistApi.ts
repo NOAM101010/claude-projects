@@ -1,3 +1,5 @@
+import type { AccountTier } from './accountApi'
+import { canAddWatchlistSymbol, canSetWatchlistAlert, getWatchlistAlertLimit, getWatchlistSymbolLimit } from './tierLimits'
 import { getSupabase } from './supabase'
 
 export type WatchlistDirection = 'above' | 'below'
@@ -24,10 +26,6 @@ interface WatchlistRow {
   created_at: string
 }
 
-/** מגבלת 15 סימבולים פעילים לחשבון - נאכפת גם בשרת (טריגר ב-010_watchlist.sql), זו
- * רק בדיקה בצד קליינט לפידבק מיידי בלי לחכות לתשובת שרת עם שגיאה. */
-export const MAX_WATCHLIST_ALERTS = 15
-
 function fromRow(row: WatchlistRow): WatchlistAlert {
   return {
     id: row.id,
@@ -53,23 +51,25 @@ export async function listWatchlistAlerts(accountId: string): Promise<WatchlistA
   return (data as WatchlistRow[]).map(fromRow)
 }
 
-/** לוגיקה טהורה לאכיפת המגבלה בצד קליינט - סופרת רק שורות פעילות, תואם לטריגר בשרת. */
-export function canAddWatchlistAlert(currentActiveCount: number): boolean {
-  return currentActiveCount < MAX_WATCHLIST_ALERTS
-}
-
 /** מוסיף סימבול למעקב, עם יעד מחיר+כיוון אופציונליים (אם לא הועברו - שורת "מעקב
- * בלבד" בלי התראה, ראה 014_watchlist_optional_alert.sql). זורק אם הוגעה המגבלה
- * (גם השרת יזרוק - זו רק בדיקה מקדימה לפידבק ברור ומיידי, בלי תלות בפורמט שגיאת ה-DB). */
+ * בלבד" בלי התראה, ראה 014_watchlist_optional_alert.sql). זורק אם הוגעה מגבלת הסימבולים
+ * הפעילים של הדרגה, או (כשמועבר יעד+כיוון) מגבלת ההתראות של הדרגה - שתיהן תלויות-דרגה
+ * (tierLimits.ts). גם השרת יזרוק (018_tier_based_limits.sql) - זו רק בדיקה מקדימה
+ * לפידבק ברור ומיידי, בלי תלות בפורמט שגיאת ה-DB. */
 export async function createWatchlistAlert(
   accountId: string,
+  tier: AccountTier,
   symbol: string,
   targetPrice: number | undefined,
   direction: WatchlistDirection | undefined,
   currentActiveCount: number,
+  currentAlertCount: number,
 ): Promise<WatchlistAlert> {
-  if (!canAddWatchlistAlert(currentActiveCount)) {
-    throw new Error(`Watchlist limit of ${MAX_WATCHLIST_ALERTS} active symbols reached`)
+  if (!canAddWatchlistSymbol(tier, currentActiveCount)) {
+    throw new Error(`Watchlist limit of ${getWatchlistSymbolLimit(tier)} active symbols reached`)
+  }
+  if (targetPrice !== undefined && !canSetWatchlistAlert(tier, currentAlertCount)) {
+    throw new Error(`Watchlist alert limit of ${getWatchlistAlertLimit(tier)} reached`)
   }
   const supabase = getSupabase()
   const { data, error } = await supabase
@@ -87,8 +87,19 @@ export async function createWatchlistAlert(
 }
 
 /** מוסיפה/מעדכנת יעד מחיר+כיוון על שורת watchlist קיימת - הזרימה "הוסף התראה
- * לסימבול שכבר במעקב", בנפרד מיצירת השורה עצמה (createWatchlistAlert). */
-export async function setWatchlistAlert(id: string, targetPrice: number, direction: WatchlistDirection): Promise<void> {
+ * לסימבול שכבר במעקב", בנפרד מיצירת השורה עצמה (createWatchlistAlert). זורק אם הוספת
+ * ההתראה הזו תחרוג ממגבלת ההתראות התלוית-דרגה (currentAlertCount = כמה שורות אחרות
+ * כבר עם target_price לא-null, לפני זו). */
+export async function setWatchlistAlert(
+  id: string,
+  tier: AccountTier,
+  targetPrice: number,
+  direction: WatchlistDirection,
+  currentAlertCount: number,
+): Promise<void> {
+  if (!canSetWatchlistAlert(tier, currentAlertCount)) {
+    throw new Error(`Watchlist alert limit of ${getWatchlistAlertLimit(tier)} reached`)
+  }
   const supabase = getSupabase()
   const { error } = await supabase.from('watchlist').update({ target_price: targetPrice, direction }).eq('id', id)
   if (error) throw error
