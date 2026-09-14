@@ -189,6 +189,9 @@ export async function fetchFearGreedIndex(): Promise<FearGreedIndex | null> {
   }
 }
 
+/** קצב רענון מחירים חי (Watchlist + Open Positions) - תואם ל-TTL של 2 הדקות ב-_shared/finnhubCache.ts, אין טעם לבקש יותר לעיתים קרובות. */
+export const LIVE_PRICE_REFRESH_MS = 120_000
+
 export interface WatchlistQuote {
   price: number
   changePercent: number
@@ -206,6 +209,30 @@ interface WatchlistPricesResponse {
 export async function fetchWatchlistPrices(): Promise<Record<string, WatchlistQuote | null>> {
   try {
     const { data, error } = await getSupabase().functions.invoke<WatchlistPricesResponse>('watchlist-prices')
+    if (error || !data) return {}
+    return data.quotes ?? {}
+  } catch {
+    return {}
+  }
+}
+
+/** אותה צורה בדיוק כמו WatchlistQuote - שם נפרד רק לבהירות סמנטית בצד הקורא (Open Positions). */
+export type OpenPositionQuote = WatchlistQuote
+
+interface OpenPositionPricesResponse {
+  quotes: Record<string, OpenPositionQuote | null>
+}
+
+/**
+ * שולפת מחירים חיים לסימבולים של הטריידים הפתוחים של החשבון המחובר, דרך
+ * `open-positions-prices` (הפונקציה שולפת את רשימת הסימבולים בעצמה מה-DB מתוך trades
+ * שבהם exit_at is null - לא נשלחת מכאן, ראה index.ts שם). לא זורקת: כשל מחזיר מפה
+ * ריקה כדי שהקורא (OpenPositions.tsx) יציג "לא זמין" בעדינות לכל סימבול בנפרד, בדיוק
+ * כמו fetchWatchlistPrices.
+ */
+export async function fetchOpenPositionPrices(): Promise<Record<string, OpenPositionQuote | null>> {
+  try {
+    const { data, error } = await getSupabase().functions.invoke<OpenPositionPricesResponse>('open-positions-prices')
     if (error || !data) return {}
     return data.quotes ?? {}
   } catch {

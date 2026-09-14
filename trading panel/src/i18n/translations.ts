@@ -26,12 +26,15 @@ const en = {
   'common.yesContinue': 'Yes, continue',
   'common.optional': '(optional)',
   'common.share': 'Share',
+  'common.long': 'Long',
+  'common.short': 'Short',
 
   // nav
   'nav.home': 'Home',
   'nav.journal': 'Journal',
   'nav.trades': 'Trades',
   'nav.dashboard': 'Dashboard',
+  'nav.openPositions': 'Positions',
   'nav.tools': 'Tools',
   'nav.calendar': 'Calendar',
   'nav.settings': 'Settings',
@@ -502,6 +505,21 @@ const en = {
   // Theme switcher
   'theme.switchToLight': 'Switch to light theme',
   'theme.switchToDark': 'Switch to dark theme',
+
+  // Open Positions board (Journal sub-tab)
+  'openPositions.emptyTitle': 'No open positions right now',
+  'openPositions.emptyHint': 'Trades without an exit yet will show up here with a live price and P&L.',
+  'openPositions.countLabel': 'Open positions',
+  'openPositions.totalPnlLabel': 'Total open P&L',
+  'openPositions.pending': 'Awaiting quotes...',
+  'openPositions.entryLabel': 'Entry',
+  'openPositions.currentLabel': 'Current',
+  'openPositions.awaitingQuote': 'Awaiting quote...',
+  'openPositions.stopLoss': 'SL',
+  'openPositions.takeProfit': 'TP',
+  'openPositions.timeInTrade': 'Time in trade',
+  'openPositions.rMultiple': 'Live R-multiple (unrealized P&L vs. initial risk)',
+  'openPositions.todayChange': 'Today:',
 } as const
 
 export type TranslationKey = keyof typeof en
@@ -527,11 +545,14 @@ const he: Record<TranslationKey, string> = {
   'common.yesContinue': 'כן, המשך',
   'common.optional': '(אופציונלי)',
   'common.share': 'שיתוף',
+  'common.long': 'לונג',
+  'common.short': 'שורט',
 
   'nav.home': 'בית',
   'nav.journal': 'יומן',
   'nav.trades': 'טריידים',
   'nav.dashboard': 'דשבורד',
+  'nav.openPositions': 'פוזיציות',
   'nav.tools': 'כלים',
   'nav.calendar': 'לוח שנה',
   'nav.settings': 'הגדרות',
@@ -976,6 +997,20 @@ const he: Record<TranslationKey, string> = {
 
   'theme.switchToLight': 'החלף לערכת נושא בהירה',
   'theme.switchToDark': 'החלף לערכת נושא כהה',
+
+  'openPositions.emptyTitle': 'אין כרגע פוזיציות פתוחות',
+  'openPositions.emptyHint': 'טריידים בלי יציאה עדיין יופיעו כאן עם מחיר חי ו-P&L.',
+  'openPositions.countLabel': 'פוזיציות פתוחות',
+  'openPositions.totalPnlLabel': 'סה"כ P&L פתוח',
+  'openPositions.pending': 'ממתין למחירים...',
+  'openPositions.entryLabel': 'כניסה',
+  'openPositions.currentLabel': 'נוכחי',
+  'openPositions.awaitingQuote': 'ממתין למחיר...',
+  'openPositions.stopLoss': 'סטופ',
+  'openPositions.takeProfit': 'יעד',
+  'openPositions.timeInTrade': 'זמן בפוזיציה',
+  'openPositions.rMultiple': 'מכפיל R חי (רווח/הפסד לא ממומש מול הסיכון ההתחלתי)',
+  'openPositions.todayChange': 'היום:',
 }
 
 const es: Record<TranslationKey, string> = {
@@ -999,11 +1034,14 @@ const es: Record<TranslationKey, string> = {
   'common.yesContinue': 'Sí, continuar',
   'common.optional': '(opcional)',
   'common.share': 'Compartir',
+  'common.long': 'Largo',
+  'common.short': 'Corto',
 
   'nav.home': 'Inicio',
   'nav.journal': 'Diario',
   'nav.trades': 'Operaciones',
   'nav.dashboard': 'Panel',
+  'nav.openPositions': 'Posiciones',
   'nav.tools': 'Herramientas',
   'nav.calendar': 'Calendario',
   'nav.settings': 'Ajustes',
@@ -1451,6 +1489,20 @@ const es: Record<TranslationKey, string> = {
 
   'theme.switchToLight': 'Cambiar a tema claro',
   'theme.switchToDark': 'Cambiar a tema oscuro',
+
+  'openPositions.emptyTitle': 'No hay posiciones abiertas por ahora',
+  'openPositions.emptyHint': 'Las operaciones sin salida aparecerán aquí con precio en vivo y P&L.',
+  'openPositions.countLabel': 'Posiciones abiertas',
+  'openPositions.totalPnlLabel': 'P&L abierto total',
+  'openPositions.pending': 'Esperando precios...',
+  'openPositions.entryLabel': 'Entrada',
+  'openPositions.currentLabel': 'Actual',
+  'openPositions.awaitingQuote': 'Esperando precio...',
+  'openPositions.stopLoss': 'SL',
+  'openPositions.takeProfit': 'TP',
+  'openPositions.timeInTrade': 'Tiempo en la operación',
+  'openPositions.rMultiple': 'Múltiplo R en vivo (P&L no realizado vs. riesgo inicial)',
+  'openPositions.todayChange': 'Hoy:',
 }
 
 const fr: Record<TranslationKey, string> = {
@@ -1474,11 +1526,14 @@ const fr: Record<TranslationKey, string> = {
   'common.yesContinue': 'Oui, continuer',
   'common.optional': '(optionnel)',
   'common.share': 'Partager',
+  'common.long': 'Long',
+  'common.short': 'Short',
 
   'nav.home': 'Accueil',
   'nav.journal': 'Journal',
   'nav.trades': 'Trades',
   'nav.dashboard': 'Tableau de bord',
+  'nav.openPositions': 'Positions',
   'nav.tools': 'Outils',
   'nav.calendar': 'Calendrier',
   'nav.settings': 'Paramètres',
@@ -1932,6 +1987,20 @@ const fr: Record<TranslationKey, string> = {
 
   'theme.switchToLight': 'Passer au thème clair',
   'theme.switchToDark': 'Passer au thème sombre',
+
+  'openPositions.emptyTitle': 'Aucune position ouverte pour le moment',
+  'openPositions.emptyHint': 'Les trades sans sortie apparaîtront ici avec un prix en direct et le P&L.',
+  'openPositions.countLabel': 'Positions ouvertes',
+  'openPositions.totalPnlLabel': 'P&L ouvert total',
+  'openPositions.pending': 'En attente des prix...',
+  'openPositions.entryLabel': 'Entrée',
+  'openPositions.currentLabel': 'Actuel',
+  'openPositions.awaitingQuote': 'En attente du prix...',
+  'openPositions.stopLoss': 'SL',
+  'openPositions.takeProfit': 'TP',
+  'openPositions.timeInTrade': 'Temps en position',
+  'openPositions.rMultiple': 'Multiple R en direct (P&L latent vs. risque initial)',
+  'openPositions.todayChange': "Aujourd'hui :",
 }
 
 export type Language = 'en' | 'he' | 'es' | 'fr'

@@ -1,11 +1,12 @@
 import { useLanguage } from '../i18n/LanguageContext'
 import { Dashboard } from './Dashboard'
+import { OpenPositions } from './OpenPositions'
 import { TradeList } from './TradeList'
 import type { TradeFilter } from '../App'
 import type { CurrencyCode, Trade } from '../types/trade'
 import styles from './Journal.module.css'
 
-export type JournalSubTab = 'trades' | 'dashboard'
+export type JournalSubTab = 'trades' | 'dashboard' | 'openPositions'
 
 interface JournalProps {
   trades: Trade[]
@@ -22,10 +23,10 @@ interface JournalProps {
 }
 
 /**
- * מסך "Journal": sub-nav פנימי בין Trades/Dashboard (אותו דפוס segmented control כמו
- * `Tools.tsx`). מקפל את `TradeList`/`Dashboard` הקיימים - הזרימה של לחיצה על שורת
- * סימבול/setup ב-Dashboard שמסננת את Trades (`goToFilteredTrades` ב-`App.tsx`) לא השתנתה,
- * רק ה-subTab עצמו מנוהל כאן ולא כ-tab עליון נפרד.
+ * מסך "Journal": sub-nav פנימי בין Trades/Dashboard/Open Positions (אותו דפוס segmented
+ * control כמו `Tools.tsx`). מקפל את `TradeList`/`Dashboard`/`OpenPositions` - הזרימה של
+ * לחיצה על שורת סימבול/setup ב-Dashboard שמסננת את Trades (`goToFilteredTrades` ב-`App.tsx`)
+ * לא השתנתה, רק ה-subTab עצמו מנוהל כאן ולא כ-tab עליון נפרד.
  */
 export function Journal({
   trades,
@@ -51,12 +52,17 @@ export function Journal({
         <button type="button" data-active={subTab === 'dashboard'} onClick={() => onSubTabChange('dashboard')}>
           {t('nav.dashboard')}
         </button>
+        <button type="button" data-active={subTab === 'openPositions'} onClick={() => onSubTabChange('openPositions')}>
+          {t('nav.openPositions')}
+        </button>
       </div>
 
       {subTab === 'trades' ? (
         <TradeList trades={trades} filter={filter} onClearFilter={onClearFilter} onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} />
-      ) : (
+      ) : subTab === 'dashboard' ? (
         <Dashboard trades={trades} baseCurrency={baseCurrency} onSelectSymbol={onSelectSymbol} onSelectSetup={onSelectSetup} />
+      ) : (
+        <OpenPositions trades={trades} baseCurrency={baseCurrency} />
       )}
     </div>
   )

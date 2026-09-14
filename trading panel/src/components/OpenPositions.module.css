@@ -1,0 +1,372 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 900px;
+  width: calc(100% - 40px);
+  margin: 0 auto 24px;
+}
+
+@media (min-width: 1024px) {
+  .wrapper {
+    max-width: 1400px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .wrapper {
+    max-width: 1880px;
+  }
+}
+
+/* ==== overview strip: 2 numbers, not more ==== */
+.overview {
+  display: flex;
+  align-items: center;
+  padding: 18px 24px;
+  gap: 24px;
+}
+
+.overviewStat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.overviewDivider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--border);
+}
+
+.overviewLabel {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.overviewValue {
+  font-size: 26px;
+  font-weight: 800;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.overviewValue.positive {
+  color: var(--pnl-pos-2);
+}
+
+.overviewValue.negative {
+  color: var(--pnl-neg-2);
+}
+
+/* ==== grid of trade cards ==== */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 720px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.card {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: box-shadow 0.35s ease, border-color 0.35s ease;
+}
+
+.card[data-sign='up'] {
+  box-shadow: inset 0 1px 0 var(--metal-hi), var(--shadow), 0 0 0 1px rgba(34, 197, 94, 0.18);
+}
+
+.card[data-sign='down'] {
+  box-shadow: inset 0 1px 0 var(--metal-hi), var(--shadow), 0 0 0 1px rgba(239, 68, 68, 0.18);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.timeInTrade {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--text-dim);
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.symbol {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--mono);
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.symbol:hover {
+  color: var(--accent-2);
+}
+
+.externalIcon {
+  opacity: 0.55;
+}
+
+.badgeLong,
+.badgeShort {
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border: 1px solid transparent;
+  font-family: var(--mono);
+}
+
+.badgeLong {
+  background: var(--pnl-pos-bg);
+  color: var(--pnl-pos-2);
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.badgeShort {
+  background: var(--pnl-neg-bg);
+  color: var(--pnl-neg-2);
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.priceRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.priceBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.priceLabel {
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.priceBlock .num {
+  font-size: 15px;
+  font-weight: 700;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.pending {
+  color: var(--text-dim);
+  font-weight: 500;
+  font-size: 13px;
+}
+
+/* secondary figure: the SYMBOL's own daily move, distinct from this trade's P&L (.pnlRow below) */
+.todayChange {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+  opacity: 0.85;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.todayChange.positive {
+  color: var(--pnl-pos-2);
+}
+
+.todayChange.negative {
+  color: var(--pnl-neg-2);
+}
+
+.pnlRow {
+  align-self: flex-start;
+  font-size: 12.5px;
+  padding: 6px 12px;
+  gap: 8px;
+}
+
+.rMultiple {
+  font-family: var(--mono);
+  font-size: 11px;
+  opacity: 0.82;
+  padding-inline-start: 8px;
+  border-inline-start: 1px dashed currentColor;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* ==== SL/TP progress bar: entry-anchored, direction-aware (left=toward stop, right=toward target regardless of long/short) ==== */
+.slTpBar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.slTpTrack {
+  display: flex;
+  align-items: center;
+  height: 8px;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.slTpSide {
+  position: relative;
+  flex: 1;
+  height: 6px;
+  min-width: 24px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--border) 70%, transparent);
+  overflow: visible;
+}
+
+.slTpFillStop {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 4px 0 0 4px;
+  background: var(--pnl-neg-2);
+  opacity: 0.55;
+  transition: width 0.4s ease;
+}
+
+.slTpFillTarget {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  border-radius: 0 4px 4px 0;
+  background: var(--pnl-pos-2);
+  opacity: 0.55;
+  transition: width 0.4s ease;
+}
+
+.slTpMarkerStop,
+.slTpMarkerTarget {
+  position: absolute;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text);
+  box-shadow: 0 0 0 2px var(--bg);
+  transition: right 0.4s ease, left 0.4s ease;
+}
+
+.slTpMarkerStop {
+  right: 0;
+  transform: translate(50%, -50%);
+}
+
+.slTpMarkerTarget {
+  left: 0;
+  transform: translate(-50%, -50%);
+}
+
+.slTpEntryMark {
+  flex-shrink: 0;
+  width: 2px;
+  height: 14px;
+  margin: 0 3px;
+  background: var(--text-dim);
+  border-radius: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slTpFillStop,
+  .slTpFillTarget,
+  .slTpMarkerStop,
+  .slTpMarkerTarget {
+    transition: none;
+  }
+}
+
+.riskRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.riskChip {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 3px 8px;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* ==== empty state - dashed frame, same tone as TradeList's empty state ==== */
+.emptyCard {
+  text-align: center;
+  padding: 56px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.emptyIcon {
+  color: var(--accent-2);
+  opacity: 0.7;
+  margin-bottom: 4px;
+}
+
+.emptyTitle {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.emptyHint {
+  color: var(--text-dim);
+  font-size: 13px;
+  max-width: 42ch;
+}

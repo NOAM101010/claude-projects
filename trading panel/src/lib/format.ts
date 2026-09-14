@@ -18,6 +18,23 @@ export function formatDate(iso: string | null, locale?: string): string {
   return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(iso))
 }
 
+/**
+ * משך זמן קריא בין `startIso` לעכשיו ("2h 14m" / "3d 5h" / "45m") - ל-Time in Trade
+ * בפוזיציות פתוחות. שונה במתכוון מ-`avgHoldDays` ב-stats.ts (שם מספיקה גרנולריות של
+ * ימים לממוצע) - כאן פוזיציה שנפתחה לפני 20 דקות צריכה להיראות "20m", לא "0.01 days".
+ * `now` אופציונלי (ברירת מחדל `new Date()`) כדי שהפונקציה תישאר טהורה/נבדקת.
+ */
+export function formatDuration(startIso: string, now: Date = new Date()): string {
+  const totalMinutes = Math.max(0, Math.floor((now.getTime() - new Date(startIso).getTime()) / 60_000))
+  const days = Math.floor(totalMinutes / 1440)
+  const hours = Math.floor((totalMinutes % 1440) / 60)
+  const minutes = totalMinutes % 60
+
+  if (days > 0) return `${days}d ${hours}h`
+  if (hours > 0) return `${hours}h ${minutes}m`
+  return `${minutes}m`
+}
+
 export function formatCurrency(value: number, currency: CurrencyCode, locale?: string): string {
   return new Intl.NumberFormat(locale, {
     style: 'currency',

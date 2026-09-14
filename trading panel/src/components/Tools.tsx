@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
 import { calculatePnl, calculatePositionSize } from '../lib/calculators'
 import { formatCurrency } from '../lib/format'
-import { fetchWatchlistPrices, type WatchlistQuote } from '../lib/marketData'
+import { LIVE_PRICE_REFRESH_MS, fetchWatchlistPrices, type WatchlistQuote } from '../lib/marketData'
 import { tradingViewUrl } from '../lib/tradingView'
 import {
   MAX_WATCHLIST_ALERTS,
@@ -19,8 +19,6 @@ import styles from './Tools.module.css'
 type ToolsTab = 'positionSize' | 'pnl' | 'watchlist'
 type RiskMode = 'amount' | 'percent'
 type TargetMode = 'price' | 'percent'
-
-const WATCHLIST_PRICE_REFRESH_MS = 120_000
 
 /** מנתח שדה טקסט מספרי לערך; מחזיר undefined אם ריק/לא תקין, כדי שהמחשבון יתייחס אליו כ"לא סופק". */
 function parseField(value: string): number | undefined {
@@ -292,7 +290,7 @@ function Watchlist({ accountId }: { accountId: string }) {
       })
     }
     refresh()
-    const interval = setInterval(refresh, WATCHLIST_PRICE_REFRESH_MS)
+    const interval = setInterval(refresh, LIVE_PRICE_REFRESH_MS)
     return () => {
       cancelled = true
       clearInterval(interval)
