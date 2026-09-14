@@ -2,6 +2,19 @@
 
 **Last updated:** 2026-09-14
 
+## Redesign in progress (4-phase plan, see `C:\Users\noam7\.claude\plans\polymorphic-forging-kahn.md`)
+User requested a full premium redesign (22-section brief) before any deployment/payment work. Agreed phasing: **Phase 1 (done, committed)** UX/structural fixes — Phase 2 (next) theme system (light/dark) + premium background + stat-bar scroll behavior — Phase 3 micro-animations + English-only copy pass — Phase 4 new analytics (Equity Curve/Drawdown, performance by day/hour). Each phase ends with its own commit after live user testing (user's explicit preference — don't batch multiple phases into one commit).
+
+**Phase 1 — done, committed** (first-ever commit for this project, since the whole folder was untracked in git until now):
+- "Delete Account" replaced with **"Clear Trading Data"** (`clearAccountTradingData` in `accountApi.ts`) — wipes trades/watchlist/chart-images across all of the account's workspaces, keeps account/tier/access-code intact. 2-step typed confirmation, no more full account teardown.
+- Calendar Share button no longer overlaps the month-nav arrow at any width (`MonthlyCalendar.module.css` `.heroNav` moved from absolute-positioned overlay to a `1fr auto 1fr` grid).
+- Settings reorganized (Workspace/Trading fields/Notifications/Data/Danger Zone), Export/Import each get a one-line per-format explanation.
+- Position Size + P&L calculators: grouped risk inputs, stronger primary-result emphasis, new Risk:Reward chip (visual only, `calculators.ts` math untouched), clear "enter values" empty state instead of a silent `0`.
+- Access-code copy clarified (invalid/already-used/device-limit messages).
+- Workspace-name UI hidden (Settings field + top-right switcher) behind new reversible `HIDE_WORKSPACE_NAME_UI` flag in `locks.ts`, per user request after live testing — same pattern as `HIDE_NEW_WORKSPACE_BUTTON`.
+- Added `supabase/.temp/` to `.gitignore` (local Supabase CLI cache, was about to be committed by accident).
+- Verified: `tsc --noEmit` clean, 158/158 Vitest tests pass, `npm run build` succeeds.
+
 ## Current status
 The product works end-to-end and has been verified live (not just tsc/build/test) against the real Supabase project: no-signup identity, adding/editing/deleting trades, a full stats dashboard, a monthly calendar, calculators, a watchlist with automatic push alerts, Excel import of a real external journal, and two shareable-image features (Trade of the Month, Calendar export) — all confirmed working against the real database. **Not deployed to the internet yet** — runs only on `localhost:5201` (production build via `npm run build && npx vite preview --port 5201 --host 0.0.0.0`; the dev server on 5200 never registers a Service Worker, so Push/PWA testing must use the preview build). Per the user's explicit request, focus stays on finishing/polishing the product itself before any step that costs money (domain, Gumroad) — those are deliberately deferred, not forgotten.
 
