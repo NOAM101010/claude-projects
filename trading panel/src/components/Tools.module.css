@@ -364,3 +364,69 @@
   background: rgba(239, 68, 68, 0.16);
   border-color: rgba(239, 68, 68, 0.45);
 }
+
+.watchlistDeleteBtnConfirm {
+  background: rgba(239, 68, 68, 0.22);
+  border-color: rgba(239, 68, 68, 0.6);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+.watchlistEmptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 4px;
+}
+
+.statusChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--pnl-pos-bg);
+  color: var(--pnl-pos-2);
+  align-self: flex-end;
+}
+
+.historyHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.watchlistRowHistory {
+  opacity: 0.85;
+}
+
+.watchlistSetAlertForm {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  width: 100%;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+
+.watchlistSetAlertForm .field {
+  min-width: 120px;
+}
+
+.watchlistSetAlertForm .directionToggle {
+  min-width: 160px;
+}

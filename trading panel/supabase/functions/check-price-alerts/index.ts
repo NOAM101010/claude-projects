@@ -4,8 +4,10 @@
 // טוענת את כל שורות watchlist הפעילות, שולפת מחירים עדכניים (cache per-symbol משותף
 // עם watchlist-prices דרך _shared/finnhubCache.ts - אותו חלון TTL, אז אם משתמש כבר
 // פתח את מסך ה-Watchlist לאחרונה הקריאה הזו לרוב "בחינם"), ומשווה direction/target_price.
-// כל alert שנחצה: שולחת push דרך _shared/push.ts ומסמנת active=false+triggered_at
-// (לא מוחקת - נשמר להיסטוריה, כמו שאר האפליקציה לא מוחקת רשומות בשקט).
+// כל alert שנחצה: שולחת push דרך _shared/push.ts, יוצרת גם התראה בתוך האפליקציה
+// בטבלת notifications (013_notifications.sql - נפרד מה-push, ראה message.ts), ומסמנת
+// active=false+triggered_at (לא מוחקת - נשמר להיסטוריה, כמו שאר האפליקציה לא מוחקת
+// רשומות בשקט).
 //
 // **אימות שונה משאר הפונקציות:** net.http_post של pg_cron לא נושא JWT משתמש, אז
 // verify_jwt חייב להיות false עבור הפונקציה הזו (להגדיר ידנית בדשבורד - Edge Functions
@@ -15,6 +17,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.116.0'
 import { errorMessage, jsonResponse, preflightResponse } from '../_shared/http.ts'
 import { getQuotesForSymbols } from '../_shared/finnhubCache.ts'
 import { sendPushToAccount } from '../_shared/push.ts'
+import { buildAlertMessage } from './message.ts'
 
 interface WatchlistRow {
   id: string
@@ -46,10 +49,14 @@ Deno.serve(async (req) => {
     }
 
     const admin = createClient(supabaseUrl, serviceRoleKey)
+    // .not('target_price', 'is', null): שורות "מעקב בלבד" (בלי יעד/כיוון, ראה
+    // 014_watchlist_optional_alert.sql) אין להן מה להשוות - מסוננות כבר בשאילתה
+    // במקום להיבדק/להידלג בלולאה למטה.
     const { data: rows, error } = await admin
       .from('watchlist')
       .select('id, account_id, symbol, target_price, direction')
       .eq('active', true)
+      .not('target_price', 'is', null)
     if (error) throw error
 
     const alerts = (rows ?? []) as WatchlistRow[]
@@ -68,11 +75,25 @@ Deno.serve(async (req) => {
       if (!quote) continue
       if (!isCrossed(alert.direction, alert.target_price, quote.price)) continue
 
-      const directionLabel = alert.direction === 'above' ? 'above' : 'below'
+      const message = buildAlertMessage(alert.symbol, alert.direction, alert.target_price, quote.price)
       await sendPushToAccount(admin, alert.account_id, {
         title: `${alert.symbol} price alert`,
-        body: `${alert.symbol} is now $${quote.price.toFixed(2)} (${directionLabel} your target of $${alert.target_price.toFixed(2)})`,
+        body: message,
       })
+
+      // התראה בתוך האפליקציה (notifications, ראה 013_notifications.sql) - נפרדת
+      // לגמרי מה-push לעיל. best-effort בכוונה: כשל כאן לא אמור להפיל את שאר הלולאה
+      // (הפעלה כבר נשלחה, watchlist עדיין חייב להתעדכן) - אותה גישה בדיוק כמו ניקוי
+      // ה-stale endpoints ב-_shared/push.ts.
+      try {
+        await admin.from('notifications').insert({
+          account_id: alert.account_id,
+          symbol: alert.symbol,
+          message,
+        })
+      } catch {
+        // best-effort - ראה הערה למעלה.
+      }
 
       const { error: updateError } = await admin
         .from('watchlist')

@@ -12,6 +12,7 @@ import type { JournalSubTab } from './components/Journal'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
 import { LaunchScreen } from './components/LaunchScreen'
 import { MonthlyCalendar } from './components/MonthlyCalendar'
+import { NotificationBell } from './components/NotificationBell'
 import { PillNav } from './components/PillNav'
 import type { Tab } from './components/PillNav'
 import { ThemeSwitcher } from './components/ThemeSwitcher'
@@ -66,6 +67,10 @@ function App() {
 
   const [tab, setTab] = useState<Tab>('home')
   const [journalSubTab, setJournalSubTab] = useState<JournalSubTab>('trades')
+  // נקרא בכל לחיצה על התראה בפעמון (ראה NotificationBell) כדי לגרום ל-Tools לעבור
+  // לתת-הטאב Watchlist - counter (לא boolean) כדי שלחיצה חוזרת על אותה התראה תמיד
+  // תפעיל את ה-effect מחדש גם אם כבר נמצאים ב-Watchlist.
+  const [focusWatchlistSignal, setFocusWatchlistSignal] = useState(0)
   const [editingTrade, setEditingTrade] = useState<Trade | undefined>(undefined)
   const [showForm, setShowForm] = useState(false)
   const [filter, setFilter] = useState<TradeFilter | null>(null)
@@ -365,6 +370,13 @@ function App() {
               />
               {!LOCK_LANGUAGE_TO_ENGLISH && <LanguageSwitcher />}
               <ThemeSwitcher />
+              <NotificationBell
+                accountId={accountId}
+                onOpenWatchlist={() => {
+                  handleChangeTab('tools')
+                  setFocusWatchlistSignal((s) => s + 1)
+                }}
+              />
               <HeaderClock />
             </>
           }
@@ -414,7 +426,7 @@ function App() {
               onSelectSetup={(setup) => goToFilteredTrades({ type: 'setup', value: setup })}
             />
           ) : tab === 'tools' ? (
-            <Tools accountId={accountId} />
+            <Tools accountId={accountId} focusWatchlistSignal={focusWatchlistSignal} />
           ) : tab === 'calendar' ? (
             <MonthlyCalendar trades={trades} baseCurrency={workspace.baseCurrency} onEditTrade={openEditForm} />
           ) : (

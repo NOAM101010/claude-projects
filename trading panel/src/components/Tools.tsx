@@ -1,16 +1,20 @@
 import { ExternalLink } from 'lucide-react'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
 import { calculatePnl, calculatePositionSize } from '../lib/calculators'
-import { formatCurrency } from '../lib/format'
+import { formatCurrency, formatDateTime } from '../lib/format'
 import { LIVE_PRICE_REFRESH_MS, fetchWatchlistPrices, type WatchlistQuote } from '../lib/marketData'
 import { tradingViewUrl } from '../lib/tradingView'
 import {
   MAX_WATCHLIST_ALERTS,
   canAddWatchlistAlert,
+  clearAlertHistory,
   createWatchlistAlert,
+  deleteAlertHistoryItem,
   deleteWatchlistAlert,
+  listAlertHistory,
   listWatchlistAlerts,
+  setWatchlistAlert,
   type WatchlistAlert,
   type WatchlistDirection,
 } from '../lib/watchlistApi'
@@ -252,9 +256,16 @@ function PnlCalculatorTool() {
   )
 }
 
-function Watchlist({ accountId }: { accountId: string }) {
+/** זמן שבו כפתור "Clear History" נשאר במצב "לאשר?" - אותו אישור-קליק-שני-קל כמו
+ * מחיקת טרייד בודד ב-TradeList.tsx (DELETE_CONFIRM_TIMEOUT_MS), לא ה-2-שלבים הכבד
+ * של "Clear Trading Data" - זו כאן פעולה על היסטוריה בלבד, כבר לא הפיכה יותר משהיא. */
+const CLEAR_HISTORY_CONFIRM_TIMEOUT_MS = 4000
+
+function Watchlist({ accountId, focusSignal }: { accountId: string; focusSignal?: number }) {
   const { t, locale } = useLanguage()
   const [alerts, setAlerts] = useState<WatchlistAlert[]>([])
+  const [history, setHistory] = useState<WatchlistAlert[]>([])
+  const [historyLoading, setHistoryLoading] = useState(true)
   const [quotes, setQuotes] = useState<Record<string, WatchlistQuote | null>>({})
   const [loading, setLoading] = useState(true)
   const [symbol, setSymbol] = useState('')
@@ -262,6 +273,17 @@ function Watchlist({ accountId }: { accountId: string }) {
   const [direction, setDirection] = useState<WatchlistDirection>('above')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [confirmingClearHistory, setConfirmingClearHistory] = useState(false)
+  const clearHistoryTimerRef = useRef<number | null>(null)
+  const symbolInputRef = useRef<HTMLInputElement>(null)
+
+  // מזהה השורה שבה נפתחה טופס-המשנה "Set Alert" (הוספת יעד+כיוון לסימבול שכבר
+  // במעקב בלי התראה) - null כשלא פתוח באף שורה. שדות הטופס נפרדים משדות ה"הוסף"
+  // הראשי למעלה כדי ששני הזרימות לא ידרסו זו את זו.
+  const [settingAlertId, setSettingAlertId] = useState<string | null>(null)
+  const [setAlertPrice, setSetAlertPrice] = useState('')
+  const [setAlertDirection, setSetAlertDirection] = useState<WatchlistDirection>('above')
+  const [setAlertSubmitting, setSetAlertSubmitting] = useState(false)
 
   const activeAlerts = alerts.filter((a) => a.active)
 
@@ -284,6 +306,37 @@ function Watchlist({ accountId }: { accountId: string }) {
 
   useEffect(() => {
     let cancelled = false
+    listAlertHistory(accountId)
+      .then((rows) => {
+        if (!cancelled) setHistory(rows)
+      })
+      .catch(() => {
+        // best-effort - ההיסטוריה היא נחמד-לקבל, לא חוסמת את שאר המסך.
+      })
+      .finally(() => {
+        if (!cancelled) setHistoryLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [accountId])
+
+  // focusSignal עולה בכל לחיצה על התראה בפעמון (ראה App.tsx/NotificationBell) - מגלגל
+  // וממקד את שדה ה-Symbol כדי שהמשתמש יראה מיד איפה מוסיפים/רואים התראות.
+  useEffect(() => {
+    if (!focusSignal) return
+    symbolInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    symbolInputRef.current?.focus()
+  }, [focusSignal])
+
+  useEffect(() => {
+    return () => {
+      if (clearHistoryTimerRef.current) window.clearTimeout(clearHistoryTimerRef.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
     const refresh = () => {
       fetchWatchlistPrices().then((data) => {
         if (!cancelled) setQuotes(data)
@@ -301,8 +354,10 @@ function Watchlist({ accountId }: { accountId: string }) {
     e.preventDefault()
     setError(null)
     const trimmedSymbol = symbol.trim()
+    // Target price + direction אופציונליים - סימבול לבד יוצר שורת "מעקב בלבד"
+    // (target_price/direction = null, ראה 014_watchlist_optional_alert.sql).
     const price = parseField(targetPrice)
-    if (!trimmedSymbol || price === undefined) return
+    if (!trimmedSymbol) return
     if (!canAddWatchlistAlert(activeAlerts.length)) {
       setError(t('tools.watchlist.limitReached', { max: MAX_WATCHLIST_ALERTS }))
       return
@@ -310,7 +365,13 @@ function Watchlist({ accountId }: { accountId: string }) {
 
     setSubmitting(true)
     try {
-      const created = await createWatchlistAlert(accountId, trimmedSymbol, price, direction, activeAlerts.length)
+      const created = await createWatchlistAlert(
+        accountId,
+        trimmedSymbol,
+        price !== undefined ? price : undefined,
+        price !== undefined ? direction : undefined,
+        activeAlerts.length,
+      )
       setAlerts((prev) => [created, ...prev])
       setSymbol('')
       setTargetPrice('')
@@ -318,6 +379,24 @@ function Watchlist({ accountId }: { accountId: string }) {
       setError(err instanceof Error ? err.message : 'Failed to add watchlist alert')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  async function handleSetAlert(id: string) {
+    setError(null)
+    const price = parseField(setAlertPrice)
+    if (price === undefined) return
+    setSetAlertSubmitting(true)
+    try {
+      await setWatchlistAlert(id, price, setAlertDirection)
+      setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, targetPrice: price, direction: setAlertDirection } : a)))
+      setSettingAlertId(null)
+      setSetAlertPrice('')
+      setSetAlertDirection('above')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to set watchlist alert')
+    } finally {
+      setSetAlertSubmitting(false)
     }
   }
 
@@ -330,6 +409,29 @@ function Watchlist({ accountId }: { accountId: string }) {
     } catch (err) {
       setAlerts(previous)
       setError(err instanceof Error ? err.message : 'Failed to remove watchlist alert')
+    }
+  }
+
+  async function handleDeleteHistoryItem(id: string) {
+    const previous = history
+    setHistory((prev) => prev.filter((h) => h.id !== id))
+    try {
+      await deleteAlertHistoryItem(id)
+    } catch {
+      setHistory(previous)
+    }
+  }
+
+  function requestClearHistory() {
+    if (clearHistoryTimerRef.current) window.clearTimeout(clearHistoryTimerRef.current)
+    if (confirmingClearHistory) {
+      setConfirmingClearHistory(false)
+      const previous = history
+      setHistory([])
+      clearAlertHistory(accountId).catch(() => setHistory(previous))
+    } else {
+      setConfirmingClearHistory(true)
+      clearHistoryTimerRef.current = window.setTimeout(() => setConfirmingClearHistory(false), CLEAR_HISTORY_CONFIRM_TIMEOUT_MS)
     }
   }
 
@@ -346,6 +448,7 @@ function Watchlist({ accountId }: { accountId: string }) {
             <label htmlFor="wl-symbol">{t('tools.watchlist.symbolLabel')}</label>
             <input
               id="wl-symbol"
+              ref={symbolInputRef}
               type="text"
               value={symbol}
               onChange={(e) => setSymbol(e.target.value.toUpperCase())}
@@ -388,7 +491,7 @@ function Watchlist({ accountId }: { accountId: string }) {
             </div>
           </div>
           <div className={styles.watchlistAddRow}>
-            <button type="submit" className={`${styles.watchlistAddButton} btn-metal`} disabled={atLimit || submitting || !symbol.trim() || parseField(targetPrice) === undefined}>
+            <button type="submit" className={`${styles.watchlistAddButton} btn-metal`} disabled={atLimit || submitting || !symbol.trim()}>
               {submitting ? t('tools.watchlist.adding') : t('tools.watchlist.addButton')}
             </button>
             <span className={styles.hint}>{t('tools.watchlist.countLabel', { count: activeAlerts.length, max: MAX_WATCHLIST_ALERTS })}</span>
@@ -399,10 +502,16 @@ function Watchlist({ accountId }: { accountId: string }) {
       </div>
 
       <div className={`${styles.card} metal-panel holo-edge`}>
+        <h3 className={styles.sectionTitle}>{t('tools.watchlist.activeSectionTitle')}</h3>
         {loading ? (
           <p className={styles.hint}>{t('tools.watchlist.loading')}</p>
         ) : activeAlerts.length === 0 ? (
-          <p className={styles.hint}>{t('tools.watchlist.empty')}</p>
+          <div className={styles.watchlistEmptyState}>
+            <p className={styles.hint}>{t('tools.watchlist.empty')}</p>
+            <button type="button" className="btn-metal" onClick={() => symbolInputRef.current?.focus()}>
+              {t('tools.watchlist.addButton')}
+            </button>
+          </div>
         ) : (
           <ul className={styles.watchlistList}>
             {activeAlerts.map((alert) => {
@@ -419,23 +528,136 @@ function Watchlist({ accountId }: { accountId: string }) {
                       {alert.symbol}
                       <ExternalLink size={12} className={styles.externalIcon} />
                     </a>
+                    {alert.targetPrice !== null && alert.direction !== null ? (
+                      <span className={styles.hint}>
+                        {t('tools.watchlist.targetLabel')}: {alert.direction === 'above' ? '≥' : '≤'}{' '}
+                        {formatCurrency(alert.targetPrice, 'USD', locale)}
+                      </span>
+                    ) : (
+                      <span className={styles.hint}>{t('tools.watchlist.noAlertSet')}</span>
+                    )}
                     <span className={styles.hint}>
-                      {t('tools.watchlist.targetLabel')}: {alert.direction === 'above' ? '≥' : '≤'}{' '}
-                      {formatCurrency(alert.targetPrice, 'USD', locale)}
+                      {t('tools.watchlist.createdLabel')}: {formatDateTime(alert.createdAt, locale)}
                     </span>
                   </div>
                   <div className={styles.watchlistPriceBlock}>
+                    <span className={styles.statusChip}>{t('tools.watchlist.statusActive')}</span>
                     <span className={styles.resultLabel}>{t('tools.watchlist.currentPriceLabel')}</span>
                     <span className={`num ${styles.resultValue}`}>
                       {quote ? formatCurrency(quote.price, 'USD', locale) : t('tools.watchlist.unavailable')}
                     </span>
                   </div>
+                  {alert.targetPrice === null && (
+                    <button
+                      type="button"
+                      className={`${styles.watchlistAddButton} btn-metal`}
+                      onClick={() => {
+                        setSettingAlertId(settingAlertId === alert.id ? null : alert.id)
+                        setSetAlertPrice('')
+                        setSetAlertDirection('above')
+                      }}
+                    >
+                      {t('tools.watchlist.setAlertButton')}
+                    </button>
+                  )}
                   <button type="button" className={styles.watchlistDeleteBtn} onClick={() => handleDelete(alert.id)}>
                     {t('tools.watchlist.deleteButton')}
                   </button>
+                  {settingAlertId === alert.id && (
+                    <div className={styles.watchlistSetAlertForm}>
+                      <div className={styles.field}>
+                        <label htmlFor={`wl-set-target-${alert.id}`}>{t('tools.watchlist.targetPriceLabel')}</label>
+                        <input
+                          id={`wl-set-target-${alert.id}`}
+                          type="number"
+                          value={setAlertPrice}
+                          onChange={(e) => setSetAlertPrice(e.target.value)}
+                        />
+                      </div>
+                      <div className={styles.directionToggle}>
+                        <button
+                          type="button"
+                          data-dir="long"
+                          data-active={setAlertDirection === 'above'}
+                          onClick={() => setSetAlertDirection('above')}
+                        >
+                          {t('tools.watchlist.directionAbove')}
+                        </button>
+                        <button
+                          type="button"
+                          data-dir="short"
+                          data-active={setAlertDirection === 'below'}
+                          onClick={() => setSetAlertDirection('below')}
+                        >
+                          {t('tools.watchlist.directionBelow')}
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        className={`${styles.watchlistAddButton} btn-metal`}
+                        disabled={setAlertSubmitting || parseField(setAlertPrice) === undefined}
+                        onClick={() => handleSetAlert(alert.id)}
+                      >
+                        {setAlertSubmitting ? t('tools.watchlist.adding') : t('tools.watchlist.setAlertButton')}
+                      </button>
+                    </div>
+                  )}
                 </li>
               )
             })}
+          </ul>
+        )}
+      </div>
+
+      <div className={`${styles.card} metal-panel holo-edge`}>
+        <div className={styles.historyHeader}>
+          <div>
+            <h3 className={styles.sectionTitle}>{t('tools.watchlist.historyTitle')}</h3>
+            <p className={styles.hint}>{t('tools.watchlist.historyHint')}</p>
+          </div>
+          {history.length > 0 && (
+            <button
+              type="button"
+              className={`${styles.watchlistDeleteBtn} ${confirmingClearHistory ? styles.watchlistDeleteBtnConfirm : ''}`}
+              onClick={requestClearHistory}
+            >
+              {confirmingClearHistory ? t('tools.watchlist.clearHistoryConfirm') : t('tools.watchlist.clearHistoryButton')}
+            </button>
+          )}
+        </div>
+
+        {historyLoading ? (
+          <p className={styles.hint}>{t('tools.watchlist.historyLoading')}</p>
+        ) : history.length === 0 ? (
+          <p className={styles.hint}>{t('tools.watchlist.historyEmpty')}</p>
+        ) : (
+          <ul className={styles.watchlistList}>
+            {history.map((item) => (
+              <li key={item.id} className={`${styles.watchlistRow} ${styles.watchlistRowHistory} det-frame`}>
+                <div className={styles.watchlistSymbolBlock}>
+                  <a href={tradingViewUrl(item.symbol)} target="_blank" rel="noopener noreferrer" className={styles.watchlistSymbol}>
+                    {item.symbol}
+                    <ExternalLink size={12} className={styles.externalIcon} />
+                  </a>
+                  {/* History items always have a real target_price/direction (they got here
+                      by crossing one, see check-price-alerts) - nullable only because the
+                      column itself is now nullable for watch-only rows, never in practice here. */}
+                  <span className={styles.hint}>
+                    {t(
+                      item.direction === 'above' ? 'tools.watchlist.historyCrossedAbove' : 'tools.watchlist.historyCrossedBelow',
+                      { price: formatCurrency(item.targetPrice ?? 0, 'USD', locale) },
+                    )}
+                  </span>
+                </div>
+                <div className={styles.watchlistPriceBlock}>
+                  <span className={styles.resultLabel}>{t('tools.watchlist.historyTriggeredLabel')}</span>
+                  <span className={styles.hint}>{item.triggeredAt ? formatDateTime(item.triggeredAt, locale) : '—'}</span>
+                </div>
+                <button type="button" className={styles.watchlistDeleteBtn} onClick={() => handleDeleteHistoryItem(item.id)}>
+                  {t('tools.watchlist.deleteButton')}
+                </button>
+              </li>
+            ))}
           </ul>
         )}
       </div>
@@ -448,9 +670,15 @@ function Watchlist({ accountId }: { accountId: string }) {
  * המחשבונים מחשבים חי תוך כדי הקלדה בלי קריאות רשת; ה-Watchlist היחיד שקורא לשרת
  * (רשימת ההתראות + מחירים חיים כל 2 דקות, ראה Watchlist למעלה).
  */
-export function Tools({ accountId }: { accountId: string }) {
+export function Tools({ accountId, focusWatchlistSignal }: { accountId: string; focusWatchlistSignal?: number }) {
   const { t } = useLanguage()
   const [tab, setTab] = useState<ToolsTab>('positionSize')
+
+  // התראה בפעמון (App.tsx) מבקשת למקד את ה-Watchlist - עוברים לתת-הטאב הזה, ה-Watchlist
+  // עצמה מטפלת בגלילה+פוקוס על שדה ה-Symbol (ראה focusSignal שם).
+  useEffect(() => {
+    if (focusWatchlistSignal) setTab('watchlist')
+  }, [focusWatchlistSignal])
 
   return (
     <div className={styles.wrapper}>
@@ -468,7 +696,7 @@ export function Tools({ accountId }: { accountId: string }) {
 
       {tab === 'positionSize' && <PositionSizeCalculator />}
       {tab === 'pnl' && <PnlCalculatorTool />}
-      {tab === 'watchlist' && <Watchlist accountId={accountId} />}
+      {tab === 'watchlist' && <Watchlist accountId={accountId} focusSignal={focusWatchlistSignal} />}
     </div>
   )
 }

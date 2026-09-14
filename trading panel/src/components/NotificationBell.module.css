@@ -1,0 +1,182 @@
+.wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.button:hover {
+  color: var(--accent-2);
+}
+
+.badge {
+  position: absolute;
+  top: -3px;
+  inset-inline-end: -3px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--chip-neg, #ef4444);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+  font-family: var(--mono);
+}
+
+/* One subtle pulse when a new notification arrives - not a continuous animation,
+   fires once per arrival (see NotificationBell.tsx's justArrived timeout). */
+@keyframes bell-pulse {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.18);
+  }
+  60% {
+    transform: scale(0.96);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.pulse {
+  animation: bell-pulse 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse {
+    animation: none;
+  }
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  inset-inline-end: 0;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  max-height: 420px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  overflow: hidden;
+  z-index: 40;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-h);
+}
+
+.markAllButton {
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--accent-2);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.markAllButton:hover {
+  background: var(--accent-bg);
+}
+
+.empty {
+  margin: 0;
+  padding: 32px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  text-align: start;
+  padding: 10px 8px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  transition: background 0.15s ease;
+}
+
+.item:hover {
+  background: rgba(var(--overlay-tint), 0.05);
+}
+
+.itemUnread {
+  background: rgba(var(--amber-rgb), 0.05);
+}
+
+.dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: var(--accent-2);
+}
+
+.itemBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.itemSymbol {
+  font-family: var(--mono);
+  font-weight: 800;
+  font-size: 12.5px;
+  color: var(--text-h);
+}
+
+.itemMessage {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.itemTime {
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
