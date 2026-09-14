@@ -20,8 +20,8 @@ export const CHART_IMAGE_LIMIT_BY_TIER: Record<AccountTier, number> = {
 /** מגבלת סימבולים פעילים ב-watchlist (שורות עם/בלי התראה, ביחד), לפי דרגה - הייתה קבועה על 15 לכולם (MAX_WATCHLIST_ALERTS הישן ב-watchlistApi.ts). */
 export const WATCHLIST_SYMBOL_LIMIT_BY_TIER: Record<AccountTier, number> = {
   demo: 2,
-  basic: 15,
-  pro: 30,
+  basic: 20,
+  pro: 50,
 }
 
 /** מגבלת שורות עם התראת מחיר פעילה (target_price לא null) מתוך סימבולי המעקב, לפי דרגה -
@@ -29,7 +29,7 @@ export const WATCHLIST_SYMBOL_LIMIT_BY_TIER: Record<AccountTier, number> = {
 export const WATCHLIST_ALERT_LIMIT_BY_TIER: Record<AccountTier, number> = {
   demo: 0,
   basic: 10,
-  pro: 20,
+  pro: 30,
 }
 
 export function getChartImageLimit(tier: AccountTier): number {

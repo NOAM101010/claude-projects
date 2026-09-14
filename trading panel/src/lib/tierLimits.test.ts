@@ -40,11 +40,11 @@ describe('canUploadChartImage', () => {
 })
 
 describe('WATCHLIST_SYMBOL_LIMIT_BY_TIER / getWatchlistSymbolLimit', () => {
-  it('demo=2, basic=15, pro=30', () => {
-    expect(WATCHLIST_SYMBOL_LIMIT_BY_TIER).toEqual({ demo: 2, basic: 15, pro: 30 })
+  it('demo=2, basic=20, pro=50', () => {
+    expect(WATCHLIST_SYMBOL_LIMIT_BY_TIER).toEqual({ demo: 2, basic: 20, pro: 50 })
     expect(getWatchlistSymbolLimit('demo')).toBe(2)
-    expect(getWatchlistSymbolLimit('basic')).toBe(15)
-    expect(getWatchlistSymbolLimit('pro')).toBe(30)
+    expect(getWatchlistSymbolLimit('basic')).toBe(20)
+    expect(getWatchlistSymbolLimit('pro')).toBe(50)
   })
 })
 
@@ -52,23 +52,23 @@ describe('canAddWatchlistSymbol', () => {
   it('מאפשר הוספה כל עוד לא הגיעו למגבלת הדרגה', () => {
     expect(canAddWatchlistSymbol('demo', 0)).toBe(true)
     expect(canAddWatchlistSymbol('demo', 1)).toBe(true)
-    expect(canAddWatchlistSymbol('basic', 14)).toBe(true)
-    expect(canAddWatchlistSymbol('pro', 29)).toBe(true)
+    expect(canAddWatchlistSymbol('basic', 19)).toBe(true)
+    expect(canAddWatchlistSymbol('pro', 49)).toBe(true)
   })
 
   it('חוסם הוספה בהגיעו למגבלת הדרגה', () => {
     expect(canAddWatchlistSymbol('demo', 2)).toBe(false)
-    expect(canAddWatchlistSymbol('basic', 15)).toBe(false)
-    expect(canAddWatchlistSymbol('pro', 30)).toBe(false)
+    expect(canAddWatchlistSymbol('basic', 20)).toBe(false)
+    expect(canAddWatchlistSymbol('pro', 50)).toBe(false)
   })
 })
 
 describe('WATCHLIST_ALERT_LIMIT_BY_TIER / getWatchlistAlertLimit', () => {
-  it('demo=0, basic=10, pro=20', () => {
-    expect(WATCHLIST_ALERT_LIMIT_BY_TIER).toEqual({ demo: 0, basic: 10, pro: 20 })
+  it('demo=0, basic=10, pro=30', () => {
+    expect(WATCHLIST_ALERT_LIMIT_BY_TIER).toEqual({ demo: 0, basic: 10, pro: 30 })
     expect(getWatchlistAlertLimit('demo')).toBe(0)
     expect(getWatchlistAlertLimit('basic')).toBe(10)
-    expect(getWatchlistAlertLimit('pro')).toBe(20)
+    expect(getWatchlistAlertLimit('pro')).toBe(30)
   })
 })
 
@@ -79,11 +79,11 @@ describe('canSetWatchlistAlert', () => {
 
   it('מאפשר הגדרת התראה כל עוד לא הגיעו למגבלת הדרגה', () => {
     expect(canSetWatchlistAlert('basic', 9)).toBe(true)
-    expect(canSetWatchlistAlert('pro', 19)).toBe(true)
+    expect(canSetWatchlistAlert('pro', 29)).toBe(true)
   })
 
   it('חוסם בהגיעו למגבלת הדרגה', () => {
     expect(canSetWatchlistAlert('basic', 10)).toBe(false)
-    expect(canSetWatchlistAlert('pro', 20)).toBe(false)
+    expect(canSetWatchlistAlert('pro', 30)).toBe(false)
   })
 })
