@@ -6,12 +6,15 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-section);
+  width: 100%;
+  min-width: 0;
 }
 
 .headerRow {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .eyebrow {
@@ -95,6 +98,7 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+  min-width: 0;
 }
 
 .kpiGroupTitle {
@@ -103,7 +107,7 @@
 
 .performanceGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -115,7 +119,7 @@
 
 .behaviorGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -209,6 +213,7 @@
 .section {
   border-radius: 14px;
   padding: 18px;
+  min-width: 0;
 }
 
 .section h3 {
@@ -243,7 +248,11 @@
 .groupHeaderRow,
 .groupRow {
   display: grid;
-  grid-template-columns: 1.6fr 0.8fr 0.8fr 1.2fr;
+  /* minmax(0, Nfr), לא Nfr לבד: בלי הרצפה ל-0 כל עמודה נעצרת אוטומטית ב-min-content
+     של תוכן התא (למשל מספר מטבע ארוך בלי רווחים לשבירה) - זה יכול לדחוף את כל ה-grid,
+     ובעקבותיו כל שרשרת ה-flex שמעליו עד .wrapper ועד הדף כולו, לרוחב שגלישת גלילה
+     אופקית אמיתית (ראה חקירת הבאג ב-progress.md). */
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 0.8fr) minmax(0, 0.8fr) minmax(0, 1.2fr);
   gap: 8px;
   align-items: center;
   padding: 9px 12px;
@@ -307,7 +316,7 @@
 @media (max-width: 560px) {
   .groupHeaderRow,
   .groupRow {
-    grid-template-columns: 1.4fr 0.7fr 0.7fr 1fr;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.7fr) minmax(0, 0.7fr) minmax(0, 1fr);
     font-size: 12px;
   }
 }
@@ -345,7 +354,7 @@
   .chartsGrid,
   .groupsGrid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 18px;
   }
 
