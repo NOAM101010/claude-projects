@@ -344,12 +344,14 @@ export function Dashboard({ trades, baseCurrency, tier, onOpenAccessCode, onSele
         </div>
       </div>
 
-      <div className={`${styles.section} metal-panel holo-edge`}>
-        <h3 className="eyebrow">{t('dashboard.bestWorstTitle')}</h3>
-        <BestWorstSpotlight best={bestTrade(convertedTrades)} worst={worstTrade(convertedTrades)} locale={locale} />
-      </div>
+      <div className={styles.spotlightGrid}>
+        <div className={`${styles.section} metal-panel holo-edge`}>
+          <h3 className="eyebrow">{t('dashboard.bestWorstTitle')}</h3>
+          <BestWorstSpotlight best={bestTrade(convertedTrades)} worst={worstTrade(convertedTrades)} locale={locale} />
+        </div>
 
-      <WeeklyRecapCard recap={recap} baseCurrency={baseCurrency} locale={locale} tier={tier} onOpenAccessCode={onOpenAccessCode} />
+        <WeeklyRecapCard recap={recap} baseCurrency={baseCurrency} locale={locale} tier={tier} onOpenAccessCode={onOpenAccessCode} />
+      </div>
 
       <div className={styles.groupsGrid}>
         <GroupTable

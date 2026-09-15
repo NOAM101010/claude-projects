@@ -322,7 +322,8 @@
 }
 
 .chartsGrid,
-.groupsGrid {
+.groupsGrid,
+.spotlightGrid {
   display: contents;
 }
 
@@ -340,7 +341,7 @@
   .kpiHero {
     flex-direction: row;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: space-between;
     gap: 28px;
     padding: 24px 32px;
   }
@@ -351,15 +352,24 @@
     gap: 6px;
   }
 
+  /* הערך הגדול הוא האלמנט הדומיננטי חזותית - flex:1 + text-align:center נותן לו את מרכז
+     הכרטיס עם נשימה משני הצדדים, במקום להיצמד לתחילת השורה עם שטח ריק גדול אחריו. */
+  .kpiHeroValue {
+    flex: 1;
+    text-align: center;
+  }
+
   .chartsGrid,
-  .groupsGrid {
+  .groupsGrid,
+  .spotlightGrid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 18px;
   }
 
   .chartsGrid > .section,
-  .groupsGrid > .section {
+  .groupsGrid > .section,
+  .spotlightGrid > .section {
     margin: 0;
   }
 }
