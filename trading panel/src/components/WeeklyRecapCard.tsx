@@ -114,7 +114,7 @@ export function WeeklyRecapCard({ recap, baseCurrency, locale, tier, onOpenAcces
       </div>
 
       {recap.bestTrade ? (
-        <>
+        <div className={styles.tradesRow}>
           <p className={styles.bestTrade}>
             {t('dashboard.weeklyRecapBestTrade', {
               symbol: recap.bestTrade.symbol,
@@ -129,7 +129,7 @@ export function WeeklyRecapCard({ recap, baseCurrency, locale, tier, onOpenAcces
               })}
             </p>
           )}
-        </>
+        </div>
       ) : (
         <p className={styles.bestTrade}>{t('dashboard.weeklyRecapNoTrades')}</p>
       )}

@@ -18,45 +18,50 @@
   min-width: 0;
 }
 
-/* פס סטטיסטיקות רוחב-מלא: כל סטטיסטיקה היא בלוק flex-column עצמאי (תווית מעל ערך) שנשאר
-   מקובץ תמיד, גם כשעוטף לשורה חדשה במסכים צרים - ר' הסבר מלא ב-WeeklyRecapCard.tsx. */
+/* תיקון עיצובי אחרי פידבק חוזר: "flex:1 1 Npx" (grow) גרם לכל אריח להתמתח ולמלא את כל
+   הרוחב הפנוי בכרטיס רוחב-מלא (900-1880px) - במסך רחב זה יוצר פערים ענקיים בין אריח לאריח,
+   טקסט קטן שצף בחלל ריק, ותחושת "לא מסודר" (בדיוק הפידבק). הפתרון: כל אריח הוא תיבה קשיחה
+   (background+border+padding, לא טקסט חשוף) שגודלה נקבע לפי התוכן שלה בלבד (flex: 0 0 auto,
+   לא grow) - האריחים יושבים צמודים זה לזה בתחילת השורה (justify-content: flex-start), לא
+   נמתחים לכל הרוחב. שאר השטח נשאר ריק בכוונה במקום להיות ממולא בפערים בין הטקסטים. */
 .statsStrip {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 18px 36px;
-  padding-top: 10px;
+  align-items: stretch;
+  gap: 10px;
+  padding-top: 12px;
   border-top: 1px solid var(--border);
 }
 
-/* min-width: 0 (לא auto) בכוונה: פריט flex בברירת מחדל לא מכווץ מתחת ל-min-content של
-   התוכן שלו (ה"auto" gotcha הידוע של flexbox) - זה מה שגרם לגלישה האופקית ב-~800px: מספרים
-   מפורמטים (formatCurrency, למשל "-$12,345.67" או עם NBSP בלוקאלים fr/es) הם token יחיד בלי
-   הזדמנות שבירה, אז בלי min-width:0 + overflow-wrap הבלוק פשוט צייר מעבר לגבולות שלו וניפח את
-   scrollWidth של הדף כולו, למרות ש-flex-wrap כן שבר בין הבלוקים עצמם. max-width: 100% מוודא
-   שאף בלוק לא יידרש רחב יותר משורת ה-flex שהוא יושב בה גם כשהוא לבד בשורה (מסכים צרים מאוד). */
 .stat {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  flex: 1 1 88px;
+  justify-content: center;
+  gap: 4px;
+  flex: 0 0 auto;
   min-width: 0;
   max-width: 100%;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: rgba(var(--overlay-tint), 0.035);
+  border: 1px solid var(--border);
 }
 
-/* Net P&L הוא המספר הראשי - בלוק רחב יותר ומודגש, אותו עיקרון בדיוק כמו StreakCard's
-   .value, ליד יתר הסטטיסטיקות באותו פס במקום שורה נפרדת ברוחב מלא. */
+/* Net P&L הוא המספר הראשי - אריח גדול ומודגש עם רקע ענברי עדין, אותו עיקרון בדיוק כמו
+   StreakCard's .value, כדי שהעין תיפול עליו קודם לפני שאר הסטטיסטיקות. */
 .statPrimary {
-  flex: 1 1 200px;
   gap: 6px;
   min-width: 0;
   max-width: 100%;
+  padding: 12px 22px;
+  background: rgba(var(--amber-rgb), 0.08);
+  border-color: var(--accent-border, var(--border-hi));
 }
 
 .primaryValue {
   font-family: var(--serif);
   font-weight: 900;
-  font-size: clamp(24px, 3.4vw, 32px);
+  font-size: clamp(26px, 2.6vw, 34px);
   line-height: 1.1;
   direction: ltr;
   unicode-bidi: isolate;
@@ -74,7 +79,7 @@
 /* השוואת שבוע-מול-שבוע, ליד תווית ה-Net P&L - אותו רעיון כמו home.change24h (חץ + דלתא
    דולרית), קומפקטי בכוונה (chip קטן), לא סקשן חדש. */
 .vsLastWeek {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   direction: ltr;
   unicode-bidi: isolate;
@@ -82,17 +87,18 @@
 }
 
 .statLabel {
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   color: var(--text-dim);
   overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 
 .statValue {
   font-family: var(--mono);
   font-weight: 800;
-  font-size: clamp(15px, 2vw, 18px);
+  font-size: 19px;
   font-variant-numeric: tabular-nums;
   direction: ltr;
   unicode-bidi: isolate;
@@ -107,11 +113,24 @@
   color: var(--pnl-neg-2);
 }
 
+/* טריידים בולט/גרוע השבוע - אריח קומפקטי משלהם, לא טקסט חשוף שנמתח לרוחב מלא. */
+.tradesRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .bestTrade {
-  margin: 8px 0 0;
-  font-size: 12.5px;
+  margin: 0;
+  font-size: 13px;
   color: var(--text-dim);
   overflow-wrap: anywhere;
+  flex: 0 0 auto;
+  max-width: 100%;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: rgba(var(--overlay-tint), 0.025);
+  border: 1px solid var(--border);
 }
 
 /* טיזר מטושטש ל-non-pro - מציג את מבנה הכרטיס בלי דאטה אמיתי, לא לחיץ (aria-hidden). */
