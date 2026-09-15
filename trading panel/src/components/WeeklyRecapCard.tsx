@@ -25,7 +25,16 @@ interface WeeklyRecapCardProps {
  * כדי שהכרטיס יזוהה כפיצ'ר דגל (צ'יפ "PRO" הוסר - מיותר כשמי שרואה את הגרסה הפתוחה כבר Pro,
  * ר' `weeklyRecapTitleLocked` לתיוג ה-Pro בגרסה הנעולה), ו-Net P&L מקבל משקל ויזואלי גדול
  * בהרבה מהסטטיסטיקות המשניות - אותו עיקרון בדיוק כמו StreakCard (`.value` גדול למעלה,
- * `.hint` דק למטה), רק עם שני מספרי-משנה (trades/win rate) לצד ה-P&L הראשי במקום שורת hint אחת.
+ * `.hint` דק למטה).
+ *
+ * פריסה (feedback: "labels and values look disconnected" בסקרינשוט RTL): הכרטיס הזה מוצג
+ * ב-Dashboard.tsx *מחוץ* ל-`.groupsGrid`, ברוחב מלא של הדף (900-1880px, ר' .wrapper ב-
+ * Dashboard.module.css) - בניגוד ל-BestWorstSpotlight/GroupTable שיושבים בתוך `.section`
+ * ברוחב מוגבל. עיצוב "כרטיס צר" עם `grid-template-columns: repeat(2, 1fr)` נמתח על פני כל
+ * הרוחב הזה ויוצר פערים ענקיים בין תווית לערך. הפתרון: `.statsStrip` - פס סטטיסטיקות רוחב-מלא
+ * (אותו רעיון בדיוק כמו `DesktopStatBar` - כל סטטיסטיקה היא בלוק flex-column אחד, תווית מעל
+ * ערך, עוטף לשורה חדשה בעצמו במסכים צרים) במקום כרטיס צר שנמתח. כל בלוק שורד RTL/LTR באותה
+ * צורה כי ה-flex רק הופך את סדר הבלוקים אופקית, לא את מה שבתוך כל בלוק.
  */
 export function WeeklyRecapCard({ recap, baseCurrency, locale, tier, onOpenAccessCode }: WeeklyRecapCardProps) {
   const { t } = useLanguage()
@@ -35,9 +44,11 @@ export function WeeklyRecapCard({ recap, baseCurrency, locale, tier, onOpenAcces
       <div className={`${styles.card} metal-panel holo-edge holo-edge--amber`}>
         <h3 className="eyebrow">{t('dashboard.weeklyRecapTitleLocked')}</h3>
         <div className={styles.lockedTeaser} aria-hidden="true">
-          <span className={`${styles.primaryValue} ${styles.positive}`}>{formatCurrency(842, baseCurrency, locale)}</span>
-          <span className={styles.primaryLabel}>{t('dashboard.weeklyRecapNetPnl')}</span>
-          <div className={styles.secondaryRow}>
+          <div className={styles.statsStrip}>
+            <div className={`${styles.stat} ${styles.statPrimary}`}>
+              <span className={`${styles.primaryValue} ${styles.positive}`}>{formatCurrency(842, baseCurrency, locale)}</span>
+              <span className={styles.statLabel}>{t('dashboard.weeklyRecapNetPnl')}</span>
+            </div>
             <div className={styles.stat}>
               <span className={styles.statLabel}>{t('dashboard.weeklyRecapTrades')}</span>
               <span className={styles.statValue}>5</span>
@@ -45,6 +56,10 @@ export function WeeklyRecapCard({ recap, baseCurrency, locale, tier, onOpenAcces
             <div className={styles.stat}>
               <span className={styles.statLabel}>{t('dashboard.weeklyRecapWinRate')}</span>
               <span className={styles.statValue}>60%</span>
+            </div>
+            <div className={styles.stat}>
+              <span className={styles.statLabel}>{t('dashboard.weeklyRecapAvgPerTrade')}</span>
+              <span className={styles.statValue}>{formatCurrency(168, baseCurrency, locale)}</span>
             </div>
           </div>
         </div>
@@ -64,22 +79,24 @@ export function WeeklyRecapCard({ recap, baseCurrency, locale, tier, onOpenAcces
         <h3 className="eyebrow">{t('dashboard.weeklyRecapTitle')}</h3>
       </div>
 
-      <span className={`${styles.primaryValue} ${recap.netPnl >= 0 ? styles.positive : styles.negative}`}>
-        {formatCurrency(recap.netPnl, baseCurrency, locale)}
-      </span>
-      <div className={styles.primaryLabelRow}>
-        <span className={styles.primaryLabel}>{t('dashboard.weeklyRecapNetPnl')}</span>
-        {recap.previousWeekNetPnl !== null && (
-          <span className={`${styles.vsLastWeek} ${recap.netPnl >= recap.previousWeekNetPnl ? styles.positive : styles.negative}`}>
-            {recap.netPnl >= recap.previousWeekNetPnl ? '▲' : '▼'}{' '}
-            {t('dashboard.weeklyRecapVsLastWeek', {
-              value: formatCurrency(Math.abs(recap.netPnl - recap.previousWeekNetPnl), baseCurrency, locale),
-            })}
+      <div className={styles.statsStrip}>
+        <div className={`${styles.stat} ${styles.statPrimary}`}>
+          <span className={`${styles.primaryValue} ${recap.netPnl >= 0 ? styles.positive : styles.negative}`}>
+            {formatCurrency(recap.netPnl, baseCurrency, locale)}
           </span>
-        )}
-      </div>
+          <div className={styles.primaryLabelRow}>
+            <span className={styles.statLabel}>{t('dashboard.weeklyRecapNetPnl')}</span>
+            {recap.previousWeekNetPnl !== null && (
+              <span className={`${styles.vsLastWeek} ${recap.netPnl >= recap.previousWeekNetPnl ? styles.positive : styles.negative}`}>
+                {recap.netPnl >= recap.previousWeekNetPnl ? '▲' : '▼'}{' '}
+                {t('dashboard.weeklyRecapVsLastWeek', {
+                  value: formatCurrency(Math.abs(recap.netPnl - recap.previousWeekNetPnl), baseCurrency, locale),
+                })}
+              </span>
+            )}
+          </div>
+        </div>
 
-      <div className={styles.secondaryRow}>
         <div className={styles.stat}>
           <span className={styles.statLabel}>{t('dashboard.weeklyRecapTrades')}</span>
           <span className={styles.statValue}>{recap.tradeCount}</span>
@@ -87,6 +104,12 @@ export function WeeklyRecapCard({ recap, baseCurrency, locale, tier, onOpenAcces
         <div className={styles.stat}>
           <span className={styles.statLabel}>{t('dashboard.weeklyRecapWinRate')}</span>
           <span className={styles.statValue}>{recap.winRate.toFixed(0)}%</span>
+        </div>
+        <div className={styles.stat}>
+          <span className={styles.statLabel}>{t('dashboard.weeklyRecapAvgPerTrade')}</span>
+          <span className={`${styles.statValue} ${recap.tradeCount > 0 && recap.avgPnlPerTrade >= 0 ? styles.positive : recap.tradeCount > 0 ? styles.negative : ''}`}>
+            {recap.tradeCount > 0 ? formatCurrency(recap.avgPnlPerTrade, baseCurrency, locale) : '—'}
+          </span>
         </div>
       </div>
 

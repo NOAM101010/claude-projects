@@ -168,6 +168,7 @@ describe('weeklyRecap', () => {
     const recap = weeklyRecap(trades, referenceDate)
     expect(recap.bestTrade).toEqual({ symbol: 'AAPL', pnl: 300 })
     expect(recap.worstTrade).toEqual({ symbol: 'AAPL', pnl: -200 })
+    expect(recap.avgPnlPerTrade).toBe(50) // (300 - 200 + 50) / 3
   })
 
   it('shows the same trade as both best and worst when only one trade is in the window', () => {
@@ -175,6 +176,13 @@ describe('weeklyRecap', () => {
     const recap = weeklyRecap(trades, referenceDate)
     expect(recap.bestTrade).toEqual({ symbol: 'AAPL', pnl: 300 })
     expect(recap.worstTrade).toEqual({ symbol: 'AAPL', pnl: 300 })
+    expect(recap.avgPnlPerTrade).toBe(300)
+  })
+
+  it('returns 0 avgPnlPerTrade when there are no closed trades in the window', () => {
+    const recap = weeklyRecap([], referenceDate)
+    expect(recap.tradeCount).toBe(0)
+    expect(recap.avgPnlPerTrade).toBe(0)
   })
 
   it('computes previousWeekNetPnl from the prior non-overlapping 7-day window', () => {

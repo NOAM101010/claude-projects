@@ -1,7 +1,13 @@
+/* הכרטיס יושב ברוחב-מלא של הדף (ר' WeeklyRecapCard.tsx, מחוץ ל-.groupsGrid) - צריך padding
+   אמיתי משלו (metal-panel/holo-edge לא נותנים אחד), בניגוד לכרטיסים בתוך .section שמקבלים
+   אותו מ-Dashboard.module.css. */
 .card {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 14px;
+  padding: 18px 20px;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .header {
@@ -9,11 +15,44 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 4px;
+  min-width: 0;
 }
 
-/* Net P&L is the headline number - same weight/treatment as StreakCard's .value, well above
-   the secondary stats (trades/win rate), so this reads as a report, not a plain stat row. */
+/* פס סטטיסטיקות רוחב-מלא: כל סטטיסטיקה היא בלוק flex-column עצמאי (תווית מעל ערך) שנשאר
+   מקובץ תמיד, גם כשעוטף לשורה חדשה במסכים צרים - ר' הסבר מלא ב-WeeklyRecapCard.tsx. */
+.statsStrip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 18px 36px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+/* min-width: 0 (לא auto) בכוונה: פריט flex בברירת מחדל לא מכווץ מתחת ל-min-content של
+   התוכן שלו (ה"auto" gotcha הידוע של flexbox) - זה מה שגרם לגלישה האופקית ב-~800px: מספרים
+   מפורמטים (formatCurrency, למשל "-$12,345.67" או עם NBSP בלוקאלים fr/es) הם token יחיד בלי
+   הזדמנות שבירה, אז בלי min-width:0 + overflow-wrap הבלוק פשוט צייר מעבר לגבולות שלו וניפח את
+   scrollWidth של הדף כולו, למרות ש-flex-wrap כן שבר בין הבלוקים עצמם. max-width: 100% מוודא
+   שאף בלוק לא יידרש רחב יותר משורת ה-flex שהוא יושב בה גם כשהוא לבד בשורה (מסכים צרים מאוד). */
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1 1 88px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Net P&L הוא המספר הראשי - בלוק רחב יותר ומודגש, אותו עיקרון בדיוק כמו StreakCard's
+   .value, ליד יתר הסטטיסטיקות באותו פס במקום שורה נפרדת ברוחב מלא. */
+.statPrimary {
+  flex: 1 1 200px;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
 .primaryValue {
   font-family: var(--serif);
   font-weight: 900;
@@ -21,14 +60,7 @@
   line-height: 1.1;
   direction: ltr;
   unicode-bidi: isolate;
-}
-
-.primaryLabel {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-dim);
+  overflow-wrap: anywhere;
 }
 
 .primaryLabelRow {
@@ -36,7 +68,7 @@
   align-items: baseline;
   gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 6px;
+  min-width: 0;
 }
 
 /* השוואת שבוע-מול-שבוע, ליד תווית ה-Net P&L - אותו רעיון כמו home.change24h (חץ + דלתא
@@ -46,20 +78,7 @@
   font-weight: 700;
   direction: ltr;
   unicode-bidi: isolate;
-}
-
-.secondaryRow {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
-}
-
-.stat {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+  overflow-wrap: anywhere;
 }
 
 .statLabel {
@@ -67,6 +86,7 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   color: var(--text-dim);
+  overflow-wrap: anywhere;
 }
 
 .statValue {
@@ -76,6 +96,7 @@
   font-variant-numeric: tabular-nums;
   direction: ltr;
   unicode-bidi: isolate;
+  overflow-wrap: anywhere;
 }
 
 .positive {
@@ -90,6 +111,7 @@
   margin: 8px 0 0;
   font-size: 12.5px;
   color: var(--text-dim);
+  overflow-wrap: anywhere;
 }
 
 /* טיזר מטושטש ל-non-pro - מציג את מבנה הכרטיס בלי דאטה אמיתי, לא לחיץ (aria-hidden). */

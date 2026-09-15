@@ -382,6 +382,9 @@ export interface WeeklyRecap {
   netPnl: number
   /** אחוז טריידים מרוויחים בחלון, 0 אם אין טריידים סגורים. */
   winRate: number
+  /** netPnl / tradeCount בחלון, 0 אם אין טריידים סגורים. שונה מ-`expectancy()` הכלל-חשבוני -
+   * זה ממוצע גולמי מוגבל ל-7 הימים האחרונים בלבד, לא תוחלת מבוססת-win-rate על כל ההיסטוריה. */
+  avgPnlPerTrade: number
   /** הטרייד עם ה-P&L הגבוה ביותר בחלון (גם אם שלילי - כמו `bestTrade()`, לא רק מנצחים). null אם אין טריידים סגורים בחלון. */
   bestTrade: { symbol: string; pnl: number } | null
   /** הטרייד עם ה-P&L הנמוך ביותר בחלון (אותו דפוס בדיוק כמו `bestTrade`, min במקום max - אם
@@ -429,6 +432,7 @@ export function weeklyRecap(trades: Trade[], referenceDate: Date = new Date()): 
     tradeCount,
     netPnl,
     winRate,
+    avgPnlPerTrade: tradeCount > 0 ? netPnl / tradeCount : 0,
     bestTrade: best ? { symbol: best.symbol, pnl: best.pnl ?? 0 } : null,
     worstTrade: worst ? { symbol: worst.symbol, pnl: worst.pnl ?? 0 } : null,
     previousWeekNetPnl,
