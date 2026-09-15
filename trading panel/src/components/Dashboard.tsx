@@ -12,8 +12,10 @@ import {
   dailyPnl,
   equityCurve,
   expectancy,
+  lossSourceBreakdown,
   maxDrawdown,
   profitFactor,
+  rankedSetupPerformance,
   statsByDayOfWeek,
   statsBySymbol,
   streaks,
@@ -25,7 +27,9 @@ import {
 } from '../lib/stats'
 import { formatDateTime } from '../lib/format'
 import { BestWorstSpotlight } from './BestWorstSpotlight'
+import { LossSourceCard } from './LossSourceCard'
 import { PnlCalendar } from './PnlCalendar'
+import { SetupPerformanceCard } from './SetupPerformanceCard'
 import { StreakCard } from './StreakCard'
 import { WeeklyRecapCard } from './WeeklyRecapCard'
 import type { CurrencyCode, Trade } from '../types/trade'
@@ -186,6 +190,13 @@ export function Dashboard({ trades, baseCurrency, tier, onOpenAccessCode, onSele
   const bySymbol = statsBySymbol(convertedTrades)
   const byDayOfWeek = statsByDayOfWeek(convertedTrades)
   const recap = weeklyRecap(convertedTrades)
+  // ה-Insights section לא אמור להציג כותרת "ריקה" - אם אף אחד משני הכרטיסים לא באמת
+  // מציג משהו (LossSourceCard/SetupPerformanceCard מחזירים null כשהממצא טריוויאלי),
+  // ה-eyebrow header עצמו צריך להיעלם איתם, לא לצוף לבד מעל שום דבר.
+  const lossSource = lossSourceBreakdown(convertedTrades)
+  const showLossSource = lossSource.sufficientData
+  const showSetupPerformance = tier !== 'pro' || rankedSetupPerformance(convertedTrades).length > 0
+  const showInsights = showLossSource || showSetupPerformance
 
   return (
     <div className={styles.wrapper}>
@@ -198,25 +209,42 @@ export function Dashboard({ trades, baseCurrency, tier, onOpenAccessCode, onSele
         {conversionError && <p className={styles.note}>{t('dashboard.conversionFailed')}</p>}
       </div>
 
-      <div className={`${styles.kpiCard} ${styles.kpiHero} metal-panel holo-edge holo-edge--amber det-frame count-in`}>
-        <div className={styles.kpiHeroTop}>
-          <span className={styles.kpiLabel}>{t('dashboard.kpiTotalPnl')}</span>
-          {total >= 0 ? (
-            <TrendingUp size={18} className={styles.positive} />
-          ) : (
-            <TrendingDown size={18} className={styles.negative} />
-          )}
+      <div className={styles.heroGrid}>
+        <div className={`${styles.kpiCard} ${styles.kpiHero} metal-panel holo-edge holo-edge--amber det-frame count-in`}>
+          <div className={styles.kpiHeroTop}>
+            <span className={styles.kpiLabel}>{t('dashboard.kpiTotalPnl')}</span>
+            {total >= 0 ? (
+              <TrendingUp size={18} className={styles.positive} />
+            ) : (
+              <TrendingDown size={18} className={styles.negative} />
+            )}
+          </div>
+          <span className={`${styles.kpiHeroValue} ${total >= 0 ? styles.positive : styles.negative}`}>
+            {formatBase(total, baseCurrency, locale)}
+          </span>
+          <div className={styles.kpiHeroChips}>
+            <span className={`det-chip ${winRate(convertedTrades) >= 50 ? 'det-chip--up' : 'det-chip--down'} ${styles.kpiHeroChip}`}>
+              {t('dashboard.kpiWinRate')} · {winRate(convertedTrades).toFixed(1)}%
+            </span>
+            <span className={`det-chip ${styles.kpiHeroChip} ${styles.kpiHeroChipMuted}`}>
+              {t('dashboard.kpiTradesClosedOpen')} · {closedCount} / {openCount}
+            </span>
+          </div>
         </div>
-        <span className={`${styles.kpiHeroValue} ${total >= 0 ? styles.positive : styles.negative}`}>
-          {formatBase(total, baseCurrency, locale)}
-        </span>
-        <div className={styles.kpiHeroChips}>
-          <span className={`det-chip ${winRate(convertedTrades) >= 50 ? 'det-chip--up' : 'det-chip--down'} ${styles.kpiHeroChip}`}>
-            {t('dashboard.kpiWinRate')} · {winRate(convertedTrades).toFixed(1)}%
+
+        <div className={`${styles.kpiCard} ${styles.kpiHero} ${styles.kpiHeroDrawdown} metal-panel holo-edge det-frame count-in`}>
+          <div className={styles.kpiHeroTop}>
+            <span className={styles.kpiLabel}>{t('dashboard.kpiMaxDrawdown')}</span>
+            <TrendingDown size={18} className={drawdown.amount > 0 ? styles.negative : styles.neutralIcon} />
+          </div>
+          <span className={`${styles.kpiHeroValue} ${drawdown.amount > 0 ? styles.negative : ''}`}>
+            {formatBase(-drawdown.amount, baseCurrency, locale)}
           </span>
-          <span className={`det-chip ${styles.kpiHeroChip} ${styles.kpiHeroChipMuted}`}>
-            {t('dashboard.kpiTradesClosedOpen')} · {closedCount} / {openCount}
-          </span>
+          <div className={styles.kpiHeroChips}>
+            <span className={`det-chip ${styles.kpiHeroChip} ${drawdown.amount > 0 ? 'det-chip--down' : styles.kpiHeroChipMuted}`}>
+              {t('dashboard.kpiMaxDrawdownPercentChip', { percent: drawdown.percent.toFixed(0) })}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -252,31 +280,41 @@ export function Dashboard({ trades, baseCurrency, tier, onOpenAccessCode, onSele
 
       <div className={styles.kpiGroup}>
         <h3 className={`eyebrow ${styles.kpiGroupTitle}`}>{t('dashboard.groupBehavior')}</h3>
+        {/* StreakCard (hero) + שני האריחים המשניים מזווגים כשני קופסאות שוות-משקל, בדיוק כמו
+            .heroGrid/.spotlightGrid - לא "באנר גדול + קופסאות קטנות מפוזרות" (ר' הערת
+            .behaviorGrid ב-Dashboard.module.css). */}
         <div className={styles.behaviorGrid}>
           <StreakCard streakInfo={streakInfo} size="lg" />
-          <div className={`${styles.kpiCard} metal-panel holo-edge`}>
-            <span className={styles.kpiLabel}>{t('dashboard.consecutiveWins')}</span>
-            <span className={`${styles.kpiValue} ${styles.positive}`}>{streakInfo.longestWin}</span>
-          </div>
-          <div className={`${styles.kpiCard} metal-panel holo-edge`}>
-            <span className={styles.kpiLabel}>{t('dashboard.consecutiveLosses')}</span>
-            <span className={`${styles.kpiValue} ${styles.negative}`}>{streakInfo.longestLoss}</span>
-          </div>
-          <div className={`${styles.kpiCard} metal-panel holo-edge`}>
-            <span className={styles.kpiLabel}>{t('dashboard.kpiAvgHoldTime')}</span>
-            <span className={styles.kpiValue}>
-              {holdDays.winners.toFixed(1)} / {holdDays.losers.toFixed(1)} <span className={styles.kpiUnit}>{t('common.days')}</span>
-            </span>
-          </div>
-          <div className={`${styles.kpiCard} ${styles.kpiCardWide} metal-panel holo-edge`}>
-            <span className={styles.kpiLabel}>{t('dashboard.kpiMaxDrawdown')}</span>
-            <span className={`${styles.kpiValueLg} ${drawdown.amount > 0 ? styles.negative : ''}`}>
-              {formatBase(-drawdown.amount, baseCurrency, locale)}{' '}
-              <span className={styles.kpiUnit}>({drawdown.percent.toFixed(0)}%)</span>
-            </span>
+          <div className={`${styles.behaviorSecondary} metal-panel holo-edge`}>
+            <div className={styles.behaviorStat}>
+              <span className={styles.kpiLabel}>{t('dashboard.consecutiveWins')}</span>
+              <span className={`${styles.kpiValue} ${styles.positive}`}>{streakInfo.longestWin}</span>
+            </div>
+            <div className={styles.behaviorStat}>
+              <span className={styles.kpiLabel}>{t('dashboard.consecutiveLosses')}</span>
+              <span className={`${styles.kpiValue} ${styles.negative}`}>{streakInfo.longestLoss}</span>
+            </div>
+            <div className={styles.behaviorStat}>
+              <span className={styles.kpiLabel}>{t('dashboard.kpiAvgHoldTime')}</span>
+              <span className={styles.kpiValue}>
+                {holdDays.winners.toFixed(1)} / {holdDays.losers.toFixed(1)} <span className={styles.kpiUnit}>{t('common.days')}</span>
+              </span>
+            </div>
           </div>
         </div>
       </div>
+
+      {showInsights && (
+        <div className={styles.kpiGroup}>
+          <h3 className={`eyebrow ${styles.kpiGroupTitle}`}>{t('dashboard.groupInsights')}</h3>
+          <div className={styles.insightsGrid}>
+            {showLossSource && <LossSourceCard trades={convertedTrades} baseCurrency={baseCurrency} locale={locale} />}
+            {showSetupPerformance && (
+              <SetupPerformanceCard trades={convertedTrades} baseCurrency={baseCurrency} locale={locale} tier={tier} onOpenAccessCode={onOpenAccessCode} />
+            )}
+          </div>
+        </div>
+      )}
 
       <div className={`${styles.section} metal-panel holo-edge`}>
         <h3 className="eyebrow">{t('dashboard.heatmapTitle')}</h3>

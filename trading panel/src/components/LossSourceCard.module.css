@@ -1,0 +1,159 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* כותרת קריאה בבירור - לא טיפול .eyebrow הקטן/העמום שמשמש לתוויות משניות בשאר האפליקציה.
+   אותה משפחת טוקנים (var(--serif), var(--text-h), משקל כבד) שכבר קיימת ב-h1-h3 הגלובליים
+   ובכרטיסי insight אחרים (ר' TradeOfTheMonthCard.module.css's .compactSymbol) - רק בגודל
+   שמתאים לכותרת כרטיס, לא לשם סימבול. */
+.title {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+  color: var(--text-h);
+}
+
+.verdict {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-h);
+  line-height: 1.5;
+}
+
+/* כשיש כיוון דומיננטי אמיתי - המשפט מקבל משקל ויזואלי (לא רק טקסט רגיל) כי זה ממצא אמיתי,
+   לא רק תיאור נייטרלי כמו "no clear pattern". */
+.verdictStrong {
+  font-weight: 700;
+  color: var(--pnl-neg-2);
+}
+
+/* בר דו-כיווני: Long גדל שמאלה מקו מרכז, Short גדל ימינה מאותו קו - שונה במפורש מבר מקוטע/
+   מדורג רגיל (ר' SetupPerformanceCard). כל צד הוא רכיב נפרד עם transform-origin בקצה הפנימי
+   שלו (הצד שנוגע בקו המרכז), כדי שהאנימציה תיראה כ"נפתחת מהמרכז החוצה" ולא "מתמלאת מקצה". */
+.diverging {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.divergingTrack {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 14px;
+  border-radius: 7px;
+  overflow: hidden;
+  background: rgba(var(--overlay-tint), 0.05);
+  border: 1px solid var(--border);
+  /* Long תמיד בצד שמאל / Short תמיד בצד ימין, בכל שפה - אותה קונבנציה כמו .legend (LTR
+     קבוע), לא הופך כיוון עם RTL, כדי שההתייחסות "שמאל/ימין" ב-.divergingLabels תישאר נכונה. */
+  direction: ltr;
+}
+
+/* כל חצי הוא ה"מסגרת ייחוס" (100%) של הצד שלו בלבד - כך ש-longSharePercent/shortSharePercent
+   (שיחד מסתכמים ל-100%) כל אחד ממופה לרוחב היחסי בתוך החצי שלו, לא לרוחב הטראק המלא. */
+.halfLong,
+.halfShort {
+  flex: 1 1 50%;
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+}
+
+.halfLong {
+  justify-content: flex-end;
+}
+
+.halfShort {
+  justify-content: flex-start;
+}
+
+.segLong {
+  height: 100%;
+  transform-origin: right;
+  animation: seg-grow-in 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  background: var(--pnl-neg);
+}
+
+.segShort {
+  height: 100%;
+  transform-origin: left;
+  animation: seg-grow-in 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  background: var(--pnl-neg-2);
+  opacity: 0.65;
+}
+
+.centerLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: var(--border-hi);
+  z-index: 1;
+}
+
+@keyframes seg-grow-in {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .segLong,
+  .segShort {
+    animation: none;
+  }
+}
+
+.divergingLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dotLong {
+  background: var(--pnl-neg);
+}
+
+.dotShort {
+  background: var(--pnl-neg-2);
+  opacity: 0.65;
+}

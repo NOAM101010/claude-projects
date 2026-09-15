@@ -440,6 +440,81 @@ export function weeklyRecap(trades: Trade[], referenceDate: Date = new Date()): 
   }
 }
 
+/** מינימום טריידים מפסידים סגורים בכל כיוון (long וגם short) לפני שקובעים טענה כיוונית -
+ * ראה `lossSourceBreakdown`. "מספיק הפסדים בסה"כ" לא מספיק: אם כל ההפסדים (או כמעט כולם)
+ * מגיעים מכיוון אחד כי החשבון כמעט ולא סוחר בכיוון השני, אין באמת "מקור הפסדים" להשוות -
+ * זו סתם עובדה טריוויאלית ("100% מ-Long" כי אין Short בכלל), לא תובנה. */
+const MIN_LOSING_TRADES_PER_DIRECTION = 3
+/** נתח מינימלי (%) מסך ה-$ שהופסד כדי לקרוא לכיוון אחד "דומיננטי" - מתחת לזה זה "אין דפוס ברור". */
+const DOMINANT_LOSS_SHARE_THRESHOLD = 60
+
+export type LossSourceBreakdown =
+  | { sufficientData: false }
+  | {
+      sufficientData: true
+      /** סה"כ $ שהופסד בטריידים סגורים מפסידים בכיוון long (מספר חיובי - כמות ה-$, לא ה-pnl השלילי) */
+      longLossAmount: number
+      /** אותו דבר לכיוון short */
+      shortLossAmount: number
+      /** longLossAmount + shortLossAmount */
+      totalLossAmount: number
+      longSharePercent: number
+      shortSharePercent: number
+      /** הכיוון שאחראי ל-≥`DOMINANT_LOSS_SHARE_THRESHOLD`% מסך ההפסד, אם יש כזה - null אם מאוזן. */
+      dominantDirection: 'long' | 'short' | null
+    }
+
+/**
+ * "מאיפה ההפסדים מגיעים" - מתוך טריידים סגורים ומפסידים בלבד (pnl < 0), איזה נתח מסך ה-$
+ * שהופסד הגיע מטריידים long מול short. דורש לפחות `MIN_LOSING_TRADES_PER_DIRECTION` טריידים
+ * מפסידים *בכל אחד* מהכיוונים (לא רק מספיק הפסדים בסה"כ) לפני שנאמרת טענה כיוונית כלשהי -
+ * מתחת לזה `sufficientData: false`, כדי לא להציג "השוואה" מול כיוון שכמעט ולא נסחר בו
+ * בכלל (אותו עיקרון כמו שאר האפליקציה - ר' איך `TradeOfTheMonthCard` מטפל ב"אין עדיין
+ * טרייד מנצח" בכנות במקום לכפות אחד).
+ */
+export function lossSourceBreakdown(trades: Trade[]): LossSourceBreakdown {
+  const losses = closedTrades(trades).filter((t) => (t.pnl ?? 0) < 0)
+  const longLosses = losses.filter((t) => t.direction === 'long')
+  const shortLosses = losses.filter((t) => t.direction === 'short')
+  if (longLosses.length < MIN_LOSING_TRADES_PER_DIRECTION || shortLosses.length < MIN_LOSING_TRADES_PER_DIRECTION) {
+    return { sufficientData: false }
+  }
+
+  const longLossAmount = Math.abs(losses.filter((t) => t.direction === 'long').reduce((s, t) => s + (t.pnl ?? 0), 0))
+  const shortLossAmount = Math.abs(losses.filter((t) => t.direction === 'short').reduce((s, t) => s + (t.pnl ?? 0), 0))
+  const totalLossAmount = longLossAmount + shortLossAmount
+
+  const longSharePercent = totalLossAmount > 0 ? (longLossAmount / totalLossAmount) * 100 : 0
+  const shortSharePercent = totalLossAmount > 0 ? (shortLossAmount / totalLossAmount) * 100 : 0
+
+  let dominantDirection: 'long' | 'short' | null = null
+  if (longSharePercent >= DOMINANT_LOSS_SHARE_THRESHOLD) dominantDirection = 'long'
+  else if (shortSharePercent >= DOMINANT_LOSS_SHARE_THRESHOLD) dominantDirection = 'short'
+
+  return { sufficientData: true, longLossAmount, shortLossAmount, totalLossAmount, longSharePercent, shortSharePercent, dominantDirection }
+}
+
+/** מינימום טריידים סגורים בתוך setup בודד כדי להיכלל בדירוג "Setup Performance" - פחות מזה זה רעש. */
+const MIN_TRADES_PER_RANKED_SETUP = 3
+/** מינימום מספר setups אמיתיים (שאינם "No setup") שעומדים בסף לעיל, לפני שדירוג בכלל נחשב
+ * בעל משמעות - setup אמיתי בודד (או אפס, כשהכל נופל תחת "No setup") הוא לא "דירוג", זו סתם
+ * חזרה על סטטיסטיקת כל החשבון תחת שם אחד. */
+const MIN_REAL_SETUPS_FOR_RANKING = 2
+
+/**
+ * דירוג setups לפי ביצועים, לשימוש ב"Setup Performance" (Pro) - קורא ל-`statsBySetup` הקיים
+ * (לא משכפל את חישוב ה-win-rate/P&L שלו), מסנן החוצה את דלי "No setup" (לא setup אמיתי -
+ * לא ניתן לדרג "לא תייגתי") ו-setups עם פחות מ-`MIN_TRADES_PER_RANKED_SETUP` טריידים סגורים,
+ * כדי לא לדרג setup עם טרייד בודד כאילו הוא ממצא משמעותי. אם פחות מ-`MIN_REAL_SETUPS_FOR_RANKING`
+ * setups עומדים בקריטריונים - מחזיר מערך ריק (הכרטיס כולו מוסתר ב-`SetupPerformanceCard`,
+ * אין טעם "לדרג" setup בודד מול עצמו). נשאר ממוין לפי P&L מצטבר יורד (אותו סדר כמו `statsBySetup`).
+ */
+export function rankedSetupPerformance(trades: Trade[]): GroupStats[] {
+  const realSetups = statsBySetup(trades).filter((s) => s.key !== 'No setup' && s.trades >= MIN_TRADES_PER_RANKED_SETUP)
+  if (realSetups.length < MIN_REAL_SETUPS_FOR_RANKING) return []
+  return realSetups
+}
+
 export interface TradeOfTheMonth {
   trade: Trade
   /** מספר טריידים סגורים בחודש הקלנדרי הזה (כולל הטרייד עצמו) - ל"Best of N". */

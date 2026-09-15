@@ -10,8 +10,10 @@ import {
   drawdownCurve,
   equityCurve,
   expectancy,
+  lossSourceBreakdown,
   maxDrawdown,
   profitFactor,
+  rankedSetupPerformance,
   statsByDayOfWeek,
   statsBySetup,
   statsBySymbol,
@@ -438,5 +440,83 @@ describe('statsByDayOfWeek', () => {
     ]
     const bucket = statsByDayOfWeek(trades).find((r) => r.key === localDay)
     expect(bucket).toEqual({ key: localDay, trades: 2, winRate: 50, pnl: 0 })
+  })
+})
+
+describe('lossSourceBreakdown', () => {
+  it('hides the insight (insufficient data) when losses are almost entirely one-directional', () => {
+    // account trades almost exclusively Long - only 1 Short loss ever, nothing meaningful to compare.
+    const trades = [
+      ...Array.from({ length: 5 }, () => makeTrade({ direction: 'long', entryPrice: 100, exitPrice: 90, quantity: 10 })),
+      makeTrade({ direction: 'short', entryPrice: 100, exitPrice: 110, quantity: 10 }),
+    ]
+    expect(lossSourceBreakdown(trades)).toEqual({ sufficientData: false })
+  })
+
+  it('reports insufficient data with fewer than 3 losing trades in either direction', () => {
+    const trades = [
+      makeTrade({ direction: 'long', entryPrice: 100, exitPrice: 90 }),
+      makeTrade({ direction: 'long', entryPrice: 100, exitPrice: 90 }),
+      makeTrade({ direction: 'short', entryPrice: 100, exitPrice: 110 }),
+    ]
+    expect(lossSourceBreakdown(trades)).toEqual({ sufficientData: false })
+  })
+
+  it('flags a dominant direction when both directions have enough losses and one accounts for >=60% of total loss $', () => {
+    const trades = [
+      // 5 long losses of -100 each = 500
+      ...Array.from({ length: 5 }, () => makeTrade({ direction: 'long', entryPrice: 100, exitPrice: 90, quantity: 10 })),
+      // 3 short losses of -100 each = 300
+      ...Array.from({ length: 3 }, () => makeTrade({ direction: 'short', entryPrice: 100, exitPrice: 110, quantity: 10 })),
+    ]
+    const result = lossSourceBreakdown(trades)
+    expect(result.sufficientData).toBe(true)
+    if (!result.sufficientData) throw new Error('unreachable')
+    expect(result.longLossAmount).toBe(500)
+    expect(result.shortLossAmount).toBe(300)
+    expect(result.longSharePercent).toBeCloseTo(62.5, 5)
+    expect(result.dominantDirection).toBe('long')
+  })
+
+  it('reports the dominance threshold correctly at exactly 60% (normal case, both directions qualify)', () => {
+    const trades = [
+      ...Array.from({ length: 3 }, () => makeTrade({ direction: 'long', entryPrice: 100, exitPrice: 88, quantity: 10 })), // -120 each = -360
+      ...Array.from({ length: 3 }, () => makeTrade({ direction: 'short', entryPrice: 100, exitPrice: 108, quantity: 10 })), // -80 each = -240
+    ]
+    const result = lossSourceBreakdown(trades)
+    expect(result.sufficientData).toBe(true)
+    if (!result.sufficientData) throw new Error('unreachable')
+    expect(result.longSharePercent).toBeCloseTo(60, 5)
+    // 60% is the dominance threshold itself - inclusive, so long *is* flagged dominant here.
+    expect(result.dominantDirection).toBe('long')
+  })
+})
+
+describe('rankedSetupPerformance', () => {
+  it('hides the ranking (empty array) when fewer than 2 real setups qualify - only 1 real setup with enough trades', () => {
+    const trades = [
+      makeTrade({ setup: 'Breakout', entryPrice: 100, exitPrice: 110 }),
+      makeTrade({ setup: 'Breakout', entryPrice: 100, exitPrice: 120 }),
+      makeTrade({ setup: 'Breakout', entryPrice: 100, exitPrice: 130 }),
+      makeTrade({ setup: 'Pullback', entryPrice: 100, exitPrice: 90 }), // only 1 trade - noise, filtered out
+    ]
+    expect(rankedSetupPerformance(trades)).toEqual([])
+  })
+
+  it('hides the ranking when the account barely uses the setup field - everything falls under "No setup"', () => {
+    const trades = Array.from({ length: 5 }, () => makeTrade({ setup: undefined, entryPrice: 100, exitPrice: 110 }))
+    expect(rankedSetupPerformance(trades)).toEqual([])
+  })
+
+  it('keeps the same descending P&L order as statsBySetup when 2+ real setups qualify (normal case, shown)', () => {
+    const trades = [
+      makeTrade({ setup: 'A', entryPrice: 100, exitPrice: 110 }), // +100
+      makeTrade({ setup: 'A', entryPrice: 100, exitPrice: 110 }), // +100
+      makeTrade({ setup: 'A', entryPrice: 100, exitPrice: 110 }), // +100 => A total +300
+      makeTrade({ setup: 'B', entryPrice: 100, exitPrice: 105 }), // +5
+      makeTrade({ setup: 'B', entryPrice: 100, exitPrice: 105 }), // +5
+      makeTrade({ setup: 'B', entryPrice: 100, exitPrice: 105 }), // +5 => B total +15
+    ]
+    expect(rankedSetupPerformance(trades).map((r) => r.key)).toEqual(['A', 'B'])
   })
 })

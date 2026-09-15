@@ -151,6 +151,7 @@ const en = {
   'dashboard.kpiTradesClosedOpen': 'Trades (closed / open)',
   'dashboard.groupPerformance': 'Performance',
   'dashboard.groupBehavior': 'Behavior & patterns',
+  'dashboard.groupInsights': 'Insights',
 
   // desktop stat bar (desktop-only "Wide Console" layout, sticky under nav)
   'desktopStatBar.todayPnl': "Today's P&L",
@@ -165,6 +166,7 @@ const en = {
   'dashboard.streakWins': '{{count}} wins in a row',
   'dashboard.streakLosses': '{{count}} losses in a row',
   'dashboard.kpiMaxDrawdown': 'Max Drawdown',
+  'dashboard.kpiMaxDrawdownPercentChip': '{{percent}}% from peak',
   'dashboard.longestStreaksTitle': 'Longest streaks (all time)',
   'dashboard.consecutiveWins': 'Consecutive wins',
   'dashboard.consecutiveLosses': 'Consecutive losses',
@@ -209,6 +211,19 @@ const en = {
   'dashboard.weeklyRecapVsLastWeek': '{{value}} vs last week',
   'dashboard.weeklyRecapLocked': 'A live summary of your last 7 days - trade count, net P&L, win rate and best trade - is a Pro feature.',
   'dashboard.weeklyRecapModalHint': 'To unlock the Weekly Recap, already have a Pro code? Enter it here.',
+
+  // Loss Source insight card (all tiers) - hidden entirely (no card, no message) when there
+  // isn't enough losing-trade data in both directions to compare - see lossSourceBreakdown().
+  'dashboard.lossSourceTitle': 'Where losses come from',
+  'dashboard.lossSourceVerdict': '{{percent}}% of your losses came from {{direction}} trades',
+  'dashboard.lossSourceNoPattern': 'No clear pattern by direction - your losses are roughly balanced between Long and Short.',
+
+  // Setup Performance insight card (Pro) - hidden entirely when fewer than 2 real setups qualify.
+  'dashboard.setupPerformanceTitle': 'Setup performance',
+  'dashboard.setupPerformanceTitleLocked': 'Setup performance (Pro)',
+  'dashboard.setupPerformanceLocked': 'A ranked breakdown of which setups actually make you money is a Pro feature.',
+  'dashboard.setupPerformanceRowMeta': '{{trades}} trades · {{winRate}}% win rate',
+  'dashboard.setupPerformanceTeaserSetup': 'Setup {{n}}',
 
   // WorkspaceSettings
   'workspaceSettings.currentTier': 'Current plan',
@@ -732,6 +747,7 @@ const he: Record<TranslationKey, string> = {
   'dashboard.kpiTradesClosedOpen': 'טריידים (סגורים / פתוחים)',
   'dashboard.groupPerformance': 'ביצועים',
   'dashboard.groupBehavior': 'התנהגות ודפוסים',
+  'dashboard.groupInsights': 'תובנות',
 
   'desktopStatBar.todayPnl': 'P&L היום',
   'desktopStatBar.openPositions': 'פוזיציות פתוחות',
@@ -745,6 +761,7 @@ const he: Record<TranslationKey, string> = {
   'dashboard.streakWins': '{{count}} ניצחונות ברצף',
   'dashboard.streakLosses': '{{count}} הפסדים ברצף',
   'dashboard.kpiMaxDrawdown': 'Max Drawdown',
+  'dashboard.kpiMaxDrawdownPercentChip': '{{percent}}% מהשיא',
   'dashboard.longestStreaksTitle': 'רצפים ארוכים ביותר (היסטוריה)',
   'dashboard.consecutiveWins': 'ניצחונות רצופים',
   'dashboard.consecutiveLosses': 'הפסדים רצופים',
@@ -789,6 +806,18 @@ const he: Record<TranslationKey, string> = {
   'dashboard.weeklyRecapVsLastWeek': '{{value}} לעומת השבוע שעבר',
   'dashboard.weeklyRecapLocked': 'סיכום חי של 7 הימים האחרונים - מספר טריידים, רווח/הפסד נטו, אחוז הצלחה והטרייד הטוב ביותר - הוא פיצ׳ר של Pro.',
   'dashboard.weeklyRecapModalHint': 'כדי לפתוח את הסיכום השבועי, יש לך כבר קוד Pro? הזן אותו כאן.',
+
+  // Loss Source insight card (all tiers)
+  'dashboard.lossSourceTitle': 'מאיפה ההפסדים מגיעים',
+  'dashboard.lossSourceVerdict': '{{percent}}% מההפסדים שלך הגיעו מטריידים {{direction}}',
+  'dashboard.lossSourceNoPattern': 'אין דפוס ברור לפי כיוון - ההפסדים שלך מתחלקים בערך שווה בין Long ל-Short.',
+
+  // Setup Performance insight card (Pro)
+  'dashboard.setupPerformanceTitle': 'ביצועים לפי Setup',
+  'dashboard.setupPerformanceTitleLocked': 'ביצועים לפי Setup (Pro)',
+  'dashboard.setupPerformanceLocked': 'פילוח מדורג של אילו setups באמת מרוויחים לך כסף הוא פיצ׳ר של Pro.',
+  'dashboard.setupPerformanceRowMeta': '{{trades}} טריידים · {{winRate}}% אחוז הצלחה',
+  'dashboard.setupPerformanceTeaserSetup': 'Setup {{n}}',
 
   'workspaceSettings.currentTier': 'התוכנית הנוכחית',
   'workspaceSettings.tierDemo': 'דמו',
@@ -1289,6 +1318,7 @@ const es: Record<TranslationKey, string> = {
   'dashboard.kpiTradesClosedOpen': 'Operaciones (cerradas / abiertas)',
   'dashboard.groupPerformance': 'Rendimiento',
   'dashboard.groupBehavior': 'Comportamiento y patrones',
+  'dashboard.groupInsights': 'Insights',
 
   'desktopStatBar.todayPnl': 'P&L de hoy',
   'desktopStatBar.openPositions': 'Posiciones abiertas',
@@ -1302,6 +1332,7 @@ const es: Record<TranslationKey, string> = {
   'dashboard.streakWins': '{{count}} victorias seguidas',
   'dashboard.streakLosses': '{{count}} pérdidas seguidas',
   'dashboard.kpiMaxDrawdown': 'Max Drawdown',
+  'dashboard.kpiMaxDrawdownPercentChip': '{{percent}}% desde el máximo',
   'dashboard.longestStreaksTitle': 'Rachas más largas (histórico)',
   'dashboard.consecutiveWins': 'Victorias consecutivas',
   'dashboard.consecutiveLosses': 'Pérdidas consecutivas',
@@ -1346,6 +1377,18 @@ const es: Record<TranslationKey, string> = {
   'dashboard.weeklyRecapVsLastWeek': '{{value}} vs. la semana pasada',
   'dashboard.weeklyRecapLocked': 'Un resumen en vivo de tus últimos 7 días - número de operaciones, P&L neto, tasa de acierto y mejor operación - es una función Pro.',
   'dashboard.weeklyRecapModalHint': 'Para desbloquear el Resumen semanal, ¿ya tienes un código Pro? Ingrésalo aquí.',
+
+  // Loss Source insight card (all tiers)
+  'dashboard.lossSourceTitle': 'De dónde vienen tus pérdidas',
+  'dashboard.lossSourceVerdict': 'El {{percent}}% de tus pérdidas vino de operaciones {{direction}}',
+  'dashboard.lossSourceNoPattern': 'No hay un patrón claro por dirección - tus pérdidas están repartidas de forma bastante equilibrada entre Long y Short.',
+
+  // Setup Performance insight card (Pro)
+  'dashboard.setupPerformanceTitle': 'Rendimiento por Setup',
+  'dashboard.setupPerformanceTitleLocked': 'Rendimiento por Setup (Pro)',
+  'dashboard.setupPerformanceLocked': 'Un desglose ordenado de qué setups realmente te hacen ganar dinero es una función Pro.',
+  'dashboard.setupPerformanceRowMeta': '{{trades}} operaciones · {{winRate}}% de acierto',
+  'dashboard.setupPerformanceTeaserSetup': 'Setup {{n}}',
 
   'workspaceSettings.currentTier': 'Plan actual',
   'workspaceSettings.tierDemo': 'Demo',
@@ -1849,6 +1892,7 @@ const fr: Record<TranslationKey, string> = {
   'dashboard.kpiTradesClosedOpen': 'Trades (fermés / ouverts)',
   'dashboard.groupPerformance': 'Performance',
   'dashboard.groupBehavior': 'Comportement et tendances',
+  'dashboard.groupInsights': 'Insights',
 
   'desktopStatBar.todayPnl': "P&L du jour",
   'desktopStatBar.openPositions': 'Positions ouvertes',
@@ -1862,6 +1906,7 @@ const fr: Record<TranslationKey, string> = {
   'dashboard.streakWins': '{{count}} victoires d’affilée',
   'dashboard.streakLosses': '{{count}} pertes d’affilée',
   'dashboard.kpiMaxDrawdown': 'Max Drawdown',
+  'dashboard.kpiMaxDrawdownPercentChip': '{{percent}}% depuis le sommet',
   'dashboard.longestStreaksTitle': 'Plus longues séries (historique)',
   'dashboard.consecutiveWins': 'Victoires consécutives',
   'dashboard.consecutiveLosses': 'Pertes consécutives',
@@ -1906,6 +1951,18 @@ const fr: Record<TranslationKey, string> = {
   'dashboard.weeklyRecapVsLastWeek': '{{value}} vs la semaine dernière',
   'dashboard.weeklyRecapLocked': "Un résumé en direct de vos 7 derniers jours - nombre de trades, P&L net, taux de réussite et meilleur trade - est une fonctionnalité Pro.",
   'dashboard.weeklyRecapModalHint': 'Pour débloquer le Récap hebdomadaire, vous avez déjà un code Pro ? Entrez-le ici.',
+
+  // Loss Source insight card (all tiers)
+  'dashboard.lossSourceTitle': 'D’où viennent vos pertes',
+  'dashboard.lossSourceVerdict': '{{percent}}% de vos pertes proviennent de trades {{direction}}',
+  'dashboard.lossSourceNoPattern': 'Aucun schéma clair par direction - vos pertes sont réparties de façon plutôt équilibrée entre Long et Short.',
+
+  // Setup Performance insight card (Pro)
+  'dashboard.setupPerformanceTitle': 'Performance par Setup',
+  'dashboard.setupPerformanceTitleLocked': 'Performance par Setup (Pro)',
+  'dashboard.setupPerformanceLocked': 'Un classement des setups qui vous font réellement gagner de l’argent est une fonctionnalité Pro.',
+  'dashboard.setupPerformanceRowMeta': '{{trades}} trades · {{winRate}}% de réussite',
+  'dashboard.setupPerformanceTeaserSetup': 'Setup {{n}}',
 
   'workspaceSettings.currentTier': 'Forfait actuel',
   'workspaceSettings.tierDemo': 'Démo',

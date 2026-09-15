@@ -64,13 +64,17 @@
   color: var(--text-dim);
 }
 
-/* גרסת "באנר" רוחב-מלא - הרצף הנוכחי הוא הכי "סיפורי" בקבוצה, מקבל שורה שלמה לעצמו. */
+/* גרסת "hero" - הרצף הנוכחי הוא הכי "סיפורי" בקבוצה, מקבל טיפול ויזואלי גדול יותר. מוצג
+   כשותף שווה-משקל מול `.behaviorSecondary` ב-Dashboard.module.css's `.behaviorGrid` (אותו
+   דפוס זיווג דו-טורי בדיוק כמו `.heroGrid`/`.spotlightGrid`) - לא עוד "באנר" שתופס שורה
+   שלמה לבד מול אריחים קטנים שצפים בנפרד (ר' history ב-Dashboard.module.css's .behaviorGrid). */
 .cardLg {
   flex-direction: row;
   align-items: center;
   gap: 18px;
   padding: 20px 26px;
-  grid-column: 1 / -1;
+  height: 100%;
+  box-sizing: border-box;
 }
 
 .flameLg {

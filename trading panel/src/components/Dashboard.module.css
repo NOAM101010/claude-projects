@@ -93,6 +93,30 @@
   color: rgba(245, 225, 190, 0.55);
 }
 
+.neutralIcon {
+  color: var(--text-dim);
+}
+
+/* Total P&L + Max Drawdown paired hero - same 2-column contents-at-base/grid-at-1024px
+   pattern as .spotlightGrid below, so Max Drawdown gets the exact same visual scale as
+   Total P&L instead of the smaller .kpiCardWide/.kpiValueLg treatment it used to have
+   buried inside .behaviorGrid. */
+.heroGrid {
+  display: contents;
+}
+
+/* Max Drawdown's hero card reuses every .kpiHero size class as-is (same font-size scale on
+   .kpiHeroValue) - only the accent wash differs, a subdued red tint instead of Total P&L's
+   amber holo-edge--amber, so the pair reads as "the two headline numbers" without the second
+   one competing for the same brand-accent attention as the first. */
+.kpiHeroDrawdown::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 140% at 100% 0%, var(--pnl-neg-bg), transparent 55%);
+  pointer-events: none;
+}
+
 /* קבוצות KPI: כל קבוצה = כותרת eyebrow + מרווח נשימה משלה - לא קיר אחיד של תאים זהים. */
 .kpiGroup {
   display: flex;
@@ -117,34 +141,30 @@
   }
 }
 
+/* פידבק: StreakCard's "lg" באנר מלא-רוחב ליד 3 אריחים קטנים באותו grid יצר בדיוק את בעיית
+   "אזור צבעוני גדול מצד אחד, קופסאות קטנות מנותקות מהצד השני" שכבר תוקנה קודם ב-
+   BestWorstSpotlight/WeeklyRecapCard (ר' `.heroGrid`/`.spotlightGrid`) - הפתרון זהה: לא grid
+   רב-תאי של פריטים בגדלים שונים, אלא שני קופסאות שוות-משקל (StreakCard + קופסת "שני
+   סטטיסטיקות משניות" אחת, לא שלוש קופסאות נפרדות) שמזדווגות זו-לצד-זו, אותו `display:
+   contents` בבסיס + grid דו-טורי מ-1024px בדיוק כמו `.heroGrid`/`.spotlightGrid` למטה.
+   ר' `.behaviorSecondary` ל-קופסת האריחים המשניים. */
 .behaviorGrid {
+  display: contents;
+}
+
+.behaviorSecondary {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 12px;
+  padding: 18px;
+  min-width: 0;
 }
 
-@media (min-width: 640px) {
-  .behaviorGrid {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  }
-}
-
-/* מספרים "שמספרים סיפור" (רצף נוכחי, Max Drawdown) - שורה מלאה, לא תא זהה לשאר. */
-.kpiCardWide {
-  grid-column: 1 / -1;
-  padding: 20px 26px;
-}
-
-.kpiValueLg {
-  position: relative;
-  z-index: 1;
-  font-size: clamp(24px, 3vw, 32px);
-  font-weight: 800;
-  color: var(--text-h);
-  font-family: var(--mono);
-  font-variant-numeric: tabular-nums;
-  direction: ltr;
-  unicode-bidi: isolate;
+.behaviorStat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
 }
 
 .kpiCard {
@@ -327,14 +347,22 @@
   display: contents;
 }
 
+/* קבוצת "תובנות" (B1/B2/B3) - כרטיסים שונים בגובה/מבנה זה מזה בכוונה (לא תבנית אחידה), אז
+   נשארים בעמודה אחת מלאה-רוחב בכל רוחב מסך, בלי grid דו-טורי שידחוף אותם להתיישר לגובה זהה. */
+.insightsGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
 /* דסקטופ אמיתי: משתמשים ברוחב הפנוי - יותר עמודות KPI, גרפים/פילוחים זה-לצד-זה */
 @media (min-width: 1024px) {
   .wrapper {
     max-width: 1400px;
   }
 
-  .performanceGrid,
-  .behaviorGrid {
+  .performanceGrid {
     grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   }
 
@@ -359,9 +387,11 @@
     text-align: center;
   }
 
+  .heroGrid,
   .chartsGrid,
   .groupsGrid,
-  .spotlightGrid {
+  .spotlightGrid,
+  .behaviorGrid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 18px;
@@ -381,8 +411,7 @@
     max-width: 1880px;
   }
 
-  .performanceGrid,
-  .behaviorGrid {
+  .performanceGrid {
     grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   }
 }
