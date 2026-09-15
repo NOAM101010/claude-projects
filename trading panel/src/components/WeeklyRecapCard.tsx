@@ -115,19 +115,30 @@ export function WeeklyRecapCard({ recap, baseCurrency, locale, tier, onOpenAcces
 
       {recap.bestTrade ? (
         <div className={styles.tradesRow}>
-          <p className={styles.bestTrade}>
-            {t('dashboard.weeklyRecapBestTrade', {
-              symbol: recap.bestTrade.symbol,
-              pnl: formatCurrency(recap.bestTrade.pnl, baseCurrency, locale),
-            })}
-          </p>
-          {recap.worstTrade && (
-            <p className={styles.bestTrade}>
-              {t('dashboard.weeklyRecapWorstTrade', {
-                symbol: recap.worstTrade.symbol,
-                pnl: formatCurrency(recap.worstTrade.pnl, baseCurrency, locale),
+          {recap.worstTrade && recap.bestTrade.id === recap.worstTrade.id ? (
+            <p className={`${styles.bestTrade} ${recap.bestTrade.pnl >= 0 ? styles.tilePositive : styles.tileNegative}`}>
+              {t('dashboard.weeklyRecapOnlyTrade', {
+                symbol: recap.bestTrade.symbol,
+                pnl: formatCurrency(recap.bestTrade.pnl, baseCurrency, locale),
               })}
             </p>
+          ) : (
+            <>
+              <p className={`${styles.bestTrade} ${recap.bestTrade.pnl >= 0 ? styles.tilePositive : styles.tileNegative}`}>
+                {t('dashboard.weeklyRecapBestTrade', {
+                  symbol: recap.bestTrade.symbol,
+                  pnl: formatCurrency(recap.bestTrade.pnl, baseCurrency, locale),
+                })}
+              </p>
+              {recap.worstTrade && (
+                <p className={`${styles.bestTrade} ${recap.worstTrade.pnl >= 0 ? styles.tilePositive : styles.tileNegative}`}>
+                  {t('dashboard.weeklyRecapWorstTrade', {
+                    symbol: recap.worstTrade.symbol,
+                    pnl: formatCurrency(recap.worstTrade.pnl, baseCurrency, locale),
+                  })}
+                </p>
+              )}
+            </>
           )}
         </div>
       ) : (

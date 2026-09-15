@@ -28,6 +28,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: stretch;
+  justify-content: center;
   gap: 10px;
   padding-top: 12px;
   border-top: 1px solid var(--border);
@@ -117,6 +118,7 @@
 .tradesRow {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 10px;
 }
 
@@ -131,6 +133,18 @@
   border-radius: 10px;
   background: rgba(var(--overlay-tint), 0.025);
   border: 1px solid var(--border);
+}
+
+/* גוון צבע עדין לפי הסימן האמיתי של ה-P&L של הטרייד (לא לפי "זה הסלוט הכי טוב/הכי גרוע" -
+   טרייד "הכי גרוע" בשבוע כולו מנצח עדיין רווחי ויוצג ירוק, לא אדום) - אותו --pnl-pos-bg/
+   --pnl-neg-bg שכבר משמש לקידוד צבע P&L בכל האפליקציה (ר' OpenPositions .badgeLong/.badgeShort),
+   כדי שהאריחים לא ייראו שטוחים/כהים ליד אריח ה-P&L הראשי הצבעוני. */
+.tilePositive {
+  background: var(--pnl-pos-bg);
+}
+
+.tileNegative {
+  background: var(--pnl-neg-bg);
 }
 
 /* טיזר מטושטש ל-non-pro - מציג את מבנה הכרטיס בלי דאטה אמיתי, לא לחיץ (aria-hidden). */

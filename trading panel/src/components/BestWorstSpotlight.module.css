@@ -1,6 +1,7 @@
 .card {
   display: flex;
   flex-direction: column;
+  gap: 10px;
 }
 
 .half {
@@ -8,7 +9,20 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 6px;
-  padding: 16px 4px;
+  padding: 16px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+/* גוון צבע עדין לפי הסימן האמיתי של ה-pnl (לא לפי best/worst - ר' SpotlightHalf ב-.tsx) -
+   אותה גישה בדיוק כמו WeeklyRecapCard's .tilePositive/.tileNegative (--pnl-pos-bg/
+   --pnl-neg-bg), כדי שהאלמנט לא יישאר טקסט חשוף על רקע כהה. */
+.halfUp {
+  background: var(--pnl-pos-bg);
+}
+
+.halfDown {
+  background: var(--pnl-neg-bg);
 }
 
 .halfHeader {
@@ -59,6 +73,5 @@
 }
 
 .divider {
-  height: 1px;
-  background: var(--border);
+  display: none;
 }

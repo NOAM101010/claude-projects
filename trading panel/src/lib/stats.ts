@@ -386,10 +386,11 @@ export interface WeeklyRecap {
    * זה ממוצע גולמי מוגבל ל-7 הימים האחרונים בלבד, לא תוחלת מבוססת-win-rate על כל ההיסטוריה. */
   avgPnlPerTrade: number
   /** הטרייד עם ה-P&L הגבוה ביותר בחלון (גם אם שלילי - כמו `bestTrade()`, לא רק מנצחים). null אם אין טריידים סגורים בחלון. */
-  bestTrade: { symbol: string; pnl: number } | null
+  bestTrade: { id: string; symbol: string; pnl: number } | null
   /** הטרייד עם ה-P&L הנמוך ביותר בחלון (אותו דפוס בדיוק כמו `bestTrade`, min במקום max - אם
-   * יש רק טרייד אחד בחלון, best/worst הם אותו טרייד, וזה בסדר). null אם אין טריידים סגורים בחלון. */
-  worstTrade: { symbol: string; pnl: number } | null
+   * יש רק טרייד אחד בחלון, best/worst הם אותו טרייד (אותו `id`) - `WeeklyRecapCard.tsx`
+   * מזהה את זה לפי `id` ומציג אריח בודד במקום שני אריחים זהים). null אם אין טריידים סגורים בחלון. */
+  worstTrade: { id: string; symbol: string; pnl: number } | null
   /** P&L נטו של חלון 7 הימים *שלפני* החלון הנוכחי (יום -14 עד יום -7 יחסית ל-referenceDate) -
    * להשוואת שבוע-מול-שבוע ב-WeeklyRecapCard. null אם לא היו טריידים סגורים בחלון הקודם, כדי
    * שלא נציג השוואה מטעה (למשל "+100%") מול שום דבר בפועל. */
@@ -433,8 +434,8 @@ export function weeklyRecap(trades: Trade[], referenceDate: Date = new Date()): 
     netPnl,
     winRate,
     avgPnlPerTrade: tradeCount > 0 ? netPnl / tradeCount : 0,
-    bestTrade: best ? { symbol: best.symbol, pnl: best.pnl ?? 0 } : null,
-    worstTrade: worst ? { symbol: worst.symbol, pnl: worst.pnl ?? 0 } : null,
+    bestTrade: best ? { id: best.id, symbol: best.symbol, pnl: best.pnl ?? 0 } : null,
+    worstTrade: worst ? { id: worst.id, symbol: worst.symbol, pnl: worst.pnl ?? 0 } : null,
     previousWeekNetPnl,
   }
 }

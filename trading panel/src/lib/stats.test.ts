@@ -166,16 +166,17 @@ describe('weeklyRecap', () => {
       makeTrade({ id: 'd', exitAt: '2026-02-01T00:00:00.000Z', entryPrice: 100, exitPrice: 500 }), // outside window
     ]
     const recap = weeklyRecap(trades, referenceDate)
-    expect(recap.bestTrade).toEqual({ symbol: 'AAPL', pnl: 300 })
-    expect(recap.worstTrade).toEqual({ symbol: 'AAPL', pnl: -200 })
+    expect(recap.bestTrade).toEqual({ id: 'a', symbol: 'AAPL', pnl: 300 })
+    expect(recap.worstTrade).toEqual({ id: 'b', symbol: 'AAPL', pnl: -200 })
     expect(recap.avgPnlPerTrade).toBe(50) // (300 - 200 + 50) / 3
   })
 
   it('shows the same trade as both best and worst when only one trade is in the window', () => {
     const trades = [makeTrade({ id: 'a', exitAt: '2026-03-12T00:00:00.000Z', entryPrice: 100, exitPrice: 130 })] // +300
     const recap = weeklyRecap(trades, referenceDate)
-    expect(recap.bestTrade).toEqual({ symbol: 'AAPL', pnl: 300 })
-    expect(recap.worstTrade).toEqual({ symbol: 'AAPL', pnl: 300 })
+    expect(recap.bestTrade).toEqual({ id: 'a', symbol: 'AAPL', pnl: 300 })
+    expect(recap.worstTrade).toEqual({ id: 'a', symbol: 'AAPL', pnl: 300 })
+    expect(recap.bestTrade?.id).toBe(recap.worstTrade?.id)
     expect(recap.avgPnlPerTrade).toBe(300)
   })
 
