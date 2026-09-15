@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calculatePnl, calculatePositionSize } from './calculators'
+import { calculateKelly, calculatePnl, calculatePositionSize, calculateRiskOfRuin } from './calculators'
 
 describe('calculatePositionSize', () => {
   it('computes shares from a fixed dollar risk amount', () => {
@@ -87,5 +87,59 @@ describe('calculatePnl', () => {
       profitLoss: 0,
       profitLossPercent: 0,
     })
+  })
+})
+
+describe('calculateKelly', () => {
+  it('computes full and half Kelly for a known case (W=0.5, R=2)', () => {
+    // f* = 0.5 - (1-0.5)/2 = 0.5 - 0.25 = 0.25 -> half = 0.125
+    const outcome = calculateKelly(0.5, 200, -100, 10)
+    expect(outcome.reason).toBeNull()
+    expect(outcome.kelly?.fullKelly).toBeCloseTo(0.25, 10)
+    expect(outcome.kelly?.halfKelly).toBeCloseTo(0.125, 10)
+  })
+
+  it('can return a negative fullKelly for a losing edge (do not bet)', () => {
+    // W=0.3, R=1 -> f* = 0.3 - 0.7/1 = -0.4
+    const outcome = calculateKelly(0.3, 100, -100, 10)
+    expect(outcome.kelly?.fullKelly).toBeCloseTo(-0.4, 10)
+  })
+
+  it('returns notEnoughTrades under the minimum closed trade count', () => {
+    const outcome = calculateKelly(0.5, 200, -100, 9)
+    expect(outcome.kelly).toBeNull()
+    expect(outcome.reason).toBe('notEnoughTrades')
+  })
+
+  it('returns noLosingTrades when there are zero losing trades (avgLoss = 0)', () => {
+    const outcome = calculateKelly(1, 200, 0, 20)
+    expect(outcome.kelly).toBeNull()
+    expect(outcome.reason).toBe('noLosingTrades')
+  })
+})
+
+describe('calculateRiskOfRuin', () => {
+  it('computes a known Risk of Ruin (W=0.6, L=0.4, 10 risk units)', () => {
+    // edge = 0.2, base = 0.8/1.2 = 0.66667, units = 10000/1000 = 10 -> 0.66667^10 ≈ 0.01734
+    const ror = calculateRiskOfRuin({ winRate: 0.6, lossRate: 0.4, accountSize: 10000, riskPerTrade: 1000 })
+    expect(ror).toBeCloseTo(0.01734, 4)
+  })
+
+  it('returns 100% ruin when edge is -1 or below (certain loss every trade)', () => {
+    expect(calculateRiskOfRuin({ winRate: 0, lossRate: 1, accountSize: 10000, riskPerTrade: 1000 })).toBe(1)
+  })
+
+  it('returns 0% ruin when the win rate is 100% (edge = 1, never loses)', () => {
+    expect(calculateRiskOfRuin({ winRate: 1, lossRate: 0, accountSize: 10000, riskPerTrade: 1000 })).toBe(0)
+  })
+
+  it('clamps to 100% instead of a number above 1 for a strongly negative edge', () => {
+    const ror = calculateRiskOfRuin({ winRate: 0.2, lossRate: 0.8, accountSize: 10000, riskPerTrade: 1000 })
+    expect(ror).toBe(1)
+  })
+
+  it('returns 100% (cannot compute safely) for invalid account size or risk per trade', () => {
+    expect(calculateRiskOfRuin({ winRate: 0.6, lossRate: 0.4, accountSize: 0, riskPerTrade: 1000 })).toBe(1)
+    expect(calculateRiskOfRuin({ winRate: 0.6, lossRate: 0.4, accountSize: 10000, riskPerTrade: 0 })).toBe(1)
   })
 })

@@ -1,0 +1,73 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.statLabel {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
+.statValue {
+  font-family: var(--mono);
+  font-weight: 800;
+  font-size: clamp(17px, 2.4vw, 21px);
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.positive {
+  color: var(--pnl-pos-2);
+}
+
+.negative {
+  color: var(--pnl-neg-2);
+}
+
+.bestTrade {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+
+/* טיזר מטושטש ל-non-pro - מציג את מבנה הכרטיס בלי דאטה אמיתי, לא לחיץ (aria-hidden). */
+.lockedTeaser {
+  filter: blur(4px);
+  opacity: 0.55;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* אותו דפוס בדיוק כמו .upgradeHint ב-Tools.module.css/WorkspaceSwitcher.module.css. */
+.upgradeHint {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+
+.upgradeHint button {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  background: none;
+  color: var(--accent-2, var(--accent));
+  cursor: pointer;
+  text-decoration: underline;
+}

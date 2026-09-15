@@ -418,6 +418,8 @@ function App() {
             <Journal
               trades={trades}
               baseCurrency={workspace.baseCurrency}
+              tier={tier}
+              onOpenAccessCode={() => openAccessModal(t('dashboard.weeklyRecapModalHint'))}
               subTab={journalSubTab}
               onSubTabChange={setJournalSubTab}
               filter={filter}
@@ -432,6 +434,7 @@ function App() {
             <Tools
               accountId={accountId}
               tier={tier}
+              trades={trades}
               focusWatchlistSignal={focusWatchlistSignal}
               onOpenAccessCode={() => openAccessModal(t('tools.watchlist.modalHint'))}
             />

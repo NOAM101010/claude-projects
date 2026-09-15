@@ -375,6 +375,46 @@ export function worstTrade(trades: Trade[]): Trade | null {
   return closed.reduce((worst, t) => ((t.pnl ?? 0) < (worst.pnl ?? 0) ? t : worst))
 }
 
+export interface WeeklyRecap {
+  /** מספר טריידים סגורים ב-7 הימים האחרונים (חלון נע, לא שבוע קלנדרי - שונה מ-`DateRangePreset` 'thisWeek' ב-tradeFilters.ts). */
+  tradeCount: number
+  /** P&L מצטבר בחלון, 0 אם אין טריידים סגורים. */
+  netPnl: number
+  /** אחוז טריידים מרוויחים בחלון, 0 אם אין טריידים סגורים. */
+  winRate: number
+  /** הטרייד עם ה-P&L הגבוה ביותר בחלון (גם אם שלילי - כמו `bestTrade()`, לא רק מנצחים). null אם אין טריידים סגורים בחלון. */
+  bestTrade: { symbol: string; pnl: number } | null
+}
+
+/**
+ * "Weekly Recap": סיכום 7 הימים האחרונים (חלון נע לפי `exitAt`, כולל `referenceDate` עצמו) -
+ * לשימוש ב-`WeeklyRecapCard.tsx` (Pro-only). בכוונה *לא* אותו דבר כמו `matchesDateRange`'s
+ * 'thisWeek' preset ב-tradeFilters.ts (שם/ראשון קלנדרי) - כאן תמיד "7 הימים האחרונים"
+ * בפועל, בלי תלות באיזה יום השבוע היום.
+ */
+export function weeklyRecap(trades: Trade[], referenceDate: Date = new Date()): WeeklyRecap {
+  const cutoff = new Date(referenceDate)
+  cutoff.setDate(cutoff.getDate() - 7)
+
+  const inWindow = closedTrades(trades).filter((t) => {
+    const exit = new Date(t.exitAt as string).getTime()
+    return exit >= cutoff.getTime() && exit <= referenceDate.getTime()
+  })
+
+  const tradeCount = inWindow.length
+  const netPnl = inWindow.reduce((s, t) => s + (t.pnl ?? 0), 0)
+  const wins = inWindow.filter((t) => (t.pnl ?? 0) > 0).length
+  const winRate = tradeCount > 0 ? (wins / tradeCount) * 100 : 0
+  const best = tradeCount > 0 ? inWindow.reduce((b, t) => ((t.pnl ?? 0) > (b.pnl ?? 0) ? t : b)) : null
+
+  return {
+    tradeCount,
+    netPnl,
+    winRate,
+    bestTrade: best ? { symbol: best.symbol, pnl: best.pnl ?? 0 } : null,
+  }
+}
+
 export interface TradeOfTheMonth {
   trade: Trade
   /** מספר טריידים סגורים בחודש הקלנדרי הזה (כולל הטרייד עצמו) - ל"Best of N". */

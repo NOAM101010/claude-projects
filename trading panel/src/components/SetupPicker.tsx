@@ -1,10 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
+import { useLanguage } from '../i18n/LanguageContext'
+import type { AccountTier } from '../lib/accountApi'
 import styles from './SetupPicker.module.css'
 
 interface SetupPickerOption {
   value: string
   label: string
+  /** אופציית "Use '{query}'" - טקסט חופשי חדש (רק ל-Pro), לא אחד מ-`options`. סטייל שונה בדרופדאון. */
+  isCustom?: boolean
 }
 
 interface SetupPickerProps {
@@ -13,6 +17,8 @@ interface SetupPickerProps {
   onChange: (value: string) => void
   options: readonly string[]
   noSetupLabel: string
+  /** קובעת אם מוצגת אופציית "Use '{query}'" ליצירת setup חופשי חדש - רק ל-Pro (ראה למטה). */
+  tier: AccountTier
 }
 
 /**
@@ -20,8 +26,14 @@ interface SetupPickerProps {
  * (~25 ערכים, ראה `types/trade.ts` SETUPS), עם אופציית "No setup" קבועה למעלה
  * וניווט מקלדת (חצים/Enter/Escape). `value` יכול להיות גם ערך חופשי שלא ברשימה
  * (טריידים ישנים, למשל 'Forex') - מוצג כטקסט חופשי כרגיל, בלי לאבד אותו.
+ *
+ * Pro exclusive: אם הטקסט המוקלד לא תואם בדיוק (case-insensitive) לאף ערך ב-`options`,
+ * מתווספת בסוף הרשימה אופציית "Use '{query}'" שמאפשרת לשמור אותו כ-setup חופשי חדש -
+ * בלעדיה (basic/demo) המשתמש יכול לבחור רק מהרשימה הקבועה, בדיוק כמו ההתנהגות המקורית
+ * (הקלדה בלי בחירה מהרשימה חוזרת ל-value האחרון שאושר, ר' handleClickOutside/Escape).
  */
-export function SetupPicker({ id, value, onChange, options, noSetupLabel }: SetupPickerProps) {
+export function SetupPicker({ id, value, onChange, options, noSetupLabel, tier }: SetupPickerProps) {
+  const { t } = useLanguage()
   const [query, setQuery] = useState(value)
   const [open, setOpen] = useState(false)
   const [highlighted, setHighlighted] = useState(0)
@@ -40,9 +52,16 @@ export function SetupPicker({ id, value, onChange, options, noSetupLabel }: Setu
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [value])
 
-  const trimmedQuery = query.trim().toLowerCase()
+  const trimmedInput = query.trim()
+  const trimmedQuery = trimmedInput.toLowerCase()
   const filtered = trimmedQuery ? options.filter((o) => o.toLowerCase().includes(trimmedQuery)) : options
-  const list: SetupPickerOption[] = [{ value: '', label: noSetupLabel }, ...filtered.map((o) => ({ value: o, label: o }))]
+  const hasExactMatch = trimmedQuery !== '' && options.some((o) => o.toLowerCase() === trimmedQuery)
+  const canUseCustom = tier === 'pro' && trimmedInput !== '' && !hasExactMatch
+  const list: SetupPickerOption[] = [
+    { value: '', label: noSetupLabel },
+    ...filtered.map((o) => ({ value: o, label: o })),
+    ...(canUseCustom ? [{ value: trimmedInput, label: t('setupPicker.useCustomOption', { query: trimmedInput }), isCustom: true }] : []),
+  ]
 
   const select = (item: SetupPickerOption) => {
     onChange(item.value)
@@ -94,10 +113,10 @@ export function SetupPicker({ id, value, onChange, options, noSetupLabel }: Setu
         <ul id={id ? `${id}-listbox` : undefined} className={styles.dropdown} role="listbox">
           {list.map((item, index) => (
             <li
-              key={item.value || '__none__'}
+              key={item.isCustom ? `__custom__:${item.value}` : item.value || '__none__'}
               role="option"
               aria-selected={item.value === value}
-              className={`${styles.option} ${index === highlighted ? styles.highlighted : ''} ${item.value === '' ? styles.noneOption : ''}`}
+              className={`${styles.option} ${index === highlighted ? styles.highlighted : ''} ${item.value === '' ? styles.noneOption : ''} ${item.isCustom ? styles.customOption : ''}`}
               onMouseDown={(e) => {
                 e.preventDefault()
                 select(item)

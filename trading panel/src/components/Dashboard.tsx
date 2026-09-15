@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { TrendingDown, TrendingUp } from 'lucide-react'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useLanguage } from '../i18n/LanguageContext'
+import type { AccountTier } from '../lib/accountApi'
 import { getHistoricalRate, toApiDate } from '../lib/exchangeRates'
 import {
   avgHoldDays,
@@ -18,6 +19,7 @@ import {
   streaks,
   tradesCountByMonth,
   totalPnl,
+  weeklyRecap,
   winRate,
   worstTrade,
 } from '../lib/stats'
@@ -25,6 +27,7 @@ import { formatDateTime } from '../lib/format'
 import { BestWorstSpotlight } from './BestWorstSpotlight'
 import { PnlCalendar } from './PnlCalendar'
 import { StreakCard } from './StreakCard'
+import { WeeklyRecapCard } from './WeeklyRecapCard'
 import type { CurrencyCode, Trade } from '../types/trade'
 import type { GroupStats } from '../lib/stats'
 import styles from './Dashboard.module.css'
@@ -32,6 +35,9 @@ import styles from './Dashboard.module.css'
 interface DashboardProps {
   trades: Trade[]
   baseCurrency: CurrencyCode
+  tier: AccountTier
+  /** פותח את מודל קוד הגישה (שדרוג) - מועבר ל-`WeeklyRecapCard` (Pro-only), אותו מנגנון כמו שאר האפליקציה. */
+  onOpenAccessCode: () => void
   onSelectSymbol?: (symbol: string) => void
   /** לא נצרך כאן יותר - ה"By Setup" table הוסרה מהמסך הזה בכוונה, אבל ה-prop נשאר כדי
    * לא לגעת בשרשרת ה-`goToFilteredTrades`/`TradeFilter` הכללית (App.tsx -> Journal.tsx),
@@ -160,7 +166,7 @@ function GroupTable({
   )
 }
 
-export function Dashboard({ trades, baseCurrency, onSelectSymbol }: DashboardProps) {
+export function Dashboard({ trades, baseCurrency, tier, onOpenAccessCode, onSelectSymbol }: DashboardProps) {
   const { t, locale } = useLanguage()
   const { convertedTrades, converting, conversionError } = useConvertedTrades(trades, baseCurrency)
 
@@ -179,6 +185,7 @@ export function Dashboard({ trades, baseCurrency, onSelectSymbol }: DashboardPro
   const calendarData = dailyPnl(convertedTrades)
   const bySymbol = statsBySymbol(convertedTrades)
   const byDayOfWeek = statsByDayOfWeek(convertedTrades)
+  const recap = weeklyRecap(convertedTrades)
 
   return (
     <div className={styles.wrapper}>
@@ -341,6 +348,8 @@ export function Dashboard({ trades, baseCurrency, onSelectSymbol }: DashboardPro
         <h3 className="eyebrow">{t('dashboard.bestWorstTitle')}</h3>
         <BestWorstSpotlight best={bestTrade(convertedTrades)} worst={worstTrade(convertedTrades)} locale={locale} />
       </div>
+
+      <WeeklyRecapCard recap={recap} baseCurrency={baseCurrency} locale={locale} tier={tier} onOpenAccessCode={onOpenAccessCode} />
 
       <div className={styles.groupsGrid}>
         <GroupTable

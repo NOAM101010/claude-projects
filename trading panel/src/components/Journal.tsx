@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
+import type { AccountTier } from '../lib/accountApi'
 import { Dashboard } from './Dashboard'
 import { TradeList } from './TradeList'
 import { DEFAULT_TRADE_FILTERS, type TradeFiltersState } from '../lib/tradeFilters'
@@ -12,6 +13,9 @@ export type JournalSubTab = 'trades' | 'dashboard'
 interface JournalProps {
   trades: Trade[]
   baseCurrency: CurrencyCode
+  tier: AccountTier
+  /** פותח את מודל קוד הגישה (שדרוג) - מועבר עד ה-Dashboard (Weekly Recap, Pro-only). */
+  onOpenAccessCode: () => void
   subTab: JournalSubTab
   onSubTabChange: (tab: JournalSubTab) => void
   filter: TradeFilter | null
@@ -33,6 +37,8 @@ interface JournalProps {
 export function Journal({
   trades,
   baseCurrency,
+  tier,
+  onOpenAccessCode,
   subTab,
   onSubTabChange,
   filter,
@@ -71,7 +77,14 @@ export function Journal({
           setAdvFilters={setAdvFilters}
         />
       ) : (
-        <Dashboard trades={trades} baseCurrency={baseCurrency} onSelectSymbol={onSelectSymbol} onSelectSetup={onSelectSetup} />
+        <Dashboard
+          trades={trades}
+          baseCurrency={baseCurrency}
+          tier={tier}
+          onOpenAccessCode={onOpenAccessCode}
+          onSelectSymbol={onSelectSymbol}
+          onSelectSetup={onSelectSetup}
+        />
       )}
     </div>
   )

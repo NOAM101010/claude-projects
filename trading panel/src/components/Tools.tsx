@@ -2,11 +2,19 @@ import { ExternalLink } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { AccountTier } from '../lib/accountApi'
-import { calculatePnl, calculatePositionSize } from '../lib/calculators'
+import {
+  MIN_CLOSED_TRADES_FOR_KELLY,
+  calculateKelly,
+  calculatePnl,
+  calculatePositionSize,
+  calculateRiskOfRuin,
+} from '../lib/calculators'
 import { formatCurrency, formatDateTime } from '../lib/format'
 import { LIVE_PRICE_REFRESH_MS, fetchWatchlistPrices, type WatchlistQuote } from '../lib/marketData'
+import { avgWinLoss, winRate } from '../lib/stats'
 import { canAddWatchlistSymbol, canSetWatchlistAlert, getWatchlistAlertLimit, getWatchlistSymbolLimit } from '../lib/tierLimits'
 import { tradingViewUrl } from '../lib/tradingView'
+import type { Trade } from '../types/trade'
 import {
   clearAlertHistory,
   createWatchlistAlert,
@@ -20,7 +28,7 @@ import {
 } from '../lib/watchlistApi'
 import styles from './Tools.module.css'
 
-type ToolsTab = 'positionSize' | 'pnl' | 'watchlist'
+type ToolsTab = 'positionSize' | 'pnl' | 'watchlist' | 'riskAnalysis'
 type RiskMode = 'amount' | 'percent'
 type TargetMode = 'price' | 'percent'
 
@@ -731,20 +739,155 @@ function Watchlist({ accountId, tier, focusSignal, onOpenAccessCode }: Watchlist
   )
 }
 
+interface RiskAnalysisToolProps {
+  trades: Trade[]
+  tier: AccountTier
+  /** פותח את מודל קוד הגישה (שדרוג) - אותו מנגנון בדיוק כמו שאר תכני ה-Pro-lock במסך הזה (ר' Watchlist למעלה). */
+  onOpenAccessCode: () => void
+}
+
 /**
- * מסך "Tools": sub-nav פנימי בין Position Size / P&L Calculator / Watchlist. שני
- * המחשבונים מחשבים חי תוך כדי הקלדה בלי קריאות רשת; ה-Watchlist היחיד שקורא לשרת
- * (רשימת ההתראות + מחירים חיים כל 2 דקות, ראה Watchlist למעלה).
+ * "Risk Analysis" - טאב חדש, Pro-only: מחשבון Kelly Criterion (מבוסס סטטיסטיקת ההיסטוריה
+ * האמיתית של החשבון - `winRate()`/`avgWinLoss()` מ-stats.ts, לא מחושב מחדש כאן) + מחשבון
+ * Risk of Ruin אינטראקטיבי (`calculateRiskOfRuin` ב-calculators.ts - צריך קלט חשבון/סיכון
+ * שלא נגזר מהיסטוריה בלבד). שני החישובים טהורים לגמרי, בלי קריאות רשת.
+ */
+function RiskAnalysisTool({ trades, tier, onOpenAccessCode }: RiskAnalysisToolProps) {
+  const { t } = useLanguage()
+  const closedCount = trades.filter((tr) => tr.pnl !== null).length
+  const historicalWinRatePercent = winRate(trades)
+  const { avgWin, avgLoss } = avgWinLoss(trades)
+
+  const [accountSize, setAccountSize] = useState('10000')
+  const [riskPerTrade, setRiskPerTrade] = useState('100')
+  // מוצג/ניתן לעריכה כ-"תרחיש" ל-Risk of Ruin, לא רק תצוגה - מתחיל מה-win rate ההיסטורי
+  // האמיתי של החשבון (ר' דרישת "pre-fill from actual historical stats").
+  const [winRatePercent, setWinRatePercent] = useState(() => historicalWinRatePercent.toFixed(1))
+
+  if (tier !== 'pro') {
+    return (
+      <div className={`${styles.card} metal-panel holo-edge`}>
+        <h2>{t('tools.riskAnalysis.title')}</h2>
+        <p className={styles.hint}>{t('tools.riskAnalysis.hint')}</p>
+        <p className={styles.upgradeHint}>
+          {t('tools.riskAnalysis.locked')}{' '}
+          <button type="button" onClick={onOpenAccessCode}>
+            {t('access.enterCode')}
+          </button>
+        </p>
+      </div>
+    )
+  }
+
+  const kelly = calculateKelly(historicalWinRatePercent / 100, avgWin, avgLoss, closedCount)
+
+  const accountSizeNum = parseField(accountSize)
+  const riskPerTradeNum = parseField(riskPerTrade)
+  const winRateInputNum = parseField(winRatePercent)
+  const hasRorInputs = accountSizeNum !== undefined && riskPerTradeNum !== undefined && winRateInputNum !== undefined
+
+  // מודל מפושט (ר' דיסקליימר למטה): loss rate = 1 - win rate, מתעלם מטריידים "בלי שינוי"
+  // (pnl=0) - עקבי עם הנוסחה הקלאסית ב"חינוך מסחר" שמבוססת על פרמטר יחיד (W).
+  const winRateDecimal = Math.min(1, Math.max(0, (winRateInputNum ?? 0) / 100))
+  const lossRateDecimal = 1 - winRateDecimal
+  const ror = calculateRiskOfRuin({
+    winRate: winRateDecimal,
+    lossRate: lossRateDecimal,
+    accountSize: accountSizeNum ?? 0,
+    riskPerTrade: riskPerTradeNum ?? 0,
+  })
+
+  return (
+    <div className={styles.wrapper}>
+      <div className={`${styles.card} metal-panel holo-edge`}>
+        <h2>{t('tools.riskAnalysis.kellyTitle')}</h2>
+        <p className={styles.hint}>{t('tools.riskAnalysis.kellyHint')}</p>
+
+        {kelly.kelly === null ? (
+          <p className={styles.resultsPlaceholder}>
+            {kelly.reason === 'notEnoughTrades'
+              ? t('tools.riskAnalysis.kellyNotEnoughTrades', { min: MIN_CLOSED_TRADES_FOR_KELLY })
+              : t('tools.riskAnalysis.kellyNoLosingTrades')}
+          </p>
+        ) : (
+          <div className={`${styles.resultsGrid} count-in`}>
+            <div className={`${styles.resultCard} ${styles.resultCardPrimary} det-frame`}>
+              <span className={styles.resultLabel}>{t('tools.riskAnalysis.kellyFullLabel')}</span>
+              <span
+                key={kelly.kelly.fullKelly}
+                className={`num ${styles.resultValuePrimary} value-pop ${kelly.kelly.fullKelly >= 0 ? styles.positive : styles.negative}`}
+              >
+                {(kelly.kelly.fullKelly * 100).toFixed(1)}%
+              </span>
+            </div>
+            <div className={styles.resultCard}>
+              <span className={styles.resultLabel}>{t('tools.riskAnalysis.kellyHalfLabel')}</span>
+              <span
+                key={kelly.kelly.halfKelly}
+                className={`num ${styles.resultValue} value-pop ${kelly.kelly.halfKelly >= 0 ? styles.positive : styles.negative}`}
+              >
+                {(kelly.kelly.halfKelly * 100).toFixed(1)}%
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className={`${styles.card} metal-panel holo-edge`}>
+        <h2>{t('tools.riskAnalysis.rorTitle')}</h2>
+        <p className={styles.hint}>{t('tools.riskAnalysis.rorHint')}</p>
+
+        <div className={styles.row}>
+          <div className={styles.field}>
+            <label htmlFor="ror-account">{t('tools.positionSize.accountSizeLabel')}</label>
+            <input id="ror-account" type="number" value={accountSize} onChange={(e) => setAccountSize(e.target.value)} />
+          </div>
+          <div className={styles.field}>
+            <label htmlFor="ror-risk">{t('tools.riskAnalysis.riskPerTradeLabel')}</label>
+            <input id="ror-risk" type="number" value={riskPerTrade} onChange={(e) => setRiskPerTrade(e.target.value)} />
+          </div>
+        </div>
+
+        <div className={styles.field}>
+          <label htmlFor="ror-winrate">{t('tools.riskAnalysis.winRateLabel')}</label>
+          <input id="ror-winrate" type="number" value={winRatePercent} onChange={(e) => setWinRatePercent(e.target.value)} />
+        </div>
+
+        {hasRorInputs ? (
+          <div className={`${styles.resultsGrid} count-in`}>
+            <div className={`${styles.resultCard} ${styles.resultCardPrimary} det-frame`}>
+              <span className={styles.resultLabel}>{t('tools.riskAnalysis.rorResultLabel')}</span>
+              <span key={ror} className={`num ${styles.resultValuePrimary} value-pop ${ror >= 0.2 ? styles.negative : styles.positive}`}>
+                {(ror * 100).toFixed(2)}%
+              </span>
+            </div>
+          </div>
+        ) : (
+          <p className={styles.resultsPlaceholder}>{t('tools.calculatorEmptyState')}</p>
+        )}
+
+        <p className={styles.hint}>{t('tools.riskAnalysis.rorDisclaimer')}</p>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * מסך "Tools": sub-nav פנימי בין Position Size / P&L Calculator / Watchlist / Risk Analysis
+ * (Pro-only). שלושת המחשבונים (position size/P&L/risk analysis) מחשבים חי תוך כדי הקלדה
+ * בלי קריאות רשת; ה-Watchlist היחיד שקורא לשרת (רשימת ההתראות + מחירים חיים כל 2 דקות,
+ * ראה Watchlist למעלה).
  */
 interface ToolsProps {
   accountId: string
   tier: AccountTier
+  trades: Trade[]
   focusWatchlistSignal?: number
-  /** פותח את מודל קוד הגישה (שדרוג) - מועבר עד ה-Watchlist, מוצג כשמגיעים למגבלת סימבולים/התראות של הדרגה. */
+  /** פותח את מודל קוד הגישה (שדרוג) - מועבר עד ה-Watchlist/Risk Analysis, מוצג כשמגיעים למגבלת/דרגה של הדרגה. */
   onOpenAccessCode: () => void
 }
 
-export function Tools({ accountId, tier, focusWatchlistSignal, onOpenAccessCode }: ToolsProps) {
+export function Tools({ accountId, tier, trades, focusWatchlistSignal, onOpenAccessCode }: ToolsProps) {
   const { t } = useLanguage()
   const [tab, setTab] = useState<ToolsTab>('positionSize')
 
@@ -766,6 +909,9 @@ export function Tools({ accountId, tier, focusWatchlistSignal, onOpenAccessCode 
         <button type="button" data-active={tab === 'watchlist'} onClick={() => setTab('watchlist')}>
           {t('tools.watchlistTab')}
         </button>
+        <button type="button" data-active={tab === 'riskAnalysis'} onClick={() => setTab('riskAnalysis')}>
+          {t('tools.riskAnalysisTab')}
+        </button>
       </div>
 
       {tab === 'positionSize' && <PositionSizeCalculator />}
@@ -773,6 +919,7 @@ export function Tools({ accountId, tier, focusWatchlistSignal, onOpenAccessCode 
       {tab === 'watchlist' && (
         <Watchlist accountId={accountId} tier={tier} focusSignal={focusWatchlistSignal} onOpenAccessCode={onOpenAccessCode} />
       )}
+      {tab === 'riskAnalysis' && <RiskAnalysisTool trades={trades} tier={tier} onOpenAccessCode={onOpenAccessCode} />}
     </div>
   )
 }

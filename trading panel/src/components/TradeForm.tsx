@@ -433,6 +433,7 @@ export function TradeForm({
             onChange={(value) => update('setup', value)}
             options={SETUPS}
             noSetupLabel={t('tradeForm.noSetupOption')}
+            tier={tier}
           />
         </div>
       )}
