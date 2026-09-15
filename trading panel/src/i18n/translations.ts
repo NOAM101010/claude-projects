@@ -196,6 +196,7 @@ const en = {
   'dashboard.tradeOfTheMonthHoldDays': '{{count}} days held',
   'dashboard.tradeOfTheMonthSizeLabel': 'Size',
   'dashboard.weeklyRecapTitle': 'Weekly Recap',
+  'dashboard.weeklyRecapProBadge': 'PRO',
   'dashboard.weeklyRecapTitleLocked': 'Weekly Recap (Pro)',
   'dashboard.weeklyRecapTrades': 'Trades closed',
   'dashboard.weeklyRecapNetPnl': 'Net P&L',
@@ -565,9 +566,25 @@ const en = {
   'tools.riskAnalysis.rorTitle': 'Risk of Ruin',
   'tools.riskAnalysis.rorHint':
     'Estimates the probability of wiping out the account given a win rate, account size and fixed risk per trade. Win rate is pre-filled from your history - adjust any value to test a scenario.',
+  'tools.riskAnalysis.rorInputsHint': 'Try changing risk per trade to see how it changes your risk of ruin.',
   'tools.riskAnalysis.riskPerTradeLabel': 'Risk per trade',
   'tools.riskAnalysis.winRateLabel': 'Win rate %',
   'tools.riskAnalysis.rorResultLabel': 'Risk of Ruin',
+  'tools.riskAnalysis.rorBucketVeryLow': 'Very low',
+  'tools.riskAnalysis.rorBucketLow': 'Low',
+  'tools.riskAnalysis.rorBucketModerate': 'Moderate',
+  'tools.riskAnalysis.rorBucketHigh': 'High',
+  'tools.riskAnalysis.rorBucketNearCertain': 'Near certain',
+  'tools.riskAnalysis.rorExplanationVeryLow':
+    'At a {{winRate}}% win rate and {{units}} risk units in your account, the math says your risk of ruin is very low at this risk level.',
+  'tools.riskAnalysis.rorExplanationLow':
+    'At a {{winRate}}% win rate and {{units}} risk units in your account, the math says your risk of ruin is low at this risk level - worth keeping an eye on.',
+  'tools.riskAnalysis.rorExplanationModerate':
+    'At a {{winRate}}% win rate and {{units}} risk units in your account, the math says your risk of ruin is moderate at this risk level - consider risking less per trade.',
+  'tools.riskAnalysis.rorExplanationHigh':
+    'At a {{winRate}}% win rate and {{units}} risk units in your account, the math says your risk of ruin is high at this risk level.',
+  'tools.riskAnalysis.rorExplanationNearCertain':
+    "At a {{winRate}}% win rate and {{units}} risk units in your account, the math says you're virtually certain to lose it all over time at this risk level.",
   'tools.riskAnalysis.rorDisclaimer':
     'This is a simplified educational model that assumes independent trades and a fixed risk amount every time - it is not a precise prediction. As with everything in TradePanel, this is not investment advice.',
 
@@ -791,6 +808,7 @@ const he: Record<TranslationKey, string> = {
   'dashboard.tradeOfTheMonthHoldDays': '{{count}} ימי החזקה',
   'dashboard.tradeOfTheMonthSizeLabel': 'גודל',
   'dashboard.weeklyRecapTitle': 'סיכום שבועי',
+  'dashboard.weeklyRecapProBadge': 'PRO',
   'dashboard.weeklyRecapTitleLocked': 'סיכום שבועי (Pro)',
   'dashboard.weeklyRecapTrades': 'טריידים שנסגרו',
   'dashboard.weeklyRecapNetPnl': 'רווח/הפסד נטו',
@@ -1140,9 +1158,25 @@ const he: Record<TranslationKey, string> = {
   'tools.riskAnalysis.kellyHalfLabel': 'Half Kelly (מומלץ)',
   'tools.riskAnalysis.rorTitle': 'Risk of Ruin',
   'tools.riskAnalysis.rorHint': 'מעריך את ההסתברות לאפס את החשבון לגמרי, בהינתן אחוז הצלחה, גודל חשבון וסיכון קבוע לטרייד. אחוז ההצלחה ממולא מראש מההיסטוריה שלך - אפשר לשנות כל ערך כדי לבדוק תרחיש.',
+  'tools.riskAnalysis.rorInputsHint': 'נסה/י לשנות את הסיכון לטרייד ותראה/י איך זה משנה את ה-Risk of Ruin שלך.',
   'tools.riskAnalysis.riskPerTradeLabel': 'סיכון לטרייד',
   'tools.riskAnalysis.winRateLabel': 'אחוז הצלחה %',
   'tools.riskAnalysis.rorResultLabel': 'Risk of Ruin',
+  'tools.riskAnalysis.rorBucketVeryLow': 'נמוך מאוד',
+  'tools.riskAnalysis.rorBucketLow': 'נמוך',
+  'tools.riskAnalysis.rorBucketModerate': 'בינוני',
+  'tools.riskAnalysis.rorBucketHigh': 'גבוה',
+  'tools.riskAnalysis.rorBucketNearCertain': 'כמעט ודאי',
+  'tools.riskAnalysis.rorExplanationVeryLow':
+    'באחוז הצלחה של {{winRate}}% ו-{{units}} יחידות סיכון בחשבון שלך, החישוב אומר שה-Risk of Ruin שלך נמוך מאוד ברמת הסיכון הזו.',
+  'tools.riskAnalysis.rorExplanationLow':
+    'באחוז הצלחה של {{winRate}}% ו-{{units}} יחידות סיכון בחשבון שלך, החישוב אומר שה-Risk of Ruin שלך נמוך ברמת הסיכון הזו - שווה לעקוב.',
+  'tools.riskAnalysis.rorExplanationModerate':
+    'באחוז הצלחה של {{winRate}}% ו-{{units}} יחידות סיכון בחשבון שלך, החישוב אומר שה-Risk of Ruin שלך בינוני ברמת הסיכון הזו - כדאי לשקול לסכן פחות בכל טרייד.',
+  'tools.riskAnalysis.rorExplanationHigh':
+    'באחוז הצלחה של {{winRate}}% ו-{{units}} יחידות סיכון בחשבון שלך, החישוב אומר שה-Risk of Ruin שלך גבוה ברמת הסיכון הזו.',
+  'tools.riskAnalysis.rorExplanationNearCertain':
+    'באחוז הצלחה של {{winRate}}% ו-{{units}} יחידות סיכון בחשבון שלך, החישוב אומר שכמעט בוודאות תאבד/י את כל החשבון לאורך זמן ברמת הסיכון הזו.',
   'tools.riskAnalysis.rorDisclaimer': 'זהו מודל חינוכי מפושט שמניח טריידים בלתי-תלויים וסכום סיכון קבוע בכל פעם - הוא לא חיזוי מדויק. כמו כל דבר ב-TradePanel, זה אינו ייעוץ השקעות.',
 
   'language.label': 'שפה',
@@ -1360,6 +1394,7 @@ const es: Record<TranslationKey, string> = {
   'dashboard.tradeOfTheMonthHoldDays': '{{count}} días en posición',
   'dashboard.tradeOfTheMonthSizeLabel': 'Tamaño',
   'dashboard.weeklyRecapTitle': 'Resumen semanal',
+  'dashboard.weeklyRecapProBadge': 'PRO',
   'dashboard.weeklyRecapTitleLocked': 'Resumen semanal (Pro)',
   'dashboard.weeklyRecapTrades': 'Operaciones cerradas',
   'dashboard.weeklyRecapNetPnl': 'Ganancia/Pérdida neta',
@@ -1713,9 +1748,25 @@ const es: Record<TranslationKey, string> = {
   'tools.riskAnalysis.rorTitle': 'Riesgo de Ruina',
   'tools.riskAnalysis.rorHint':
     'Estima la probabilidad de perder toda la cuenta dado una tasa de acierto, un tamaño de cuenta y un riesgo fijo por operación. La tasa de acierto se prellena con tu historial - ajusta cualquier valor para probar un escenario.',
+  'tools.riskAnalysis.rorInputsHint': 'Prueba a cambiar el riesgo por operación para ver cómo cambia tu Riesgo de Ruina.',
   'tools.riskAnalysis.riskPerTradeLabel': 'Riesgo por operación',
   'tools.riskAnalysis.winRateLabel': 'Tasa de acierto %',
   'tools.riskAnalysis.rorResultLabel': 'Riesgo de Ruina',
+  'tools.riskAnalysis.rorBucketVeryLow': 'Muy bajo',
+  'tools.riskAnalysis.rorBucketLow': 'Bajo',
+  'tools.riskAnalysis.rorBucketModerate': 'Moderado',
+  'tools.riskAnalysis.rorBucketHigh': 'Alto',
+  'tools.riskAnalysis.rorBucketNearCertain': 'Casi seguro',
+  'tools.riskAnalysis.rorExplanationVeryLow':
+    'Con una tasa de acierto del {{winRate}}% y {{units}} unidades de riesgo en tu cuenta, el cálculo dice que tu Riesgo de Ruina es muy bajo a este nivel de riesgo.',
+  'tools.riskAnalysis.rorExplanationLow':
+    'Con una tasa de acierto del {{winRate}}% y {{units}} unidades de riesgo en tu cuenta, el cálculo dice que tu Riesgo de Ruina es bajo a este nivel de riesgo - vale la pena vigilarlo.',
+  'tools.riskAnalysis.rorExplanationModerate':
+    'Con una tasa de acierto del {{winRate}}% y {{units}} unidades de riesgo en tu cuenta, el cálculo dice que tu Riesgo de Ruina es moderado a este nivel de riesgo - considera arriesgar menos por operación.',
+  'tools.riskAnalysis.rorExplanationHigh':
+    'Con una tasa de acierto del {{winRate}}% y {{units}} unidades de riesgo en tu cuenta, el cálculo dice que tu Riesgo de Ruina es alto a este nivel de riesgo.',
+  'tools.riskAnalysis.rorExplanationNearCertain':
+    'Con una tasa de acierto del {{winRate}}% y {{units}} unidades de riesgo en tu cuenta, el cálculo dice que es casi seguro que pierdas toda la cuenta con el tiempo a este nivel de riesgo.',
   'tools.riskAnalysis.rorDisclaimer':
     'Este es un modelo educativo simplificado que asume operaciones independientes y un monto de riesgo fijo cada vez - no es una predicción precisa. Como todo en TradePanel, esto no es asesoramiento de inversión.',
 
@@ -1935,6 +1986,7 @@ const fr: Record<TranslationKey, string> = {
   'dashboard.tradeOfTheMonthHoldDays': '{{count}} jours de détention',
   'dashboard.tradeOfTheMonthSizeLabel': 'Taille',
   'dashboard.weeklyRecapTitle': 'Récap hebdomadaire',
+  'dashboard.weeklyRecapProBadge': 'PRO',
   'dashboard.weeklyRecapTitleLocked': 'Récap hebdomadaire (Pro)',
   'dashboard.weeklyRecapTrades': 'Trades clôturés',
   'dashboard.weeklyRecapNetPnl': 'P&L net',
@@ -2294,9 +2346,25 @@ const fr: Record<TranslationKey, string> = {
   'tools.riskAnalysis.rorTitle': 'Risque de Ruine',
   'tools.riskAnalysis.rorHint':
     "Estime la probabilité de ruiner complètement le compte, étant donné un taux de réussite, une taille de compte et un risque fixe par trade. Le taux de réussite est pré-rempli à partir de votre historique - ajustez n'importe quelle valeur pour tester un scénario.",
+  'tools.riskAnalysis.rorInputsHint': 'Essayez de modifier le risque par trade pour voir comment cela change votre Risque de Ruine.',
   'tools.riskAnalysis.riskPerTradeLabel': 'Risque par trade',
   'tools.riskAnalysis.winRateLabel': 'Taux de réussite %',
   'tools.riskAnalysis.rorResultLabel': 'Risque de Ruine',
+  'tools.riskAnalysis.rorBucketVeryLow': 'Très faible',
+  'tools.riskAnalysis.rorBucketLow': 'Faible',
+  'tools.riskAnalysis.rorBucketModerate': 'Modéré',
+  'tools.riskAnalysis.rorBucketHigh': 'Élevé',
+  'tools.riskAnalysis.rorBucketNearCertain': 'Quasi certain',
+  'tools.riskAnalysis.rorExplanationVeryLow':
+    "Avec un taux de réussite de {{winRate}}% et {{units}} unités de risque dans votre compte, le calcul indique que votre Risque de Ruine est très faible à ce niveau de risque.",
+  'tools.riskAnalysis.rorExplanationLow':
+    "Avec un taux de réussite de {{winRate}}% et {{units}} unités de risque dans votre compte, le calcul indique que votre Risque de Ruine est faible à ce niveau de risque - à surveiller.",
+  'tools.riskAnalysis.rorExplanationModerate':
+    "Avec un taux de réussite de {{winRate}}% et {{units}} unités de risque dans votre compte, le calcul indique que votre Risque de Ruine est modéré à ce niveau de risque - envisagez de risquer moins par trade.",
+  'tools.riskAnalysis.rorExplanationHigh':
+    "Avec un taux de réussite de {{winRate}}% et {{units}} unités de risque dans votre compte, le calcul indique que votre Risque de Ruine est élevé à ce niveau de risque.",
+  'tools.riskAnalysis.rorExplanationNearCertain':
+    "Avec un taux de réussite de {{winRate}}% et {{units}} unités de risque dans votre compte, le calcul indique qu'il est quasi certain que vous perdiez tout le compte à terme à ce niveau de risque.",
   'tools.riskAnalysis.rorDisclaimer':
     "Il s'agit d'un modèle éducatif simplifié qui suppose des trades indépendants et un montant de risque fixe à chaque fois - ce n'est pas une prédiction précise. Comme tout dans TradePanel, ceci ne constitue pas un conseil en investissement.",
 

@@ -185,3 +185,20 @@ export function calculateRiskOfRuin({ winRate, lossRate, accountSize, riskPerTra
   if (!Number.isFinite(ror)) return 1
   return Math.min(1, Math.max(0, ror))
 }
+
+export type RiskOfRuinBucket = 'veryLow' | 'low' | 'moderate' | 'high' | 'nearCertain'
+
+/**
+ * Buckets a Risk of Ruin fraction (0-1, output of `calculateRiskOfRuin`) into a qualitative
+ * label - presentation-only, doesn't touch the math above. A bare "78.42%" means nothing to a
+ * non-technical user; this gives them the gist at a glance. Thresholds are a judgment call, not
+ * a formula from any source - kept here as a single source of truth so the label and the raw
+ * number never disagree: <5% veryLow, 5-25% low, 25-60% moderate, 60-90% high, >90% nearCertain.
+ */
+export function getRiskOfRuinBucket(ror: number): RiskOfRuinBucket {
+  if (ror < 0.05) return 'veryLow'
+  if (ror < 0.25) return 'low'
+  if (ror < 0.6) return 'moderate'
+  if (ror < 0.9) return 'high'
+  return 'nearCertain'
+}

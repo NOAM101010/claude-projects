@@ -8,6 +8,8 @@ import {
   calculatePnl,
   calculatePositionSize,
   calculateRiskOfRuin,
+  getRiskOfRuinBucket,
+  type RiskOfRuinBucket,
 } from '../lib/calculators'
 import { formatCurrency, formatDateTime } from '../lib/format'
 import { LIVE_PRICE_REFRESH_MS, fetchWatchlistPrices, type WatchlistQuote } from '../lib/marketData'
@@ -15,6 +17,7 @@ import { avgWinLoss, winRate } from '../lib/stats'
 import { canAddWatchlistSymbol, canSetWatchlistAlert, getWatchlistAlertLimit, getWatchlistSymbolLimit } from '../lib/tierLimits'
 import { tradingViewUrl } from '../lib/tradingView'
 import type { Trade } from '../types/trade'
+import type { TranslationKey } from '../i18n/translations'
 import {
   clearAlertHistory,
   createWatchlistAlert,
@@ -739,6 +742,34 @@ function Watchlist({ accountId, tier, focusSignal, onOpenAccessCode }: Watchlist
   )
 }
 
+/** ממפה bucket ל-i18n key של התווית הקצרה שמוצגת ליד האחוז הגולמי (ר' `getRiskOfRuinBucket`). */
+const ROR_BUCKET_LABEL_KEY: Record<RiskOfRuinBucket, TranslationKey> = {
+  veryLow: 'tools.riskAnalysis.rorBucketVeryLow',
+  low: 'tools.riskAnalysis.rorBucketLow',
+  moderate: 'tools.riskAnalysis.rorBucketModerate',
+  high: 'tools.riskAnalysis.rorBucketHigh',
+  nearCertain: 'tools.riskAnalysis.rorBucketNearCertain',
+}
+
+/** ממפה bucket למשפט ההסבר הדינמי (עם winRate/units של המשתמש) - משפט שלם, ולא הרכבה
+ * מ"תווית + גזרת משפט", כדי שהדקדוק יישאר תקין בכל שפה (במיוחד עברית/צרפתית). */
+const ROR_EXPLANATION_KEY: Record<RiskOfRuinBucket, TranslationKey> = {
+  veryLow: 'tools.riskAnalysis.rorExplanationVeryLow',
+  low: 'tools.riskAnalysis.rorExplanationLow',
+  moderate: 'tools.riskAnalysis.rorExplanationModerate',
+  high: 'tools.riskAnalysis.rorExplanationHigh',
+  nearCertain: 'tools.riskAnalysis.rorExplanationNearCertain',
+}
+
+/** ממפה bucket למחלקת ה-CSS של הצ'יפ - 3 גוונים (ירוק/ענבר/אדום) ל-5 buckets, ר' Tools.module.css. */
+const ROR_BUCKET_CHIP_CLASS: Record<RiskOfRuinBucket, keyof typeof styles> = {
+  veryLow: 'rorBucketChipLow',
+  low: 'rorBucketChipLow',
+  moderate: 'rorBucketChipModerate',
+  high: 'rorBucketChipHigh',
+  nearCertain: 'rorBucketChipHigh',
+}
+
 interface RiskAnalysisToolProps {
   trades: Trade[]
   tier: AccountTier
@@ -796,6 +827,10 @@ function RiskAnalysisTool({ trades, tier, onOpenAccessCode }: RiskAnalysisToolPr
     accountSize: accountSizeNum ?? 0,
     riskPerTrade: riskPerTradeNum ?? 0,
   })
+  const rorBucket = getRiskOfRuinBucket(ror)
+  // "units" = כמה טריידי-הפסד-מקסימלי רצופים לוקח לאפס את החשבון (accountSize/riskPerTrade) -
+  // אותו איבר בדיוק שכבר מחושב בתוך calculateRiskOfRuin, כאן רק לצורך התצוגה/המשפט ההסבר.
+  const units = riskPerTradeNum && riskPerTradeNum > 0 ? (accountSizeNum ?? 0) / riskPerTradeNum : 0
 
   return (
     <div className={styles.wrapper}>
@@ -836,6 +871,7 @@ function RiskAnalysisTool({ trades, tier, onOpenAccessCode }: RiskAnalysisToolPr
       <div className={`${styles.card} metal-panel holo-edge`}>
         <h2>{t('tools.riskAnalysis.rorTitle')}</h2>
         <p className={styles.hint}>{t('tools.riskAnalysis.rorHint')}</p>
+        <p className={styles.hint}>{t('tools.riskAnalysis.rorInputsHint')}</p>
 
         <div className={styles.row}>
           <div className={styles.field}>
@@ -854,14 +890,24 @@ function RiskAnalysisTool({ trades, tier, onOpenAccessCode }: RiskAnalysisToolPr
         </div>
 
         {hasRorInputs ? (
-          <div className={`${styles.resultsGrid} count-in`}>
-            <div className={`${styles.resultCard} ${styles.resultCardPrimary} det-frame`}>
-              <span className={styles.resultLabel}>{t('tools.riskAnalysis.rorResultLabel')}</span>
-              <span key={ror} className={`num ${styles.resultValuePrimary} value-pop ${ror >= 0.2 ? styles.negative : styles.positive}`}>
-                {(ror * 100).toFixed(2)}%
-              </span>
+          <>
+            <div className={`${styles.resultsGrid} count-in`}>
+              <div className={`${styles.resultCard} ${styles.resultCardPrimary} det-frame`}>
+                <span className={styles.resultLabel}>{t('tools.riskAnalysis.rorResultLabel')}</span>
+                <div className={styles.rorResultRow}>
+                  <span key={ror} className={`num ${styles.resultValuePrimary} value-pop ${ror >= 0.2 ? styles.negative : styles.positive}`}>
+                    {(ror * 100).toFixed(2)}%
+                  </span>
+                  <span className={`${styles.rorBucketChip} ${styles[ROR_BUCKET_CHIP_CLASS[rorBucket]]}`}>
+                    {t(ROR_BUCKET_LABEL_KEY[rorBucket])}
+                  </span>
+                </div>
+              </div>
             </div>
-          </div>
+            <p className={styles.hint}>
+              {t(ROR_EXPLANATION_KEY[rorBucket], { winRate: winRateInputNum ?? 0, units: Math.round(units) })}
+            </p>
+          </>
         ) : (
           <p className={styles.resultsPlaceholder}>{t('tools.calculatorEmptyState')}</p>
         )}

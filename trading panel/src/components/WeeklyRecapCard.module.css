@@ -1,13 +1,43 @@
 .card {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 4px;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
+  margin-bottom: 4px;
+}
+
+/* Net P&L is the headline number - same weight/treatment as StreakCard's .value, well above
+   the secondary stats (trades/win rate), so this reads as a report, not a plain stat row. */
+.primaryValue {
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: clamp(24px, 3.4vw, 32px);
+  line-height: 1.1;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.primaryLabel {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.secondaryRow {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
 }
 
 .stat {
@@ -26,7 +56,7 @@
 .statValue {
   font-family: var(--mono);
   font-weight: 800;
-  font-size: clamp(17px, 2.4vw, 21px);
+  font-size: clamp(15px, 2vw, 18px);
   font-variant-numeric: tabular-nums;
   direction: ltr;
   unicode-bidi: isolate;
@@ -41,13 +71,15 @@
 }
 
 .bestTrade {
-  margin: 0;
+  margin: 8px 0 0;
   font-size: 12.5px;
   color: var(--text-dim);
 }
 
 /* טיזר מטושטש ל-non-pro - מציג את מבנה הכרטיס בלי דאטה אמיתי, לא לחיץ (aria-hidden). */
 .lockedTeaser {
+  display: flex;
+  flex-direction: column;
   filter: blur(4px);
   opacity: 0.55;
   pointer-events: none;

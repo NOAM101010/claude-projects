@@ -20,23 +20,26 @@ interface WeeklyRecapCardProps {
  * בלי backend חדש. ל-basic/demo מוצג טיזר מטושטש + כפתור שדרוג, אותו דפוס בדיוק כמו
  * ה-upgrade-hint הקיים (`WorkspaceSwitcher.tsx`/`Tools.tsx`'s `onOpenAccessCode`) - לא
  * מוסתר לגמרי, כדי שיראו מה הם מפסידים.
+ *
+ * שדרוג ויזואלי (feedback: "looks like just another stat card"): צ'יפ "PRO" + holo-edge--amber
+ * חמים יותר כדי שהכרטיס יזוהה כפיצ'ר דגל, ו-Net P&L מקבל משקל ויזואלי גדול בהרבה מהסטטיסטיקות
+ * המשניות - אותו עיקרון בדיוק כמו StreakCard (`.value` גדול למעלה, `.hint` דק למטה), רק עם
+ * שני מספרי-משנה (trades/win rate) לצד ה-P&L הראשי במקום שורת hint אחת.
  */
 export function WeeklyRecapCard({ recap, baseCurrency, locale, tier, onOpenAccessCode }: WeeklyRecapCardProps) {
   const { t } = useLanguage()
 
   if (tier !== 'pro') {
     return (
-      <div className={`${styles.card} metal-panel holo-edge`}>
+      <div className={`${styles.card} metal-panel holo-edge holo-edge--amber`}>
         <h3 className="eyebrow">{t('dashboard.weeklyRecapTitleLocked')}</h3>
         <div className={styles.lockedTeaser} aria-hidden="true">
-          <div className={styles.grid}>
+          <span className={`${styles.primaryValue} ${styles.positive}`}>{formatCurrency(842, baseCurrency, locale)}</span>
+          <span className={styles.primaryLabel}>{t('dashboard.weeklyRecapNetPnl')}</span>
+          <div className={styles.secondaryRow}>
             <div className={styles.stat}>
               <span className={styles.statLabel}>{t('dashboard.weeklyRecapTrades')}</span>
               <span className={styles.statValue}>5</span>
-            </div>
-            <div className={styles.stat}>
-              <span className={styles.statLabel}>{t('dashboard.weeklyRecapNetPnl')}</span>
-              <span className={`${styles.statValue} ${styles.positive}`}>{formatCurrency(842, baseCurrency, locale)}</span>
             </div>
             <div className={styles.stat}>
               <span className={styles.statLabel}>{t('dashboard.weeklyRecapWinRate')}</span>
@@ -55,24 +58,28 @@ export function WeeklyRecapCard({ recap, baseCurrency, locale, tier, onOpenAcces
   }
 
   return (
-    <div className={`${styles.card} metal-panel holo-edge`}>
-      <h3 className="eyebrow">{t('dashboard.weeklyRecapTitle')}</h3>
-      <div className={styles.grid}>
+    <div className={`${styles.card} metal-panel holo-edge holo-edge--amber glass-hover`}>
+      <div className={styles.header}>
+        <h3 className="eyebrow">{t('dashboard.weeklyRecapTitle')}</h3>
+        <span className="det-chip">{t('dashboard.weeklyRecapProBadge')}</span>
+      </div>
+
+      <span className={`${styles.primaryValue} ${recap.netPnl >= 0 ? styles.positive : styles.negative}`}>
+        {formatCurrency(recap.netPnl, baseCurrency, locale)}
+      </span>
+      <span className={styles.primaryLabel}>{t('dashboard.weeklyRecapNetPnl')}</span>
+
+      <div className={styles.secondaryRow}>
         <div className={styles.stat}>
           <span className={styles.statLabel}>{t('dashboard.weeklyRecapTrades')}</span>
           <span className={styles.statValue}>{recap.tradeCount}</span>
-        </div>
-        <div className={styles.stat}>
-          <span className={styles.statLabel}>{t('dashboard.weeklyRecapNetPnl')}</span>
-          <span className={`${styles.statValue} ${recap.netPnl >= 0 ? styles.positive : styles.negative}`}>
-            {formatCurrency(recap.netPnl, baseCurrency, locale)}
-          </span>
         </div>
         <div className={styles.stat}>
           <span className={styles.statLabel}>{t('dashboard.weeklyRecapWinRate')}</span>
           <span className={styles.statValue}>{recap.winRate.toFixed(0)}%</span>
         </div>
       </div>
+
       {recap.bestTrade ? (
         <p className={styles.bestTrade}>
           {t('dashboard.weeklyRecapBestTrade', {
