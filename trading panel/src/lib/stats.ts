@@ -384,6 +384,13 @@ export interface WeeklyRecap {
   winRate: number
   /** הטרייד עם ה-P&L הגבוה ביותר בחלון (גם אם שלילי - כמו `bestTrade()`, לא רק מנצחים). null אם אין טריידים סגורים בחלון. */
   bestTrade: { symbol: string; pnl: number } | null
+  /** הטרייד עם ה-P&L הנמוך ביותר בחלון (אותו דפוס בדיוק כמו `bestTrade`, min במקום max - אם
+   * יש רק טרייד אחד בחלון, best/worst הם אותו טרייד, וזה בסדר). null אם אין טריידים סגורים בחלון. */
+  worstTrade: { symbol: string; pnl: number } | null
+  /** P&L נטו של חלון 7 הימים *שלפני* החלון הנוכחי (יום -14 עד יום -7 יחסית ל-referenceDate) -
+   * להשוואת שבוע-מול-שבוע ב-WeeklyRecapCard. null אם לא היו טריידים סגורים בחלון הקודם, כדי
+   * שלא נציג השוואה מטעה (למשל "+100%") מול שום דבר בפועל. */
+  previousWeekNetPnl: number | null
 }
 
 /**
@@ -406,12 +413,25 @@ export function weeklyRecap(trades: Trade[], referenceDate: Date = new Date()): 
   const wins = inWindow.filter((t) => (t.pnl ?? 0) > 0).length
   const winRate = tradeCount > 0 ? (wins / tradeCount) * 100 : 0
   const best = tradeCount > 0 ? inWindow.reduce((b, t) => ((t.pnl ?? 0) > (b.pnl ?? 0) ? t : b)) : null
+  const worst = tradeCount > 0 ? inWindow.reduce((w, t) => ((t.pnl ?? 0) < (w.pnl ?? 0) ? t : w)) : null
+
+  // חלון-ההשוואה: 7 הימים שממש לפני החלון הנוכחי (יום -14 עד יום -7), לא חופף אליו.
+  const previousCutoffStart = new Date(referenceDate)
+  previousCutoffStart.setDate(previousCutoffStart.getDate() - 14)
+  const previousCutoffEnd = new Date(cutoff)
+  const previousWindow = closedTrades(trades).filter((t) => {
+    const exit = new Date(t.exitAt as string).getTime()
+    return exit >= previousCutoffStart.getTime() && exit < previousCutoffEnd.getTime()
+  })
+  const previousWeekNetPnl = previousWindow.length > 0 ? previousWindow.reduce((s, t) => s + (t.pnl ?? 0), 0) : null
 
   return {
     tradeCount,
     netPnl,
     winRate,
     bestTrade: best ? { symbol: best.symbol, pnl: best.pnl ?? 0 } : null,
+    worstTrade: worst ? { symbol: worst.symbol, pnl: worst.pnl ?? 0 } : null,
+    previousWeekNetPnl,
   }
 }
 

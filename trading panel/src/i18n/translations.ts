@@ -196,13 +196,14 @@ const en = {
   'dashboard.tradeOfTheMonthHoldDays': '{{count}} days held',
   'dashboard.tradeOfTheMonthSizeLabel': 'Size',
   'dashboard.weeklyRecapTitle': 'Weekly Recap',
-  'dashboard.weeklyRecapProBadge': 'PRO',
   'dashboard.weeklyRecapTitleLocked': 'Weekly Recap (Pro)',
   'dashboard.weeklyRecapTrades': 'Trades closed',
   'dashboard.weeklyRecapNetPnl': 'Net P&L',
   'dashboard.weeklyRecapWinRate': 'Win rate',
   'dashboard.weeklyRecapBestTrade': 'Best trade this week: {{symbol}} ({{pnl}})',
+  'dashboard.weeklyRecapWorstTrade': 'Worst trade this week: {{symbol}} ({{pnl}})',
   'dashboard.weeklyRecapNoTrades': 'No trades closed in the last 7 days',
+  'dashboard.weeklyRecapVsLastWeek': '{{value}} vs last week',
   'dashboard.weeklyRecapLocked': 'A live summary of your last 7 days - trade count, net P&L, win rate and best trade - is a Pro feature.',
   'dashboard.weeklyRecapModalHint': 'To unlock the Weekly Recap, already have a Pro code? Enter it here.',
 
@@ -551,42 +552,6 @@ const en = {
   'tools.pnl.targetPercentLabel': 'Target percent',
   'tools.pnl.resultProfitLoss': 'Profit / Loss',
   'tools.pnl.resultProfitLossPercent': 'Profit / Loss %',
-  'tools.riskAnalysisTab': 'Risk Analysis',
-  'tools.riskAnalysis.title': 'Risk Analysis',
-  'tools.riskAnalysis.hint': 'Kelly Criterion and Risk of Ruin, based on your own trading history and a risk scenario you choose.',
-  'tools.riskAnalysis.locked': 'Risk Analysis (Kelly Criterion and Risk of Ruin, based on your own history) is a Pro feature.',
-  'tools.riskAnalysis.kellyTitle': 'Kelly Criterion',
-  'tools.riskAnalysis.kellyHint':
-    'Based on your real win rate and average win/loss so far. Shows the theoretical share of your account to risk per trade to maximize long-term growth - full Kelly is aggressive, half Kelly is the commonly recommended, more conservative version.',
-  'tools.riskAnalysis.kellyNotEnoughTrades':
-    'Not enough closed trades yet to calculate this meaningfully (at least {{min}} needed) - keep logging trades and check back.',
-  'tools.riskAnalysis.kellyNoLosingTrades': "You haven't had a losing trade yet, so there's no loss data to base this on.",
-  'tools.riskAnalysis.kellyFullLabel': 'Full Kelly',
-  'tools.riskAnalysis.kellyHalfLabel': 'Half Kelly (recommended)',
-  'tools.riskAnalysis.rorTitle': 'Risk of Ruin',
-  'tools.riskAnalysis.rorHint':
-    'Estimates the probability of wiping out the account given a win rate, account size and fixed risk per trade. Win rate is pre-filled from your history - adjust any value to test a scenario.',
-  'tools.riskAnalysis.rorInputsHint': 'Try changing risk per trade to see how it changes your risk of ruin.',
-  'tools.riskAnalysis.riskPerTradeLabel': 'Risk per trade',
-  'tools.riskAnalysis.winRateLabel': 'Win rate %',
-  'tools.riskAnalysis.rorResultLabel': 'Risk of Ruin',
-  'tools.riskAnalysis.rorBucketVeryLow': 'Very low',
-  'tools.riskAnalysis.rorBucketLow': 'Low',
-  'tools.riskAnalysis.rorBucketModerate': 'Moderate',
-  'tools.riskAnalysis.rorBucketHigh': 'High',
-  'tools.riskAnalysis.rorBucketNearCertain': 'Near certain',
-  'tools.riskAnalysis.rorExplanationVeryLow':
-    'At a {{winRate}}% win rate and {{units}} risk units in your account, the math says your risk of ruin is very low at this risk level.',
-  'tools.riskAnalysis.rorExplanationLow':
-    'At a {{winRate}}% win rate and {{units}} risk units in your account, the math says your risk of ruin is low at this risk level - worth keeping an eye on.',
-  'tools.riskAnalysis.rorExplanationModerate':
-    'At a {{winRate}}% win rate and {{units}} risk units in your account, the math says your risk of ruin is moderate at this risk level - consider risking less per trade.',
-  'tools.riskAnalysis.rorExplanationHigh':
-    'At a {{winRate}}% win rate and {{units}} risk units in your account, the math says your risk of ruin is high at this risk level.',
-  'tools.riskAnalysis.rorExplanationNearCertain':
-    "At a {{winRate}}% win rate and {{units}} risk units in your account, the math says you're virtually certain to lose it all over time at this risk level.",
-  'tools.riskAnalysis.rorDisclaimer':
-    'This is a simplified educational model that assumes independent trades and a fixed risk amount every time - it is not a precise prediction. As with everything in TradePanel, this is not investment advice.',
 
   // Language switcher
   'language.label': 'Language',
@@ -808,13 +773,14 @@ const he: Record<TranslationKey, string> = {
   'dashboard.tradeOfTheMonthHoldDays': '{{count}} ימי החזקה',
   'dashboard.tradeOfTheMonthSizeLabel': 'גודל',
   'dashboard.weeklyRecapTitle': 'סיכום שבועי',
-  'dashboard.weeklyRecapProBadge': 'PRO',
   'dashboard.weeklyRecapTitleLocked': 'סיכום שבועי (Pro)',
   'dashboard.weeklyRecapTrades': 'טריידים שנסגרו',
   'dashboard.weeklyRecapNetPnl': 'רווח/הפסד נטו',
   'dashboard.weeklyRecapWinRate': 'אחוז הצלחה',
   'dashboard.weeklyRecapBestTrade': 'הטרייד הטוב ביותר השבוע: {{symbol}} ({{pnl}})',
+  'dashboard.weeklyRecapWorstTrade': 'הטרייד הגרוע ביותר השבוע: {{symbol}} ({{pnl}})',
   'dashboard.weeklyRecapNoTrades': 'לא נסגרו טריידים ב-7 הימים האחרונים',
+  'dashboard.weeklyRecapVsLastWeek': '{{value}} לעומת השבוע שעבר',
   'dashboard.weeklyRecapLocked': 'סיכום חי של 7 הימים האחרונים - מספר טריידים, רווח/הפסד נטו, אחוז הצלחה והטרייד הטוב ביותר - הוא פיצ׳ר של Pro.',
   'dashboard.weeklyRecapModalHint': 'כדי לפתוח את הסיכום השבועי, יש לך כבר קוד Pro? הזן אותו כאן.',
 
@@ -1145,39 +1111,6 @@ const he: Record<TranslationKey, string> = {
   'tools.pnl.targetPercentLabel': 'אחוז יעד',
   'tools.pnl.resultProfitLoss': 'רווח / הפסד',
   'tools.pnl.resultProfitLossPercent': 'רווח / הפסד %',
-  'tools.riskAnalysisTab': 'ניתוח סיכון',
-  'tools.riskAnalysis.title': 'ניתוח סיכון',
-  'tools.riskAnalysis.hint': 'Kelly Criterion ו-Risk of Ruin, מבוססים על ההיסטוריה האמיתית שלך ותרחיש סיכון שתבחר/י.',
-  'tools.riskAnalysis.locked': 'ניתוח סיכון (Kelly Criterion ו-Risk of Ruin, מבוססים על ההיסטוריה שלך) הוא פיצ׳ר של Pro.',
-  'tools.riskAnalysis.kellyTitle': 'Kelly Criterion',
-  'tools.riskAnalysis.kellyHint':
-    'מבוסס על אחוז ההצלחה וממוצע הרווח/הפסד האמיתיים שלך עד כה. מציג את החלק התיאורטי מהחשבון שכדאי לסכן בכל טרייד כדי למקסם צמיחה לטווח ארוך - Kelly מלא אגרסיבי, Half Kelly הוא הגרסה השמרנית המומלצת בדרך כלל.',
-  'tools.riskAnalysis.kellyNotEnoughTrades': 'עדיין אין מספיק טריידים סגורים כדי לחשב את זה בצורה משמעותית (נדרשים לפחות {{min}}) - המשך/י לתעד וחזור/י לבדוק.',
-  'tools.riskAnalysis.kellyNoLosingTrades': 'עדיין לא היה לך אף טרייד מפסיד, אז אין נתוני הפסד לבסס עליהם את החישוב.',
-  'tools.riskAnalysis.kellyFullLabel': 'Kelly מלא',
-  'tools.riskAnalysis.kellyHalfLabel': 'Half Kelly (מומלץ)',
-  'tools.riskAnalysis.rorTitle': 'Risk of Ruin',
-  'tools.riskAnalysis.rorHint': 'מעריך את ההסתברות לאפס את החשבון לגמרי, בהינתן אחוז הצלחה, גודל חשבון וסיכון קבוע לטרייד. אחוז ההצלחה ממולא מראש מההיסטוריה שלך - אפשר לשנות כל ערך כדי לבדוק תרחיש.',
-  'tools.riskAnalysis.rorInputsHint': 'נסה/י לשנות את הסיכון לטרייד ותראה/י איך זה משנה את ה-Risk of Ruin שלך.',
-  'tools.riskAnalysis.riskPerTradeLabel': 'סיכון לטרייד',
-  'tools.riskAnalysis.winRateLabel': 'אחוז הצלחה %',
-  'tools.riskAnalysis.rorResultLabel': 'Risk of Ruin',
-  'tools.riskAnalysis.rorBucketVeryLow': 'נמוך מאוד',
-  'tools.riskAnalysis.rorBucketLow': 'נמוך',
-  'tools.riskAnalysis.rorBucketModerate': 'בינוני',
-  'tools.riskAnalysis.rorBucketHigh': 'גבוה',
-  'tools.riskAnalysis.rorBucketNearCertain': 'כמעט ודאי',
-  'tools.riskAnalysis.rorExplanationVeryLow':
-    'באחוז הצלחה של {{winRate}}% ו-{{units}} יחידות סיכון בחשבון שלך, החישוב אומר שה-Risk of Ruin שלך נמוך מאוד ברמת הסיכון הזו.',
-  'tools.riskAnalysis.rorExplanationLow':
-    'באחוז הצלחה של {{winRate}}% ו-{{units}} יחידות סיכון בחשבון שלך, החישוב אומר שה-Risk of Ruin שלך נמוך ברמת הסיכון הזו - שווה לעקוב.',
-  'tools.riskAnalysis.rorExplanationModerate':
-    'באחוז הצלחה של {{winRate}}% ו-{{units}} יחידות סיכון בחשבון שלך, החישוב אומר שה-Risk of Ruin שלך בינוני ברמת הסיכון הזו - כדאי לשקול לסכן פחות בכל טרייד.',
-  'tools.riskAnalysis.rorExplanationHigh':
-    'באחוז הצלחה של {{winRate}}% ו-{{units}} יחידות סיכון בחשבון שלך, החישוב אומר שה-Risk of Ruin שלך גבוה ברמת הסיכון הזו.',
-  'tools.riskAnalysis.rorExplanationNearCertain':
-    'באחוז הצלחה של {{winRate}}% ו-{{units}} יחידות סיכון בחשבון שלך, החישוב אומר שכמעט בוודאות תאבד/י את כל החשבון לאורך זמן ברמת הסיכון הזו.',
-  'tools.riskAnalysis.rorDisclaimer': 'זהו מודל חינוכי מפושט שמניח טריידים בלתי-תלויים וסכום סיכון קבוע בכל פעם - הוא לא חיזוי מדויק. כמו כל דבר ב-TradePanel, זה אינו ייעוץ השקעות.',
 
   'language.label': 'שפה',
 
@@ -1394,13 +1327,14 @@ const es: Record<TranslationKey, string> = {
   'dashboard.tradeOfTheMonthHoldDays': '{{count}} días en posición',
   'dashboard.tradeOfTheMonthSizeLabel': 'Tamaño',
   'dashboard.weeklyRecapTitle': 'Resumen semanal',
-  'dashboard.weeklyRecapProBadge': 'PRO',
   'dashboard.weeklyRecapTitleLocked': 'Resumen semanal (Pro)',
   'dashboard.weeklyRecapTrades': 'Operaciones cerradas',
   'dashboard.weeklyRecapNetPnl': 'Ganancia/Pérdida neta',
   'dashboard.weeklyRecapWinRate': 'Tasa de acierto',
   'dashboard.weeklyRecapBestTrade': 'Mejor operación de la semana: {{symbol}} ({{pnl}})',
+  'dashboard.weeklyRecapWorstTrade': 'Peor operación de la semana: {{symbol}} ({{pnl}})',
   'dashboard.weeklyRecapNoTrades': 'No se cerraron operaciones en los últimos 7 días',
+  'dashboard.weeklyRecapVsLastWeek': '{{value}} vs. la semana pasada',
   'dashboard.weeklyRecapLocked': 'Un resumen en vivo de tus últimos 7 días - número de operaciones, P&L neto, tasa de acierto y mejor operación - es una función Pro.',
   'dashboard.weeklyRecapModalHint': 'Para desbloquear el Resumen semanal, ¿ya tienes un código Pro? Ingrésalo aquí.',
 
@@ -1733,42 +1667,6 @@ const es: Record<TranslationKey, string> = {
   'tools.pnl.targetPercentLabel': 'Porcentaje objetivo',
   'tools.pnl.resultProfitLoss': 'Ganancia / Pérdida',
   'tools.pnl.resultProfitLossPercent': 'Ganancia / Pérdida %',
-  'tools.riskAnalysisTab': 'Análisis de riesgo',
-  'tools.riskAnalysis.title': 'Análisis de riesgo',
-  'tools.riskAnalysis.hint': 'Criterio de Kelly y Riesgo de Ruina, basados en tu propio historial de trading y un escenario de riesgo que elijas.',
-  'tools.riskAnalysis.locked': 'El Análisis de riesgo (Criterio de Kelly y Riesgo de Ruina, basados en tu historial) es una función Pro.',
-  'tools.riskAnalysis.kellyTitle': 'Criterio de Kelly',
-  'tools.riskAnalysis.kellyHint':
-    'Basado en tu tasa de acierto real y tu ganancia/pérdida promedio hasta ahora. Muestra la fracción teórica de la cuenta a arriesgar por operación para maximizar el crecimiento a largo plazo - Kelly completo es agresivo, medio Kelly es la versión más conservadora y comúnmente recomendada.',
-  'tools.riskAnalysis.kellyNotEnoughTrades':
-    'Aún no hay suficientes operaciones cerradas para calcular esto de forma significativa (se necesitan al menos {{min}}) - sigue registrando operaciones y vuelve a revisar.',
-  'tools.riskAnalysis.kellyNoLosingTrades': 'Todavía no has tenido ninguna operación perdedora, así que no hay datos de pérdidas en los que basarse.',
-  'tools.riskAnalysis.kellyFullLabel': 'Kelly completo',
-  'tools.riskAnalysis.kellyHalfLabel': 'Medio Kelly (recomendado)',
-  'tools.riskAnalysis.rorTitle': 'Riesgo de Ruina',
-  'tools.riskAnalysis.rorHint':
-    'Estima la probabilidad de perder toda la cuenta dado una tasa de acierto, un tamaño de cuenta y un riesgo fijo por operación. La tasa de acierto se prellena con tu historial - ajusta cualquier valor para probar un escenario.',
-  'tools.riskAnalysis.rorInputsHint': 'Prueba a cambiar el riesgo por operación para ver cómo cambia tu Riesgo de Ruina.',
-  'tools.riskAnalysis.riskPerTradeLabel': 'Riesgo por operación',
-  'tools.riskAnalysis.winRateLabel': 'Tasa de acierto %',
-  'tools.riskAnalysis.rorResultLabel': 'Riesgo de Ruina',
-  'tools.riskAnalysis.rorBucketVeryLow': 'Muy bajo',
-  'tools.riskAnalysis.rorBucketLow': 'Bajo',
-  'tools.riskAnalysis.rorBucketModerate': 'Moderado',
-  'tools.riskAnalysis.rorBucketHigh': 'Alto',
-  'tools.riskAnalysis.rorBucketNearCertain': 'Casi seguro',
-  'tools.riskAnalysis.rorExplanationVeryLow':
-    'Con una tasa de acierto del {{winRate}}% y {{units}} unidades de riesgo en tu cuenta, el cálculo dice que tu Riesgo de Ruina es muy bajo a este nivel de riesgo.',
-  'tools.riskAnalysis.rorExplanationLow':
-    'Con una tasa de acierto del {{winRate}}% y {{units}} unidades de riesgo en tu cuenta, el cálculo dice que tu Riesgo de Ruina es bajo a este nivel de riesgo - vale la pena vigilarlo.',
-  'tools.riskAnalysis.rorExplanationModerate':
-    'Con una tasa de acierto del {{winRate}}% y {{units}} unidades de riesgo en tu cuenta, el cálculo dice que tu Riesgo de Ruina es moderado a este nivel de riesgo - considera arriesgar menos por operación.',
-  'tools.riskAnalysis.rorExplanationHigh':
-    'Con una tasa de acierto del {{winRate}}% y {{units}} unidades de riesgo en tu cuenta, el cálculo dice que tu Riesgo de Ruina es alto a este nivel de riesgo.',
-  'tools.riskAnalysis.rorExplanationNearCertain':
-    'Con una tasa de acierto del {{winRate}}% y {{units}} unidades de riesgo en tu cuenta, el cálculo dice que es casi seguro que pierdas toda la cuenta con el tiempo a este nivel de riesgo.',
-  'tools.riskAnalysis.rorDisclaimer':
-    'Este es un modelo educativo simplificado que asume operaciones independientes y un monto de riesgo fijo cada vez - no es una predicción precisa. Como todo en TradePanel, esto no es asesoramiento de inversión.',
 
   'language.label': 'Idioma',
 
@@ -1986,13 +1884,14 @@ const fr: Record<TranslationKey, string> = {
   'dashboard.tradeOfTheMonthHoldDays': '{{count}} jours de détention',
   'dashboard.tradeOfTheMonthSizeLabel': 'Taille',
   'dashboard.weeklyRecapTitle': 'Récap hebdomadaire',
-  'dashboard.weeklyRecapProBadge': 'PRO',
   'dashboard.weeklyRecapTitleLocked': 'Récap hebdomadaire (Pro)',
   'dashboard.weeklyRecapTrades': 'Trades clôturés',
   'dashboard.weeklyRecapNetPnl': 'P&L net',
   'dashboard.weeklyRecapWinRate': 'Taux de réussite',
   'dashboard.weeklyRecapBestTrade': 'Meilleur trade de la semaine : {{symbol}} ({{pnl}})',
+  'dashboard.weeklyRecapWorstTrade': 'Pire trade de la semaine : {{symbol}} ({{pnl}})',
   'dashboard.weeklyRecapNoTrades': 'Aucun trade clôturé au cours des 7 derniers jours',
+  'dashboard.weeklyRecapVsLastWeek': '{{value}} vs la semaine dernière',
   'dashboard.weeklyRecapLocked': "Un résumé en direct de vos 7 derniers jours - nombre de trades, P&L net, taux de réussite et meilleur trade - est une fonctionnalité Pro.",
   'dashboard.weeklyRecapModalHint': 'Pour débloquer le Récap hebdomadaire, vous avez déjà un code Pro ? Entrez-le ici.',
 
@@ -2331,42 +2230,6 @@ const fr: Record<TranslationKey, string> = {
   'tools.pnl.targetPercentLabel': 'Pourcentage cible',
   'tools.pnl.resultProfitLoss': 'Profit / Perte',
   'tools.pnl.resultProfitLossPercent': 'Profit / Perte %',
-  'tools.riskAnalysisTab': 'Analyse de risque',
-  'tools.riskAnalysis.title': 'Analyse de risque',
-  'tools.riskAnalysis.hint': 'Critère de Kelly et Risque de Ruine, basés sur votre propre historique de trading et un scénario de risque que vous choisissez.',
-  'tools.riskAnalysis.locked': "L'Analyse de risque (Critère de Kelly et Risque de Ruine, basés sur votre historique) est une fonctionnalité Pro.",
-  'tools.riskAnalysis.kellyTitle': 'Critère de Kelly',
-  'tools.riskAnalysis.kellyHint':
-    "Basé sur votre taux de réussite réel et votre gain/perte moyen jusqu'à présent. Indique la part théorique du compte à risquer par trade pour maximiser la croissance à long terme - le Kelly complet est agressif, le demi-Kelly est la version plus prudente généralement recommandée.",
-  'tools.riskAnalysis.kellyNotEnoughTrades':
-    "Pas encore assez de trades clôturés pour calculer cela de façon significative (au moins {{min}} nécessaires) - continuez à enregistrer vos trades et revenez vérifier.",
-  'tools.riskAnalysis.kellyNoLosingTrades': "Vous n'avez encore eu aucun trade perdant, il n'y a donc aucune donnée de perte sur laquelle se baser.",
-  'tools.riskAnalysis.kellyFullLabel': 'Kelly complet',
-  'tools.riskAnalysis.kellyHalfLabel': 'Demi-Kelly (recommandé)',
-  'tools.riskAnalysis.rorTitle': 'Risque de Ruine',
-  'tools.riskAnalysis.rorHint':
-    "Estime la probabilité de ruiner complètement le compte, étant donné un taux de réussite, une taille de compte et un risque fixe par trade. Le taux de réussite est pré-rempli à partir de votre historique - ajustez n'importe quelle valeur pour tester un scénario.",
-  'tools.riskAnalysis.rorInputsHint': 'Essayez de modifier le risque par trade pour voir comment cela change votre Risque de Ruine.',
-  'tools.riskAnalysis.riskPerTradeLabel': 'Risque par trade',
-  'tools.riskAnalysis.winRateLabel': 'Taux de réussite %',
-  'tools.riskAnalysis.rorResultLabel': 'Risque de Ruine',
-  'tools.riskAnalysis.rorBucketVeryLow': 'Très faible',
-  'tools.riskAnalysis.rorBucketLow': 'Faible',
-  'tools.riskAnalysis.rorBucketModerate': 'Modéré',
-  'tools.riskAnalysis.rorBucketHigh': 'Élevé',
-  'tools.riskAnalysis.rorBucketNearCertain': 'Quasi certain',
-  'tools.riskAnalysis.rorExplanationVeryLow':
-    "Avec un taux de réussite de {{winRate}}% et {{units}} unités de risque dans votre compte, le calcul indique que votre Risque de Ruine est très faible à ce niveau de risque.",
-  'tools.riskAnalysis.rorExplanationLow':
-    "Avec un taux de réussite de {{winRate}}% et {{units}} unités de risque dans votre compte, le calcul indique que votre Risque de Ruine est faible à ce niveau de risque - à surveiller.",
-  'tools.riskAnalysis.rorExplanationModerate':
-    "Avec un taux de réussite de {{winRate}}% et {{units}} unités de risque dans votre compte, le calcul indique que votre Risque de Ruine est modéré à ce niveau de risque - envisagez de risquer moins par trade.",
-  'tools.riskAnalysis.rorExplanationHigh':
-    "Avec un taux de réussite de {{winRate}}% et {{units}} unités de risque dans votre compte, le calcul indique que votre Risque de Ruine est élevé à ce niveau de risque.",
-  'tools.riskAnalysis.rorExplanationNearCertain':
-    "Avec un taux de réussite de {{winRate}}% et {{units}} unités de risque dans votre compte, le calcul indique qu'il est quasi certain que vous perdiez tout le compte à terme à ce niveau de risque.",
-  'tools.riskAnalysis.rorDisclaimer':
-    "Il s'agit d'un modèle éducatif simplifié qui suppose des trades indépendants et un montant de risque fixe à chaque fois - ce n'est pas une prédiction précise. Comme tout dans TradePanel, ceci ne constitue pas un conseil en investissement.",
 
   'language.label': 'Langue',
 

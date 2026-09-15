@@ -434,7 +434,6 @@ function App() {
             <Tools
               accountId={accountId}
               tier={tier}
-              trades={trades}
               focusWatchlistSignal={focusWatchlistSignal}
               onOpenAccessCode={() => openAccessModal(t('tools.watchlist.modalHint'))}
             />

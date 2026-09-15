@@ -19,6 +19,7 @@ import {
   tradeOfTheMonth,
   tradesCountByMonth,
   totalPnl,
+  weeklyRecap,
   winRate,
   worstTrade,
 } from './stats'
@@ -149,6 +150,49 @@ describe('bestTrade / worstTrade', () => {
     ]
     expect(bestTrade(trades)?.id).toBe('a')
     expect(worstTrade(trades)?.id).toBe('b')
+  })
+})
+
+describe('weeklyRecap', () => {
+  // referenceDate 2026-03-15 -> current window: 2026-03-08..2026-03-15 (day -7..0);
+  // previous window: 2026-03-01..2026-03-08 (day -14..-7).
+  const referenceDate = new Date('2026-03-15T12:00:00.000Z')
+
+  it('finds the best and worst trade in the current 7-day window', () => {
+    const trades = [
+      makeTrade({ id: 'a', exitAt: '2026-03-10T00:00:00.000Z', entryPrice: 100, exitPrice: 130 }), // +300, best
+      makeTrade({ id: 'b', exitAt: '2026-03-12T00:00:00.000Z', entryPrice: 100, exitPrice: 80 }), // -200, worst
+      makeTrade({ id: 'c', exitAt: '2026-03-14T00:00:00.000Z', entryPrice: 100, exitPrice: 105 }), // +50
+      makeTrade({ id: 'd', exitAt: '2026-02-01T00:00:00.000Z', entryPrice: 100, exitPrice: 500 }), // outside window
+    ]
+    const recap = weeklyRecap(trades, referenceDate)
+    expect(recap.bestTrade).toEqual({ symbol: 'AAPL', pnl: 300 })
+    expect(recap.worstTrade).toEqual({ symbol: 'AAPL', pnl: -200 })
+  })
+
+  it('shows the same trade as both best and worst when only one trade is in the window', () => {
+    const trades = [makeTrade({ id: 'a', exitAt: '2026-03-12T00:00:00.000Z', entryPrice: 100, exitPrice: 130 })] // +300
+    const recap = weeklyRecap(trades, referenceDate)
+    expect(recap.bestTrade).toEqual({ symbol: 'AAPL', pnl: 300 })
+    expect(recap.worstTrade).toEqual({ symbol: 'AAPL', pnl: 300 })
+  })
+
+  it('computes previousWeekNetPnl from the prior non-overlapping 7-day window', () => {
+    const trades = [
+      makeTrade({ id: 'current', exitAt: '2026-03-10T00:00:00.000Z', entryPrice: 100, exitPrice: 110 }), // +100, current window
+      makeTrade({ id: 'prev1', exitAt: '2026-03-03T00:00:00.000Z', entryPrice: 100, exitPrice: 120 }), // +200, previous window
+      makeTrade({ id: 'prev2', exitAt: '2026-03-05T00:00:00.000Z', entryPrice: 100, exitPrice: 90 }), // -100, previous window
+      makeTrade({ id: 'tooOld', exitAt: '2026-02-01T00:00:00.000Z', entryPrice: 100, exitPrice: 500 }), // before previous window
+    ]
+    const recap = weeklyRecap(trades, referenceDate)
+    expect(recap.netPnl).toBe(100)
+    expect(recap.previousWeekNetPnl).toBe(100) // +200 - 100
+  })
+
+  it('returns null previousWeekNetPnl instead of a misleading comparison when there were no prior trades', () => {
+    const trades = [makeTrade({ id: 'current', exitAt: '2026-03-10T00:00:00.000Z', entryPrice: 100, exitPrice: 110 })]
+    const recap = weeklyRecap(trades, referenceDate)
+    expect(recap.previousWeekNetPnl).toBeNull()
   })
 })
 
