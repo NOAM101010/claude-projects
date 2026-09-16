@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useLanguage } from '../i18n/LanguageContext'
 import { CALENDAR_DOW, CALENDAR_MONTHS } from '../i18n/translations'
 import type { DailyPnl } from '../lib/stats'
@@ -75,6 +76,12 @@ export function PnlCalendar({ dailyPnl }: PnlCalendarProps) {
   }, [activeYear, dailyPnl, language])
 
   const [hover, setHover] = useState<DailyPnl | null>(null)
+  /** מיקום מסך (לא מיקום ה-grid הפנימי, שנתון ל-`overflow-x:auto` משלו) לעוגן-Tooltip
+   * צף מעל התא המרחף - `position:fixed` + `createPortal` ל-`document.body`, אותו דפוס
+   * שכבר תועד ל-`ChartImageThumbnail`/`TradeForm` (ר' progress.md): כל אב עם `transform`
+   * לא-`none` (כמו אנימציית `count-in` בכרטיסי KPI) הופך containing-block ל-`fixed`,
+   * אז Tooltip פנימי-רגיל היה עלול להילכד בתוך קונטיינר לא-נכון. */
+  const [tipPos, setTipPos] = useState<{ x: number; y: number } | null>(null)
 
   const yearEntries = dailyPnl.filter((d) => d.date.startsWith(activeYear))
   const yearTotal = yearEntries.reduce((s, d) => s + d.pnl, 0)
@@ -139,8 +146,16 @@ export function PnlCalendar({ dailyPnl }: PnlCalendarProps) {
                         background: day.inYear ? colorFor(data?.pnl ?? 0, maxAbs) : undefined,
                         visibility: day.inYear ? 'visible' : 'hidden',
                       }}
-                      onMouseEnter={() => day.inYear && setHover(data ?? { date: day.date, pnl: 0, trades: 0 })}
-                      onMouseLeave={() => setHover(null)}
+                      onMouseEnter={(e) => {
+                        if (!day.inYear) return
+                        setHover(data ?? { date: day.date, pnl: 0, trades: 0 })
+                        const r = e.currentTarget.getBoundingClientRect()
+                        setTipPos({ x: r.left + r.width / 2, y: r.top })
+                      }}
+                      onMouseLeave={() => {
+                        setHover(null)
+                        setTipPos(null)
+                      }}
                     />
                   )
                 })}
@@ -149,6 +164,25 @@ export function PnlCalendar({ dailyPnl }: PnlCalendarProps) {
           </div>
         </div>
       </div>
+
+      {/* Tooltip צף דקורטיבי בלבד (aria-hidden) - שורת ה-footer למטה נשארת מקור המידע
+          הנגיש/keyboard-safe הקיים, לא הוחלפה, כדי לא לשבור נגישות. */}
+      {hover && tipPos && hover.trades > 0 && (
+        createPortal(
+          <div
+            className={styles.floatTooltip}
+            style={{ left: tipPos.x, top: tipPos.y }}
+            aria-hidden="true"
+          >
+            <span className={styles.floatTooltipDate}>{new Date(hover.date).toLocaleDateString(locale)}</span>
+            <span className={`${styles.floatTooltipPnl} num ${hover.pnl >= 0 ? styles.positive : styles.negative}`}>
+              {hover.pnl >= 0 ? '+' : ''}
+              {hover.pnl.toFixed(2)}
+            </span>
+          </div>,
+          document.body,
+        )
+      )}
 
       <div className={styles.footer}>
         <span className={styles.hoverInfo}>

@@ -203,7 +203,10 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--text-dim);
+  /* var(--text-label), לא var(--text-dim) - עקבי עם ה-mockup המאושר (screen-dashboard.html)
+     ועם התקדים מ-Home (Phase 1): תוויות סטטיסטיקה קטנות משתמשות בטוקן קרם-בהיר הייעודי,
+     לא בגוון האפור-הדוהה של טקסט גוף רגיל. */
+  color: var(--text-label);
 }
 
 .kpiValue {

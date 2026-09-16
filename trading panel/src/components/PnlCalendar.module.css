@@ -152,6 +152,40 @@
   font-weight: 700;
 }
 
+/* Tooltip צף על ריחוף מעל תא ביום - מבוסס `.yr-tooltip` מה-mockup (screen-dashboard.html):
+   כרטיס כהה קטן עם מסגרת ענבר, ממוקם מעל התא (`translate(-50%, -100%)`), pointer-events:none
+   כדי לא להפריע לריחוף עצמו. ממוקם ע"י `createPortal` ל-body + position:fixed - ר' הערה ב-PnlCalendar.tsx. */
+.floatTooltip {
+  position: fixed;
+  z-index: var(--z-dropdown);
+  transform: translate(-50%, calc(-100% - 10px));
+  pointer-events: none;
+  padding: 8px 13px;
+  border-radius: 10px;
+  background: var(--metal-1);
+  border: 1px solid rgba(var(--amber-rgb), 0.4);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.floatTooltipDate {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
+.floatTooltipPnl {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--text-h);
+}
+
 .empty {
   text-align: center;
   padding: 28px 0;
