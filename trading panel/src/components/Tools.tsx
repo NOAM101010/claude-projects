@@ -595,6 +595,7 @@ function Watchlist({ accountId, tier, focusSignal, onOpenAccessCode }: Watchlist
                         {t('tools.watchlist.statusWatching')}
                       </span>
                     )}
+                    {quote && <span className={styles.liveDot}>{t('tools.watchlist.liveLabel')}</span>}
                     <span className={styles.resultLabel}>{t('tools.watchlist.currentPriceLabel')}</span>
                     <span className={`num ${styles.resultValue}`}>
                       {quote ? formatCurrency(quote.price, 'USD', locale) : t('tools.watchlist.unavailable')}
@@ -756,6 +757,12 @@ export function Tools({ accountId, tier, focusWatchlistSignal, onOpenAccessCode 
 
   return (
     <div className={styles.wrapper}>
+      <div className={styles.headerRow}>
+        <span className={`eyebrow ${styles.eyebrow}`}>{t('tools.eyebrow')}</span>
+        <h2 className={`hero-title ${styles.heroTitle}`}>{t('nav.tools')}</h2>
+        <p className={styles.pageNote}>{t('tools.pageNote')}</p>
+      </div>
+
       <div className={`${styles.subNav} btn-metal`}>
         <button type="button" data-active={tab === 'positionSize'} onClick={() => setTab('positionSize')}>
           {t('tools.positionSizeTab')}

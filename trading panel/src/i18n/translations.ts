@@ -514,6 +514,8 @@ const en = {
   'monthlyCalendar.dailyView.close': 'Close day view',
 
   // Tools (Calculators - Watchlist ships in a future round)
+  'tools.eyebrow': 'Calculators · Market tracking',
+  'tools.pageNote': 'Calculate position size, profit/loss and track prices - all live, nothing saved.',
   'tools.positionSizeTab': 'Position Size',
   'tools.pnlTab': 'P&L Calculator',
   'tools.watchlistTab': 'Watchlist',
@@ -530,6 +532,7 @@ const en = {
   'tools.watchlist.empty': 'No symbols yet - add one above to start tracking its price.',
   'tools.watchlist.loading': 'Loading watchlist...',
   'tools.watchlist.currentPriceLabel': 'Current price',
+  'tools.watchlist.liveLabel': 'Live',
   'tools.watchlist.unavailable': 'unavailable',
   'tools.watchlist.deleteButton': 'Remove',
   'tools.watchlist.targetLabel': 'Target',
@@ -1103,6 +1106,8 @@ const he: Record<TranslationKey, string> = {
   'monthlyCalendar.dailyView.noneClosedHint': 'טריידים סגורים מהיום הזה יופיעו כאן.',
   'monthlyCalendar.dailyView.close': 'סגירת תצוגת יום',
 
+  'tools.eyebrow': 'מחשבונים · מעקב שווקים',
+  'tools.pageNote': 'חישוב גודל פוזיציה, רווח/הפסד ומעקב מחירים - הכל חי, בלי שמירה.',
   'tools.positionSizeTab': 'גודל פוזיציה',
   'tools.pnlTab': 'מחשבון P&L',
   'tools.watchlistTab': 'רשימת מעקב',
@@ -1119,6 +1124,7 @@ const he: Record<TranslationKey, string> = {
   'tools.watchlist.empty': 'עדיין אין סימבולים - הוסף אחד למעלה כדי להתחיל לעקוב אחרי המחיר שלו.',
   'tools.watchlist.loading': 'טוען רשימת מעקב...',
   'tools.watchlist.currentPriceLabel': 'מחיר נוכחי',
+  'tools.watchlist.liveLabel': 'חי',
   'tools.watchlist.unavailable': 'לא זמין',
   'tools.watchlist.deleteButton': 'הסר',
   'tools.watchlist.targetLabel': 'יעד',
@@ -1689,6 +1695,8 @@ const es: Record<TranslationKey, string> = {
   'monthlyCalendar.dailyView.noneClosedHint': 'Las operaciones cerradas de este día aparecerán aquí.',
   'monthlyCalendar.dailyView.close': 'Cerrar vista del día',
 
+  'tools.eyebrow': 'Calculadoras · Seguimiento del mercado',
+  'tools.pageNote': 'Calcula el tamaño de posición, ganancia/pérdida y sigue precios - todo en vivo, sin guardar nada.',
   'tools.positionSizeTab': 'Tamaño de posición',
   'tools.pnlTab': 'Calculadora P&L',
   'tools.watchlistTab': 'Lista de seguimiento',
@@ -1705,6 +1713,7 @@ const es: Record<TranslationKey, string> = {
   'tools.watchlist.empty': 'Todavía no hay símbolos - agrega uno arriba para empezar a seguir su precio.',
   'tools.watchlist.loading': 'Cargando lista de seguimiento...',
   'tools.watchlist.currentPriceLabel': 'Precio actual',
+  'tools.watchlist.liveLabel': 'En vivo',
   'tools.watchlist.unavailable': 'no disponible',
   'tools.watchlist.deleteButton': 'Quitar',
   'tools.watchlist.targetLabel': 'Objetivo',
@@ -2281,6 +2290,8 @@ const fr: Record<TranslationKey, string> = {
   'monthlyCalendar.dailyView.noneClosedHint': 'Les trades clôturés ce jour-là apparaîtront ici.',
   'monthlyCalendar.dailyView.close': 'Fermer la vue du jour',
 
+  'tools.eyebrow': 'Calculateurs · Suivi du marché',
+  'tools.pageNote': 'Calculez la taille de position, le profit/perte et suivez les prix - tout en direct, rien n\'est enregistré.',
   'tools.positionSizeTab': 'Taille de position',
   'tools.pnlTab': 'Calculatrice P&L',
   'tools.watchlistTab': 'Liste de suivi',
@@ -2297,6 +2308,7 @@ const fr: Record<TranslationKey, string> = {
   'tools.watchlist.empty': 'Aucun symbole pour l’instant - ajoutez-en un ci-dessus pour suivre son prix.',
   'tools.watchlist.loading': 'Chargement de la liste de suivi...',
   'tools.watchlist.currentPriceLabel': 'Prix actuel',
+  'tools.watchlist.liveLabel': 'En direct',
   'tools.watchlist.unavailable': 'indisponible',
   'tools.watchlist.deleteButton': 'Retirer',
   'tools.watchlist.targetLabel': 'Cible',
