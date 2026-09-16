@@ -66,16 +66,61 @@ export function Home({
 
   return (
     <div className={styles.wrapper}>
+      <MarketTicker indices={indices} crypto={crypto} />
+
       <section className={styles.hero}>
-        {/* Market status is the single most important thing a trader checks on open -
-            it now leads the hero (bigger, first), the greeting is de-emphasized below it
-            instead of dominating the top of the page (see progress.md UX pass). */}
-        <div className={styles.heroMeta}>
-          <MarketStatusChip now={now} locale={locale} />
-          <span className={styles.dateLabel}>{dateLabel}</span>
+        <div className={styles.heroGrid}>
+          {/* Market status is the single most important thing a trader checks on open -
+              it now leads the hero (bigger, first), the greeting is de-emphasized below it
+              instead of dominating the top of the page (see progress.md UX pass). This
+              panel also carries the new "kinetic data" clock treatment (see progress.md's
+              Visual redesign exploration / direction-merged-v1.html). */}
+          <div className={`${styles.clockPanel} metal-panel holo-edge holo-edge--amber`}>
+            <span className={`eyebrow ${styles.eyebrow} ${styles.eyebrowLive}`}>{t('home.overviewEyebrow')}</span>
+            <LiveClock />
+            <div className={styles.heroMeta}>
+              <MarketStatusChip now={now} locale={locale} />
+            </div>
+            <h1 className={`hero-title ${styles.heroTitle}`}>{greeting}</h1>
+            <span className={styles.dateLabel}>{dateLabel}</span>
+          </div>
+
+          {/* Layered "depth stack" of the 3 headline real quotes (SPY/QQQ/BTC) - the
+              mockup's per-tile sparkline was decorative/randomized, and the app has no
+              real historical intraday series to draw one from (only a single current
+              price + 24h % change per IndexQuote/CryptoPrice - see marketData.ts). Kept
+              the glow/pulse/depth energy, deliberately dropped the sparkline rather than
+              fabricate a shape for real money-adjacent data. */}
+          <div className={styles.stack}>
+            <StackCard
+              cls={styles.c1}
+              label={t('home.stackSpyLabel')}
+              price={indices?.spy?.price ?? null}
+              changePercent={indices?.spy?.changePercent ?? null}
+              loading={indicesLoading}
+              failed={indicesFailed}
+              priceFormatter={(v) => v.toFixed(2)}
+            />
+            <StackCard
+              cls={styles.c2}
+              label={t('home.stackQqqLabel')}
+              price={indices?.qqq?.price ?? null}
+              changePercent={indices?.qqq?.changePercent ?? null}
+              loading={indicesLoading}
+              failed={indicesFailed}
+              priceFormatter={(v) => v.toFixed(2)}
+            />
+            <StackCard
+              cls={styles.c3}
+              label={t('home.stackBtcLabel')}
+              price={crypto?.bitcoin.usd ?? null}
+              changePercent={crypto?.bitcoin.usd24hChange ?? null}
+              loading={cryptoLoading}
+              failed={cryptoFailed}
+              priceFormatter={(v) => new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(v)}
+            />
+          </div>
         </div>
-        <span className={`eyebrow ${styles.eyebrow}`}>{t('home.overviewEyebrow')}</span>
-        <h1 className={`hero-title ${styles.heroTitle}`}>{greeting}</h1>
       </section>
 
       <StockSection indices={indices} loading={indicesLoading} failed={indicesFailed} />
@@ -85,6 +130,121 @@ export function Home({
         loading={cryptoLoading}
         failed={cryptoFailed}
       />
+    </div>
+  )
+}
+
+/** שעון חי - שעון-קיר של המכשיר עצמו (לא שעון הבורסה - זה תפקידה של MarketStatusChip
+ * למעלה), מתקתק כל שנייה. state נפרד ומבודד ברכיב משלו כדי שרק השעון עצמו יתעדכן כל
+ * שנייה, לא כל עץ ה-Home. */
+function LiveClock() {
+  const [time, setTime] = useState(() => new Date())
+  const { t } = useLanguage()
+
+  useEffect(() => {
+    const id = setInterval(() => setTime(new Date()), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  return (
+    <>
+      <div className={`${styles.clockBig} num`}>{time.toTimeString().slice(0, 8)}</div>
+      <span className={styles.clockSubLabel}>{t('home.yourTimeLabel')}</span>
+    </>
+  )
+}
+
+/** רצועת טיקר גוללת - מדדים+קריפטו אמיתיים (אותו דאטה כמו למטה, מוצג שוב כתקציר קינטי).
+ * דקורטיבי בלבד (aria-hidden) - כל המספרים כבר נגישים בתגיות/רשתות שמתחת. שני עותקים
+ * זהים זה לצד זה + translateX(-50%) לולאה חלקה בלי קפיצה. */
+function MarketTicker({ indices, crypto }: { indices: StockIndices | null; crypto: CryptoPrices | null }) {
+  const items: { symbol: string; changePercent: number }[] = []
+  const pushIndex = (symbol: string, quote: IndexQuote | null) => {
+    if (quote) items.push({ symbol, changePercent: quote.changePercent })
+  }
+  if (indices) {
+    pushIndex('SPY', indices.spy)
+    pushIndex('QQQ', indices.qqq)
+    pushIndex('DIA', indices.dia)
+    pushIndex('IWM', indices.iwm)
+  }
+  if (crypto) {
+    items.push({ symbol: 'BTC', changePercent: crypto.bitcoin.usd24hChange })
+    items.push({ symbol: 'ETH', changePercent: crypto.ethereum.usd24hChange })
+    items.push({ symbol: 'SOL', changePercent: crypto.solana.usd24hChange })
+    items.push({ symbol: 'XRP', changePercent: crypto.ripple.usd24hChange })
+    items.push({ symbol: 'BNB', changePercent: crypto.binancecoin.usd24hChange })
+  }
+
+  if (items.length === 0) return null
+
+  const row = (dup: number) => (
+    <div className={styles.tickerRow} key={dup}>
+      {items.map((it, i) => {
+        const up = it.changePercent >= 0
+        return (
+          <span className={styles.tickerItem} key={`${dup}-${i}`}>
+            <span className={styles.tickerSym}>{it.symbol}</span>
+            <span className={`num ${up ? styles.up : styles.down}`}>
+              {up ? '+' : ''}
+              {it.changePercent.toFixed(2)}%
+            </span>
+          </span>
+        )
+      })}
+    </div>
+  )
+
+  return (
+    <div className={styles.tickerWrap} dir="ltr" aria-hidden="true">
+      <div className={styles.tickerTrack}>
+        {row(0)}
+        {row(1)}
+      </div>
+    </div>
+  )
+}
+
+/** כרטיס בודד ב"מחסנית עומק" (stack) - אותו דאטה אמיתי כמו PriceTile, בלי גרף sparkline
+ * (אין דאטה היסטורי אמיתי לצייר ממנו - ראה ההערה למעלה ב-Home). `cls` קובע את מיקום
+ * השכבה (c1/c2/c3, ראה Home.module.css). */
+function StackCard({
+  cls,
+  label,
+  price,
+  changePercent,
+  loading,
+  failed,
+  priceFormatter,
+}: {
+  cls: string
+  label: string
+  price: number | null
+  changePercent: number | null
+  loading: boolean
+  failed: boolean
+  priceFormatter: (value: number) => string
+}) {
+  const { t } = useLanguage()
+  const up = (changePercent ?? 0) >= 0
+  const unavailable = failed || (!loading && price == null)
+
+  return (
+    <div className={`${styles.stackCard} ${cls}`}>
+      <div className={styles.stackLabel}>{label}</div>
+      {loading ? (
+        <div className={`${styles.stackValue} shimmer`} style={{ height: 28, borderRadius: 6 }} />
+      ) : unavailable ? (
+        <span className={styles.note}>{t('home.indexUnavailable')}</span>
+      ) : (
+        <>
+          <div className={`${styles.stackValue} num`}>{priceFormatter(price as number)}</div>
+          <div className={`${styles.stackChange} num ${up ? styles.up : styles.down}`}>
+            {up ? '▲' : '▼'} {up ? '+' : ''}
+            {(changePercent ?? 0).toFixed(2)}%
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -136,9 +296,10 @@ function PriceTile({
 }) {
   const { t } = useLanguage()
   const up = (changePercent ?? 0) >= 0
+  const flashClass = price == null ? '' : up ? styles.tileUp : styles.tileDown
 
   return (
-    <div className={`${styles.tile} glass glass-hover`}>
+    <div className={`${styles.tile} ${flashClass} glass glass-hover`}>
       <div className={styles.tileHeader}>
         {symbol ? (
           <a href={tradingViewUrl(symbol)} target="_blank" rel="noopener noreferrer" className={styles.tileLabelLink}>

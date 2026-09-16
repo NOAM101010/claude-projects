@@ -47,7 +47,10 @@ export function SectorHeatmap({ sectors, loading }: SectorHeatmapProps) {
 
   return (
     <div className={styles.wrapper}>
-      <h3 className={styles.title}>{t('home.sectorHeatmapTitle')}</h3>
+      <div className={styles.header}>
+        <h3 className={styles.title}>{t('home.sectorHeatmapTitle')}</h3>
+        <span className={styles.hint}>{t('home.sectorHeatmapHint')}</span>
+      </div>
       <div className={styles.grid}>
         {loading || sorted.length === 0
           ? Array.from({ length: 11 }).map((_, i) => <div key={i} className={`${styles.cell} shimmer`} />)

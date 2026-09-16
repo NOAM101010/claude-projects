@@ -54,6 +54,15 @@
   --code-bg: rgba(var(--overlay-tint), 0.045);
   --shadow: 0 18px 40px -22px rgba(0, 0, 0, 0.75);
 
+  /* Cream small-stat-label tint - part of the "kinetic data" Home redesign
+     language (see progress.md's "Visual redesign exploration"): a warm cream
+     instead of flat dim-gray for uppercase micro-labels (tile/section labels),
+     more legible against the dark ambient background than --text-dim while
+     staying clearly secondary to --text-h. Light theme aliases back to
+     --text-dim, which was already re-tuned for AA contrast on paper - a warm
+     cream tint has no equivalent legibility win on a light background. */
+  --text-label: rgba(253, 246, 232, 0.82);
+
   /* Titanium / charcoal metal — machined console surfaces */
   --metal-1: #0c0e11;
   --metal-1-rgb: 12, 14, 17;
@@ -187,6 +196,8 @@
   --grid-line: rgba(32, 27, 16, 0.05);
   --grid-dot: rgba(160, 107, 28, 0.08);
   --sweep-color: rgba(160, 107, 28, 0.06);
+
+  --text-label: var(--text-dim);
 }
 
 * {

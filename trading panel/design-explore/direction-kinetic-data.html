@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TradePanel — כיוון: נתונים קינטיים</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=JetBrains+Mono:wght@500;600;700;800&family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#07080b; --bg-2:#0b0d12;
+    --card: rgba(255,255,255,0.035); --border: rgba(255,255,255,0.09); --border-hi: rgba(255,255,255,0.2);
+    --text:#a3a3ab; --text-h:#f5f5f7; --text-dim:#74747c;
+    --pos:#22c55e; --pos-2:#4ade80; --pos-glow: rgba(34,197,94,.55);
+    --neg:#ef4444; --neg-2:#f87171; --neg-glow: rgba(239,68,68,.55);
+    --accent:#d99a2b; --accent-2:#e8b341; --amber-rgb:217,154,43;
+    --serif:'Frank Ruhl Libre', Georgia, serif;
+    --mono:'JetBrains Mono', ui-monospace, monospace;
+    --sans:'Heebo', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(ellipse 900px 500px at 85% -10%, rgba(217,154,43,.09), transparent 55%),
+      radial-gradient(ellipse 700px 600px at 0% 110%, rgba(34,197,94,.06), transparent 55%),
+      var(--bg);
+    padding-bottom:60px;
+  }
+  .num{direction:ltr;unicode-bidi:isolate;font-family:var(--mono);font-variant-numeric:tabular-nums;}
+
+  /* ==== ticker tape ==== */
+  .ticker-wrap{
+    overflow:hidden; border-bottom:1px solid var(--border); background:#050608;
+    box-shadow: inset 0 -14px 24px -20px rgba(217,154,43,.25);
+  }
+  .ticker{
+    display:flex; gap:36px; white-space:nowrap; width:max-content;
+    padding:9px 0; animation: ticker-scroll 32s linear infinite;
+    font-family:var(--mono); font-size:12.5px; font-weight:600; letter-spacing:.02em;
+  }
+  .ticker span.sym{color:var(--text-dim); margin-inline-end:6px;}
+  .ticker span.up{color:var(--pos-2);} .ticker span.down{color:var(--neg-2);}
+  @keyframes ticker-scroll{ from{transform:translateX(0);} to{transform:translateX(-50%);} }
+
+  .wrap{max-width:1180px; margin:0 auto; padding:0 22px;}
+
+  /* ==== hero: big dramatic clock/stat block ==== */
+  .hero{
+    display:grid; grid-template-columns: 1.3fr 1fr; gap:18px;
+    padding:34px 0 10px;
+  }
+  @media (max-width: 860px){ .hero{grid-template-columns:1fr;} }
+
+  .clock-panel{
+    position:relative; border-radius:20px; padding:28px 30px; overflow:hidden;
+    background: linear-gradient(160deg, #101319 0%, #0a0c10 70%);
+    border:1px solid var(--border);
+    box-shadow: 0 30px 60px -30px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  .clock-panel::before{
+    content:''; position:absolute; inset:0; pointer-events:none; opacity:.5;
+    background-image: repeating-linear-gradient(90deg, rgba(217,154,43,.05) 0 1px, transparent 1px 46px);
+  }
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:9px; font-size:10.5px; font-weight:700;
+    letter-spacing:.24em; text-transform:uppercase; color:var(--text-dim); font-family:var(--mono);
+  }
+  .eyebrow::before{content:''; width:22px; height:1px; background:linear-gradient(90deg, var(--accent-2), transparent);}
+  .eyebrow.live::after{
+    content:''; width:7px; height:7px; border-radius:50%; background:var(--pos-2);
+    box-shadow:0 0 0 0 rgba(34,197,94,.6); animation: live-pulse 1.8s ease-out infinite;
+  }
+  @keyframes live-pulse{ 0%{box-shadow:0 0 0 0 rgba(34,197,94,.55);} 70%{box-shadow:0 0 0 9px rgba(34,197,94,0);} 100%{box-shadow:0 0 0 0 rgba(34,197,94,0);} }
+
+  .clock-big{
+    font-family:var(--mono); font-weight:800; font-size:clamp(52px,7vw,84px);
+    color:var(--text-h); line-height:1; margin:14px 0 4px; letter-spacing:-.01em;
+    direction:ltr; text-align:left;
+    text-shadow: 0 0 30px rgba(217,154,43,.18);
+  }
+  .clock-sub{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:10px;}
+  .status-chip{
+    font-family:var(--mono); font-size:12px; letter-spacing:.12em; text-transform:uppercase;
+    padding:6px 14px; border-radius:999px; border:1px solid rgba(34,197,94,.45); color:var(--pos-2);
+    background:rgba(34,197,94,.08);
+  }
+  .clock-sub .txt{font-size:14px; color:var(--text-h); font-weight:600;}
+
+  .hero-stat-panel{
+    position:relative; border-radius:20px; padding:26px 28px;
+    background: linear-gradient(160deg, rgba(217,154,43,.14), rgba(217,154,43,.02) 60%), #0d0f14;
+    border:1px solid rgba(217,154,43,.28);
+    box-shadow: 0 30px 60px -30px rgba(0,0,0,.8), inset 0 0 40px -20px rgba(217,154,43,.35);
+    display:flex; flex-direction:column; justify-content:space-between;
+  }
+  .hero-stat-panel .lbl{font-family:var(--mono); font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:rgba(232,179,65,.85);}
+  .hero-stat-num{
+    font-family:var(--mono); font-weight:800; font-size:clamp(38px,5vw,54px); color:var(--text-h);
+    direction:ltr; text-align:left; margin:10px 0 2px;
+    animation: value-glow 3.4s ease-in-out infinite;
+  }
+  @keyframes value-glow{
+    0%,100%{ text-shadow: 0 0 0 rgba(74,222,128,0); }
+    50%{ text-shadow: 0 0 22px rgba(74,222,128,.45); }
+  }
+  .hero-stat-change{font-family:var(--mono); font-size:16px; font-weight:700; color:var(--pos-2); direction:ltr; text-align:left;}
+  .spark{width:100%; height:56px; display:block; margin-top:12px;}
+  .spark path.line{
+    fill:none; stroke:var(--pos-2); stroke-width:2; stroke-linecap:round;
+    stroke-dasharray: 400; stroke-dashoffset:400; animation: draw 2.2s ease forwards, spark-glow 3.4s ease-in-out infinite 2.2s;
+  }
+  @keyframes draw{ to{ stroke-dashoffset:0; } }
+  @keyframes spark-glow{ 0%,100%{opacity:.85;} 50%{opacity:1; filter:drop-shadow(0 0 6px rgba(74,222,128,.6));} }
+  .spark path.fill{ fill:url(#sparkFill); opacity:.5; }
+
+  /* ==== section heading ==== */
+  .section{padding-top:30px;}
+  .section-head{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px;}
+  .section-title{font-family:var(--serif); font-weight:900; font-size:22px; color:var(--text-h); margin:0; letter-spacing:-.01em;}
+  .section-hint{font-family:var(--mono); font-size:10.5px; color:var(--text-dim); letter-spacing:.1em; text-transform:uppercase;}
+
+  /* ==== sector heatmap: floor-board pulsing tiles ==== */
+  .heatmap{display:grid; grid-template-columns:repeat(6,1fr); gap:8px;}
+  @media (max-width:760px){.heatmap{grid-template-columns:repeat(3,1fr);}}
+  .heat-cell{
+    border-radius:10px; padding:12px 10px; position:relative; overflow:hidden;
+    font-family:var(--mono); border:1px solid transparent;
+  }
+  .heat-cell .name{font-size:11px; font-weight:700; color:inherit; opacity:.92;}
+  .heat-cell .pct{font-size:15px; font-weight:800; margin-top:4px; direction:ltr;}
+  .heat-cell::after{
+    content:''; position:absolute; inset:0; background:currentColor; opacity:0; mix-blend-mode:overlay;
+    animation: heat-breathe 3.2s ease-in-out infinite;
+  }
+  @keyframes heat-breathe{ 0%,100%{opacity:0;} 50%{opacity:.16;} }
+  .h1{background:rgba(34,197,94,.32); border-color:rgba(34,197,94,.5); color:#dcfce7;}
+  .h2{background:rgba(34,197,94,.18); border-color:rgba(34,197,94,.32); color:#86efac;}
+  .h3{background:rgba(34,197,94,.08); border-color:rgba(34,197,94,.18); color:#bbf7d0;}
+  .h4{background:rgba(239,68,68,.1); border-color:rgba(239,68,68,.2); color:#fecaca;}
+  .h5{background:rgba(239,68,68,.22); border-color:rgba(239,68,68,.36); color:#fca5a5;}
+  .h6{background:rgba(239,68,68,.34); border-color:rgba(239,68,68,.5); color:#fee2e2;}
+
+  /* ==== tiles grid: index/commodity/bond/crypto ==== */
+  .grid{display:grid; grid-template-columns:repeat(4,1fr); gap:12px;}
+  @media (max-width:900px){.grid{grid-template-columns:repeat(2,1fr);}}
+
+  .tile{
+    border-radius:14px; padding:16px 17px; position:relative; overflow:hidden;
+    background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.01)), var(--bg-2);
+    border:1px solid var(--border);
+    transition: transform .18s ease, border-color .18s ease;
+  }
+  .tile:hover{ transform:translateY(-3px); border-color:var(--border-hi); }
+  .tile .row1{display:flex; justify-content:space-between; align-items:center;}
+  .tile .lbl{font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text-dim);}
+  .tile .price{font-family:var(--mono); font-size:21px; font-weight:800; color:var(--text-h); margin-top:8px; direction:ltr;}
+  .tile .chg{font-family:var(--mono); font-size:12.5px; font-weight:700; margin-top:3px; direction:ltr;}
+  .tile.up .chg{color:var(--pos-2);} .tile.down .chg{color:var(--neg-2);}
+  .tile .mini-spark{width:100%; height:26px; margin-top:8px; display:block;}
+  .tile.up .mini-spark path{stroke:var(--pos-2);} .tile.down .mini-spark path{stroke:var(--neg-2);}
+  .tile .mini-spark path{fill:none; stroke-width:1.6; stroke-linecap:round;}
+  .tile.up{box-shadow: inset 0 0 0 1px transparent, 0 0 0 0 rgba(34,197,94,0); animation: tile-up-flash 5s ease-in-out infinite;}
+  .tile.down{animation: tile-down-flash 5s ease-in-out infinite;}
+  @keyframes tile-up-flash{ 0%,92%,100%{box-shadow:none;} 95%{box-shadow: inset 0 0 24px -6px rgba(34,197,94,.35);} }
+  @keyframes tile-down-flash{ 0%,92%,100%{box-shadow:none;} 95%{box-shadow: inset 0 0 24px -6px rgba(239,68,68,.35);} }
+
+  .fg-tile{grid-column:span 1;}
+  .fg-num{font-family:var(--mono); font-weight:800; font-size:28px; color:var(--accent-2); margin-top:8px;}
+  .fg-bar{height:6px; border-radius:99px; margin-top:10px; background:linear-gradient(90deg,#ef4444,#eab308,#22c55e); position:relative;}
+  .fg-bar::after{content:''; position:absolute; top:-3px; width:2px; height:12px; background:#fff; left:64%; box-shadow:0 0 8px rgba(255,255,255,.8);}
+
+  footer{padding:40px 0 0; text-align:center; font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; color:var(--text-dim); text-transform:uppercase;}
+</style>
+</head>
+<body>
+
+  <div class="ticker-wrap">
+    <div class="ticker" id="tickerRow"></div>
+  </div>
+
+  <div class="wrap">
+    <section class="hero">
+      <div class="clock-panel">
+        <span class="eyebrow live">שוק פתוח כעת</span>
+        <div class="clock-big num" id="clock">14:32:07</div>
+        <div class="clock-sub">
+          <span class="status-chip">NYSE · פתוח</span>
+          <span class="txt">נסגר בעוד 1:27:53</span>
+        </div>
+      </div>
+      <div class="hero-stat-panel">
+        <div>
+          <span class="lbl">S&amp;P 500 · SPY</span>
+          <div class="hero-stat-num num">582.14</div>
+          <div class="hero-stat-change num">▲ +1.84%</div>
+        </div>
+        <svg class="spark" viewBox="0 0 300 56" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#4ade80" stop-opacity=".55"/>
+              <stop offset="100%" stop-color="#4ade80" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <path class="fill" d="M0,40 L20,36 L40,38 L60,28 L80,32 L100,20 L120,24 L140,14 L160,18 L180,10 L200,16 L220,8 L240,12 L260,6 L280,10 L300,4 L300,56 L0,56 Z"/>
+          <path class="line" d="M0,40 L20,36 L40,38 L60,28 L80,32 L100,20 L120,24 L140,14 L160,18 L180,10 L200,16 L220,8 L240,12 L260,6 L280,10 L300,4"/>
+        </svg>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2 class="section-title">מפת חום סקטורים</h2>
+        <span class="section-hint">עדכון חי · כל 30 שניות</span>
+      </div>
+      <div class="heatmap" id="heatmap"></div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2 class="section-title">מדדים מובילים</h2>
+        <span class="section-hint">S&amp;P · NASDAQ · DOW · Russell</span>
+      </div>
+      <div class="grid" id="indices"></div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2 class="section-title">סחורות ואג״ח</h2>
+        <span class="section-hint">זהב · נפט · דולר · אג״ח</span>
+      </div>
+      <div class="grid" id="commodities"></div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2 class="section-title">קריפטו</h2>
+        <span class="section-hint">מסך המסחר הפעיל בעולם</span>
+      </div>
+      <div class="grid" id="crypto"></div>
+    </section>
+
+    <footer>TradePanel · Kinetic Data · כיוון עיצובי לבחינה בלבד</footer>
+  </div>
+
+<script>
+  // clock ticking
+  const clockEl = document.getElementById('clock');
+  let t0 = new Date(2026,0,1,14,32,7);
+  setInterval(()=>{ t0.setSeconds(t0.getSeconds()+1);
+    clockEl.textContent = t0.toTimeString().slice(0,8);
+  },1000);
+
+  // ticker tape content, duplicated for seamless loop
+  const tickerData = [
+    ['SPY','+1.84%',1],['QQQ','+2.11%',1],['DIA','+0.62%',1],['IWM','-0.34%',0],
+    ['BTC','+3.42%',1],['ETH','-1.05%',0],['GLD','+0.28%',1],['USO','-0.91%',0],
+    ['TLT','+0.14%',1],['AAPL','+1.12%',1],['NVDA','+4.65%',1],['TSLA','-2.31%',0],
+  ];
+  const tickerRow = document.getElementById('tickerRow');
+  function buildTicker(){
+    const html = tickerData.map(([s,p,u])=>`<span><span class="sym">${s}</span><span class="${u?'up':'down'}">${p}</span></span>`).join('');
+    tickerRow.innerHTML = html + html;
+  }
+  buildTicker();
+
+  function miniSpark(up){
+    const pts=[]; let y = 13; for(let i=0;i<=10;i++){ y += (Math.random()-0.5)*8*(up?-1:1)*0.6 + (up?-1:1)*0.6; y=Math.max(2,Math.min(24,y)); pts.push(`${i*10},${y.toFixed(1)}`); }
+    return `<svg class="mini-spark" viewBox="0 0 100 26" preserveAspectRatio="none"><path d="M${pts.join(' L')}"/></svg>`;
+  }
+
+  function tile(label, price, chg, symbol){
+    const up = chg >= 0;
+    return `<div class="tile ${up?'up':'down'}">
+      <div class="row1"><span class="lbl">${symbol || label}</span></div>
+      <div class="price num">${price}</div>
+      <div class="chg num">${up?'▲':'▼'} ${up?'+':''}${chg.toFixed(2)}%</div>
+      ${miniSpark(up)}
+    </div>`;
+  }
+
+  document.getElementById('indices').innerHTML =
+    tile('S&P 500','582.14',1.84,'SPY') + tile('Nasdaq 100','498.02',2.11,'QQQ') +
+    tile('דאו ג׳ונס','412.67',0.62,'DIA') + tile('Russell 2000','221.05',-0.34,'IWM');
+
+  document.getElementById('commodities').innerHTML =
+    tile('זהב','2,384.10',0.28,'GLD') + tile('נפט','74.32',-0.91,'USO') +
+    tile('דולר אינדקס','101.44',0.12,'UUP') + tile('אג״ח ארוך','92.18',0.14,'TLT');
+
+  document.getElementById('crypto').innerHTML =
+    tile('BTC','67,842',3.42,'BTC') + tile('ETH','3,214',-1.05,'ETH') +
+    tile('SOL','162.30',5.87,'SOL') +
+    `<div class="tile fg-tile"><div class="row1"><span class="lbl">Fear &amp; Greed</span></div>
+      <div class="fg-num num">71</div>
+      <div class="chg num up">חמדנות</div>
+      <div class="fg-bar"></div>
+    </div>`;
+
+  const sectors = [
+    ['טכנולוגיה',2.4,'h1'],['בריאות',1.1,'h2'],['פיננסים',0.6,'h3'],
+    ['תעשייה',-0.3,'h4'],['אנרגיה',-1.4,'h5'],['נדל״ן',-2.1,'h6'],
+    ['צריכה',1.8,'h2'],['תשתיות',0.9,'h3'],['חומרי גלם',-0.6,'h4'],
+    ['תקשורת',2.9,'h1'],['שירותים',0.2,'h3'],['תעופה',-1.9,'h5'],
+  ];
+  document.getElementById('heatmap').innerHTML = sectors.map(([n,p,cls])=>
+    `<div class="heat-cell ${cls}"><div class="name">${n}</div><div class="pct num">${p>0?'+':''}${p.toFixed(1)}%</div></div>`
+  ).join('');
+</script>
+</body>
+</html>

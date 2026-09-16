@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TradePanel — לוח בקרה (כיוון מיזוג)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=JetBrains+Mono:wght@500;600;700;800&family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#07080b; --bg-2:#0b0d12;
+    --card: rgba(255,255,255,0.035); --border: rgba(255,255,255,0.09); --border-hi: rgba(255,255,255,0.2);
+    --text:#a3a3ab; --text-h:#f5f5f7; --text-dim:#9c9ca6; --text-dim-lo:#7d7d86;
+    --pos:#22c55e; --pos-2:#4ade80; --pos-glow: rgba(34,197,94,.55);
+    --neg:#ef4444; --neg-2:#f87171; --neg-glow: rgba(239,68,68,.55);
+    --accent:#d99a2b; --accent-2:#e8b341; --amber-rgb:217,154,43;
+    --serif:'Frank Ruhl Libre', Georgia, serif;
+    --mono:'JetBrains Mono', ui-monospace, monospace;
+    --sans:'Heebo', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(ellipse 900px 500px at 85% -10%, rgba(217,154,43,.09), transparent 55%),
+      radial-gradient(ellipse 700px 600px at 0% 110%, rgba(34,197,94,.06), transparent 55%),
+      var(--bg);
+    padding-bottom:60px;
+  }
+  .num{direction:ltr;unicode-bidi:isolate;font-family:var(--mono);font-variant-numeric:tabular-nums;}
+
+  /* ==== ticker tape ==== */
+  .ticker-wrap{ overflow:hidden; border-bottom:1px solid var(--border); background:#050608; box-shadow: inset 0 -14px 24px -20px rgba(217,154,43,.25); }
+  .ticker{ display:flex; gap:36px; white-space:nowrap; width:max-content; padding:9px 0; animation: ticker-scroll 30s linear infinite; font-family:var(--mono); font-size:12.5px; font-weight:600; letter-spacing:.02em; }
+  .ticker span.sym{color:var(--text-dim); margin-inline-end:6px;}
+  .ticker span.up{color:var(--pos-2);} .ticker span.down{color:var(--neg-2);}
+  @keyframes ticker-scroll{ from{transform:translateX(0);} to{transform:translateX(-50%);} }
+
+  .wrap{max-width:1320px; margin:0 auto; padding:0 22px;}
+
+  .eyebrow{ display:inline-flex; align-items:center; gap:9px; font-size:11.5px; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:var(--text-dim); font-family:var(--mono); }
+  .eyebrow::before{content:''; width:22px; height:1px; background:linear-gradient(90deg, var(--accent-2), transparent);}
+  .page-head{ padding:30px 0 22px; }
+  .page-title{font-family:var(--serif); font-weight:900; font-size:clamp(26px,3.6vw,38px); color:var(--text-h); margin:6px 0 0; letter-spacing:-.01em;}
+  .page-note{ margin:8px 0 0; font-size:13px; color:var(--text-dim); }
+
+  .section{ padding-top:34px; }
+  .section-head{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:8px;}
+  .section-title{font-family:var(--serif); font-weight:900; font-size:20px; color:var(--text-h); margin:0; letter-spacing:-.01em;}
+  .section-hint{font-family:var(--mono); font-size:11.5px; color:var(--text-dim); letter-spacing:.08em; text-transform:uppercase;}
+
+  /* ==== hero KPI pair: dominant, matches Home's clock-panel energy ==== */
+  .hero-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:860px){ .hero-grid{grid-template-columns:1fr;} }
+
+  .hero-kpi{
+    position:relative; border-radius:20px; padding:26px 30px; overflow:hidden;
+    background: linear-gradient(160deg, #101319 0%, #0a0c10 70%);
+    border:1px solid var(--border);
+    box-shadow: 0 30px 60px -30px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  .hero-kpi::before{
+    content:''; position:absolute; inset:0; pointer-events:none; opacity:.5;
+    background-image: repeating-linear-gradient(90deg, rgba(217,154,43,.05) 0 1px, transparent 1px 46px);
+  }
+  .hero-kpi.amber{ border-color:rgba(217,154,43,.32); box-shadow: 0 30px 60px -30px rgba(0,0,0,.8), inset 0 0 46px -22px rgba(217,154,43,.35); }
+  .hero-kpi.red{ border-color:rgba(239,68,68,.28); box-shadow: 0 30px 60px -30px rgba(0,0,0,.8), inset 0 0 46px -22px rgba(239,68,68,.28); }
+  .hero-top{ position:relative; display:flex; align-items:center; justify-content:space-between; }
+  .hero-lbl{ font-family:var(--mono); font-size:12px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:#fdf6e8; opacity:.92; }
+  .hero-icon{ width:20px; height:20px; }
+  .hero-val{
+    position:relative; font-family:var(--mono); font-weight:800; font-size:clamp(38px,5.4vw,58px);
+    color:var(--text-h); line-height:1; margin:14px 0 6px; letter-spacing:-.01em; direction:ltr; text-align:left;
+    text-shadow: 0 0 30px rgba(217,154,43,.18);
+  }
+  .hero-val.pos{ color:var(--pos-2); text-shadow:0 0 34px rgba(74,222,128,.28); }
+  .hero-val.neg{ color:var(--neg-2); text-shadow:0 0 34px rgba(248,113,113,.28); }
+  .hero-chips{ position:relative; display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; }
+  .chip{ font-family:var(--mono); font-size:11.5px; font-weight:700; padding:6px 13px; border-radius:999px; border:1px solid rgba(255,255,255,.16); color:rgba(245,225,190,.7); background:rgba(255,255,255,.03); }
+  .chip.up{ border-color:rgba(34,197,94,.45); color:var(--pos-2); background:rgba(34,197,94,.08); }
+  .chip.down{ border-color:rgba(239,68,68,.45); color:var(--neg-2); background:rgba(239,68,68,.08); }
+
+  /* ==== performance tiles ==== */
+  .tile-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:12px; }
+  @media (max-width:960px){ .tile-grid{grid-template-columns:repeat(2,1fr);} }
+  .tile{
+    border-radius:14px; padding:15px 18px; position:relative; overflow:hidden;
+    background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.01)), var(--bg-2);
+    border:1px solid var(--border); transition: transform .18s ease, border-color .18s ease;
+    display:flex; flex-direction:column; align-items:flex-end; justify-content:center; gap:5px; min-height:88px;
+  }
+  .tile:hover{ transform:translateY(-3px); border-color:var(--border-hi); }
+  .tile .lbl{ font-size:12px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:#fdf6e8; opacity:.92; font-family:var(--mono); text-align:right; }
+  .tile .val{ font-family:var(--mono); font-size:clamp(21px,2.3vw,29px); font-weight:800; color:var(--text-h); direction:ltr; line-height:1; letter-spacing:-.01em; white-space:nowrap; }
+  .tile .val.pos{ color:var(--pos-2); } .tile .val.neg{ color:var(--neg-2); }
+
+  /* ==== behavior: streak + secondary stats — 4 equal-size boxes in one row ==== */
+  .behavior-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; align-items:stretch; }
+  @media (max-width:860px){ .behavior-grid{grid-template-columns:1fr 1fr;} }
+  .streak-card{
+    border-radius:14px; padding:10px 14px; position:relative; overflow:hidden;
+    background: linear-gradient(160deg, rgba(217,154,43,.09), rgba(217,154,43,.015) 60%), #0d0f14;
+    border:1px solid rgba(217,154,43,.2);
+    display:flex; flex-direction:column; justify-content:center; gap:3px; min-height:70px;
+    box-shadow: 0 26px 50px -26px rgba(0,0,0,.8), inset 0 0 26px -18px rgba(217,154,43,.2);
+  }
+  .streak-top{ display:flex; align-items:center; gap:8px; line-height:1; }
+  .streak-flame{ font-size:15px; line-height:1; filter:drop-shadow(0 0 6px rgba(217,154,43,.4)); }
+  .streak-num{ font-family:var(--mono); font-weight:800; font-size:clamp(21px,2.3vw,29px); color:var(--accent-2); direction:ltr; line-height:1; }
+  .streak-sub{ font-family:var(--sans); font-size:14.5px; font-weight:800; line-height:1.2; color:#fdf6e8; opacity:.92; letter-spacing:.02em; text-transform:uppercase; }
+  .behavior-grid .tile{ padding:10px 14px; min-height:70px; gap:3px; }
+  .behavior-grid .tile .lbl{ color:#fdf6e8; opacity:.92; font-weight:800; font-family:var(--sans); font-size:14.5px; letter-spacing:.02em; }
+
+  /* ==== yearly P&L heatmap (GitHub-contributions style) ==== */
+  .cal-panel{ border-radius:18px; padding:26px 28px 24px; border:1px solid var(--border); background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.005)), var(--bg-2); overflow-x:auto; }
+  .year-scroll{ overflow-x:auto; padding-bottom:2px; }
+  .year-wrap{ display:flex; direction:ltr; gap:11px; width:max-content; margin:0 auto; }
+  .year-side{ display:flex; flex-direction:column; flex:none; }
+  .year-side-spacer{ height:20px; }
+  .year-axis{ display:grid; grid-template-rows:repeat(7,16px); row-gap:4px; }
+  .year-axis span{ font-family:var(--mono); font-size:10px; font-weight:600; color:var(--text-dim-lo); line-height:16px; text-align:right; padding-inline-end:6px; white-space:nowrap; }
+  .year-main{ display:flex; flex-direction:column; gap:4px; }
+  .year-months{ position:relative; height:18px; }
+  .year-months span{ position:absolute; top:0; font-family:var(--mono); font-size:11.5px; font-weight:700; color:var(--text-dim); letter-spacing:.02em; white-space:nowrap; }
+  .year-grid{ display:grid; grid-template-rows:repeat(7,16px); grid-auto-flow:column; grid-auto-columns:16px; gap:4px; }
+  .year-cell{ width:16px; height:16px; border-radius:4px; border:1px solid transparent; transition:transform .12s ease, border-color .12s ease; }
+  .year-cell.blank{ background:transparent; visibility:hidden; }
+  .year-cell:not(.blank){ cursor:pointer; }
+  .year-cell:not(.blank):hover{ transform:scale(1.55); border-color:rgba(255,255,255,.55); z-index:3; box-shadow:0 4px 14px -4px rgba(0,0,0,.6); }
+  .year-cell.p1, .cal-legend .sw.p1{background:rgba(34,197,94,.16); border-color:rgba(34,197,94,.28);}
+  .year-cell.p2, .cal-legend .sw.p2{background:rgba(34,197,94,.34); border-color:rgba(34,197,94,.5);}
+  .year-cell.p3, .cal-legend .sw.p3{background:rgba(34,197,94,.55); border-color:rgba(34,197,94,.75);}
+  .year-cell.n1, .cal-legend .sw.n1{background:rgba(239,68,68,.16); border-color:rgba(239,68,68,.28);}
+  .year-cell.n2, .cal-legend .sw.n2{background:rgba(239,68,68,.34); border-color:rgba(239,68,68,.5);}
+  .year-cell.n3, .cal-legend .sw.n3{background:rgba(239,68,68,.55); border-color:rgba(239,68,68,.75);}
+  .year-cell.zero, .year-cell.empty, .cal-legend .sw.zero{background:rgba(255,255,255,.045); border-color:var(--border);}
+  .cal-legend{ display:flex; align-items:center; justify-content:center; gap:8px; margin-top:18px; font-family:var(--mono); font-size:11.5px; color:var(--text-dim); }
+  .cal-legend .sw{ width:16px; height:16px; border-radius:4px; border:1px solid transparent; }
+
+  /* ==== custom hover tooltip for year heatmap ==== */
+  .yr-tooltip{
+    position:fixed; top:0; left:0; z-index:80; pointer-events:none;
+    padding:8px 13px; border-radius:10px; background:rgba(11,13,18,.96);
+    border:1px solid rgba(217,154,43,.4); box-shadow:0 22px 44px -20px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.06);
+    font-family:var(--mono); white-space:nowrap; text-align:center;
+    opacity:0; transform:translate(-50%,calc(-100% - 10px)) scale(.9); transition:opacity .12s ease, transform .12s ease;
+  }
+  .yr-tooltip.show{ opacity:1; transform:translate(-50%,calc(-100% - 10px)) scale(1); }
+  .yr-tooltip .yt-date{ display:block; font-size:10px; font-weight:600; letter-spacing:.04em; color:var(--text-dim); margin-bottom:2px; }
+  .yr-tooltip .yt-pnl{ display:block; font-size:13.5px; font-weight:800; color:var(--text-h); direction:ltr; }
+  .yr-tooltip .yt-pnl.pos{ color:var(--pos-2); } .yr-tooltip .yt-pnl.neg{ color:var(--neg-2); }
+
+  /* ==== charts ==== */
+  .charts-grid{ display:grid; grid-template-columns:1.5fr 1fr; gap:16px; }
+  @media (max-width:900px){ .charts-grid{grid-template-columns:1fr;} }
+  .chart-panel{ border-radius:18px; padding:22px; border:1px solid var(--border); background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.005)), var(--bg-2); position:relative; overflow:hidden; }
+  .equity-body{ display:flex; gap:12px; align-items:stretch; }
+  .equity-axis{ display:flex; flex-direction:column; justify-content:space-between; min-width:46px; padding:2px 0; font-family:var(--mono); font-size:11px; font-weight:600; color:var(--text-dim); text-align:left; direction:ltr; }
+  .equity-svg{ flex:1; width:100%; height:240px; display:block; overflow:visible; }
+  .equity-line{ fill:none; stroke:var(--accent-2); stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; filter:drop-shadow(0 0 8px rgba(232,179,65,.55)); pathLength:1; stroke-dasharray:1; stroke-dashoffset:1; animation: draw-line 2.2s cubic-bezier(.2,.7,.3,1) forwards; }
+  @keyframes draw-line{ to{ stroke-dashoffset:0; } }
+  .equity-fill{ opacity:.9; animation: fill-in 1.4s ease .8s both; }
+  @keyframes fill-in{ from{opacity:0;} to{opacity:.9;} }
+  .equity-dot{ fill:var(--accent-2); filter:drop-shadow(0 0 6px rgba(232,179,65,.8)); animation: dot-pulse 2s ease-in-out infinite 2.2s; }
+  @keyframes dot-pulse{ 0%,100%{ r:4; opacity:1;} 50%{ r:6; opacity:.6; } }
+  .eq-point{ cursor:pointer; }
+  .eq-point .eq-hit{ fill:transparent; }
+  .eq-point .eq-dot{ fill:var(--accent-2); opacity:.4; transition:opacity .15s ease, r .15s ease; }
+  .eq-point:hover .eq-dot, .eq-point.active .eq-dot{ opacity:1; r:5; filter:drop-shadow(0 0 8px rgba(232,179,65,.85)); }
+  .eq-guide{ stroke:rgba(232,179,65,.35); stroke-width:1; stroke-dasharray:2 3; opacity:0; transition:opacity .15s ease; pointer-events:none; }
+  .eq-guide.show{ opacity:1; }
+  .chart-callout{ font-family:var(--mono); font-size:12px; font-weight:800; direction:ltr; }
+  .chart-callout.start{ fill:var(--text-dim); }
+  .chart-callout.end{ fill:var(--accent-2); }
+  .chart-callout-lbl{ font-family:var(--mono); font-size:10.5px; font-weight:600; fill:var(--text-dim); direction:ltr; }
+  .equity-foot{ display:flex; justify-content:space-between; margin-top:6px; padding-right:58px; font-family:var(--mono); font-size:11px; color:var(--text-dim); }
+  .month-svg{ width:100%; height:190px; display:block; overflow:visible; }
+  .month-bar{ fill:url(#monthGrad); transition:filter .15s ease; }
+  .month-bar:hover{ filter:brightness(1.25); }
+  .month-val{ font-family:var(--mono); font-size:11.5px; font-weight:800; fill:var(--accent-2); text-anchor:middle; }
+  .month-lbl{ font-family:var(--mono); font-size:11px; font-weight:600; fill:var(--text-dim); text-anchor:middle; }
+  .month-base{ stroke:rgba(255,255,255,.12); stroke-width:1; }
+
+  /* ==== group tables ==== */
+  .groups-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:860px){ .groups-grid{grid-template-columns:1fr;} }
+  .group-panel{ border-radius:18px; padding:20px; border:1px solid var(--border); background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.005)), var(--bg-2); }
+  .group-header{ display:grid; grid-template-columns:1.6fr .8fr .8fr 1.2fr; gap:8px; padding:0 12px 10px; font-family:var(--mono); font-size:11.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--text-dim); }
+  .group-row{ display:grid; grid-template-columns:1.6fr .8fr .8fr 1.2fr; gap:8px; align-items:center; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:rgba(255,255,255,.02); margin-bottom:6px; transition:border-color .15s ease, background .15s ease; }
+  .group-row:hover{ border-color:var(--border-hi); background:linear-gradient(90deg, rgba(217,154,43,.06), transparent 60%); }
+  .group-key{ font-family:var(--mono); font-weight:700; color:var(--text-h); direction:ltr; text-align:left; }
+  .group-num{ font-family:var(--mono); font-size:13px; color:var(--text); direction:ltr; text-align:left; }
+  .group-num.pos{ color:var(--pos-2); } .group-num.neg{ color:var(--neg-2); }
+
+  footer{padding:44px 0 0; text-align:center; font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; color:var(--text-dim); text-transform:uppercase;}
+</style>
+</head>
+<body>
+
+  <div class="ticker-wrap">
+    <div class="ticker">
+      <span><span class="sym">Win Rate</span><span class="up">64.6%</span></span>
+      <span><span class="sym">Profit Factor</span><span class="up">2.31</span></span>
+      <span><span class="sym">Expectancy</span><span class="up">+$184</span></span>
+      <span><span class="sym">Avg R:R</span><span class="up">1:2.1</span></span>
+      <span><span class="sym">Max Drawdown</span><span class="down">-$3,180</span></span>
+      <span><span class="sym">Streak</span><span class="up">5W</span></span>
+      <span><span class="sym">Avg Hold</span><span class="up">3.2d</span></span>
+      <span><span class="sym">Trades</span><span class="up">48</span></span>
+      <span><span class="sym">Win Rate</span><span class="up">64.6%</span></span>
+      <span><span class="sym">Profit Factor</span><span class="up">2.31</span></span>
+      <span><span class="sym">Expectancy</span><span class="up">+$184</span></span>
+      <span><span class="sym">Avg R:R</span><span class="up">1:2.1</span></span>
+      <span><span class="sym">Max Drawdown</span><span class="down">-$3,180</span></span>
+      <span><span class="sym">Streak</span><span class="up">5W</span></span>
+      <span><span class="sym">Avg Hold</span><span class="up">3.2d</span></span>
+      <span><span class="sym">Trades</span><span class="up">48</span></span>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="page-head">
+      <span class="eyebrow">USD · 48 טריידים סגורים</span>
+      <h1 class="page-title">לוח בקרה</h1>
+      <p class="page-note">כל הנתונים מוצגים לפי מטבע הבסיס של התיק</p>
+    </div>
+
+    <div class="hero-grid">
+      <div class="hero-kpi amber">
+        <div class="hero-top">
+          <span class="hero-lbl">Total P&amp;L</span>
+          <svg class="hero-icon" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>
+        </div>
+        <div class="hero-val pos num">+$18,420</div>
+        <div class="hero-chips">
+          <span class="chip up">Win Rate · 64.6%</span>
+          <span class="chip">סגורים/פתוחים · 48 / 3</span>
+        </div>
+      </div>
+
+      <div class="hero-kpi red">
+        <div class="hero-top">
+          <span class="hero-lbl">Max Drawdown</span>
+          <svg class="hero-icon" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><path d="M3 7l6 6 4-4 8 8"/><path d="M15 17h6v-6"/></svg>
+        </div>
+        <div class="hero-val neg num">-$3,180</div>
+        <div class="hero-chips">
+          <span class="chip down">12% משיא ההון</span>
+        </div>
+      </div>
+    </div>
+
+    <section class="section">
+      <div class="section-head">
+        <h2 class="section-title">ביצועים</h2>
+        <span class="section-hint">Performance</span>
+      </div>
+      <div class="tile-grid">
+        <div class="tile"><div class="lbl">Profit Factor</div><div class="val pos num">2.31</div></div>
+        <div class="tile"><div class="lbl">Expectancy</div><div class="val pos num">+$184</div></div>
+        <div class="tile"><div class="lbl">Avg Win</div><div class="val pos num">+$612</div></div>
+        <div class="tile"><div class="lbl">Avg Loss</div><div class="val neg num">-$286</div></div>
+        <div class="tile"><div class="lbl">Avg R:R</div><div class="val num">1:2.14</div></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2 class="section-title">התנהגות</h2>
+        <span class="section-hint">Behavior</span>
+      </div>
+      <div class="behavior-grid">
+        <div class="streak-card">
+          <div class="streak-top">
+            <span class="streak-flame">🔥</span>
+            <div class="streak-num num">5</div>
+          </div>
+          <div class="streak-sub">רצף ניצחונות נוכחי</div>
+        </div>
+        <div class="tile"><div class="lbl">רצף ניצחונות שיא</div><div class="val pos num">8</div></div>
+        <div class="tile"><div class="lbl">רצף הפסדים שיא</div><div class="val neg num">3</div></div>
+        <div class="tile"><div class="lbl">החזקה ממוצעת (ימים)</div><div class="val num">2.1 / 4.6</div></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2 class="section-title">מפת חום P&amp;L</h2>
+        <span class="section-hint">2026 · תמונה שנתית</span>
+      </div>
+      <div class="cal-panel">
+        <div class="year-scroll">
+          <div class="year-wrap">
+            <div class="year-side">
+              <div class="year-side-spacer"></div>
+              <div class="year-axis" id="yearAxis"></div>
+            </div>
+            <div class="year-main">
+              <div class="year-months" id="yearMonths"></div>
+              <div class="year-grid" id="yearGrid"></div>
+            </div>
+          </div>
+        </div>
+        <div class="cal-legend">
+          <span>הפסד</span>
+          <span class="sw n3"></span>
+          <span class="sw n2"></span>
+          <span class="sw n1"></span>
+          <span class="sw zero"></span>
+          <span class="sw p1"></span>
+          <span class="sw p2"></span>
+          <span class="sw p3"></span>
+          <span>רווח</span>
+          <span style="margin-inline-start:14px; color:var(--text-dim-lo);">ריחוף על יום מציג סכום מדויק</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="yr-tooltip" id="yrTooltip"><span class="yt-date"></span><span class="yt-pnl"></span></div>
+
+    <section class="section">
+      <div class="charts-grid">
+        <div class="chart-panel">
+          <div class="section-head">
+            <h2 class="section-title">עקומת הון</h2>
+            <span class="section-hint">Equity Curve</span>
+          </div>
+          <div class="equity-body">
+            <div class="equity-axis">
+              <span>$20k</span><span>$16k</span><span>$12k</span><span>$8k</span><span>$4k</span><span>$0</span>
+            </div>
+            <svg class="equity-svg" viewBox="0 0 600 240" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="equityFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#e8b341" stop-opacity="0.45" />
+                  <stop offset="100%" stop-color="#e8b341" stop-opacity="0" />
+                </linearGradient>
+              </defs>
+              <g stroke="rgba(255,255,255,0.09)" stroke-width="1">
+                <line x1="0" y1="48" x2="600" y2="48" /><line x1="0" y1="96" x2="600" y2="96" />
+                <line x1="0" y1="144" x2="600" y2="144" /><line x1="0" y1="192" x2="600" y2="192" />
+              </g>
+              <path class="equity-fill" fill="url(#equityFill)" d="M0,210 L40,205 L80,195 L120,198 L160,175 L200,180 L240,150 L280,158 L320,120 L360,128 L400,95 L440,102 L480,70 L520,78 L560,45 L600,38 L600,240 L0,240 Z" />
+              <path class="equity-line" pathLength="1" d="M0,210 L40,205 L80,195 L120,198 L160,175 L200,180 L240,150 L280,158 L320,120 L360,128 L400,95 L440,102 L480,70 L520,78 L560,45 L600,38" />
+              <line x1="0" y1="210" x2="0" y2="230" stroke="rgba(255,255,255,.15)" stroke-width="1" stroke-dasharray="2 2" />
+              <circle cx="0" cy="210" r="3" fill="var(--text-dim)" />
+              <text class="chart-callout-lbl" x="6" y="228">התחלה</text>
+              <text class="chart-callout start" x="6" y="238">$0</text>
+              <circle class="equity-dot" cx="600" cy="38" r="4" />
+              <text class="chart-callout-lbl" x="594" y="18" text-anchor="end">כרגע · שיא</text>
+              <text class="chart-callout end" x="594" y="32" text-anchor="end">+$18,420</text>
+              <line class="eq-guide" id="eqGuide" x1="0" y1="0" x2="0" y2="240" />
+              <g id="eqPoints"></g>
+            </svg>
+          </div>
+          <div class="equity-foot"><span>1 באפר׳ 2026</span><span>היום</span></div>
+        </div>
+
+        <div class="yr-tooltip" id="eqTooltip"><span class="yt-date"></span><span class="yt-pnl"></span></div>
+
+        <div class="chart-panel">
+          <div class="section-head">
+            <h2 class="section-title">טריידים לפי חודש</h2>
+            <span class="section-hint">Volume</span>
+          </div>
+          <svg class="month-svg" viewBox="0 0 460 190" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="monthGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#e8b341" stop-opacity="0.9" />
+                <stop offset="100%" stop-color="#e8b341" stop-opacity="0.25" />
+              </linearGradient>
+            </defs>
+            <line class="month-base" x1="4" y1="158" x2="456" y2="158" />
+            <rect class="month-bar" x="10" y="103" width="30" height="55" rx="4" />
+            <text class="month-val" x="25" y="94">5</text>
+            <text class="month-lbl" x="25" y="174">מרץ</text>
+
+            <rect class="month-bar" x="73" y="92" width="30" height="66" rx="4" />
+            <text class="month-val" x="88" y="83">6</text>
+            <text class="month-lbl" x="88" y="174">אפר׳</text>
+
+            <rect class="month-bar" x="136" y="81" width="30" height="77" rx="4" />
+            <text class="month-val" x="151" y="72">7</text>
+            <text class="month-lbl" x="151" y="174">מאי</text>
+
+            <rect class="month-bar" x="199" y="103" width="30" height="55" rx="4" />
+            <text class="month-val" x="214" y="94">5</text>
+            <text class="month-lbl" x="214" y="174">יוני</text>
+
+            <rect class="month-bar" x="262" y="70" width="30" height="88" rx="4" />
+            <text class="month-val" x="277" y="61">8</text>
+            <text class="month-lbl" x="277" y="174">יולי</text>
+
+            <rect class="month-bar" x="325" y="81" width="30" height="77" rx="4" />
+            <text class="month-val" x="340" y="72">7</text>
+            <text class="month-lbl" x="340" y="174">אוג׳</text>
+
+            <rect class="month-bar" x="388" y="48" width="30" height="110" rx="4" />
+            <text class="month-val" x="403" y="39">10</text>
+            <text class="month-lbl" x="403" y="174">ספט׳</text>
+          </svg>
+          <div class="equity-foot" style="padding-right:0; margin-top:2px;"><span>סה״כ 48 טריידים · 7 חודשים אחרונים</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="groups-grid">
+        <div class="group-panel">
+          <div class="section-head"><h2 class="section-title">לפי סימבול</h2><span class="section-hint">By Symbol</span></div>
+          <div class="group-header"><span>סימבול</span><span>טריידים</span><span>Win%</span><span>P&amp;L מצטבר</span></div>
+          <div id="bySymbol"></div>
+        </div>
+        <div class="group-panel">
+          <div class="section-head"><h2 class="section-title">לפי יום בשבוע</h2><span class="section-hint">By Weekday</span></div>
+          <div class="group-header"><span>יום</span><span>טריידים</span><span>Win%</span><span>P&amp;L מצטבר</span></div>
+          <div id="byDow"></div>
+        </div>
+      </div>
+    </section>
+
+    <footer>TradePanel · לוח בקרה · כיוון עיצובי לבחינה בלבד</footer>
+  </div>
+
+<script>
+  // ==== yearly P&L heatmap: 2026, GitHub-contributions layout ====
+  // deterministic PRNG so the mock dataset is stable across reloads
+  function mulberry32(seed){ return function(){ seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  const rnd = mulberry32(20260101);
+
+  function classFor(v){
+    if (v === 0) return 'zero';
+    if (v > 250) return 'p3'; if (v > 80) return 'p2'; if (v > 0) return 'p1';
+    if (v < -150) return 'n3'; if (v < -50) return 'n2'; return 'n1';
+  }
+  function fmtPnl(n){ const s = n>=0?'+':'-'; return `${s}$${Math.abs(n).toLocaleString('en-US')}`; }
+
+  const monthNames = ['ינו׳','פבר׳','מרץ','אפר׳','מאי','יוני','יולי','אוג׳','ספט׳','אוק׳','נוב׳','דצמ׳'];
+  const dowLetters = ['א','ב','ג','ד','ה','ו','ש']; // Sun..Sat
+
+  const YEAR = 2026;
+  const jan1 = new Date(YEAR, 0, 1);
+  const leadingBlanks = jan1.getDay(); // how many blank cells before Jan 1 in its week-column
+  const isLeap = (YEAR % 4 === 0 && YEAR % 100 !== 0) || YEAR % 400 === 0;
+  const totalDays = isLeap ? 366 : 365;
+
+  const cellsHtml = [];
+  for (let i = 0; i < leadingBlanks; i++) cellsHtml.push('<div class="year-cell blank"></div>');
+
+  const monthCols = []; // {name, col}
+  let cursor = new Date(YEAR, 0, 1);
+  for (let d = 0; d < totalDays; d++) {
+    const dow = cursor.getDay();
+    const isWeekend = dow === 0 || dow === 6; // markets closed
+    let pnl = null; // null = no trading day
+    if (!isWeekend) {
+      const skip = rnd() < 0.3; // no trades taken that day
+      if (!skip) {
+        const win = rnd() < 0.62;
+        const mag = rnd();
+        pnl = win ? Math.round(40 + mag * 680) : -Math.round(30 + mag * 420);
+        if (rnd() < 0.05) pnl = 0;
+      }
+    }
+    if (cursor.getDate() === 1) {
+      const colIndex = Math.floor((leadingBlanks + d) / 7);
+      monthCols.push({ name: monthNames[cursor.getMonth()], col: colIndex });
+    }
+    const dateStr = `${cursor.getDate()} ${monthNames[cursor.getMonth()]} ${YEAR}`;
+    if (pnl === null) {
+      cellsHtml.push(`<div class="year-cell empty" data-date="${dateStr}" data-pnl="" ></div>`);
+    } else {
+      cellsHtml.push(`<div class="year-cell ${classFor(pnl)}" data-date="${dateStr}" data-pnl="${pnl}"></div>`);
+    }
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  document.getElementById('yearGrid').innerHTML = cellsHtml.join('');
+
+  document.getElementById('yearMonths').innerHTML = monthCols
+    .map(m => `<span style="left:${m.col * 16}px">${m.name}</span>`).join('');
+
+  document.getElementById('yearAxis').innerHTML = dowLetters
+    .map((l, i) => `<span>${(i === 1 || i === 3 || i === 5) ? l : ''}</span>`).join('');
+
+  // custom tooltip — event delegation over the whole grid
+  const yearGrid = document.getElementById('yearGrid');
+  const tip = document.getElementById('yrTooltip');
+  const tipDate = tip.querySelector('.yt-date');
+  const tipPnl = tip.querySelector('.yt-pnl');
+
+  function showTip(cell){
+    const date = cell.dataset.date;
+    const raw = cell.dataset.pnl;
+    tipDate.textContent = date;
+    if (raw === '') {
+      tipPnl.textContent = 'אין טריידים';
+      tipPnl.className = 'yt-pnl';
+    } else {
+      const n = Number(raw);
+      tipPnl.textContent = fmtPnl(n);
+      tipPnl.className = 'yt-pnl ' + (n > 0 ? 'pos' : n < 0 ? 'neg' : '');
+    }
+    tip.classList.add('show');
+  }
+  function positionTip(cell){
+    const r = cell.getBoundingClientRect();
+    tip.style.left = (r.left + r.width / 2) + 'px';
+    tip.style.top = r.top + 'px';
+  }
+  yearGrid.addEventListener('pointerover', (e) => {
+    const cell = e.target.closest('.year-cell');
+    if (!cell || cell.classList.contains('blank')) return;
+    positionTip(cell);
+    showTip(cell);
+  });
+  yearGrid.addEventListener('pointermove', (e) => {
+    const cell = e.target.closest('.year-cell');
+    if (!cell || cell.classList.contains('blank')) return;
+    positionTip(cell);
+  });
+  yearGrid.addEventListener('pointerout', (e) => {
+    const next = e.relatedTarget && e.relatedTarget.closest ? e.relatedTarget.closest('.year-cell') : null;
+    if (!next) tip.classList.remove('show');
+  });
+
+  // ==== equity curve: hoverable point markers with tooltip (reuses .yr-tooltip style) ====
+  (function(){
+    const coords = [
+      [0,210],[40,205],[80,195],[120,198],[160,175],[200,180],[240,150],[280,158],
+      [320,120],[360,128],[400,95],[440,102],[480,70],[520,78],[560,45],[600,38]
+    ];
+    const startDate = new Date(2026, 3, 1);   // 1 באפר׳ 2026
+    const endDate   = new Date(2026, 8, 15);  // היום (15 בספט׳ 2026)
+    const dayMs = 86400000;
+    const totalDays = Math.round((endDate - startDate) / dayMs);
+    const monthNamesEq = ['ינו׳','פבר׳','מרץ','אפר׳','מאי','יוני','יולי','אוג׳','ספט׳','אוק׳','נוב׳','דצמ׳'];
+
+    const points = coords.map(([x, y], i) => {
+      const t = i / (coords.length - 1);
+      const value = Math.round((210 - y) / (210 - 38) * 18420);
+      const d = new Date(startDate.getTime() + Math.round(totalDays * t) * dayMs);
+      const dateStr = i === coords.length - 1 ? 'היום' : `${d.getDate()} ב${monthNamesEq[d.getMonth()]} ${d.getFullYear()}`;
+      return { x, y, value, dateStr };
+    });
+
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const group = document.getElementById('eqPoints');
+    const guide = document.getElementById('eqGuide');
+    const tip = document.getElementById('eqTooltip');
+    const tipDate = tip.querySelector('.yt-date');
+    const tipPnl = tip.querySelector('.yt-pnl');
+    const svgEl = document.querySelector('.equity-svg');
+
+    points.forEach(p => {
+      const g = document.createElementNS(svgNS, 'g');
+      g.setAttribute('class', 'eq-point');
+      g.dataset.x = p.x; g.dataset.y = p.y; g.dataset.value = p.value; g.dataset.date = p.dateStr;
+
+      const hit = document.createElementNS(svgNS, 'circle');
+      hit.setAttribute('class', 'eq-hit');
+      hit.setAttribute('cx', p.x); hit.setAttribute('cy', p.y); hit.setAttribute('r', 12);
+      g.appendChild(hit);
+
+      const dot = document.createElementNS(svgNS, 'circle');
+      dot.setAttribute('class', 'eq-dot');
+      dot.setAttribute('cx', p.x); dot.setAttribute('cy', p.y); dot.setAttribute('r', 3);
+      g.appendChild(dot);
+
+      group.appendChild(g);
+    });
+
+    function showEqTip(pt){
+      tipDate.textContent = pt.dataset.date;
+      const n = Number(pt.dataset.value);
+      tipPnl.textContent = fmtPnl(n);
+      tipPnl.className = 'yt-pnl ' + (n > 0 ? 'pos' : n < 0 ? 'neg' : '');
+      tip.classList.add('show');
+    }
+    function positionEqTip(pt){
+      // map svg viewBox coords -> screen coords via the point's own bounding box
+      const hitEl = pt.querySelector('.eq-hit');
+      const r = hitEl.getBoundingClientRect();
+      tip.style.left = (r.left + r.width / 2) + 'px';
+      tip.style.top = r.top + 'px';
+      const svgR = svgEl.getBoundingClientRect();
+      guide.setAttribute('x1', pt.dataset.x); guide.setAttribute('x2', pt.dataset.x);
+      guide.classList.add('show');
+    }
+    group.addEventListener('pointerover', (e) => {
+      const pt = e.target.closest('.eq-point');
+      if (!pt) return;
+      pt.classList.add('active');
+      positionEqTip(pt);
+      showEqTip(pt);
+    });
+    group.addEventListener('pointermove', (e) => {
+      const pt = e.target.closest('.eq-point');
+      if (!pt) return;
+      positionEqTip(pt);
+    });
+    group.addEventListener('pointerout', (e) => {
+      const pt = e.target.closest('.eq-point');
+      if (!pt) return;
+      pt.classList.remove('active');
+      const next = e.relatedTarget && e.relatedTarget.closest ? e.relatedTarget.closest('.eq-point') : null;
+      if (!next) { tip.classList.remove('show'); guide.classList.remove('show'); }
+    });
+  })();
+
+  const bySymbol = [
+    {k:'NVDA', t:9, w:78, p:4820},
+    {k:'TSLA', t:7, w:57, p:1240},
+    {k:'AMD', t:6, w:50, p:-380},
+    {k:'COIN', t:5, w:80, p:3110},
+    {k:'META', t:5, w:40, p:-620},
+    {k:'MSFT', t:4, w:75, p:1650},
+  ];
+  document.getElementById('bySymbol').innerHTML = bySymbol.map(r => `
+    <div class="group-row">
+      <span class="group-key">${r.k}</span>
+      <span class="group-num">${r.t}</span>
+      <span class="group-num">${r.w}%</span>
+      <span class="group-num ${r.p>=0?'pos':'neg'}">${fmtPnl(r.p)}</span>
+    </div>`).join('');
+
+  const byDow = [
+    {k:'שני', t:11, w:73, p:3920},
+    {k:'שלישי', t:9, w:67, p:2180},
+    {k:'רביעי', t:8, w:50, p:-310},
+    {k:'חמישי', t:12, w:58, p:1560},
+    {k:'שישי', t:8, w:75, p:2610},
+  ];
+  document.getElementById('byDow').innerHTML = byDow.map(r => `
+    <div class="group-row">
+      <span class="group-key">${r.k}</span>
+      <span class="group-num">${r.t}</span>
+      <span class="group-num">${r.w}%</span>
+      <span class="group-num ${r.p>=0?'pos':'neg'}">${fmtPnl(r.p)}</span>
+    </div>`).join('');
+</script>
+</body>
+</html>

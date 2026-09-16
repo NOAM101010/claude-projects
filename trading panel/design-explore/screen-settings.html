@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TradePanel — הגדרות (כיוון מיזוג)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=JetBrains+Mono:wght@500;600;700;800&family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#07080b; --bg-2:#0b0d12;
+    --card: rgba(255,255,255,0.035); --border: rgba(255,255,255,0.09); --border-hi: rgba(255,255,255,0.2);
+    --text:#a3a3ab; --text-h:#f5f5f7; --text-dim:#9c9ca6; --text-dim-lo:#7d7d86;
+    --pos:#22c55e; --pos-2:#4ade80; --pos-glow: rgba(34,197,94,.55);
+    --neg:#ef4444; --neg-2:#f87171; --neg-glow: rgba(239,68,68,.55);
+    --accent:#d99a2b; --accent-2:#e8b341; --amber-rgb:217,154,43;
+    --serif:'Frank Ruhl Libre', Georgia, serif;
+    --mono:'JetBrains Mono', ui-monospace, monospace;
+    --sans:'Heebo', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(ellipse 900px 500px at 85% -10%, rgba(217,154,43,.07), transparent 55%),
+      radial-gradient(ellipse 700px 600px at 0% 110%, rgba(34,197,94,.04), transparent 55%),
+      var(--bg);
+    padding-bottom:60px;
+  }
+  .num{direction:ltr;unicode-bidi:isolate;font-family:var(--mono);font-variant-numeric:tabular-nums;}
+
+  .ticker-wrap{ overflow:hidden; border-bottom:1px solid var(--border); background:#050608; box-shadow: inset 0 -14px 24px -20px rgba(217,154,43,.25); }
+  .ticker{ display:flex; gap:36px; white-space:nowrap; width:max-content; padding:9px 0; animation: ticker-scroll 30s linear infinite; font-family:var(--mono); font-size:12.5px; font-weight:600; letter-spacing:.02em; }
+  .ticker span.sym{color:var(--text-dim); margin-inline-end:6px;}
+  .ticker span.up{color:var(--pos-2);} .ticker span.down{color:var(--neg-2);}
+  @keyframes ticker-scroll{ from{transform:translateX(0);} to{transform:translateX(-50%);} }
+
+  /* Settings is a config surface, not a data surface — narrower than Dashboard/Journal
+     (matches the real app's ~760px form width), a touch narrower even than Tools since
+     there's no multi-column results grid competing for space. */
+  .wrap{max-width:780px; margin:0 auto; padding:0 22px;}
+
+  .eyebrow{ display:inline-flex; align-items:center; gap:9px; font-size:11.5px; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:var(--text-dim); font-family:var(--mono); }
+  .eyebrow::before{content:''; width:22px; height:1px; background:linear-gradient(90deg, var(--accent-2), transparent);}
+  .page-head{ padding:30px 0 26px; }
+  .page-title{font-family:var(--serif); font-weight:900; font-size:clamp(26px,3.6vw,34px); color:var(--text-h); margin:6px 0 0; letter-spacing:-.01em;}
+  .page-note{ margin:8px 0 0; font-size:13px; color:var(--text-dim); }
+
+  .section{ padding-bottom:30px; }
+  .section-head{ margin-bottom:14px; }
+  .section-title{ font-family:var(--serif); font-weight:900; font-size:17px; color:var(--text-h); margin:0; letter-spacing:-.01em; }
+  .section-hint{ font-family:var(--mono); font-size:11px; color:var(--text-dim); letter-spacing:.06em; margin-top:3px; display:block; }
+
+  /* ==== quiet static card — same construction language as the rest of the app
+     (ruled texture, hairline border, soft shadow) but the ruler is nearly invisible
+     and there is NO ambient glow/pulse: nothing here should look "alive" when the
+     user isn't touching it. Liveness is reserved for hover/focus states only. ==== */
+  .card{
+    position:relative; border-radius:18px; padding:22px 24px; margin-bottom:14px; overflow:hidden;
+    background: linear-gradient(180deg, rgba(255,255,255,.028), rgba(255,255,255,.006)), var(--bg-2);
+    border:1px solid var(--border);
+    box-shadow: 0 20px 44px -30px rgba(0,0,0,.75);
+  }
+  .card::before{
+    content:''; position:absolute; inset:0; pointer-events:none; opacity:.22;
+    background-image: repeating-linear-gradient(90deg, rgba(217,154,43,.05) 0 1px, transparent 1px 46px);
+  }
+
+  .row-line{
+    position:relative; display:flex; align-items:center; justify-content:space-between; gap:14px;
+    padding:13px 2px; border-bottom:1px solid var(--border);
+  }
+  .row-line:first-of-type{ padding-top:2px; }
+  .row-line:last-of-type{ border-bottom:none; padding-bottom:2px; }
+  .row-lbl{ font-weight:600; color:var(--text-h); font-size:13.5px; }
+  .row-sub{ display:block; font-size:11.5px; color:var(--text-dim); margin-top:2px; font-weight:400; }
+
+  .text-input, select.text-input{
+    font:inherit; font-family:var(--mono); font-size:13px; padding:9px 12px; border-radius:9px;
+    border:1px solid var(--border); background:rgba(255,255,255,.03); color:var(--text-h); min-width:170px;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .text-input:hover{ border-color:var(--border-hi); }
+  .text-input:focus{ outline:none; border-color:rgba(var(--amber-rgb),.5); background:rgba(var(--amber-rgb),.06); }
+
+  .tier-chip{
+    font-family:var(--mono); font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+    padding:5px 12px; border-radius:999px; border:1px solid rgba(var(--amber-rgb),.4); color:var(--accent-2); background:rgba(var(--amber-rgb),.1);
+  }
+
+  .plain-btn{
+    font:inherit; font-size:12.5px; font-weight:700; padding:9px 16px; border-radius:9px;
+    border:1px solid var(--border); background:rgba(255,255,255,.03); color:var(--text-h); cursor:pointer;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .plain-btn:hover{ border-color:var(--border-hi); background:rgba(255,255,255,.05); }
+  .plain-btn.amber{ border-color:rgba(var(--amber-rgb),.4); color:var(--accent-2); background:rgba(var(--amber-rgb),.08); }
+  .plain-btn.amber:hover{ background:rgba(var(--amber-rgb),.14); }
+  .actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:2px; }
+
+  /* ==== toggle switch: replaces the raw checkbox with a considered on/off control —
+     a deliberate, weighty click-settle, not an ambient animation. This is the one
+     place Settings gets to feel tactile, since it's the primary verb of the screen. ==== */
+  .switch{ position:relative; display:inline-block; width:42px; height:24px; flex-shrink:0; }
+  .switch input{ position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer; }
+  .switch .track{
+    position:absolute; inset:0; border-radius:999px; background:rgba(255,255,255,.08); border:1px solid var(--border);
+    transition: background .2s ease, border-color .2s ease;
+  }
+  .switch .knob{
+    position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:#9c9ca6;
+    transition: transform .2s cubic-bezier(.3,.9,.4,1.1), background .2s ease;
+  }
+  .switch input:checked ~ .track{ background:rgba(var(--amber-rgb),.9); border-color:rgba(var(--amber-rgb),.9); }
+  .switch input:checked ~ .knob{ transform:translateX(20px); background:#1a1408; box-shadow:none; }
+  [dir="rtl"] .switch .knob{ left:auto; right:2px; }
+  [dir="rtl"] .switch input:checked ~ .knob{ transform:translateX(-20px); }
+
+  .format-list{ display:flex; flex-direction:column; gap:4px; margin-bottom:14px; }
+  .format-item{ display:flex; align-items:baseline; gap:8px; font-size:12.5px; }
+  .format-name{ font-weight:700; color:var(--text-h); flex:0 0 auto; }
+  .format-desc{ color:var(--text-dim); }
+
+  .status-msg{ font-size:12px; color:var(--text-dim); margin:10px 0 0; min-height:14px; }
+  .result-banner{
+    display:flex; flex-direction:column; gap:6px; padding:12px 14px; border-radius:10px; margin-top:12px;
+    border:1px solid rgba(34,197,94,.35); background:rgba(34,197,94,.08);
+  }
+  .result-banner p{ margin:0; font-size:12.5px; font-weight:600; color:var(--pos-2); }
+
+  /* ==== danger zone: intentionally the one card that breaks the calm register —
+     hazard border, faint diagonal warning stripe along the top edge, uppercase
+     mono heading. It should read as structurally different at a glance, before
+     you even parse the words. ==== */
+  .danger-card{
+    position:relative; border-radius:18px; padding:22px 24px; overflow:hidden;
+    background: linear-gradient(180deg, rgba(239,68,68,.05), rgba(255,255,255,.006)), var(--bg-2);
+    border:1px solid rgba(239,68,68,.32);
+    box-shadow: 0 24px 50px -30px rgba(0,0,0,.8), inset 0 0 40px -24px rgba(239,68,68,.3);
+  }
+  .danger-card::before{
+    content:''; position:absolute; top:0; left:0; right:0; height:5px;
+    background: repeating-linear-gradient(-45deg, rgba(239,68,68,.55) 0 10px, rgba(239,68,68,.15) 10px 20px);
+  }
+  .danger-title{
+    display:flex; align-items:center; gap:9px; font-family:var(--mono); font-weight:800; font-size:13px;
+    letter-spacing:.12em; text-transform:uppercase; color:var(--neg-2); margin:6px 0 4px;
+  }
+  .danger-title::before{ content:'⚠'; font-size:14px; }
+  .danger-hint{ font-size:12.5px; color:var(--text-dim); margin:0 0 16px; line-height:1.5; }
+  .danger-btn{
+    font:inherit; font-size:12.5px; font-weight:800; padding:10px 20px; border-radius:9px;
+    border:1px solid rgba(239,68,68,.45); background:rgba(239,68,68,.1); color:var(--neg-2); cursor:pointer;
+    transition: border-color .15s ease, background .15s ease; align-self:flex-start;
+  }
+  .danger-btn:hover{ border-color:rgba(239,68,68,.7); background:rgba(239,68,68,.18); }
+  .danger-btn:disabled{ opacity:.45; cursor:not-allowed; }
+  .confirm-box{
+    display:flex; flex-direction:column; gap:12px; padding:16px; border-radius:12px; margin-top:14px;
+    border:1px solid rgba(239,68,68,.35); background:rgba(239,68,68,.06);
+  }
+  .confirm-box p{ margin:0; font-size:13px; color:var(--text-h); line-height:1.5; }
+  .confirm-box .word{ font-family:var(--mono); font-weight:800; color:var(--neg-2); }
+
+  footer{padding:44px 0 0; text-align:center; font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; color:var(--text-dim); text-transform:uppercase;}
+</style>
+</head>
+<body>
+
+  <div class="ticker-wrap">
+    <div class="ticker">
+      <span><span class="sym">NVDA</span><span class="up">+2.14%</span></span>
+      <span><span class="sym">TSLA</span><span class="down">-1.32%</span></span>
+      <span><span class="sym">AAPL</span><span class="up">+0.61%</span></span>
+      <span><span class="sym">AMD</span><span class="up">+3.05%</span></span>
+      <span><span class="sym">META</span><span class="down">-0.44%</span></span>
+      <span><span class="sym">COIN</span><span class="up">+4.82%</span></span>
+      <span><span class="sym">MSFT</span><span class="up">+0.29%</span></span>
+      <span><span class="sym">GOOGL</span><span class="down">-0.87%</span></span>
+      <span><span class="sym">NVDA</span><span class="up">+2.14%</span></span>
+      <span><span class="sym">TSLA</span><span class="down">-1.32%</span></span>
+      <span><span class="sym">AAPL</span><span class="up">+0.61%</span></span>
+      <span><span class="sym">AMD</span><span class="up">+3.05%</span></span>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="page-head">
+      <span class="eyebrow">חשבון · Workspace</span>
+      <h1 class="page-title">הגדרות</h1>
+      <p class="page-note">שם ומטבע ה-Workspace, שדות בטופס הוספת טרייד, התראות, ייצוא/ייבוא נתונים</p>
+    </div>
+
+    <!-- ============ WORKSPACE ============ -->
+    <section class="section">
+      <div class="section-head"><h2 class="section-title">Workspace</h2><span class="section-hint">שם, דרגה, שפה ומטבע בסיס</span></div>
+      <div class="card">
+        <div class="row-line">
+          <span class="row-lbl">שם ה-Workspace</span>
+          <input class="text-input" type="text" value="תיק המסחר שלי" />
+        </div>
+        <div class="row-line">
+          <span class="row-lbl">דרגה נוכחית</span>
+          <span class="tier-chip">PRO</span>
+        </div>
+        <div class="row-line">
+          <span class="row-lbl">שפה</span>
+          <select class="text-input">
+            <option>עברית</option>
+            <option>English</option>
+          </select>
+        </div>
+        <div class="row-line">
+          <span class="row-lbl">מטבע בסיס
+            <span class="row-sub">כל הדוחות והדשבורד מוצגים לפי מטבע זה</span>
+          </span>
+          <select class="text-input">
+            <option>USD</option>
+            <option>ILS</option>
+            <option>EUR</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ OPTIONAL FIELDS ============ -->
+    <section class="section">
+      <div class="section-head"><h2 class="section-title">שדות בטופס הוספת טרייד</h2><span class="section-hint">הפעילו רק את מה שאתם באמת עוקבים אחריו</span></div>
+      <div class="card">
+        <div class="row-line">
+          <span class="row-lbl">Stop Loss</span>
+          <label class="switch"><input type="checkbox" checked /><span class="track"></span><span class="knob"></span></label>
+        </div>
+        <div class="row-line">
+          <span class="row-lbl">Take Profit</span>
+          <label class="switch"><input type="checkbox" checked /><span class="track"></span><span class="knob"></span></label>
+        </div>
+        <div class="row-line">
+          <span class="row-lbl">עמלה (Fee)</span>
+          <label class="switch"><input type="checkbox" /><span class="track"></span><span class="knob"></span></label>
+        </div>
+        <div class="row-line">
+          <span class="row-lbl">הערות</span>
+          <label class="switch"><input type="checkbox" checked /><span class="track"></span><span class="knob"></span></label>
+        </div>
+        <div class="row-line">
+          <span class="row-lbl">סטאפ</span>
+          <label class="switch"><input type="checkbox" checked /><span class="track"></span><span class="knob"></span></label>
+        </div>
+        <div class="row-line">
+          <span class="row-lbl">חיוב שעת כניסה/יציאה מדויקת
+            <span class="row-sub">אם כבוי, אפשר לרשום טרייד עם תאריך בלבד</span>
+          </span>
+          <label class="switch"><input type="checkbox" /><span class="track"></span><span class="knob"></span></label>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ NOTIFICATIONS ============ -->
+    <section class="section">
+      <div class="section-head"><h2 class="section-title">התראות</h2><span class="section-hint">Push · התראות מחיר יעד</span></div>
+      <div class="card">
+        <p class="danger-hint" style="margin-bottom:14px;">הפעילו התראות דחיפה כדי לקבל עדכון כשמחיר עובר את היעד שהגדרתם ברשימת המעקב.</p>
+        <div class="actions">
+          <button class="plain-btn amber" type="button">הפעל התראות דחיפה</button>
+          <button class="plain-btn" type="button">שלח התראת בדיקה</button>
+        </div>
+        <p class="status-msg">מנוי דחיפה פעיל במכשיר זה</p>
+      </div>
+    </section>
+
+    <!-- ============ EXPORT / IMPORT ============ -->
+    <section class="section">
+      <div class="section-head"><h2 class="section-title">ייצוא וייבוא נתונים</h2><span class="section-hint">גיבוי, מעבר בין מכשירים, ייבוא מברוקר</span></div>
+      <div class="card">
+        <div class="format-list">
+          <div class="format-item"><span class="format-name">JSON</span><span class="format-desc">גיבוי מלא — כולל כל שדות הטרייד, לשחזור עתידי</span></div>
+          <div class="format-item"><span class="format-name">CSV</span><span class="format-desc">לפתיחה באקסל / Google Sheets</span></div>
+        </div>
+        <div class="actions">
+          <button class="plain-btn" type="button">ייצוא JSON</button>
+          <button class="plain-btn" type="button">ייצוא CSV</button>
+        </div>
+
+        <div class="row-line" style="border-top:1px solid var(--border); margin-top:18px; padding-top:16px; border-bottom:none;">
+          <span class="row-lbl">ייבוא</span>
+        </div>
+        <div class="format-list">
+          <div class="format-item"><span class="format-name">Excel</span><span class="format-desc">מזהה כותרות עמודות אוטומטית מרוב הברוקרים הנפוצים</span></div>
+          <div class="format-item"><span class="format-name">JSON</span><span class="format-desc">קובץ גיבוי שיוצא מכאן קודם</span></div>
+        </div>
+        <div class="actions">
+          <button class="plain-btn amber" type="button">בחר קובץ לייבוא</button>
+        </div>
+
+        <div class="result-banner">
+          <p>יובאו 12 טריידים חדשים · 3 עודכנו · 0 ללא שינוי</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ DANGER ZONE ============ -->
+    <section class="section" style="padding-bottom:0;">
+      <div class="section-head"><h2 class="section-title">אזור מסוכן</h2><span class="section-hint">פעולות בלתי הפיכות</span></div>
+      <div class="danger-card">
+        <div class="danger-title">ניקוי נתוני מסחר</div>
+        <p class="danger-hint">פעולה זו מוחקת לצמיתות את כל הטריידים ורשימת המעקב בכל ה-Workspaces של החשבון. לא ניתן לבטל לאחר האישור הסופי.</p>
+        <button class="danger-btn" type="button" onclick="startClear()" id="danger-start-btn">נקה נתוני מסחר</button>
+
+        <div class="confirm-box" id="confirm-step1" style="display:none;">
+          <p>בטוחים? כל הטריידים ורשימת המעקב יימחקו לצמיתות מכל ה-Workspaces.</p>
+          <div class="actions">
+            <button class="danger-btn" type="button" onclick="toStep2()">כן, המשך</button>
+            <button class="plain-btn" type="button" onclick="cancelClear()">ביטול</button>
+          </div>
+        </div>
+
+        <div class="confirm-box" id="confirm-step2" style="display:none;">
+          <p>הקלידו <span class="word">מחיקה</span> לאישור סופי ובלתי הפיך:</p>
+          <input class="text-input" type="text" id="confirm-input" oninput="checkConfirmWord()" style="min-width:100%;" />
+          <div class="actions">
+            <button class="danger-btn" type="button" id="confirm-final-btn" disabled onclick="finishClear()">מחק לצמיתות</button>
+            <button class="plain-btn" type="button" onclick="cancelClear()">ביטול</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer>TradePanel · הגדרות · כיוון עיצובי לבחינה בלבד</footer>
+  </div>
+
+<script>
+  function startClear(){
+    document.getElementById('danger-start-btn').style.display='none';
+    document.getElementById('confirm-step1').style.display='flex';
+  }
+  function toStep2(){
+    document.getElementById('confirm-step1').style.display='none';
+    document.getElementById('confirm-step2').style.display='flex';
+  }
+  function cancelClear(){
+    document.getElementById('confirm-step1').style.display='none';
+    document.getElementById('confirm-step2').style.display='none';
+    document.getElementById('danger-start-btn').style.display='inline-flex';
+    document.getElementById('confirm-input').value='';
+    checkConfirmWord();
+  }
+  function checkConfirmWord(){
+    const val = document.getElementById('confirm-input').value.trim();
+    document.getElementById('confirm-final-btn').disabled = (val !== 'מחיקה');
+  }
+  function finishClear(){
+    alert('דמו בלבד — בפועל כאן מתבצעת המחיקה בפועל דרך clearAccountTradingData().');
+    cancelClear();
+  }
+</script>
+</body>
+</html>

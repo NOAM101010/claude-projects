@@ -4,14 +4,30 @@
   gap: 10px;
 }
 
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .title {
   margin: 0;
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  color: var(--text-dim);
+  color: var(--text-label);
   font-family: var(--mono);
+}
+
+.hint {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
 }
 
 .grid {
@@ -33,6 +49,8 @@
 }
 
 .cell {
+  position: relative;
+  overflow: hidden;
   height: 64px;
   border-radius: 12px;
   border: 1px solid var(--border);
@@ -47,6 +65,35 @@
 
 .cell:hover {
   transform: scale(1.04);
+}
+
+/* faint "breathing" pulse of the cell's own color - a decorative liveliness cue,
+   not new information (the underlying % is real, already rendered in .pct). */
+.cell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  opacity: 0;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  animation: heat-breathe 3.2s ease-in-out infinite;
+}
+
+@keyframes heat-breathe {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.16;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cell::after {
+    animation: none;
+  }
 }
 
 .etf {
