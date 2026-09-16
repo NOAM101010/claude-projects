@@ -25,6 +25,10 @@ interface WatchlistRow {
   symbol: string
   target_price: number
   direction: 'above' | 'below'
+  // מגיע דרך ה-join המשוקע ל-accounts (ראה השאילתה למטה) - נדרש כדי לבנות את טקסט
+  // ההתראה בשפת החשבון (021_account_language.sql, message.ts). Supabase JS מחזיר
+  // relationship עם foreign key יחיד כאובייקט בודד (לא מערך) כברירת מחדל.
+  accounts: { language: string } | null
 }
 
 function isCrossed(direction: 'above' | 'below', target: number, current: number): boolean {
@@ -54,7 +58,7 @@ Deno.serve(async (req) => {
     // במקום להיבדק/להידלג בלולאה למטה.
     const { data: rows, error } = await admin
       .from('watchlist')
-      .select('id, account_id, symbol, target_price, direction')
+      .select('id, account_id, symbol, target_price, direction, accounts(language)')
       .eq('active', true)
       .not('target_price', 'is', null)
     if (error) throw error
@@ -75,7 +79,13 @@ Deno.serve(async (req) => {
       if (!quote) continue
       if (!isCrossed(alert.direction, alert.target_price, quote.price)) continue
 
-      const message = buildAlertMessage(alert.symbol, alert.direction, alert.target_price, quote.price)
+      const message = buildAlertMessage(
+        alert.symbol,
+        alert.direction,
+        alert.target_price,
+        quote.price,
+        alert.accounts?.language ?? 'en',
+      )
       await sendPushToAccount(admin, alert.account_id, {
         title: `${alert.symbol} price alert`,
         body: message,

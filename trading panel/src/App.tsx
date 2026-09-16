@@ -24,8 +24,8 @@ import { WorkspaceSwitcher } from './components/WorkspaceSwitcher'
 import { REQUIRE_ACCESS_CODE_GATE, SHOW_INTRO_SPLASH } from './config/locks'
 import type { RedeemResult } from './hooks/useRedeemCode'
 import { useMarketData } from './hooks/useMarketData'
-import { useTranslation } from './i18n/LanguageContext'
-import { canCreateTrade, getAccount } from './lib/accountApi'
+import { useLanguage } from './i18n/LanguageContext'
+import { canCreateTrade, getAccount, updateAccountLanguage } from './lib/accountApi'
 import type { AccountTier } from './lib/accountApi'
 import { deleteChartImage } from './lib/chartImagesApi'
 import { ensureSession, getStoredSession, isCodeVerified } from './lib/session'
@@ -52,7 +52,7 @@ export interface TradeFilter {
 }
 
 function App() {
-  const t = useTranslation()
+  const { t, language } = useLanguage()
   const [accountId, setAccountId] = useState<string | null>(null)
   const [tier, setTier] = useState<AccountTier>('demo')
   const [demoTradesCreated, setDemoTradesCreated] = useState(0)
@@ -63,7 +63,12 @@ function App() {
   const [tradesLoading, setTradesLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   // ברמת App כדי לשרוד מעברי טאב (Home נכנס/יוצא מה-DOM) - ראה תיעוד ב-useMarketData.ts.
-  const marketData = useMarketData()
+  // ready=Boolean(accountId): לא מתחיל לשלוף עד ש-ensureSession()/loadAccount() הצליחו -
+  // אחרת ה-effect כאן והרצה המקבילה של ensureSession() ב-init() למטה מתחרים על מי יוצר
+  // ראשון את ה-Supabase client (anon vs. עם token), מה שגורם ל"Multiple GoTrueClient
+  // instances" ועלול לגרום ל-market-indices (Edge Function עם verify_jwt) להישלח עם
+  // הטוקן הלא-נכון בטעינה הראשונה.
+  const marketData = useMarketData(Boolean(accountId))
 
   const [tab, setTab] = useState<Tab>('home')
   const [journalSubTab, setJournalSubTab] = useState<JournalSubTab>('trades')
@@ -130,6 +135,20 @@ function App() {
       cancelled = true
     }
   }, [])
+
+  // מסנכרן את השפה הנוכחית (localStorage, ראה LanguageContext.tsx) לעמודת
+  // accounts.language בכל טעינה ובכל שינוי שפה - כדי ש-Edge Functions בצד שרת
+  // (check-price-alerts) ידעו לבנות טקסט התראות בשפה הנכונה. כיוון-כתיבה אחד בלבד
+  // (local → DB), בכוונה: לא קוראים מה-DB חזרה ל-state המקומי, כדי לא לסתור את ההחלטה
+  // המתועדת ב-LanguageContext.tsx שלא "מפתיעים" משתמש עם שפה שלא בחר בעצמו במפורש
+  // במכשיר הזה. ריצה ראשונה (ברגע ש-accountId נטען) גם ממלאת בדיעבד את העמודה עבור
+  // חשבונות קיימים שכבר בחרו שפה לפני ה-migration הזה - best-effort, לא חוסם UI.
+  useEffect(() => {
+    if (!accountId) return
+    updateAccountLanguage(accountId, language).catch((err) => {
+      console.error('[App] failed to persist language preference to account:', err)
+    })
+  }, [accountId, language])
 
   const openAddForm = () => {
     setEditingTrade(undefined)

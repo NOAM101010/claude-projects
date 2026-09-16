@@ -1,6 +1,7 @@
 .wrapper {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 /* אותו דפוס segmented control של `Tools.module.css`'s .subNav, אבל ברוחב שמתאים

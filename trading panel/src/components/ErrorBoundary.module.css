@@ -1,0 +1,46 @@
+.wrapper {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-gate);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--bg);
+}
+
+.dialog {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 34px 30px;
+  border-radius: 18px;
+  text-align: center;
+  align-items: center;
+}
+
+.title {
+  font-size: clamp(24px, 5.5vw, 32px);
+  margin: 0;
+}
+
+.message {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--text-dim);
+}
+
+.reload {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 12px 24px;
+  border-radius: 9px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--accent-2);
+  cursor: pointer;
+}

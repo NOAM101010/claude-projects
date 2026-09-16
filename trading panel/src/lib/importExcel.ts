@@ -1,5 +1,13 @@
-import * as XLSX from 'xlsx'
+import type * as XLSXTypes from 'xlsx'
 import type { Direction, Trade } from '../types/trade'
+
+/** xlsx (SheetJS) הוא תלות כבדה שלא צריכה להיטען עד שמשתמש בפועל מפעיל ייבוא Excel - נטענת
+ * דינמית ב-import ראשון ומוזרמת (cache) לקריאות חוזרות, כדי לא לשלש הורדה/פענוח באותו session. */
+let xlsxPromise: Promise<typeof XLSXTypes> | null = null
+function loadXlsx(): Promise<typeof XLSXTypes> {
+  if (!xlsxPromise) xlsxPromise = import('xlsx')
+  return xlsxPromise
+}
 
 /**
  * שורה מפוענחת מקובץ Excel חיצוני. השדות ה"חובה" המינימליים מובטחים (symbol/direction/
@@ -103,7 +111,7 @@ function parseDirection(raw: unknown): Direction | null {
 }
 
 /** ממיר תא תאריך של xlsx (Date object, serial number, או string) ל-ISO string. null אם לא ניתן לפרסר. */
-function parseDateCell(raw: unknown): string | null {
+function parseDateCell(raw: unknown, XLSX: typeof XLSXTypes): string | null {
   if (raw instanceof Date) {
     if (Number.isNaN(raw.getTime())) return null
     return raw.toISOString()
@@ -250,7 +258,11 @@ export function detectBuySellBlockFormat(rawRows: unknown[][]): BuySellBlockColu
 }
 
 /** מפענח שורות דאטה לפי עמודות "בלוק קניה/מכירה" שזוהו - יומן Long-only, אין עמודת כיוון בקובץ. */
-function parseBuySellBlockRows(rawRows: unknown[][], columns: BuySellBlockColumns): ParseExcelResult {
+function parseBuySellBlockRows(
+  rawRows: unknown[][],
+  columns: BuySellBlockColumns,
+  XLSX: typeof XLSXTypes,
+): ParseExcelResult {
   const errors: string[] = []
   const rows: ParsedExcelRow[] = []
 
@@ -262,7 +274,7 @@ function parseBuySellBlockRows(rawRows: unknown[][], columns: BuySellBlockColumn
     const symbol = parseStringCell(dataRow[columns.symbolCol])
     const quantity = parseNumberCell(dataRow[columns.quantityCol])
     const entryPrice = parseNumberCell(dataRow[columns.entryPriceCol])
-    const entryAt = parseDateCell(dataRow[columns.entryAtCol])
+    const entryAt = parseDateCell(dataRow[columns.entryAtCol], XLSX)
 
     const missing: string[] = []
     if (!symbol) missing.push('symbol')
@@ -283,7 +295,7 @@ function parseBuySellBlockRows(rawRows: unknown[][], columns: BuySellBlockColumn
       quantity: quantity as number,
       stopLoss: null,
       takeProfit: null,
-      exitAt: parseDateCell(dataRow[columns.exitAtCol]),
+      exitAt: parseDateCell(dataRow[columns.exitAtCol], XLSX),
       exitPrice: parseNumberCell(dataRow[columns.exitPriceCol]),
       pnl: parseNumberCell(dataRow[columns.pnlCol]),
       fee: parseNumberCell(dataRow[columns.feeCol]),
@@ -297,8 +309,10 @@ function parseBuySellBlockRows(rawRows: unknown[][], columns: BuySellBlockColumn
  * מפענח את הגיליון הראשון של קובץ .xlsx לשורות טריידים. שורה בודדת פגומה (חסר אחד
  * מהשדות המחייבים: symbol/direction/entryAt/entryPrice/quantity) לא זורקת - נכנסת
  * ל-errors עם מספר שורה (1-based, כולל שורת הכותרות) וסיבה, וממשיכים לשורה הבאה.
+ * async: טוענת את xlsx דינמית (ר' loadXlsx) - התלות הכבדה הזו לא נטענת עד שמשתמש בפועל מפעיל ייבוא.
  */
-export function parseTradesExcel(buffer: ArrayBuffer): ParseExcelResult {
+export async function parseTradesExcel(buffer: ArrayBuffer): Promise<ParseExcelResult> {
+  const XLSX = await loadXlsx()
   // cellDates:false (the default) is intentional, not an oversight: SheetJS's own cellDates:true
   // conversion pre-converts numeric date cells into JS Date objects using the Excel epoch (Dec 30
   // 1899) anchored through the *local* Date constructor - and in timezones whose historical Local
@@ -344,7 +358,7 @@ export function parseTradesExcel(buffer: ArrayBuffer): ParseExcelResult {
 
     const symbol = parseStringCell(cells.symbol)
     const direction = parseDirection(cells.direction)
-    const entryAt = parseDateCell(cells.entryAt)
+    const entryAt = parseDateCell(cells.entryAt, XLSX)
     const entryPrice = parseNumberCell(cells.entryPrice)
     const quantity = parseNumberCell(cells.quantity)
 
@@ -368,7 +382,7 @@ export function parseTradesExcel(buffer: ArrayBuffer): ParseExcelResult {
       quantity: quantity as number,
       stopLoss: parseNumberCell(cells.stopLoss),
       takeProfit: parseNumberCell(cells.takeProfit),
-      exitAt: parseDateCell(cells.exitAt),
+      exitAt: parseDateCell(cells.exitAt, XLSX),
       exitPrice: parseNumberCell(cells.exitPrice),
       pnl: parseNumberCell(cells.pnl),
       fee: parseNumberCell(cells.fee),
@@ -382,7 +396,7 @@ export function parseTradesExcel(buffer: ArrayBuffer): ParseExcelResult {
     // (כותרות פרושות על כמה שורות, כמו יומן המסחר החיצוני של המשתמש). ננסה לזהות אותו לפני ויתור.
     const blockColumns = detectBuySellBlockFormat(rawRows)
     if (blockColumns) {
-      const blockResult = parseBuySellBlockRows(rawRows, blockColumns)
+      const blockResult = parseBuySellBlockRows(rawRows, blockColumns, XLSX)
       return { ...blockResult, detectedHeaders }
     }
   }

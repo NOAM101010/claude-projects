@@ -253,27 +253,39 @@ export function Dashboard({ trades, baseCurrency, tier, onOpenAccessCode, onSele
         <div className={styles.performanceGrid}>
           <div className={`${styles.kpiCard} metal-panel holo-edge`}>
             <span className={styles.kpiLabel}>{t('dashboard.kpiProfitFactor')}</span>
-            <span className={`${styles.kpiValue} ${pf === null || pf >= 1 ? styles.positive : styles.negative}`}>
+            <span
+              className={`${styles.kpiValue} ${pf === null || pf >= 1 ? styles.positive : styles.negative}`}
+              title={pf === null ? '∞' : pf.toFixed(2)}
+            >
               {pf === null ? '∞' : pf.toFixed(2)}
             </span>
           </div>
           <div className={`${styles.kpiCard} metal-panel holo-edge`}>
             <span className={styles.kpiLabel}>{t('dashboard.kpiExpectancy')}</span>
-            <span className={`${styles.kpiValue} ${exp >= 0 ? styles.positive : styles.negative}`}>
+            <span
+              className={`${styles.kpiValue} ${exp >= 0 ? styles.positive : styles.negative}`}
+              title={formatBase(exp, baseCurrency, locale)}
+            >
               {formatBase(exp, baseCurrency, locale)}
             </span>
           </div>
           <div className={`${styles.kpiCard} metal-panel holo-edge`}>
             <span className={styles.kpiLabel}>{t('dashboard.kpiAvgWin')}</span>
-            <span className={`${styles.kpiValue} ${styles.positive}`}>{formatBase(avgWin, baseCurrency, locale)}</span>
+            <span className={`${styles.kpiValue} ${styles.positive}`} title={formatBase(avgWin, baseCurrency, locale)}>
+              {formatBase(avgWin, baseCurrency, locale)}
+            </span>
           </div>
           <div className={`${styles.kpiCard} metal-panel holo-edge`}>
             <span className={styles.kpiLabel}>{t('dashboard.kpiAvgLoss')}</span>
-            <span className={`${styles.kpiValue} ${styles.negative}`}>{formatBase(avgLoss, baseCurrency, locale)}</span>
+            <span className={`${styles.kpiValue} ${styles.negative}`} title={formatBase(avgLoss, baseCurrency, locale)}>
+              {formatBase(avgLoss, baseCurrency, locale)}
+            </span>
           </div>
           <div className={`${styles.kpiCard} metal-panel holo-edge`}>
             <span className={styles.kpiLabel}>{t('dashboard.kpiAvgRR')}</span>
-            <span className={styles.kpiValue}>{rr === null ? '—' : `1:${rr.toFixed(2)}`}</span>
+            <span className={styles.kpiValue} title={rr === null ? '—' : `1:${rr.toFixed(2)}`}>
+              {rr === null ? '—' : `1:${rr.toFixed(2)}`}
+            </span>
           </div>
         </div>
       </div>

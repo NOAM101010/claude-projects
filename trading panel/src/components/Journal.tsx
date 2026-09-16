@@ -1,12 +1,15 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { AccountTier } from '../lib/accountApi'
-import { Dashboard } from './Dashboard'
 import { TradeList } from './TradeList'
 import { DEFAULT_TRADE_FILTERS, type TradeFiltersState } from '../lib/tradeFilters'
 import type { TradeFilter } from '../App'
 import type { CurrencyCode, Trade } from '../types/trade'
 import styles from './Journal.module.css'
+
+// recharts (טעון ע"י Dashboard) הוא תלות כבדה שלא צריכה להיכנס ל-chunk הראשי - Home/Trades לא
+// צריכים אותה בכלל. נטענת רק כשהמשתמש בפועל עובר לתת-הטאב הזה.
+const Dashboard = lazy(() => import('./Dashboard').then((m) => ({ default: m.Dashboard })))
 
 export type JournalSubTab = 'trades' | 'dashboard'
 
@@ -77,14 +80,16 @@ export function Journal({
           setAdvFilters={setAdvFilters}
         />
       ) : (
-        <Dashboard
-          trades={trades}
-          baseCurrency={baseCurrency}
-          tier={tier}
-          onOpenAccessCode={onOpenAccessCode}
-          onSelectSymbol={onSelectSymbol}
-          onSelectSetup={onSelectSetup}
-        />
+        <Suspense fallback={<p className="loadingState">{t('app.loading')}</p>}>
+          <Dashboard
+            trades={trades}
+            baseCurrency={baseCurrency}
+            tier={tier}
+            onOpenAccessCode={onOpenAccessCode}
+            onSelectSymbol={onSelectSymbol}
+            onSelectSetup={onSelectSetup}
+          />
+        </Suspense>
       )}
     </div>
   )

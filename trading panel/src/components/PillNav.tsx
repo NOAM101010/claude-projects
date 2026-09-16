@@ -56,6 +56,8 @@ export function PillNav({ tab, onChangeTab, actions }: PillNavProps) {
                 key={item.tab}
                 type="button"
                 data-active={active}
+                aria-label={t(item.labelKey)}
+                title={t(item.labelKey)}
                 className={`${styles.navButton} btn-metal ${active ? 'btn-metal--active' : ''}`}
                 onClick={() => onChangeTab(item.tab)}
               >

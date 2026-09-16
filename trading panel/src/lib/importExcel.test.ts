@@ -12,12 +12,12 @@ function buildXlsxBuffer(aoa: unknown[][]): ArrayBuffer {
 }
 
 describe('parseTradesExcel', () => {
-  it('מפענח שורה תקינה עם כותרות אנגליות מלאות', () => {
+  it('מפענח שורה תקינה עם כותרות אנגליות מלאות', async () => {
     const buffer = buildXlsxBuffer([
       ['Symbol', 'Direction', 'Entry Date', 'Entry Price', 'Quantity', 'Exit Price', 'Fee', 'Notes'],
       ['AAPL', 'Buy', '2026-01-05', 150, 10, 160, 1, 'good trade'],
     ])
-    const { rows, errors } = parseTradesExcel(buffer)
+    const { rows, errors } = await parseTradesExcel(buffer)
     expect(errors).toHaveLength(0)
     expect(rows).toHaveLength(1)
     expect(rows[0].symbol).toBe('AAPL')
@@ -30,34 +30,34 @@ describe('parseTradesExcel', () => {
     expect(rows[0].entryAt).toMatch(/^2026-01-05/)
   })
 
-  it('מפענח כותרות עבריות ומזהה כיוון בעברית', () => {
+  it('מפענח כותרות עבריות ומזהה כיוון בעברית', async () => {
     const buffer = buildXlsxBuffer([
       ['סימבול', 'כיוון', 'תאריך כניסה', 'מחיר כניסה', 'כמות'],
       ['TEVA', 'שורט', '2026-02-01', 20, 100],
     ])
-    const { rows, errors } = parseTradesExcel(buffer)
+    const { rows, errors } = await parseTradesExcel(buffer)
     expect(errors).toHaveLength(0)
     expect(rows[0].symbol).toBe('TEVA')
     expect(rows[0].direction).toBe('short')
   })
 
-  it('כותרות case-insensitive עם רווחים מיותרים', () => {
+  it('כותרות case-insensitive עם רווחים מיותרים', async () => {
     const buffer = buildXlsxBuffer([
       [' SYMBOL ', ' side ', 'date', 'entry', 'qty'],
       ['MSFT', 'long', '2026-03-01', 300, 5],
     ])
-    const { rows, errors } = parseTradesExcel(buffer)
+    const { rows, errors } = await parseTradesExcel(buffer)
     expect(errors).toHaveLength(0)
     expect(rows[0].symbol).toBe('MSFT')
   })
 
-  it('דוחה שורה חסרת שדה חובה ומדווחת ב-errors, וממשיכה לשורה הבאה', () => {
+  it('דוחה שורה חסרת שדה חובה ומדווחת ב-errors, וממשיכה לשורה הבאה', async () => {
     const buffer = buildXlsxBuffer([
       ['Symbol', 'Direction', 'Entry Date', 'Entry Price', 'Quantity'],
       ['AAPL', '', '2026-01-05', 150, 10], // חסר direction
       ['MSFT', 'long', '2026-01-06', 300, 5], // תקין
     ])
-    const { rows, errors } = parseTradesExcel(buffer)
+    const { rows, errors } = await parseTradesExcel(buffer)
     expect(rows).toHaveLength(1)
     expect(rows[0].symbol).toBe('MSFT')
     expect(errors).toHaveLength(1)
@@ -65,12 +65,12 @@ describe('parseTradesExcel', () => {
     expect(errors[0]).toMatch(/direction/)
   })
 
-  it('שורה עם שדות אופציונליים חסרים בלבד ממשיכה להיכלל (undefined/null)', () => {
+  it('שורה עם שדות אופציונליים חסרים בלבד ממשיכה להיכלל (undefined/null)', async () => {
     const buffer = buildXlsxBuffer([
       ['Symbol', 'Direction', 'Entry Date', 'Entry Price', 'Quantity'],
       ['AAPL', 'long', '2026-01-05', 150, 10],
     ])
-    const { rows, errors } = parseTradesExcel(buffer)
+    const { rows, errors } = await parseTradesExcel(buffer)
     expect(errors).toHaveLength(0)
     expect(rows[0].exitPrice).toBeNull()
     expect(rows[0].pnl).toBeNull()
@@ -78,37 +78,37 @@ describe('parseTradesExcel', () => {
     expect(rows[0].setup).toBeUndefined()
   })
 
-  it('מדלג על שורות ריקות לגמרי בלי לדווח שגיאה', () => {
+  it('מדלג על שורות ריקות לגמרי בלי לדווח שגיאה', async () => {
     const buffer = buildXlsxBuffer([
       ['Symbol', 'Direction', 'Entry Date', 'Entry Price', 'Quantity'],
       [null, null, null, null, null],
       ['AAPL', 'long', '2026-01-05', 150, 10],
     ])
-    const { rows, errors } = parseTradesExcel(buffer)
+    const { rows, errors } = await parseTradesExcel(buffer)
     expect(rows).toHaveLength(1)
     expect(errors).toHaveLength(0)
   })
 
-  it('מחזירה את כותרות העמודות הגולמיות שזוהו בשורה הראשונה', () => {
+  it('מחזירה את כותרות העמודות הגולמיות שזוהו בשורה הראשונה', async () => {
     const buffer = buildXlsxBuffer([
       ['Symbol', 'Direction', 'Entry Date', 'Entry Price', 'Quantity'],
       ['AAPL', 'long', '2026-01-05', 150, 10],
     ])
-    const { detectedHeaders } = parseTradesExcel(buffer)
+    const { detectedHeaders } = await parseTradesExcel(buffer)
     expect(detectedHeaders).toEqual(['Symbol', 'Direction', 'Entry Date', 'Entry Price', 'Quantity'])
   })
 
-  it('כשאף כותרת לא מזוהה, כל השורות נדחות אך הכותרות הגולמיות עדיין מוחזרות', () => {
+  it('כשאף כותרת לא מזוהה, כל השורות נדחות אך הכותרות הגולמיות עדיין מוחזרות', async () => {
     const buffer = buildXlsxBuffer([
       ['Column A', 'Column B', 'Column C'],
       ['AAPL', 'long', 150],
     ])
-    const { rows, detectedHeaders } = parseTradesExcel(buffer)
+    const { rows, detectedHeaders } = await parseTradesExcel(buffer)
     expect(rows).toHaveLength(0)
     expect(detectedHeaders).toEqual(['Column A', 'Column B', 'Column C'])
   })
 
-  it('מפענח פורמט "בלוק קניה/מכירה" עם כותרות פרושות על 3 שורות (יומן המסחר האמיתי של המשתמש)', () => {
+  it('מפענח פורמט "בלוק קניה/מכירה" עם כותרות פרושות על 3 שורות (יומן המסחר האמיתי של המשתמש)', async () => {
     // חיקוי מדויק של המבנה האמיתי: שורה 0 = כותרת קבוצה בלבד, שורה 1+2 = תת-כותרות
     // (חלקן חוזרות/דומות בכוונה, למשל "שער" פעמיים ו"תאריך" פעמיים), שורות 3-4 ריקות (מפריד),
     // דאטה מתחילה בשורה 5. עמודות תואמות לתיעוד: 0=מספר,2=טיקר,3=כמות,5=שער-כניסה,6=סכום,
@@ -159,7 +159,7 @@ describe('parseTradesExcel', () => {
     const profitRow: unknown[] = [2, null, 'SATL ', 10, null, 100, 1000, 46060, null, 105, 1050, 46062, null, 50, 0.05, 1050, 50, 2, 37.5]
 
     const buffer = buildXlsxBuffer([header0, header1, header2, blank, blank, lossRow, profitRow])
-    const { rows, errors } = parseTradesExcel(buffer)
+    const { rows, errors } = await parseTradesExcel(buffer)
 
     expect(errors).toHaveLength(0)
     expect(rows).toHaveLength(2)

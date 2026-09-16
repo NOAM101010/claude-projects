@@ -48,6 +48,11 @@ const en = {
   'app.loadErrorPrefix': 'Loading error:',
   'app.noWorkspace': 'Workspace not found. Please reload the page.',
 
+  // ErrorBoundary (top-level render-crash fallback, see src/components/ErrorBoundary.tsx)
+  'errorBoundary.title': 'Something went wrong',
+  'errorBoundary.message': "We're sorry - the app hit an unexpected error. Reloading the page should fix it, and none of your saved data was affected.",
+  'errorBoundary.reload': 'Reload',
+
   // shared access-code entry points
   'access.enterCode': 'Already have a Pro code? Enter it here',
 
@@ -649,6 +654,10 @@ const he: Record<TranslationKey, string> = {
   'app.loadErrorPrefix': 'שגיאה בטעינה:',
   'app.noWorkspace': 'מרחב העבודה לא נמצא. רענן/י את הדף.',
 
+  'errorBoundary.title': 'משהו השתבש',
+  'errorBoundary.message': 'מצטערים - האפליקציה נתקלה בשגיאה בלתי צפויה. רענון הדף אמור לפתור את זה, והדאטה השמורה שלך לא נפגעה.',
+  'errorBoundary.reload': 'רענן',
+
   'access.enterCode': 'יש לך כבר קוד Pro? הזן אותו כאן',
 
   'tradeForm.addTitle': 'הוספת טרייד',
@@ -1218,6 +1227,10 @@ const es: Record<TranslationKey, string> = {
   'app.reloadAccountFailed': 'Error al cargar la nueva cuenta',
   'app.loadErrorPrefix': 'Error al cargar:',
   'app.noWorkspace': 'No se encontró el espacio de trabajo. Recarga la página.',
+
+  'errorBoundary.title': 'Algo salió mal',
+  'errorBoundary.message': 'Lo sentimos - la aplicación tuvo un error inesperado. Recargar la página debería solucionarlo, y tus datos guardados no se vieron afectados.',
+  'errorBoundary.reload': 'Recargar',
 
   'access.enterCode': '¿Ya tienes un código Pro? Ingrésalo aquí',
 
@@ -1791,6 +1804,10 @@ const fr: Record<TranslationKey, string> = {
   'app.reloadAccountFailed': 'Échec du chargement du nouveau compte',
   'app.loadErrorPrefix': 'Erreur de chargement :',
   'app.noWorkspace': "Espace de travail introuvable. Rechargez la page.",
+
+  'errorBoundary.title': "Une erreur s'est produite",
+  'errorBoundary.message': "Désolé - l'application a rencontré une erreur inattendue. Recharger la page devrait résoudre le problème, et vos données enregistrées n'ont pas été affectées.",
+  'errorBoundary.reload': 'Recharger',
 
   'access.enterCode': 'Vous avez déjà un code Pro ? Entrez-le ici',
 

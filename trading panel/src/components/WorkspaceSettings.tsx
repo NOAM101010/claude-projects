@@ -185,7 +185,7 @@ export function WorkspaceSettings({
     try {
       if (file.name.toLowerCase().endsWith('.xlsx')) {
         const buffer = await file.arrayBuffer()
-        const { rows, errors, detectedHeaders } = parseTradesExcel(buffer)
+        const { rows, errors, detectedHeaders } = await parseTradesExcel(buffer)
         setImportErrors(errors)
         const result = await importOrUpdateTrades(workspace.id, accountId, rows, trades)
         onTradesImported(result.createdTrades)

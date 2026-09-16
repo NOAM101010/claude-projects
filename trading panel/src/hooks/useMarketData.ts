@@ -39,7 +39,7 @@ function isIndicesFullyFailed(indices: StockIndices): boolean {
   )
 }
 
-export function useMarketData(): MarketDataState {
+export function useMarketData(ready: boolean): MarketDataState {
   const [indices, setIndices] = useState<StockIndices | null>(null)
   const [indicesLoading, setIndicesLoading] = useState(true)
   const [indicesFailed, setIndicesFailed] = useState(false)
@@ -50,6 +50,7 @@ export function useMarketData(): MarketDataState {
   const [fearGreed, setFearGreed] = useState<FearGreedIndex | null>(null)
 
   useEffect(() => {
+    if (!ready) return
     let cancelled = false
     const load = async () => {
       try {
@@ -70,9 +71,10 @@ export function useMarketData(): MarketDataState {
       cancelled = true
       clearInterval(id)
     }
-  }, [])
+  }, [ready])
 
   useEffect(() => {
+    if (!ready) return
     let cancelled = false
     const load = async () => {
       try {
@@ -94,7 +96,7 @@ export function useMarketData(): MarketDataState {
       cancelled = true
       clearInterval(id)
     }
-  }, [])
+  }, [ready])
 
   return { indices, indicesLoading, indicesFailed, crypto, cryptoLoading, cryptoFailed, fearGreed }
 }

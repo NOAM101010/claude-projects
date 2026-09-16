@@ -1,6 +1,7 @@
 import { getSupabase } from './supabase'
 import { deleteAllTradesInWorkspace } from './tradesApi'
 import { deleteAllWatchlistAlerts } from './watchlistApi'
+import type { Language } from '../i18n/translations'
 
 export type AccountTier = 'demo' | 'basic' | 'pro'
 
@@ -32,6 +33,19 @@ export async function getAccount(accountId: string): Promise<Account> {
   return { id: row.id, tier: row.tier, demoTradesCreated: row.demo_trades_created }
 }
 
+/**
+ * שומר את בחירת השפה של המשתמש בעמודת `accounts.language` (021_account_language.sql) -
+ * כדי ש-Edge Functions בצד שרת (check-price-alerts) יוכלו לבנות טקסט התראות בשפה
+ * הנכונה. עד עכשיו השפה הייתה client-only (localStorage, ראה LanguageContext.tsx).
+ * הקריאה best-effort מצד הקורא (App.tsx) - כשל כאן לא אמור לחסום את ה-UI, השפה כבר
+ * מוחלת מקומית מיד דרך localStorage בלי תלות ב-DB.
+ */
+export async function updateAccountLanguage(accountId: string, language: Language): Promise<void> {
+  const supabase = getSupabase()
+  const { error } = await supabase.from('accounts').update({ language }).eq('id', accountId)
+  if (error) throw error
+}
+
 /** מגבלת הדמו - עד 5 טריידים חינם לפני שנדרש קוד גישה (trading-journal-plan.md סעיף 5). */
 export const DEMO_TRADE_LIMIT = 5
 
@@ -50,9 +64,9 @@ export function canCreateTrade(tier: AccountTier, demoTradesCreated: number): bo
  * מנקה את כל הדאטה המסחרית של החשבון - טריידים (+ תמונות גרפים ב-Storage) בכל
  * ה-workspaces שלו, ואת כל שורות ה-watchlist. **לא** נוגעת ב-accounts/access_codes/
  * workspaces עצמם (name/baseCurrency/field_settings נשארים כפי שהוגדרו) - זה החליף
- * את `deleteAccount` הקודם, כי מחיקת חשבון שאי-פעם מימש קוד גישה נכשלת היום
- * (FK RESTRICT על access_codes.redeemed_by, לא תוקן) וגם הייתה הורסת דרגת-מנוי/זהות
- * שהמשתמש לא רוצה לחשוף כפעולה בכלל. `push_subscriptions` נשארת בכוונה - רישום
+ * את `deleteAccount` הקודם (ה-FK RESTRICT על access_codes.redeemed_by תוקן מאז ב-
+ * 012_fix_delete_account_fk.sql, אבל מחיקת חשבון עדיין הייתה הורסת דרגת-מנוי/זהות
+ * שהמשתמש לא רוצה לחשוף כפעולה בכלל). `push_subscriptions` נשארת בכוונה - רישום
  * push של מכשיר הוא לא "דאטה מסחרית" ומחיקתה הייתה שוברת התראות בלי תועלת.
  */
 export async function clearAccountTradingData(accountId: string, workspaceIds: string[]): Promise<void> {

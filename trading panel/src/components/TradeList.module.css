@@ -3,6 +3,8 @@
   max-width: 900px;
   margin: 0 auto;
   box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
 }
 
 .header {
@@ -86,6 +88,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
 .searchInput {
@@ -114,6 +117,13 @@
   border-radius: 10px;
   border: 1px solid var(--border);
   background: rgba(var(--overlay-tint), 0.02);
+  /* 4-button variant (type filter) is wider than a 375px viewport even at min-content
+     (min-width:0 lets it shrink below its buttons' combined nowrap width, but that
+     still leaves it narrower than its content) - scroll internally instead of
+     forcing the whole page wider, same chip-row pattern used for filter controls. */
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .segmented button {

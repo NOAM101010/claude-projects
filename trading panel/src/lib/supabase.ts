@@ -13,7 +13,11 @@ function createSupabaseClient(accessToken: string | null): SupabaseClient {
   })
 }
 
-let client: SupabaseClient = createSupabaseClient(null)
+// אין יצירה עגלה של לקוח anon ב-module load: session.ts תמיד קורא ל-setSupabaseAccessToken
+// (או ל-getSupabase, במסלולים שלא צריכים session) לפני כל שימוש אמיתי, כך שלקוח אחד
+// בדיוק נוצר בפועל - לא אחד "זמני" שמושלך מיד ואחד "אמיתי" שמחליף אותו (ראה
+// Multiple GoTrueClient instances warning שזה תיקן).
+let client: SupabaseClient | null = null
 
 /**
  * מחליף את הלקוח הפעיל בלקוח חדש שנושא את ה-JWT הנתון בכל בקשה (כ-Authorization
@@ -25,5 +29,8 @@ export function setSupabaseAccessToken(accessToken: string | null): void {
 }
 
 export function getSupabase(): SupabaseClient {
+  if (!client) {
+    client = createSupabaseClient(null)
+  }
   return client
 }
