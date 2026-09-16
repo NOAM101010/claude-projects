@@ -387,7 +387,7 @@ const en = {
   'terms.responsibilityText':
     'The service is provided "as-is". Data is automatically backed up to the cloud (Supabase), but it is also recommended to export a manual backup (JSON/CSV) occasionally via the settings screen. Clearing your trading data from the settings screen is irreversible.',
   'terms.contactTitle': 'Contact',
-  'terms.contactText': 'Questions/issues: support@tradepanel.example (placeholder - update before a real launch).',
+  'terms.contactText': 'Questions/issues: tradepanelsupport1@gmail.com',
 
   // Privacy Policy
   'privacy.title': 'Privacy Policy',
@@ -406,7 +406,7 @@ const en = {
   'privacy.deleteText':
     'You can permanently clear all of your trading data (trades, watchlist alerts and chart images) at any time, without needing to contact us, via the "Clear Trading Data" button on the settings screen (danger zone). To delete your account entirely, contact us.',
   'privacy.contactTitle': 'Contact',
-  'privacy.contactText': 'Privacy questions: privacy@tradepanel.example (placeholder - update before a real launch).',
+  'privacy.contactText': 'Privacy questions: tradepanelsupport1@gmail.com',
 
   // StyleOnboarding (mandatory first-run "what do you trade?" screen)
   'styleOnboarding.title': 'What do you trade?',
@@ -989,7 +989,7 @@ const he: Record<TranslationKey, string> = {
   'terms.responsibilityText':
     'השירות ניתן "as-is". הדאטה מגובה אוטומטית בענן (Supabase), אך מומלץ גם לייצא גיבוי ידני (JSON/CSV) מדי פעם דרך מסך ההגדרות. ניקוי הדאטה המסחרית דרך מסך ההגדרות הוא בלתי הפיך.',
   'terms.contactTitle': 'יצירת קשר',
-  'terms.contactText': 'שאלות/בעיות: support@tradepanel.example (placeholder - יש לעדכן לפני השקה בפועל).',
+  'terms.contactText': 'שאלות/בעיות: tradepanelsupport1@gmail.com',
 
   'privacy.title': 'מדיניות פרטיות',
   'privacy.disclaimer':
@@ -1007,7 +1007,7 @@ const he: Record<TranslationKey, string> = {
   'privacy.deleteText':
     'אפשר לנקות לצמיתות את כל הדאטה המסחרית שלך (טריידים, התראות watchlist ותמונות גרפים) בכל רגע, ללא צורך לפנות אלינו - דרך כפתור "ניקוי דאטה מסחרית" במסך ההגדרות (אזור מסוכן). כדי למחוק את החשבון עצמו לגמרי, יש לפנות אלינו.',
   'privacy.contactTitle': 'יצירת קשר',
-  'privacy.contactText': 'שאלות לגבי פרטיות: privacy@tradepanel.example (placeholder - יש לעדכן לפני השקה בפועל).',
+  'privacy.contactText': 'שאלות לגבי פרטיות: tradepanelsupport1@gmail.com',
 
   'styleOnboarding.title': 'במה אתה סוחר?',
   'styleOnboarding.hint': 'זה קובע את ברירות המחדל של הדשבורד (מטבע בסיס, ווידג\'טים של השוק). אפשר לשנות הכל אחר כך בהגדרות.',
@@ -1582,7 +1582,7 @@ const es: Record<TranslationKey, string> = {
   'terms.responsibilityText':
     'El servicio se ofrece "tal cual". Los datos se respaldan automáticamente en la nube (Supabase), pero también se recomienda exportar una copia de seguridad manual (JSON/CSV) de vez en cuando desde la pantalla de ajustes. Borrar tus datos de trading desde la pantalla de ajustes es irreversible.',
   'terms.contactTitle': 'Contacto',
-  'terms.contactText': 'Preguntas/problemas: support@tradepanel.example (marcador de posición - actualizar antes de un lanzamiento real).',
+  'terms.contactText': 'Preguntas/problemas: tradepanelsupport1@gmail.com',
 
   'privacy.title': 'Política de privacidad',
   'privacy.disclaimer':
@@ -1600,7 +1600,7 @@ const es: Record<TranslationKey, string> = {
   'privacy.deleteText':
     'Puedes borrar permanentemente todos tus datos de trading (operaciones, alertas de watchlist e imágenes de gráficos) en cualquier momento, sin necesidad de contactarnos, mediante el botón "Borrar datos de trading" en la pantalla de ajustes (zona de peligro). Para eliminar la cuenta por completo, contáctanos.',
   'privacy.contactTitle': 'Contacto',
-  'privacy.contactText': 'Preguntas sobre privacidad: privacy@tradepanel.example (marcador de posición - actualizar antes de un lanzamiento real).',
+  'privacy.contactText': 'Preguntas sobre privacidad: tradepanelsupport1@gmail.com',
 
   'styleOnboarding.title': '¿Qué operas?',
   'styleOnboarding.hint': 'Esto configura los valores predeterminados de tu panel (moneda base, widgets de mercado). Puedes ajustar todo después en configuración.',
@@ -2181,7 +2181,7 @@ const fr: Record<TranslationKey, string> = {
   'terms.responsibilityText':
     'Le service est fourni "tel quel". Les données sont automatiquement sauvegardées dans le cloud (Supabase), mais il est également recommandé d’exporter une sauvegarde manuelle (JSON/CSV) de temps en temps depuis l’écran des paramètres. Effacer vos données de trading depuis l’écran des paramètres est irréversible.',
   'terms.contactTitle': 'Contact',
-  'terms.contactText': "Questions/problèmes : support@tradepanel.example (exemple - à mettre à jour avant un vrai lancement).",
+  'terms.contactText': "Questions/problèmes : tradepanelsupport1@gmail.com",
 
   'privacy.title': 'Politique de confidentialité',
   'privacy.disclaimer':
@@ -2199,7 +2199,7 @@ const fr: Record<TranslationKey, string> = {
   'privacy.deleteText':
     "Vous pouvez effacer définitivement toutes vos données de trading (trades, alertes de watchlist et images de graphiques) à tout moment, sans avoir besoin de nous contacter - via le bouton \"Effacer les données de trading\" dans l'écran des paramètres (zone dangereuse). Pour supprimer entièrement le compte, contactez-nous.",
   'privacy.contactTitle': 'Contact',
-  'privacy.contactText': "Questions sur la confidentialité : privacy@tradepanel.example (exemple - à mettre à jour avant un vrai lancement).",
+  'privacy.contactText': "Questions sur la confidentialité : tradepanelsupport1@gmail.com",
 
   'styleOnboarding.title': 'Que tradez-vous ?',
   'styleOnboarding.hint': 'Cela configure les valeurs par défaut de votre tableau de bord (devise de base, widgets de marché). Vous pourrez tout ajuster plus tard dans les paramètres.',

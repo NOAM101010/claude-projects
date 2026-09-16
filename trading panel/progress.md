@@ -13,6 +13,10 @@
 **⚠️ Still outstanding, needs the user directly (Claude Code's auto-mode classifier blocks both DB writes and even read-only queries against the live Supabase project from an agent session)**:
 - **Item 10 (orphaned test-account cleanup)** — not started. Needs the user to run a read query identifying non-`DEVP`/non-`DEVB` accounts with zero or near-zero trades, confirm the exact list, then delete. Do **not** touch `DEVP-WRYQ-SQTW-YL2U` (the real working Pro account) or `DEVB-GKKH-TW4N-GUCD` (62 real imported test trades, kept deliberately per earlier session notes).
 
+- **Placeholder support emails replaced with the real one — done, live-verified**: both `terms.contactText` and `privacy.contactText` (all 4 languages, 8 strings total) switched from `support@tradepanel.example`/`privacy@tradepanel.example` to the real `tradepanelsupport1@gmail.com` (user-provided; one address used for both Terms and Privacy contact, no separate privacy-specific inbox requested). Manager confirmed live in the running app: opened both the Terms of Service and Privacy Policy modals (via Home's footer), both show the real address. `tsc`/tests re-verified clean (253/253) after the change.
+
+- **`PROJECT_BRIEF_FOR_CLAUDE.md`** (new, in this folder) — a standalone project summary written for pasting into a plain claude.ai conversation (product/pricing, stack, architecture, all 7 screens, current status, fixed decisions). Not part of the app itself; keep it reasonably in sync if something major changes, but it's a convenience doc, not a source of truth (that's still this file + the code).
+
 ## Visual redesign exploration — user approved, NOT YET implemented in the real app
 User felt the current design was "too simple, looks like every site, nothing feels alive." Ran a design-exploration round entirely in throwaway static HTML mockups under `C:\CLAUDE AI\trading panel\design-explore\` (published as Artifacts for review — none of this touched `src/`). Explicitly agreed with the user up front: approving a mockup direction does NOT commit the whole site to be identical to it — it's about finding what resonates.
 
