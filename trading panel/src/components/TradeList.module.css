@@ -344,20 +344,143 @@
   border-bottom: none;
 }
 
+/* edge treatment: glowing inset bar instead of a flat border-left, matching the
+   design-explore/screen-journal.html mockup's "instrument panel" read */
 .row td:first-child {
-  border-left: 3px solid transparent;
+  box-shadow: inset 3px 0 0 0 transparent;
 }
 
 .rowPositive td:first-child {
-  border-left-color: var(--pnl-pos-2);
+  box-shadow: inset 3px 0 0 0 var(--pnl-pos-2), inset 9px 0 20px -14px rgba(34, 197, 94, 0.45);
 }
 
 .rowNegative td:first-child {
-  border-left-color: var(--pnl-neg-2);
+  box-shadow: inset 3px 0 0 0 var(--pnl-neg-2), inset 9px 0 20px -14px rgba(239, 68, 68, 0.45);
 }
 
 .rowNeutral td:first-child {
-  border-left-color: transparent;
+  box-shadow: inset 3px 0 0 0 rgba(var(--overlay-tint), 0.16);
+}
+
+/* fresh-trade treatment: pulse on the newest row only (index 0 of the sorted/filtered
+   list) - deliberately not applied to every row, so it stays a meaningful signal
+   instead of visual noise. */
+.rowFresh.rowPositive td:first-child {
+  animation: freshPulsePos 2.4s ease-in-out infinite;
+}
+
+.rowFresh.rowNegative td:first-child {
+  animation: freshPulseNeg 2.4s ease-in-out infinite;
+}
+
+.rowFresh.rowNeutral td:first-child {
+  animation: freshPulseNeutral 2.4s ease-in-out infinite;
+}
+
+@keyframes freshPulsePos {
+  0%,
+  100% {
+    box-shadow: inset 3px 0 0 0 var(--pnl-pos-2), inset 9px 0 20px -14px rgba(34, 197, 94, 0.45);
+  }
+  50% {
+    box-shadow: inset 4px 0 0 0 var(--pnl-pos-2), inset 13px 0 30px -10px rgba(34, 197, 94, 0.5);
+  }
+}
+
+@keyframes freshPulseNeg {
+  0%,
+  100% {
+    box-shadow: inset 3px 0 0 0 var(--pnl-neg-2), inset 9px 0 20px -14px rgba(239, 68, 68, 0.45);
+  }
+  50% {
+    box-shadow: inset 4px 0 0 0 var(--pnl-neg-2), inset 13px 0 30px -10px rgba(239, 68, 68, 0.5);
+  }
+}
+
+@keyframes freshPulseNeutral {
+  0%,
+  100% {
+    box-shadow: inset 3px 0 0 0 rgba(var(--overlay-tint), 0.16);
+  }
+  50% {
+    box-shadow: inset 4px 0 0 0 rgba(var(--amber-rgb), 0.5), inset 13px 0 26px -12px rgba(var(--amber-rgb), 0.35);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rowFresh.rowPositive td:first-child,
+  .rowFresh.rowNegative td:first-child,
+  .rowFresh.rowNeutral td:first-child {
+    animation: none;
+  }
+}
+
+/* small pill next to the symbol on the newest row, with a pulsing live-dot */
+.freshChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pnl-pos-2);
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  padding: 2px 8px 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.freshChip::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--pnl-pos-2);
+  animation: freshLiveDot 1.8s ease-out infinite;
+}
+
+@keyframes freshLiveDot {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(34, 197, 94, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .freshChip::before {
+    animation: none;
+  }
+}
+
+/* mini spark-line: a single straight segment between a closed trade's two real
+   price points (entry -> exit) - no fabricated in-between points. Open trades
+   (no exit yet) render a dash instead, see TradeList.tsx. */
+.spark {
+  width: 60px;
+  height: 20px;
+  display: block;
+}
+
+.spark line {
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  fill: none;
+}
+
+.sparkUp line {
+  stroke: var(--pnl-pos-2);
+}
+
+.sparkDown line {
+  stroke: var(--pnl-neg-2);
 }
 
 .mono {

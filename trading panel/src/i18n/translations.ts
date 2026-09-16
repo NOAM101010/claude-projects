@@ -114,6 +114,7 @@ const en = {
   'tradeList.columnSide': 'Side',
   'tradeList.columnEntry': 'Entry',
   'tradeList.columnExit': 'Exit',
+  'tradeList.columnTrend': 'Trend',
   'tradeList.columnPnl': 'P&L',
   'tradeList.columnDate': 'Date',
   'tradeList.columnSize': 'Size',
@@ -145,6 +146,7 @@ const en = {
   'tradeList.filters.summaryTotalTrades': 'Total Trades',
   'tradeList.deleteUndoMessage': '{{symbol}} trade deleted',
   'tradeList.undoButton': 'Undo',
+  'tradeList.freshBadge': 'Latest',
 
   // Dashboard
   'dashboard.note':
@@ -720,6 +722,7 @@ const he: Record<TranslationKey, string> = {
   'tradeList.columnSide': 'כיוון',
   'tradeList.columnEntry': 'כניסה',
   'tradeList.columnExit': 'יציאה',
+  'tradeList.columnTrend': 'מגמה',
   'tradeList.columnPnl': 'רווח/הפסד',
   'tradeList.columnDate': 'תאריך',
   'tradeList.columnSize': 'גודל',
@@ -751,6 +754,7 @@ const he: Record<TranslationKey, string> = {
   'tradeList.filters.summaryTotalTrades': 'סה"כ טריידים',
   'tradeList.deleteUndoMessage': 'הטרייד {{symbol}} נמחק',
   'tradeList.undoButton': 'בטל',
+  'tradeList.freshBadge': 'טרי',
 
   'dashboard.note':
     'כל הסטטיסטיקות כאן (כולל מפת החום, הפילוחים וה-KPIs) מוצגות במטבע הבסיס של מרחב העבודה ({{currency}}). טריידים שנרשמו במטבע אחר מומרים בתצוגה בלבד לפי השער ההיסטורי ליום היציאה/כניסה - ה-P&L השמור על כל טרייד במקור לא משתנה. אפשר לשנות את מטבע הבסיס בכל רגע בהגדרות.',
@@ -1300,6 +1304,7 @@ const es: Record<TranslationKey, string> = {
   'tradeList.columnSide': 'Lado',
   'tradeList.columnEntry': 'Entrada',
   'tradeList.columnExit': 'Salida',
+  'tradeList.columnTrend': 'Tendencia',
   'tradeList.columnPnl': 'P&L',
   'tradeList.columnDate': 'Fecha',
   'tradeList.columnSize': 'Tamaño',
@@ -1331,6 +1336,7 @@ const es: Record<TranslationKey, string> = {
   'tradeList.filters.summaryTotalTrades': 'Total de operaciones',
   'tradeList.deleteUndoMessage': 'Operación {{symbol}} eliminada',
   'tradeList.undoButton': 'Deshacer',
+  'tradeList.freshBadge': 'Reciente',
 
   'dashboard.note':
     'Todas las estadísticas aquí (incluyendo el mapa de calor, los desgloses y los KPIs) se muestran en la moneda base del espacio de trabajo ({{currency}}). Las operaciones registradas en otra moneda se convierten solo para la visualización, usando el tipo de cambio histórico del día de salida/entrada - el P&L guardado en cada operación nunca cambia. Puedes cambiar la moneda base en cualquier momento en ajustes.',
@@ -1883,6 +1889,7 @@ const fr: Record<TranslationKey, string> = {
   'tradeList.columnSide': 'Sens',
   'tradeList.columnEntry': 'Entrée',
   'tradeList.columnExit': 'Sortie',
+  'tradeList.columnTrend': 'Tendance',
   'tradeList.columnPnl': 'P&L',
   'tradeList.columnDate': 'Date',
   'tradeList.columnSize': 'Taille',
@@ -1914,6 +1921,7 @@ const fr: Record<TranslationKey, string> = {
   'tradeList.filters.summaryTotalTrades': 'Total des trades',
   'tradeList.deleteUndoMessage': 'Trade {{symbol}} supprimé',
   'tradeList.undoButton': 'Annuler',
+  'tradeList.freshBadge': 'Récent',
 
   'dashboard.note':
     "Toutes les statistiques ici (y compris la carte de chaleur, les répartitions et les KPIs) sont affichées dans la devise de base de l'espace de travail ({{currency}}). Les trades enregistrés dans une autre devise sont convertis uniquement pour l'affichage, selon le taux historique du jour de sortie/entrée - le P&L enregistré sur chaque trade ne change jamais. Vous pouvez changer la devise de base à tout moment dans les paramètres.",

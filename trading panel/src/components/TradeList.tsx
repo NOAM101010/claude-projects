@@ -29,6 +29,32 @@ const DATE_PRESETS: DateRangePreset[] = ['all', 'today', 'thisWeek', 'thisMonth'
 /** זמן שבו כפתור המחיקה נשאר במצב "לאשר?" לפני שחוזר אוטומטית למצב הרגיל. */
 const DELETE_CONFIRM_TIMEOUT_MS = 4000
 
+/**
+ * מיני-spark-line של שורת טרייד סגור: קו ישר יחיד בין 2 הנקודות האמיתיות היחידות
+ * שקיימות לטרייד - מחיר כניסה ומחיר יציאה (אין היסטוריית מחיר בין לבין, אז אין
+ * כאן שום נקודת ביניים מומצאת). המיקום האנכי מקודד רק כיוון (עלה/ירד), לא גודל
+ * שינוי מדויק - אין למה להשוות אחוזי-שינוי בין שורות בקנה מידה משותף כשהערך
+ * המספרי המדויק כבר מוצג בעמודת P&L. לטריידים פתוחים (אין exit) אין spark-line
+ * בכלל - ראו קריאה למטה.
+ */
+function TradeSpark({ entry, exit }: { entry: number; exit: number }) {
+  const w = 60
+  const h = 20
+  const up = exit >= entry
+  const y1 = up ? h - 3 : 3
+  const y2 = up ? 3 : h - 3
+  return (
+    <svg
+      className={`${styles.spark} ${up ? styles.sparkUp : styles.sparkDown}`}
+      viewBox={`0 0 ${w} ${h}`}
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <line x1={2} y1={y1} x2={w - 2} y2={y2} />
+    </svg>
+  )
+}
+
 export function TradeList({ trades, filter, onClearFilter, onAdd, onEdit, onDelete, advFilters, setAdvFilters }: TradeListProps) {
   const { t, locale } = useLanguage()
   // מחיקה דורשת אישור-לחיצה-שנייה קלה (לא ה-2-שלבים הכבד של Clear Trading Data - זה טרייד
@@ -228,6 +254,7 @@ export function TradeList({ trades, filter, onClearFilter, onAdd, onEdit, onDele
                   <th>{t('tradeList.columnSide')}</th>
                   <th className="num">{t('tradeList.columnEntry')}</th>
                   <th className="num">{t('tradeList.columnExit')}</th>
+                  <th>{t('tradeList.columnTrend')}</th>
                   <th className="num">{t('tradeList.columnPnl')}</th>
                   <th>{t('tradeList.columnDate')}</th>
                   <th>{t('tradeList.columnSize')}</th>
@@ -235,11 +262,14 @@ export function TradeList({ trades, filter, onClearFilter, onAdd, onEdit, onDele
                 </tr>
               </thead>
               <tbody>
-                {sorted.map((trade) => {
+                {sorted.map((trade, index) => {
                   const sizePercent = maxPositionValue > 0 ? ((trade.entryPrice * trade.quantity) / maxPositionValue) * 100 : 0
                   const rowAccent = trade.pnl === null ? styles.rowNeutral : trade.pnl > 0 ? styles.rowPositive : trade.pnl < 0 ? styles.rowNegative : styles.rowNeutral
+                  // "טרי" מסומן רק על הטרייד העדכני ביותר בתצוגה הנוכחית (index 0 אחרי המיון
+                  // לפי entryAt) - לא על כל שורה, כדי שהאפקט יישאר משמעותי ולא רועש.
+                  const isFreshest = index === 0
                   return (
-                    <tr className={`${styles.row} ${rowAccent} row-hover count-in`} key={trade.id}>
+                    <tr className={`${styles.row} ${rowAccent} ${isFreshest ? styles.rowFresh : ''} row-hover count-in`} key={trade.id}>
                       <td className={styles.symbol}>
                         <div className={styles.symbolCell}>
                           <a href={tradingViewUrl(trade.symbol)} target="_blank" rel="noopener noreferrer" className={styles.symbolLink}>
@@ -247,6 +277,7 @@ export function TradeList({ trades, filter, onClearFilter, onAdd, onEdit, onDele
                             <ExternalLink size={11} className={styles.externalIcon} />
                           </a>
                           {trade.chartImageUrl && <ChartImageThumbnail path={trade.chartImageUrl} variant="icon" />}
+                          {isFreshest && <span className={styles.freshChip}>{t('tradeList.freshBadge')}</span>}
                         </div>
                       </td>
                       <td>
@@ -256,6 +287,13 @@ export function TradeList({ trades, filter, onClearFilter, onAdd, onEdit, onDele
                       </td>
                       <td className={`num ${styles.mono}`}>{trade.entryPrice}</td>
                       <td className={`num ${styles.mono}`}>{trade.exitPrice ?? '—'}</td>
+                      <td>
+                        {trade.exitPrice !== null ? (
+                          <TradeSpark entry={trade.entryPrice} exit={trade.exitPrice} />
+                        ) : (
+                          <span className={styles.mono}>—</span>
+                        )}
+                      </td>
                       <td className="num">
                         {trade.pnl === null ? (
                           <span className={styles.pnlOpen}>{t('common.open')}</span>
