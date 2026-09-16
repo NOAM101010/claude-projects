@@ -605,6 +605,8 @@ const en = {
   'openPositions.rMultiple': 'Live R-multiple (unrealized P&L vs. initial risk)',
   'openPositions.todayChange': 'Today:',
   'openPositions.slTpBarLabel': 'Distance to stop / target',
+  'openPositions.eyebrow': 'Live tracking',
+  'openPositions.liveBadge': 'Refreshes every {{minutes}} min',
 
   // Notifications bell (header) - in-app notifications, separate from device push
   'notifications.bellLabel': 'Notifications',
@@ -1189,6 +1191,8 @@ const he: Record<TranslationKey, string> = {
   'openPositions.rMultiple': 'מכפיל R חי (רווח/הפסד לא ממומש מול הסיכון ההתחלתי)',
   'openPositions.todayChange': 'היום:',
   'openPositions.slTpBarLabel': 'מרחק מהסטופ / מהיעד',
+  'openPositions.eyebrow': 'מעקב חי',
+  'openPositions.liveBadge': 'מתרענן כל {{minutes}} דק׳',
 
   'notifications.bellLabel': 'התראות',
   'notifications.title': 'התראות',
@@ -1773,6 +1777,8 @@ const es: Record<TranslationKey, string> = {
   'openPositions.rMultiple': 'Múltiplo R en vivo (P&L no realizado vs. riesgo inicial)',
   'openPositions.todayChange': 'Hoy:',
   'openPositions.slTpBarLabel': 'Distancia al stop / objetivo',
+  'openPositions.eyebrow': 'Seguimiento en vivo',
+  'openPositions.liveBadge': 'Se actualiza cada {{minutes}} min',
 
   'notifications.bellLabel': 'Notificaciones',
   'notifications.title': 'Notificaciones',
@@ -2364,6 +2370,8 @@ const fr: Record<TranslationKey, string> = {
   'openPositions.rMultiple': 'Multiple R en direct (P&L latent vs. risque initial)',
   'openPositions.todayChange': "Aujourd'hui :",
   'openPositions.slTpBarLabel': 'Distance au stop / à l\'objectif',
+  'openPositions.eyebrow': 'Suivi en direct',
+  'openPositions.liveBadge': 'Actualisation toutes les {{minutes}} min',
 
   'notifications.bellLabel': 'Notifications',
   'notifications.title': 'Notifications',

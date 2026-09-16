@@ -20,6 +20,66 @@
   }
 }
 
+/* ==== page header: eyebrow + title + live-cadence badge ==== */
+.headerRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.headerTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.eyebrow {
+  margin-bottom: 0;
+}
+
+.heroTitle {
+  font-size: clamp(22px, 4.4vw, 36px);
+  margin: 0;
+}
+
+/* honest badge: reflects the real ~2min polling cadence (LIVE_PRICE_REFRESH_MS), not a
+   faster fake-live claim - see OpenPositions.tsx / progress.md for why this matters here. */
+.liveBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pnl-pos-2);
+  background: var(--pnl-pos-bg);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  padding: 6px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.liveBadge svg {
+  animation: live-badge-pulse 1.8s ease-out infinite;
+}
+
+@keyframes live-badge-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .liveBadge svg {
+    animation: none;
+  }
+}
+
 /* ==== overview strip: 2 numbers, not more ==== */
 .overview {
   display: flex;
@@ -44,7 +104,7 @@
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-dim);
+  color: var(--text-label);
 }
 
 .overviewValue {
@@ -88,20 +148,43 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  transition: box-shadow 0.35s ease, border-color 0.35s ease;
+  transition: box-shadow 0.35s ease, border-color 0.35s ease, transform 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
 }
 
 .card[data-sign='up'] {
   box-shadow: inset 0 1px 0 var(--metal-hi), var(--shadow), 0 0 0 1px rgba(34, 197, 94, 0.18);
+  animation: breathe-pos 4.5s ease-in-out infinite;
 }
 
 .card[data-sign='down'] {
   box-shadow: inset 0 1px 0 var(--metal-hi), var(--shadow), 0 0 0 1px rgba(239, 68, 68, 0.18);
+  animation: breathe-neg 4.5s ease-in-out infinite;
+}
+
+/* subtle "alive" breathing glow - purely ambient (an unrealized position is still moving
+   even while you read it), independent of the real ~2min quote-refresh cadence. It must
+   NOT be read as "this updates every 4.5s" - the actual data only changes on real polls,
+   handled separately by the `value-pop` flash on quote/pnl key changes above. */
+@keyframes breathe-pos {
+  0%, 100% { box-shadow: inset 0 1px 0 var(--metal-hi), var(--shadow), 0 0 0 1px rgba(34, 197, 94, 0.18); }
+  50% { box-shadow: inset 0 1px 0 var(--metal-hi), var(--shadow), 0 0 0 1px rgba(34, 197, 94, 0.34); }
+}
+
+@keyframes breathe-neg {
+  0%, 100% { box-shadow: inset 0 1px 0 var(--metal-hi), var(--shadow), 0 0 0 1px rgba(239, 68, 68, 0.18); }
+  50% { box-shadow: inset 0 1px 0 var(--metal-hi), var(--shadow), 0 0 0 1px rgba(239, 68, 68, 0.3); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .card {
+  .card,
+  .card[data-sign='up'],
+  .card[data-sign='down'] {
     transition: none;
+    animation: none;
   }
 }
 
@@ -189,7 +272,7 @@
   font-size: 10.5px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--text-dim);
+  color: var(--text-label);
 }
 
 .priceBlock .num {
@@ -197,6 +280,20 @@
   font-weight: 700;
   direction: ltr;
   unicode-bidi: isolate;
+}
+
+/* current price is the "live" figure on the card - slightly heavier than the static entry price */
+.currentValue {
+  font-size: 16.5px;
+  font-weight: 800;
+}
+
+.card[data-sign='up'] .currentValue {
+  color: var(--pnl-pos-2);
+}
+
+.card[data-sign='down'] .currentValue {
+  color: var(--pnl-neg-2);
 }
 
 .pending {
@@ -230,6 +327,23 @@
   gap: 8px;
 }
 
+.pnlAmount {
+  font-family: var(--mono);
+  font-size: 17px;
+  font-weight: 800;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.pnlPercent {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0.85;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
 .rMultiple {
   font-family: var(--mono);
   font-size: 11px;
@@ -253,7 +367,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-dim);
+  color: var(--text-label);
   opacity: 0.75;
 }
 

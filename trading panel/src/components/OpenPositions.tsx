@@ -1,4 +1,4 @@
-import { Clock, ExternalLink, Radar } from 'lucide-react'
+import { Clock, ExternalLink, Radar, Radio } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
 import { formatCurrency, formatDuration } from '../lib/format'
@@ -50,9 +50,20 @@ export function OpenPositions({ trades, baseCurrency }: OpenPositionsProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openTrades.length])
 
+  const liveBadge = (
+    <span className={styles.liveBadge} title={t('openPositions.liveBadge', { minutes: LIVE_PRICE_REFRESH_MS / 60_000 })}>
+      <Radio size={11} />
+      {t('openPositions.liveBadge', { minutes: LIVE_PRICE_REFRESH_MS / 60_000 })}
+    </span>
+  )
+
   if (openTrades.length === 0) {
     return (
       <div className={styles.wrapper}>
+        <div className={styles.headerRow}>
+          <span className={`eyebrow ${styles.eyebrow}`}>{t('openPositions.eyebrow')}</span>
+          <h2 className={`hero-title ${styles.heroTitle}`}>{t('nav.openPositions')}</h2>
+        </div>
         <div className={`${styles.emptyCard} metal-panel holo-edge count-in`}>
           <Radar size={30} className={styles.emptyIcon} />
           <p className={styles.emptyTitle}>{t('openPositions.emptyTitle')}</p>
@@ -76,6 +87,14 @@ export function OpenPositions({ trades, baseCurrency }: OpenPositionsProps) {
 
   return (
     <div className={styles.wrapper}>
+      <div className={styles.headerRow}>
+        <div className={styles.headerTop}>
+          <span className={`eyebrow ${styles.eyebrow}`}>{t('openPositions.eyebrow')}</span>
+          {liveBadge}
+        </div>
+        <h2 className={`hero-title ${styles.heroTitle}`}>{t('nav.openPositions')}</h2>
+      </div>
+
       <div className={`${styles.overview} metal-panel holo-edge det-frame count-in`}>
         <div className={styles.overviewStat}>
           <span className={styles.overviewLabel}>{t('openPositions.countLabel')}</span>
@@ -124,7 +143,7 @@ export function OpenPositions({ trades, baseCurrency }: OpenPositionsProps) {
                 <div className={styles.priceBlock}>
                   <span className={styles.priceLabel}>{t('openPositions.currentLabel')}</span>
                   {quote ? (
-                    <span key={quote.price} className="num value-pop">
+                    <span key={quote.price} className={`num value-pop ${styles.currentValue}`}>
                       {formatCurrency(quote.price, trade.currency, locale)}
                     </span>
                   ) : (
@@ -146,12 +165,12 @@ export function OpenPositions({ trades, baseCurrency }: OpenPositionsProps) {
               <div className={`${styles.pnlRow} det-chip ${sign === 'up' ? 'det-chip--up' : sign === 'down' ? 'det-chip--down' : ''}`}>
                 {live.pnl !== null ? (
                   <>
-                    <span key={live.pnl} className="value-pop">
+                    <span key={live.pnl} className={`value-pop ${styles.pnlAmount}`}>
                       {live.pnl >= 0 ? '+' : ''}
                       {formatCurrency(live.pnl, trade.currency, locale)}
                     </span>
                     {live.pnlPercent !== null && (
-                      <span key={live.pnlPercent}>
+                      <span key={live.pnlPercent} className={styles.pnlPercent}>
                         ({live.pnlPercent >= 0 ? '+' : ''}
                         {live.pnlPercent.toFixed(2)}%)
                       </span>
