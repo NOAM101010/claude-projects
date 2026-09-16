@@ -36,6 +36,11 @@ export function totalPnl(trades: Trade[]): number {
   return closedTrades(trades).reduce((sum, t) => sum + (t.pnl ?? 0), 0)
 }
 
+/** סה"כ עמלות ששולמו על כל הטריידים הסגורים (סכום `fee ?? 0`). 0 אם אף טרייד לא כולל עמלה. */
+export function totalFeesPaid(trades: Trade[]): number {
+  return closedTrades(trades).reduce((sum, t) => sum + (t.fee ?? 0), 0)
+}
+
 export interface EquityPoint {
   date: string
   cumulative: number

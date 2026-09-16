@@ -384,7 +384,14 @@ function CryptoPricesSection({
     <section className={styles.section}>
       <h3 className={styles.sectionTitle}>{t('home.cryptoCardTitle')}</h3>
       {loading ? (
-        <p className={styles.note}>{t('home.cryptoLoading')}</p>
+        // shimmer skeleton (אותה מחלקת .shimmer הקיימת ב-index.css, כבר בשימוש ב-StackCard/
+        // SectorHeatmap) במקום "Loading..." טקסטואלי - 5 מטבעות + כרטיס Fear & Greed, אותו
+        // מספר תאים כמו המצב האמיתי כדי שהגריד לא "יקפוץ" בגודל כשהדאטה מגיעה.
+        <div className={styles.grid} aria-hidden="true">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className={`${styles.tile} ${styles.skeletonTile} shimmer`} />
+          ))}
+        </div>
       ) : failed || !prices ? (
         <p className={styles.note}>{t('home.cryptoUnavailable')}</p>
       ) : (
@@ -454,7 +461,12 @@ function StockSection({
       <section className={styles.section}>
         <h3 className={styles.sectionTitle}>{t('home.indicesGroupTitle')}</h3>
         {loading ? (
-          <p className={styles.note}>{t('home.indicesLoading')}</p>
+          // shimmer skeleton במקום "Loading..." טקסטואלי - ראה אותה הערה ב-CryptoPricesSection.
+          <div className={styles.grid} aria-hidden="true">
+            {indexSymbols.map((symbol) => (
+              <div key={symbol} className={`${styles.tile} ${styles.skeletonTile} shimmer`} />
+            ))}
+          </div>
         ) : failed || !indices ? (
           <p className={styles.note}>{t('home.indicesUnavailable')}</p>
         ) : (

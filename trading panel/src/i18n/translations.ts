@@ -166,6 +166,7 @@ const en = {
   'dashboard.kpiAvgWin': 'Average win',
   'dashboard.kpiAvgLoss': 'Average loss',
   'dashboard.kpiAvgRR': 'Average Risk:Reward',
+  'dashboard.kpiTotalFees': 'Total fees paid',
   'dashboard.kpiProfitFactor': 'Profit Factor',
   'dashboard.kpiExpectancy': 'Expectancy per trade',
   'dashboard.kpiAvgHoldTime': 'Avg hold time (winners / losers)',
@@ -406,12 +407,6 @@ const en = {
     'You can permanently clear all of your trading data (trades, watchlist alerts and chart images) at any time, without needing to contact us, via the "Clear Trading Data" button on the settings screen (danger zone). To delete your account entirely, contact us.',
   'privacy.contactTitle': 'Contact',
   'privacy.contactText': 'Privacy questions: privacy@tradepanel.example (placeholder - update before a real launch).',
-
-  // Shared workspace-style labels (onboarding + settings style picker)
-  'style.dayTrading': 'Day Trading',
-  'style.swing': 'Swing',
-  'style.longTerm': 'Long-term',
-  'style.crypto': 'Crypto',
 
   // StyleOnboarding (mandatory first-run "what do you trade?" screen)
   'styleOnboarding.title': 'What do you trade?',
@@ -785,6 +780,7 @@ const he: Record<TranslationKey, string> = {
   'dashboard.kpiAvgWin': 'ממוצע רווח',
   'dashboard.kpiAvgLoss': 'ממוצע הפסד',
   'dashboard.kpiAvgRR': 'יחס Risk:Reward ממוצע',
+  'dashboard.kpiTotalFees': 'סה"כ עמלות ששולמו',
   'dashboard.kpiProfitFactor': 'Profit Factor',
   'dashboard.kpiExpectancy': 'Expectancy לטרייד',
   'dashboard.kpiAvgHoldTime': 'זמן החזקה ממוצע (מנצח / מפסיד)',
@@ -1012,11 +1008,6 @@ const he: Record<TranslationKey, string> = {
     'אפשר לנקות לצמיתות את כל הדאטה המסחרית שלך (טריידים, התראות watchlist ותמונות גרפים) בכל רגע, ללא צורך לפנות אלינו - דרך כפתור "ניקוי דאטה מסחרית" במסך ההגדרות (אזור מסוכן). כדי למחוק את החשבון עצמו לגמרי, יש לפנות אלינו.',
   'privacy.contactTitle': 'יצירת קשר',
   'privacy.contactText': 'שאלות לגבי פרטיות: privacy@tradepanel.example (placeholder - יש לעדכן לפני השקה בפועל).',
-
-  'style.dayTrading': 'דיי טרייד',
-  'style.swing': 'סווינג',
-  'style.longTerm': 'טווח ארוך',
-  'style.crypto': 'קריפטו',
 
   'styleOnboarding.title': 'במה אתה סוחר?',
   'styleOnboarding.hint': 'זה קובע את ברירות המחדל של הדשבורד (מטבע בסיס, ווידג\'טים של השוק). אפשר לשנות הכל אחר כך בהגדרות.',
@@ -1380,6 +1371,7 @@ const es: Record<TranslationKey, string> = {
   'dashboard.kpiAvgWin': 'Ganancia promedio',
   'dashboard.kpiAvgLoss': 'Pérdida promedio',
   'dashboard.kpiAvgRR': 'Riesgo:Beneficio promedio',
+  'dashboard.kpiTotalFees': 'Total de comisiones pagadas',
   'dashboard.kpiProfitFactor': 'Profit Factor',
   'dashboard.kpiExpectancy': 'Expectativa por operación',
   'dashboard.kpiAvgHoldTime': 'Tiempo promedio en posición (ganadoras / perdedoras)',
@@ -1609,11 +1601,6 @@ const es: Record<TranslationKey, string> = {
     'Puedes borrar permanentemente todos tus datos de trading (operaciones, alertas de watchlist e imágenes de gráficos) en cualquier momento, sin necesidad de contactarnos, mediante el botón "Borrar datos de trading" en la pantalla de ajustes (zona de peligro). Para eliminar la cuenta por completo, contáctanos.',
   'privacy.contactTitle': 'Contacto',
   'privacy.contactText': 'Preguntas sobre privacidad: privacy@tradepanel.example (marcador de posición - actualizar antes de un lanzamiento real).',
-
-  'style.dayTrading': 'Day Trading',
-  'style.swing': 'Swing',
-  'style.longTerm': 'Largo plazo',
-  'style.crypto': 'Cripto',
 
   'styleOnboarding.title': '¿Qué operas?',
   'styleOnboarding.hint': 'Esto configura los valores predeterminados de tu panel (moneda base, widgets de mercado). Puedes ajustar todo después en configuración.',
@@ -1978,6 +1965,7 @@ const fr: Record<TranslationKey, string> = {
   'dashboard.kpiAvgWin': 'Gain moyen',
   'dashboard.kpiAvgLoss': 'Perte moyenne',
   'dashboard.kpiAvgRR': 'Risque:Rendement moyen',
+  'dashboard.kpiTotalFees': 'Total des frais payés',
   'dashboard.kpiProfitFactor': 'Profit Factor',
   'dashboard.kpiExpectancy': 'Espérance par trade',
   'dashboard.kpiAvgHoldTime': 'Durée moyenne de détention (gagnants / perdants)',
@@ -2212,11 +2200,6 @@ const fr: Record<TranslationKey, string> = {
     "Vous pouvez effacer définitivement toutes vos données de trading (trades, alertes de watchlist et images de graphiques) à tout moment, sans avoir besoin de nous contacter - via le bouton \"Effacer les données de trading\" dans l'écran des paramètres (zone dangereuse). Pour supprimer entièrement le compte, contactez-nous.",
   'privacy.contactTitle': 'Contact',
   'privacy.contactText': "Questions sur la confidentialité : privacy@tradepanel.example (exemple - à mettre à jour avant un vrai lancement).",
-
-  'style.dayTrading': 'Day Trading',
-  'style.swing': 'Swing',
-  'style.longTerm': 'Long terme',
-  'style.crypto': 'Crypto',
 
   'styleOnboarding.title': 'Que tradez-vous ?',
   'styleOnboarding.hint': 'Cela configure les valeurs par défaut de votre tableau de bord (devise de base, widgets de marché). Vous pourrez tout ajuster plus tard dans les paramètres.',

@@ -20,6 +20,7 @@ import {
   streaks,
   tradeOfTheMonth,
   tradesCountByMonth,
+  totalFeesPaid,
   totalPnl,
   weeklyRecap,
   winRate,
@@ -98,6 +99,22 @@ describe('totalPnl / equityCurve', () => {
     expect(totalPnl(trades)).toBe(50)
     const curve = equityCurve(trades)
     expect(curve.map((p) => p.cumulative)).toEqual([-50, 50])
+  })
+})
+
+describe('totalFeesPaid', () => {
+  it('sums fee across closed trades, treating null as 0', () => {
+    const trades = [
+      makeTrade({ entryPrice: 100, exitPrice: 110, fee: 5 }),
+      makeTrade({ entryPrice: 100, exitPrice: 90, fee: null }),
+      makeTrade({ entryPrice: 100, exitPrice: 105, fee: 2.5 }),
+      makeTrade({ exitAt: null, exitPrice: null, fee: 100 }), // open, excluded
+    ]
+    expect(totalFeesPaid(trades)).toBe(7.5)
+  })
+
+  it('returns 0 when no trades have a fee', () => {
+    expect(totalFeesPaid([makeTrade({ entryPrice: 100, exitPrice: 110, fee: 0 })])).toBe(0)
   })
 })
 

@@ -317,7 +317,9 @@
 .lightboxOverlay {
   position: fixed;
   inset: 0;
-  z-index: 30;
+  /* full-screen overlay - צריך לשבת מעל הכל (כולל דרופדאונים/מודלים), ולכן משתמש
+     ב-`--z-toast` הכי גבוה בסקאלה שהוגדרה ב-index.css, לא מספר קשיח. */
+  z-index: var(--z-toast);
   display: flex;
   align-items: center;
   justify-content: center;

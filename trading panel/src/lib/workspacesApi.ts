@@ -1,6 +1,5 @@
 import { getSupabase } from './supabase'
 import type { AccountTier } from './accountApi'
-import type { TranslationKey } from '../i18n/translations'
 import type { CurrencyCode } from '../types/trade'
 
 export interface FieldSettings {
@@ -29,7 +28,6 @@ export interface Workspace {
   id: string
   accountId: string
   name: string
-  style: string | null
   fieldSettings: FieldSettings
   baseCurrency: CurrencyCode
 }
@@ -38,7 +36,6 @@ interface WorkspaceRow {
   id: string
   account_id: string
   name: string
-  style: string | null
   field_settings: Partial<FieldSettings> | null
   base_currency: CurrencyCode
 }
@@ -48,7 +45,6 @@ function fromRow(row: WorkspaceRow): Workspace {
     id: row.id,
     accountId: row.account_id,
     name: row.name,
-    style: row.style,
     fieldSettings: { ...DEFAULT_FIELD_SETTINGS, ...(row.field_settings ?? {}) },
     baseCurrency: row.base_currency,
   }
@@ -91,47 +87,6 @@ export async function updateFieldSettings(workspaceId: string, fieldSettings: Fi
 export const MAX_PRO_WORKSPACES = 5
 
 /**
- * פריסטים מוצעים ליצירת workspace חדש / בחירה בעת ה-onboarding. **בכוונה בלי Forex**
- * (הוסר במפורש מתוכנית הפיצ'ר - נשאר קיים כ-`Setup` בטופס טרייד עצמו, זה נפרד).
- */
-export const WORKSPACE_STYLE_PRESETS = ['Day Trading', 'Swing', 'Long-term', 'Crypto'] as const
-export type WorkspaceStylePreset = (typeof WORKSPACE_STYLE_PRESETS)[number]
-
-/** מפתח תרגום לכל פריסט - לתצוגה מקומית ב-onboarding/הגדרות (לא הארדקוד אנגלי). */
-export const WORKSPACE_STYLE_LABEL_KEYS: Record<WorkspaceStylePreset, TranslationKey> = {
-  'Day Trading': 'style.dayTrading',
-  Swing: 'style.swing',
-  'Long-term': 'style.longTerm',
-  Crypto: 'style.crypto',
-}
-
-/**
- * ברירות מחדל (מטבע בסיס + הגדרות שדות) לכל סגנון - מופעלות אוטומטית ב-`applyWorkspaceStyle`.
- * נקודת התחלה בלבד; המשתמש יכול לשנות כל דבר בהגדרות אחרי הבחירה.
- */
-const WORKSPACE_STYLE_DEFAULTS: Record<WorkspaceStylePreset, { fieldSettings: FieldSettings; baseCurrency: CurrencyCode }> = {
-  'Day Trading': { fieldSettings: DEFAULT_FIELD_SETTINGS, baseCurrency: 'USD' },
-  Swing: { fieldSettings: DEFAULT_FIELD_SETTINGS, baseCurrency: 'USD' },
-  'Long-term': { fieldSettings: { ...DEFAULT_FIELD_SETTINGS, stopLoss: false, takeProfit: false }, baseCurrency: 'USD' },
-  Crypto: { fieldSettings: DEFAULT_FIELD_SETTINGS, baseCurrency: 'USD' },
-}
-
-/**
- * קובע את סגנון המסחר של ה-workspace ומפעיל את ברירות המחדל שלו (מטבע בסיס +
- * הגדרות שדות). משמש הן ב-onboarding הראשוני והן בשינוי סגנון בהגדרות (אחרי מחיקת
- * הטריידים הישנים אם היו - ראה `WorkspaceSettings.tsx`/`deleteAllTradesInWorkspace`).
- */
-export async function applyWorkspaceStyle(
-  workspaceId: string,
-  style: WorkspaceStylePreset,
-): Promise<{ style: string; baseCurrency: CurrencyCode; fieldSettings: FieldSettings }> {
-  const defaults = WORKSPACE_STYLE_DEFAULTS[style]
-  await updateWorkspaceSettings(workspaceId, { style, baseCurrency: defaults.baseCurrency })
-  await updateFieldSettings(workspaceId, defaults.fieldSettings)
-  return { style, baseCurrency: defaults.baseCurrency, fieldSettings: defaults.fieldSettings }
-}
-
-/**
  * לוגיקה טהורה לאכיפת המגבלה: דרגות שאינן Pro תמיד נעולות ל-workspace יחיד (זה שכבר
  * נוצר ע"י `ensureWorkspace`, אין להן כפתור יצירה בכלל) - Pro מוגבל ל-`MAX_PRO_WORKSPACES`.
  */
@@ -153,9 +108,7 @@ export async function listWorkspaces(accountId: string): Promise<Workspace[]> {
 }
 
 /**
- * יוצר מרחב עבודה נוסף לחשבון Pro. `style` נשאר `null` לצמיתות - מאז שלב A בתוכנית
- * ה-redesign לא נבחר/נשלח יותר סגנון מהלקוח (עמודת `style` ולוגיקת הפריסטים נשארות
- * בסכמה/בקוד, פשוט לא בשימוש). זורק אם החשבון לא Pro או שכבר הגיע למגבלה.
+ * יוצר מרחב עבודה נוסף לחשבון Pro. זורק אם החשבון לא Pro או שכבר הגיע למגבלה.
  */
 export async function createWorkspace(accountId: string, tier: AccountTier, name: string): Promise<Workspace> {
   const supabase = getSupabase()
@@ -166,7 +119,7 @@ export async function createWorkspace(accountId: string, tier: AccountTier, name
 
   const { data, error } = await supabase
     .from('workspaces')
-    .insert({ account_id: accountId, name, style: null, field_settings: DEFAULT_FIELD_SETTINGS })
+    .insert({ account_id: accountId, name, field_settings: DEFAULT_FIELD_SETTINGS })
     .select('*')
     .single()
   if (error || !data) throw error ?? new Error('Failed to create workspace')
@@ -182,16 +135,14 @@ export async function renameWorkspace(workspaceId: string, name: string): Promis
 
 export interface WorkspaceSettingsPatch {
   name?: string
-  style?: string | null
   baseCurrency?: CurrencyCode
 }
 
-/** עדכון גנרי של שם/סגנון/מטבע בסיס. לא נוגע ב-field_settings (ראה `updateFieldSettings`). */
+/** עדכון גנרי של שם/מטבע בסיס. לא נוגע ב-field_settings (ראה `updateFieldSettings`). */
 export async function updateWorkspaceSettings(workspaceId: string, patch: WorkspaceSettingsPatch): Promise<void> {
   const supabase = getSupabase()
-  const row: { name?: string; style?: string | null; base_currency?: CurrencyCode } = {}
+  const row: { name?: string; base_currency?: CurrencyCode } = {}
   if (patch.name !== undefined) row.name = patch.name
-  if (patch.style !== undefined) row.style = patch.style
   if (patch.baseCurrency !== undefined) row.base_currency = patch.baseCurrency
 
   const { error } = await supabase.from('workspaces').update(row).eq('id', workspaceId)

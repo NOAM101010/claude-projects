@@ -20,12 +20,13 @@ import {
   statsBySymbol,
   streaks,
   tradesCountByMonth,
+  totalFeesPaid,
   totalPnl,
   weeklyRecap,
   winRate,
   worstTrade,
 } from '../lib/stats'
-import { formatDateTime } from '../lib/format'
+import { formatCurrency, formatDateTime } from '../lib/format'
 import { BestWorstSpotlight } from './BestWorstSpotlight'
 import { LossSourceCard } from './LossSourceCard'
 import { PnlCalendar } from './PnlCalendar'
@@ -186,6 +187,10 @@ export function Dashboard({ trades, baseCurrency, tier, onOpenAccessCode, onSele
   const holdDays = avgHoldDays(convertedTrades)
   const streakInfo = streaks(convertedTrades)
   const drawdown = maxDrawdown(convertedTrades)
+  const feesPaid = totalFeesPaid(convertedTrades)
+  // רק אם המשתמש בפועל משתמש בשדה העמלות (לפחות עמלה אחת שאינה 0/null) - אותו עיקרון
+  // כמו כרטיסי ה-Insights: אין טעם להציג אריח "$0.00" חסר משמעות למשתמש שלא ממלא עמלות בכלל.
+  const showFeesPaid = convertedTrades.some((t) => t.pnl !== null && (t.fee ?? 0) !== 0)
   const calendarData = dailyPnl(convertedTrades)
   const bySymbol = statsBySymbol(convertedTrades)
   const byDayOfWeek = statsByDayOfWeek(convertedTrades)
@@ -287,6 +292,16 @@ export function Dashboard({ trades, baseCurrency, tier, onOpenAccessCode, onSele
               {rr === null ? '—' : `1:${rr.toFixed(2)}`}
             </span>
           </div>
+          {showFeesPaid && (
+            <div className={`${styles.kpiCard} metal-panel holo-edge`}>
+              <span className={styles.kpiLabel}>{t('dashboard.kpiTotalFees')}</span>
+              {/* `formatCurrency` (בלי signDisplay) בכוונה, לא `formatBase` - עמלה היא לא
+                  "רווח"/"הפסד", אין טעם ל-"+" מלפנים כמו בשאר האריחים במסך הזה. */}
+              <span className={styles.kpiValue} title={formatCurrency(feesPaid, baseCurrency, locale)}>
+                {formatCurrency(feesPaid, baseCurrency, locale)}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

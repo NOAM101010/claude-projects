@@ -67,15 +67,40 @@ export function tradeInputToRow(input: TradeInput): Omit<TradeRow, 'id' | 'works
   }
 }
 
+/** גודל כל עמוד ב-pagination הפנימית של `listTrades` - נמוך מכל מגבלת שורות בפרויקטי
+ * Supabase/PostgREST מתארחים סטנדרטיים (בד"כ 1000), כדי שאף פעם לא נפגע במגבלה ההיא
+ * בתוך עמוד בודד. */
+const LIST_TRADES_PAGE_SIZE = 1000
+
+/**
+ * שולף את **כל** הטריידים של workspace, גם כשיש יותר מ-`LIST_TRADES_PAGE_SIZE`.
+ * Supabase/PostgREST hosted מגביל כל query בודד (בד"כ ~1000 שורות) בלי שגיאה - מעבר
+ * לזה חוזר set חתוך בשקט, מה שהיה מצמצם בלי אזהרה את כל הסטטיסטיקות בחשבון גדול.
+ * ממשיכה לדפדף (`.range`) עד שעמוד חוזר קטן מהגודל המלא, ומצרפת הכל - חוזה ה-API
+ * הציבורי (מחזירה את כל הטריידים במערך אחד) נשאר זהה למי שקורא לפונקציה.
+ */
 export async function listTrades(workspaceId: string): Promise<Trade[]> {
   const supabase = getSupabase()
-  const { data, error } = await supabase
-    .from('trades')
-    .select('*')
-    .eq('workspace_id', workspaceId)
-    .order('entry_at', { ascending: false })
-  if (error) throw error
-  return (data as TradeRow[]).map(rowToTrade)
+  const allRows: TradeRow[] = []
+  let from = 0
+
+  for (;;) {
+    const to = from + LIST_TRADES_PAGE_SIZE - 1
+    const { data, error } = await supabase
+      .from('trades')
+      .select('*')
+      .eq('workspace_id', workspaceId)
+      .order('entry_at', { ascending: false })
+      .range(from, to)
+    if (error) throw error
+
+    const rows = data as TradeRow[]
+    allRows.push(...rows)
+    if (rows.length < LIST_TRADES_PAGE_SIZE) break
+    from += LIST_TRADES_PAGE_SIZE
+  }
+
+  return allRows.map(rowToTrade)
 }
 
 export async function createTrade(workspaceId: string, accountId: string, trade: Trade): Promise<Trade> {

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Crown } from 'lucide-react'
 import { useLanguage } from '../i18n/LanguageContext'
 import { canCreateWorkspace } from '../lib/workspacesApi'
 import type { Workspace } from '../lib/workspacesApi'
@@ -39,8 +40,15 @@ export function WorkspaceSwitcher({
   if (tier !== 'pro' && workspaces.length <= 1) {
     return (
       <div className={styles.wrapper}>
-        <button type="button" className={styles.newButton} onClick={onOpenAccessCode}>
-          {t('workspaceSwitcher.upgradeButton')}
+        <button
+          type="button"
+          className={styles.newButton}
+          onClick={onOpenAccessCode}
+          aria-label={t('workspaceSwitcher.upgradeButton')}
+          title={t('workspaceSwitcher.upgradeButton')}
+        >
+          <Crown size={14} className={styles.upgradeIcon} aria-hidden="true" />
+          <span className={styles.upgradeText}>{t('workspaceSwitcher.upgradeButton')}</span>
         </button>
       </div>
     )
