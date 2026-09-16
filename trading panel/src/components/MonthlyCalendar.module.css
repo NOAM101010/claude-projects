@@ -111,7 +111,7 @@
 
 .heroStatLabel {
   font-size: clamp(8.5px, 1vh, 11px);
-  color: var(--text-dim);
+  color: var(--text-label);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
