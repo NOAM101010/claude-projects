@@ -233,6 +233,14 @@ const en = {
   'dashboard.setupPerformanceTeaserSetup': 'Setup {{n}}',
 
   // WorkspaceSettings
+  'workspaceSettings.eyebrow': 'Account · Workspace',
+  'workspaceSettings.pageNote': 'Workspace name and currency, trade form fields, notifications, data export/import',
+  'workspaceSettings.workspaceHint': 'Name, plan, language and base currency',
+  'workspaceSettings.pushHintShort': 'Push · price-target alerts',
+  'workspaceSettings.exportImportHintShort': 'Backup, switching devices, importing from a broker',
+  'workspaceSettings.dangerZoneHint': 'Irreversible actions',
+  'workspaceSettings.dangerCardHint':
+    'Permanently deletes every trade and watchlist item across all of this account\'s workspaces. Cannot be undone after the final confirmation.',
   'workspaceSettings.currentTier': 'Current plan',
   'workspaceSettings.tierDemo': 'Demo',
   'workspaceSettings.tierBasic': 'Basic',
@@ -842,6 +850,14 @@ const he: Record<TranslationKey, string> = {
   'dashboard.setupPerformanceRowMeta': '{{trades}} טריידים · {{winRate}}% אחוז הצלחה',
   'dashboard.setupPerformanceTeaserSetup': 'Setup {{n}}',
 
+  'workspaceSettings.eyebrow': 'חשבון · Workspace',
+  'workspaceSettings.pageNote': 'שם ומטבע ה-Workspace, שדות בטופס הוספת טרייד, התראות, ייצוא/ייבוא נתונים',
+  'workspaceSettings.workspaceHint': 'שם, דרגה, שפה ומטבע בסיס',
+  'workspaceSettings.pushHintShort': 'Push · התראות מחיר יעד',
+  'workspaceSettings.exportImportHintShort': 'גיבוי, מעבר בין מכשירים, ייבוא מברוקר',
+  'workspaceSettings.dangerZoneHint': 'פעולות בלתי הפיכות',
+  'workspaceSettings.dangerCardHint':
+    'פעולה זו מוחקת לצמיתות את כל הטריידים ורשימת המעקב בכל מרחבי העבודה של החשבון. לא ניתן לבטל לאחר האישור הסופי.',
   'workspaceSettings.currentTier': 'התוכנית הנוכחית',
   'workspaceSettings.tierDemo': 'דמו',
   'workspaceSettings.tierBasic': 'Basic',
@@ -1429,6 +1445,14 @@ const es: Record<TranslationKey, string> = {
   'dashboard.setupPerformanceRowMeta': '{{trades}} operaciones · {{winRate}}% de acierto',
   'dashboard.setupPerformanceTeaserSetup': 'Setup {{n}}',
 
+  'workspaceSettings.eyebrow': 'Cuenta · Espacio de trabajo',
+  'workspaceSettings.pageNote': 'Nombre y moneda del espacio de trabajo, campos del formulario de operaciones, notificaciones, exportar/importar datos',
+  'workspaceSettings.workspaceHint': 'Nombre, plan, idioma y moneda base',
+  'workspaceSettings.pushHintShort': 'Push · alertas de precio objetivo',
+  'workspaceSettings.exportImportHintShort': 'Copia de seguridad, cambio de dispositivo, importar desde un bróker',
+  'workspaceSettings.dangerZoneHint': 'Acciones irreversibles',
+  'workspaceSettings.dangerCardHint':
+    'Elimina permanentemente todas las operaciones y elementos de la watchlist en todos los espacios de trabajo de esta cuenta. No se puede deshacer tras la confirmación final.',
   'workspaceSettings.currentTier': 'Plan actual',
   'workspaceSettings.tierDemo': 'Demo',
   'workspaceSettings.tierBasic': 'Basic',
@@ -2019,6 +2043,14 @@ const fr: Record<TranslationKey, string> = {
   'dashboard.setupPerformanceRowMeta': '{{trades}} trades · {{winRate}}% de réussite',
   'dashboard.setupPerformanceTeaserSetup': 'Setup {{n}}',
 
+  'workspaceSettings.eyebrow': 'Compte · Espace de travail',
+  'workspaceSettings.pageNote': "Nom et devise de l'espace de travail, champs du formulaire de trade, notifications, export/import de données",
+  'workspaceSettings.workspaceHint': 'Nom, forfait, langue et devise de base',
+  'workspaceSettings.pushHintShort': 'Push · alertes de prix cible',
+  'workspaceSettings.exportImportHintShort': "Sauvegarde, changement d'appareil, import depuis un courtier",
+  'workspaceSettings.dangerZoneHint': 'Actions irréversibles',
+  'workspaceSettings.dangerCardHint':
+    "Supprime définitivement tous les trades et éléments de la watchlist dans tous les espaces de travail de ce compte. Action irréversible après la confirmation finale.",
   'workspaceSettings.currentTier': 'Forfait actuel',
   'workspaceSettings.tierDemo': 'Démo',
   'workspaceSettings.tierBasic': 'Basic',

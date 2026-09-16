@@ -1,28 +1,132 @@
 .wrapper {
-  padding: 24px;
-  max-width: 640px;
+  padding: 20px;
+  max-width: 720px;
   margin: 0 auto;
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+  width: 100%;
+  min-width: 0;
 }
 
-/* דסקטופ: קצת יותר נשימה, אבל נשאר טופס-מבנה קריא (לא נמתח לרוחב מסך שלם) */
+/* דסקטופ: קצת יותר נשימה, אבל נשאר טופס-מבנה קריא - צר יותר אפילו מ-Tools,
+   כי אין כאן grid תוצאות רב-עמודות שמתחרה על מקום. */
 @media (min-width: 1024px) {
   .wrapper {
-    max-width: 760px;
+    max-width: 780px;
     padding: 32px 24px;
   }
 }
 
-.wrapper h2 {
+/* ==== page header: eyebrow + title + note - same pattern as Home/Tools/OpenPositions ==== */
+.headerRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  margin-bottom: 8px;
+}
+
+.eyebrow {
+  margin-bottom: 0;
+}
+
+.heroTitle {
+  font-size: clamp(22px, 4.4vw, 34px);
   margin: 0;
-  font-size: var(--text-h2-page);
+}
+
+.pageNote {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.sectionHead {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.sectionTitle {
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 17px;
+  color: var(--text-h);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.sectionHint {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+}
+
+/* ==== quiet static card - same construction language as the rest of the app
+   (hairline border, soft shadow via the shared `glass` utility) but with a
+   near-invisible ruled texture and NO ambient glow/pulse: this is config UI,
+   not live data, and nothing here should look "alive" when untouched. ==== */
+.card {
+  position: relative;
+  padding: 18px 20px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.18;
+  background-image: repeating-linear-gradient(90deg, rgba(var(--amber-rgb), 0.05) 0 1px, transparent 1px 46px);
+}
+
+.rowLine {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+}
+
+.rowLine:first-of-type {
+  padding-top: 2px;
+}
+
+.rowLine:last-of-type {
+  border-bottom: none;
+  padding-bottom: 2px;
+}
+
+.rowLbl {
+  font-weight: 600;
+  color: var(--text-h);
+  font-size: 13.5px;
+  min-width: 0;
+}
+
+.rowSub {
+  display: block;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  margin-top: 2px;
+  font-weight: 400;
 }
 
 .hint {
-  margin: -8px 0 0;
+  margin: 0;
   color: var(--text-dim);
   font-size: 13px;
 }
@@ -30,28 +134,6 @@
 .list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-}
-
-.toggleRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: rgba(var(--overlay-tint), 0.02);
-}
-
-.toggleRow span {
-  font-weight: 600;
-  color: var(--text-h);
-}
-
-.toggleRow input[type='checkbox'] {
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
 }
 
 .status {
@@ -60,113 +142,182 @@
   min-height: 16px;
 }
 
-.block {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding-top: 6px;
-  border-top: 1px solid var(--border);
-}
-
-.block:first-of-type {
-  padding-top: 0;
-  border-top: none;
-}
-
-.block h3 {
-  margin: 0;
-  font-size: 15px;
-  color: var(--text-h);
-}
-
-.fieldRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.fieldRow span {
-  font-weight: 600;
-  color: var(--text-h);
-}
-
 .textInput {
   font: inherit;
   font-size: 13px;
-  padding: 8px 10px;
-  border-radius: 8px;
+  padding: 9px 12px;
+  border-radius: 9px;
   border: 1px solid var(--border);
-  background: rgba(var(--overlay-tint), 0.02);
+  background: rgba(var(--overlay-tint), 0.03);
   color: var(--text-h);
-  min-width: 160px;
+  min-width: 170px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.textInput:hover {
+  border-color: var(--border-hi);
+}
+
+.textInput:focus {
+  outline: none;
+  border-color: rgba(var(--amber-rgb), 0.5);
+  background: rgba(var(--amber-rgb), 0.06);
+}
+
+.tierChip {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--amber-rgb), 0.4);
+  color: var(--accent-2);
+  background: rgba(var(--amber-rgb), 0.1);
 }
 
 .actions {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  margin-top: 2px;
 }
 
 .actions button {
   font: inherit;
   font-size: 12.5px;
-  font-weight: 600;
-  padding: 8px 16px;
+  font-weight: 700;
+  padding: 9px 16px;
   border-radius: 9px;
   border: 1px solid var(--border);
   background: rgba(var(--overlay-tint), 0.03);
   color: var(--text-h);
   cursor: pointer;
-  transition: border-color 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 .actions button:hover {
   border-color: var(--border-hi);
+  background: var(--card-hi);
 }
 
-.dangerBlock {
-  border-top: 1px solid rgba(239, 68, 68, 0.25);
-}
-
-.dangerButton {
-  font: inherit;
-  font-size: 12.5px;
-  font-weight: 700;
-  padding: 9px 18px;
-  border-radius: 9px;
-  border: 1px solid rgba(239, 68, 68, 0.4);
-  background: rgba(239, 68, 68, 0.08);
-  color: var(--pnl-neg-2);
-  cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
-  align-self: flex-start;
-}
-
-.dangerButton:hover {
-  border-color: rgba(239, 68, 68, 0.65);
-  background: rgba(239, 68, 68, 0.14);
-}
-
-.dangerButton:disabled {
+.actions button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.confirmBox {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px;
-  border-radius: 10px;
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  background: rgba(239, 68, 68, 0.05);
+.actionAmber {
+  border-color: rgba(var(--amber-rgb), 0.4) !important;
+  color: var(--accent-2) !important;
+  background: rgba(var(--amber-rgb), 0.08) !important;
 }
 
-.confirmBox p {
+.actionAmber:hover {
+  background: rgba(var(--amber-rgb), 0.14) !important;
+}
+
+/* ==== toggle switch: replaces the raw checkbox with a considered on/off
+   control - a deliberate, weighty click-settle, not an ambient animation.
+   This is the one place the Settings screen gets to feel tactile, since it's
+   the primary verb of the screen. ==== */
+.toggleRow {
+  cursor: pointer;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
   margin: 0;
-  font-size: 13px;
-  color: var(--text);
+  cursor: pointer;
+}
+
+.switchTrack {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: rgba(var(--overlay-tint), 0.12);
+  border: 1px solid var(--border);
+  transition: background 0.2s ease, border-color 0.2s ease;
+  pointer-events: none;
+}
+
+.switchKnob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  transition: transform 0.2s cubic-bezier(0.3, 0.9, 0.4, 1.1), background 0.2s ease;
+  pointer-events: none;
+}
+
+.switch input:checked ~ .switchTrack {
+  background: rgba(var(--amber-rgb), 0.9);
+  border-color: rgba(var(--amber-rgb), 0.9);
+}
+
+.switch input:checked ~ .switchKnob {
+  transform: translateX(20px);
+  background: rgba(var(--ink-rgb), 0.85);
+}
+
+[dir='rtl'] .switchKnob {
+  left: auto;
+  right: 2px;
+}
+
+[dir='rtl'] .switch input:checked ~ .switchKnob {
+  transform: translateX(-20px);
+}
+
+.switch input:focus-visible ~ .switchTrack {
+  outline: 2px solid rgba(var(--amber-rgb), 0.6);
+  outline-offset: 2px;
+}
+
+.formatList {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 14px;
+}
+
+.formatItem {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12.5px;
+  flex-wrap: wrap;
+}
+
+.formatName {
+  flex: 0 0 auto;
+  font-weight: 700;
+  color: var(--text-h);
+}
+
+.formatDesc {
+  color: var(--text-dim);
+}
+
+.importDivider {
+  border-top: 1px solid var(--border);
+  margin-top: 18px;
+  padding-top: 16px;
+  border-bottom: none;
 }
 
 .importResult {
@@ -177,11 +328,12 @@
   border-radius: 10px;
   border: 1px solid var(--border);
   background: rgba(var(--overlay-tint), 0.02);
+  margin-top: 12px;
 }
 
 .importResultText {
   margin: 0;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
   color: var(--text-h);
 }
@@ -223,29 +375,6 @@
   color: var(--pnl-neg-2);
 }
 
-.formatList {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.formatItem {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  font-size: 12.5px;
-}
-
-.formatName {
-  flex: 0 0 auto;
-  font-weight: 700;
-  color: var(--text-h);
-}
-
-.formatDesc {
-  color: var(--text-dim);
-}
-
 .successBanner {
   padding: 12px 14px;
   border-radius: 10px;
@@ -255,4 +384,88 @@
   font-size: 13px;
   font-weight: 600;
   margin: 0;
+}
+
+/* ==== danger zone: intentionally the one card that breaks the calm register -
+   hazard border, a diagonal warning stripe along the top edge, uppercase mono
+   heading. It should read as structurally different at a glance, before you
+   even parse the words. ==== */
+.dangerCard {
+  position: relative;
+  border-radius: 14px;
+  padding: 18px 20px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.05), rgba(255, 255, 255, 0.006)), var(--card);
+  border: 1px solid rgba(239, 68, 68, 0.32);
+  box-shadow: var(--shadow), inset 0 0 40px -24px rgba(239, 68, 68, 0.3);
+}
+
+.dangerCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  background: repeating-linear-gradient(-45deg, rgba(239, 68, 68, 0.55) 0 10px, rgba(239, 68, 68, 0.15) 10px 20px);
+}
+
+.dangerTitle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--mono);
+  font-weight: 800;
+  font-size: 12.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pnl-neg-2);
+  margin: 6px 0 12px;
+}
+
+.dangerTitle::before {
+  content: '⚠';
+  font-size: 14px;
+}
+
+.dangerButton {
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  padding: 10px 20px;
+  border-radius: 9px;
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--pnl-neg-2);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  align-self: flex-start;
+}
+
+.dangerButton:hover {
+  border-color: rgba(239, 68, 68, 0.7);
+  background: rgba(239, 68, 68, 0.18);
+}
+
+.dangerButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.confirmBox {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 10px;
+  margin-top: 14px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.confirmBox p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-h);
+  line-height: 1.5;
 }

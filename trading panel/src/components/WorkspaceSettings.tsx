@@ -255,46 +255,46 @@ export function WorkspaceSettings({
 
   return (
     <div className={styles.wrapper}>
-      <h2>{t('nav.settings')}</h2>
+      <div className={styles.headerRow}>
+        <span className={`eyebrow ${styles.eyebrow}`}>{t('workspaceSettings.eyebrow')}</span>
+        <h2 className={`hero-title ${styles.heroTitle}`}>{t('nav.settings')}</h2>
+        <p className={styles.pageNote}>{t('workspaceSettings.pageNote')}</p>
+      </div>
 
-      <div className={styles.block}>
-        <h3>{t('workspaceSettings.workspaceTitle')}</h3>
-        {!HIDE_WORKSPACE_NAME_UI && (
-          <label className={styles.fieldRow}>
-            <span>{t('common.name')}</span>
-            <input
-              className={styles.textInput}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onBlur={saveName}
-              disabled={nameSaving}
-            />
-          </label>
-        )}
-        <div className={styles.fieldRow}>
-          <span>{t('workspaceSettings.currentTier')}</span>
-          <span className={styles.textInput}>{TIER_LABELS[tier]}</span>
+      <div className={styles.section}>
+        <div className={styles.sectionHead}>
+          <h3 className={styles.sectionTitle}>{t('workspaceSettings.workspaceTitle')}</h3>
+          <span className={styles.sectionHint}>{t('workspaceSettings.workspaceHint')}</span>
         </div>
-        {tier !== 'pro' && (
-          <>
-            <p className={styles.hint}>{t('workspaceSettings.proHint')}</p>
-            <div className={styles.actions}>
-              <button type="button" onClick={onOpenAccessCode}>
-                {t('access.enterCode')}
-              </button>
+        <div className={`${styles.card} glass`}>
+          {!HIDE_WORKSPACE_NAME_UI && (
+            <div className={styles.rowLine}>
+              <span className={styles.rowLbl}>{t('common.name')}</span>
+              <input
+                className={styles.textInput}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onBlur={saveName}
+                disabled={nameSaving}
+              />
             </div>
-          </>
-        )}
-        {!LOCK_LANGUAGE_TO_ENGLISH && (
-          <label className={styles.fieldRow}>
-            <span>{t('workspaceSettings.languageLabel')}</span>
-            <LanguageSwitcher className={styles.textInput} />
-          </label>
-        )}
-        {!LOCK_CURRENCY_TO_USD && (
-          <>
-            <label className={styles.fieldRow}>
-              <span>{t('workspaceSettings.baseCurrencyLabel')}</span>
+          )}
+          <div className={styles.rowLine}>
+            <span className={styles.rowLbl}>{t('workspaceSettings.currentTier')}</span>
+            <span className={styles.tierChip}>{TIER_LABELS[tier]}</span>
+          </div>
+          {!LOCK_LANGUAGE_TO_ENGLISH && (
+            <div className={styles.rowLine}>
+              <span className={styles.rowLbl}>{t('workspaceSettings.languageLabel')}</span>
+              <LanguageSwitcher className={styles.textInput} />
+            </div>
+          )}
+          {!LOCK_CURRENCY_TO_USD && (
+            <div className={styles.rowLine}>
+              <span className={styles.rowLbl}>
+                {t('workspaceSettings.baseCurrencyLabel')}
+                <span className={styles.rowSub}>{t('workspaceSettings.baseCurrencyHint')}</span>
+              </span>
               <select
                 className={styles.textInput}
                 value={workspace.baseCurrency}
@@ -307,164 +307,211 @@ export function WorkspaceSettings({
                   </option>
                 ))}
               </select>
-            </label>
-            <p className={styles.hint}>{t('workspaceSettings.baseCurrencyHint')}</p>
-          </>
-        )}
+            </div>
+          )}
+          {tier !== 'pro' && (
+            <>
+              <p className={styles.hint} style={{ marginTop: 14 }}>
+                {t('workspaceSettings.proHint')}
+              </p>
+              <div className={styles.actions}>
+                <button type="button" className={styles.actionAmber} onClick={onOpenAccessCode}>
+                  {t('access.enterCode')}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
-      <div className={styles.block}>
-        <h3>{t('workspaceSettings.optionalFieldsTitle')}</h3>
-        <p className={styles.hint}>{t('workspaceSettings.optionalFieldsHint')}</p>
-        <div className={styles.list}>
-          {(Object.keys(FIELD_LABELS) as (keyof FieldSettings)[]).map((key) => (
-            <label className={`${styles.toggleRow} glass-hover`} key={key}>
-              <span>{FIELD_LABELS[key]}</span>
-              <input
-                type="checkbox"
-                checked={workspace.fieldSettings[key]}
-                disabled={saving === key}
-                onChange={() => toggle(key)}
-              />
-            </label>
-          ))}
+      <div className={styles.section}>
+        <div className={styles.sectionHead}>
+          <h3 className={styles.sectionTitle}>{t('workspaceSettings.optionalFieldsTitle')}</h3>
+          <span className={styles.sectionHint}>{t('workspaceSettings.optionalFieldsHint')}</span>
         </div>
-        <p className={styles.hint}>{t('workspaceSettings.requireExactTimeHint')}</p>
-        <p className={styles.status}>{error ?? ''}</p>
+        <div className={`${styles.card} glass`}>
+          <div className={styles.list}>
+            {(Object.keys(FIELD_LABELS) as (keyof FieldSettings)[]).map((key) => (
+              <label className={`${styles.rowLine} ${styles.toggleRow}`} key={key}>
+                <span className={styles.rowLbl}>
+                  {FIELD_LABELS[key]}
+                  {key === 'requireExactTime' && (
+                    <span className={styles.rowSub}>{t('workspaceSettings.requireExactTimeHint')}</span>
+                  )}
+                </span>
+                <span className={styles.switch}>
+                  <input
+                    type="checkbox"
+                    checked={workspace.fieldSettings[key]}
+                    disabled={saving === key}
+                    onChange={() => toggle(key)}
+                  />
+                  <span className={styles.switchTrack} />
+                  <span className={styles.switchKnob} />
+                </span>
+              </label>
+            ))}
+          </div>
+          <p className={styles.status}>{error ?? ''}</p>
+        </div>
       </div>
 
-      <div className={styles.block}>
-        <h3>{t('workspaceSettings.pushTitle')}</h3>
-        <p className={styles.hint}>{t('workspaceSettings.pushHint')}</p>
-        <div className={styles.actions}>
-          <button type="button" onClick={enablePush} disabled={pushEnabling}>
-            {pushEnabling ? t('workspaceSettings.enablingPush') : t('workspaceSettings.enablePush')}
-          </button>
-          <button type="button" onClick={sendTest} disabled={testSending}>
-            {testSending ? t('workspaceSettings.sendingTest') : t('workspaceSettings.sendTest')}
-          </button>
+      <div className={styles.section}>
+        <div className={styles.sectionHead}>
+          <h3 className={styles.sectionTitle}>{t('workspaceSettings.pushTitle')}</h3>
+          <span className={styles.sectionHint}>{t('workspaceSettings.pushHintShort')}</span>
         </div>
-        <p className={styles.status}>{pushStatus ?? testStatus ?? ''}</p>
-      </div>
-
-      <div className={styles.block}>
-        <h3>{t('workspaceSettings.exportTitle')}</h3>
-        <div className={styles.formatList}>
-          <div className={styles.formatItem}>
-            <span className={styles.formatName}>JSON</span>
-            <span className={styles.formatDesc}>{t('workspaceSettings.exportJsonHint')}</span>
-          </div>
-          <div className={styles.formatItem}>
-            <span className={styles.formatName}>CSV</span>
-            <span className={styles.formatDesc}>{t('workspaceSettings.exportCsvHint')}</span>
-          </div>
-        </div>
-        <div className={styles.actions}>
-          <button type="button" onClick={() => exportAsJson(trades)}>
-            {t('workspaceSettings.exportJson')}
-          </button>
-          <button type="button" onClick={() => exportAsCsv(trades)}>
-            {t('workspaceSettings.exportCsv')}
-          </button>
-        </div>
-        <h3>{t('workspaceSettings.importTitle')}</h3>
-        <div className={styles.formatList}>
-          <div className={styles.formatItem}>
-            <span className={styles.formatName}>{t('workspaceSettings.importExcelLabel')}</span>
-            <span className={styles.formatDesc}>{t('workspaceSettings.importExcelHint')}</span>
-          </div>
-          <div className={styles.formatItem}>
-            <span className={styles.formatName}>JSON</span>
-            <span className={styles.formatDesc}>{t('workspaceSettings.importHint')}</span>
-          </div>
-        </div>
-        <div className={styles.actions}>
-          <input
-            ref={importInputRef}
-            type="file"
-            accept=".json,.xlsx"
-            hidden
-            onChange={handleImportFile}
-          />
-          <button type="button" onClick={() => importInputRef.current?.click()} disabled={importing}>
-            {importing ? t('workspaceSettings.importing') : t('workspaceSettings.importButton')}
-          </button>
-        </div>
-        {importStatus && (
-          <div
-            className={`${styles.importResult} count-in ${
-              importTone === 'success'
-                ? styles.importResultSuccess
-                : importTone === 'error'
-                  ? styles.importResultError
-                  : styles.importResultPartial
-            }`}
-          >
-            <p className={styles.importResultText}>{importStatus}</p>
-            {importErrors.length > 0 && (
-              <ul className={styles.importResultList}>
-                {importErrors.slice(0, 5).map((err, i) => (
-                  <li key={i}>{err}</li>
-                ))}
-                {importErrors.length > 5 && (
-                  <li>{t('workspaceSettings.importMoreErrors', { count: importErrors.length - 5 })}</li>
-                )}
-              </ul>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className={`${styles.block} ${styles.dangerBlock}`}>
-        <h3>{t('workspaceSettings.dangerZoneTitle')}</h3>
-        {clearStep === 0 && (
-          <>
-            <button type="button" className={styles.dangerButton} onClick={startClear}>
-              {t('workspaceSettings.clearDataButton')}
+        <div className={`${styles.card} glass`}>
+          <p className={styles.hint} style={{ marginBottom: 14 }}>
+            {t('workspaceSettings.pushHint')}
+          </p>
+          <div className={styles.actions}>
+            <button type="button" className={styles.actionAmber} onClick={enablePush} disabled={pushEnabling}>
+              {pushEnabling ? t('workspaceSettings.enablingPush') : t('workspaceSettings.enablePush')}
             </button>
-            {clearSuccess && <p className={`${styles.successBanner} count-in`}>{t('workspaceSettings.clearDataSuccess')}</p>}
-          </>
-        )}
+            <button type="button" onClick={sendTest} disabled={testSending}>
+              {testSending ? t('workspaceSettings.sendingTest') : t('workspaceSettings.sendTest')}
+            </button>
+          </div>
+          <p className={styles.status}>{pushStatus ?? testStatus ?? ''}</p>
+        </div>
+      </div>
 
-        {clearStep === 1 && (
-          <div className={`${styles.confirmBox} count-in`}>
-            <p>{t('workspaceSettings.clearDataConfirmStep1')}</p>
-            <div className={styles.actions}>
-              <button type="button" className={styles.dangerButton} onClick={() => setClearStep(2)}>
-                {t('common.yesContinue')}
-              </button>
-              <button type="button" onClick={() => setClearStep(0)}>
-                {t('common.cancel')}
-              </button>
+      <div className={styles.section}>
+        <div className={styles.sectionHead}>
+          <h3 className={styles.sectionTitle}>{t('workspaceSettings.exportTitle')}</h3>
+          <span className={styles.sectionHint}>{t('workspaceSettings.exportImportHintShort')}</span>
+        </div>
+        <div className={`${styles.card} glass`}>
+          <div className={styles.formatList}>
+            <div className={styles.formatItem}>
+              <span className={styles.formatName}>JSON</span>
+              <span className={styles.formatDesc}>{t('workspaceSettings.exportJsonHint')}</span>
+            </div>
+            <div className={styles.formatItem}>
+              <span className={styles.formatName}>CSV</span>
+              <span className={styles.formatDesc}>{t('workspaceSettings.exportCsvHint')}</span>
             </div>
           </div>
-        )}
+          <div className={styles.actions}>
+            <button type="button" onClick={() => exportAsJson(trades)}>
+              {t('workspaceSettings.exportJson')}
+            </button>
+            <button type="button" onClick={() => exportAsCsv(trades)}>
+              {t('workspaceSettings.exportCsv')}
+            </button>
+          </div>
 
-        {clearStep === 2 && (
-          <div className={`${styles.confirmBox} count-in`}>
-            <p>{t('workspaceSettings.clearDataConfirmStep2', { word: CLEAR_CONFIRM_WORD })}</p>
+          <div className={`${styles.rowLine} ${styles.importDivider}`}>
+            <span className={styles.rowLbl}>{t('workspaceSettings.importTitle')}</span>
+          </div>
+          <div className={styles.formatList}>
+            <div className={styles.formatItem}>
+              <span className={styles.formatName}>{t('workspaceSettings.importExcelLabel')}</span>
+              <span className={styles.formatDesc}>{t('workspaceSettings.importExcelHint')}</span>
+            </div>
+            <div className={styles.formatItem}>
+              <span className={styles.formatName}>JSON</span>
+              <span className={styles.formatDesc}>{t('workspaceSettings.importHint')}</span>
+            </div>
+          </div>
+          <div className={styles.actions}>
             <input
-              className={styles.textInput}
-              value={confirmText}
-              onChange={(e) => setConfirmText(e.target.value)}
-              autoFocus
+              ref={importInputRef}
+              type="file"
+              accept=".json,.xlsx"
+              hidden
+              onChange={handleImportFile}
             />
-            <div className={styles.actions}>
-              <button
-                type="button"
-                className={styles.dangerButton}
-                onClick={confirmClear}
-                disabled={confirmText !== CLEAR_CONFIRM_WORD || clearing}
-              >
-                {clearing ? t('workspaceSettings.clearingData') : t('workspaceSettings.clearDataForever')}
-              </button>
-              <button type="button" onClick={() => setClearStep(0)} disabled={clearing}>
-                {t('common.cancel')}
-              </button>
-            </div>
-            {clearError && <p className={`${styles.status} count-in`}>{clearError}</p>}
+            <button type="button" className={styles.actionAmber} onClick={() => importInputRef.current?.click()} disabled={importing}>
+              {importing ? t('workspaceSettings.importing') : t('workspaceSettings.importButton')}
+            </button>
           </div>
-        )}
+          {importStatus && (
+            <div
+              className={`${styles.importResult} count-in ${
+                importTone === 'success'
+                  ? styles.importResultSuccess
+                  : importTone === 'error'
+                    ? styles.importResultError
+                    : styles.importResultPartial
+              }`}
+            >
+              <p className={styles.importResultText}>{importStatus}</p>
+              {importErrors.length > 0 && (
+                <ul className={styles.importResultList}>
+                  {importErrors.slice(0, 5).map((err, i) => (
+                    <li key={i}>{err}</li>
+                  ))}
+                  {importErrors.length > 5 && (
+                    <li>{t('workspaceSettings.importMoreErrors', { count: importErrors.length - 5 })}</li>
+                  )}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className={styles.section}>
+        <div className={styles.sectionHead}>
+          <h3 className={styles.sectionTitle}>{t('workspaceSettings.dangerZoneTitle')}</h3>
+          <span className={styles.sectionHint}>{t('workspaceSettings.dangerZoneHint')}</span>
+        </div>
+        <div className={styles.dangerCard}>
+          <div className={styles.dangerTitle}>{t('workspaceSettings.clearDataButton')}</div>
+          <p className={styles.hint} style={{ marginBottom: 14 }}>
+            {t('workspaceSettings.dangerCardHint')}
+          </p>
+          {clearStep === 0 && (
+            <>
+              <button type="button" className={styles.dangerButton} onClick={startClear}>
+                {t('workspaceSettings.clearDataButton')}
+              </button>
+              {clearSuccess && <p className={`${styles.successBanner} count-in`}>{t('workspaceSettings.clearDataSuccess')}</p>}
+            </>
+          )}
+
+          {clearStep === 1 && (
+            <div className={`${styles.confirmBox} count-in`}>
+              <p>{t('workspaceSettings.clearDataConfirmStep1')}</p>
+              <div className={styles.actions}>
+                <button type="button" className={styles.dangerButton} onClick={() => setClearStep(2)}>
+                  {t('common.yesContinue')}
+                </button>
+                <button type="button" onClick={() => setClearStep(0)}>
+                  {t('common.cancel')}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {clearStep === 2 && (
+            <div className={`${styles.confirmBox} count-in`}>
+              <p>{t('workspaceSettings.clearDataConfirmStep2', { word: CLEAR_CONFIRM_WORD })}</p>
+              <input
+                className={styles.textInput}
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                autoFocus
+              />
+              <div className={styles.actions}>
+                <button
+                  type="button"
+                  className={styles.dangerButton}
+                  onClick={confirmClear}
+                  disabled={confirmText !== CLEAR_CONFIRM_WORD || clearing}
+                >
+                  {clearing ? t('workspaceSettings.clearingData') : t('workspaceSettings.clearDataForever')}
+                </button>
+                <button type="button" onClick={() => setClearStep(0)} disabled={clearing}>
+                  {t('common.cancel')}
+                </button>
+              </div>
+              {clearError && <p className={`${styles.status} count-in`}>{clearError}</p>}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
