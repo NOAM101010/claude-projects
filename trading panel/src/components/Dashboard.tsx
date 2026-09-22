@@ -12,10 +12,14 @@ import {
   dailyPnl,
   equityCurve,
   expectancy,
+  isTradeOpen,
   lossSourceBreakdown,
   maxDrawdown,
+  performanceByHourOfDay,
   profitFactor,
   rankedSetupPerformance,
+  rMultipleDistribution,
+  slTpAdjustmentStats,
   statsByDayOfWeek,
   statsBySymbol,
   streaks,
@@ -27,11 +31,17 @@ import {
   worstTrade,
 } from '../lib/stats'
 import { formatCurrency, formatDateTime } from '../lib/format'
+import type { SlTpHistoryEntry } from '../lib/slTpHistoryApi'
+import type { WorkspaceTemplate } from '../lib/workspacesApi'
 import { BestWorstSpotlight } from './BestWorstSpotlight'
+import { DailyRiskBudgetCard } from './DailyRiskBudgetCard'
 import { LossSourceCard } from './LossSourceCard'
 import { PnlCalendar } from './PnlCalendar'
+import { RMultipleDistributionCard } from './RMultipleDistributionCard'
 import { SetupPerformanceCard } from './SetupPerformanceCard'
+import { SlTpAdjustmentCard } from './SlTpAdjustmentCard'
 import { StreakCard } from './StreakCard'
+import { TimeOfDayPerformanceCard } from './TimeOfDayPerformanceCard'
 import { WeeklyRecapCard } from './WeeklyRecapCard'
 import type { CurrencyCode, Trade } from '../types/trade'
 import type { GroupStats } from '../lib/stats'
@@ -39,8 +49,14 @@ import styles from './Dashboard.module.css'
 
 interface DashboardProps {
   trades: Trade[]
+  slTpHistory: SlTpHistoryEntry[]
   baseCurrency: CurrencyCode
   tier: AccountTier
+  /** תבנית ה-workspace הפעיל - `DailyRiskBudgetCard`/`TimeOfDayPerformanceCard`/
+   * `RMultipleDistributionCard` מוצגים רק כש-`'day'` (robust-munching-puffin.md סבב C2). */
+  template: WorkspaceTemplate | null
+  /** תקציב סיכון יומי (Day Trading בלבד) - null = לא הוגדר, `DailyRiskBudgetCard` לא מוצג. */
+  dailyRiskBudget: number | null
   /** פותח את מודל קוד הגישה (שדרוג) - מועבר ל-`WeeklyRecapCard` (Pro-only), אותו מנגנון כמו שאר האפליקציה. */
   onOpenAccessCode: () => void
   onSelectSymbol?: (symbol: string) => void
@@ -48,6 +64,9 @@ interface DashboardProps {
    * לא לגעת בשרשרת ה-`goToFilteredTrades`/`TradeFilter` הכללית (App.tsx -> Journal.tsx),
    * שתומכת גם בסוג `'setup'` באופן גנרי יחד עם `'symbol'` (ראה `TradeList.tsx`). */
   onSelectSetup?: (setup: string) => void
+  /** פותח את טופס "הוספת טרייד" הקיים (אותו callback שמועבר ל-`TradeList`/`onAdd` דרך
+   * `Journal.tsx`) - נצרך כאן רק ע"י כפתור ה-CTA בבאנר "ברוך הבא" (0 טריידים סגורים). */
+  onAddTrade?: () => void
 }
 
 /** מציג מספר לפי מטבע הבסיס של ה-workspace (כל הטריידים כאן כבר הומרו אליו - ראה `useConvertedTrades`). */
@@ -171,11 +190,27 @@ function GroupTable({
   )
 }
 
-export function Dashboard({ trades, baseCurrency, tier, onOpenAccessCode, onSelectSymbol }: DashboardProps) {
+export function Dashboard({
+  trades,
+  slTpHistory,
+  baseCurrency,
+  tier,
+  template,
+  dailyRiskBudget,
+  onOpenAccessCode,
+  onSelectSymbol,
+  onAddTrade,
+}: DashboardProps) {
   const { t, locale } = useLanguage()
   const { convertedTrades, converting, conversionError } = useConvertedTrades(trades, baseCurrency)
 
-  const closedCount = convertedTrades.filter((t) => t.pnl !== null).length
+  // 0 טריידים סגורים בכלל (לא משנה כמה פתוחים יש) = כל אריחי ה-KPI העליונים (Total P&L,
+  // Max Drawdown, Profit Factor, Avg Win/Loss, Avg Hold Time וכו') חסרי משמעות - $0.00/∞/NaN.
+  // מוחלפים בבאנר "ברוך הבא" יחיד במקום להציג את שניהם. שאר הסקשנים (GroupTable/equity-curve/
+  // heatmap) כבר יש להם empty state תקין משלהם ולא מושפעים מהדגל הזה.
+  const hasClosedTrades = convertedTrades.some((t) => !isTradeOpen(t))
+
+  const closedCount = convertedTrades.filter((t) => !isTradeOpen(t)).length
   const openCount = convertedTrades.length - closedCount
   const { avgWin, avgLoss } = avgWinLoss(convertedTrades)
   const rr = avgRiskReward(convertedTrades)
@@ -201,7 +236,16 @@ export function Dashboard({ trades, baseCurrency, tier, onOpenAccessCode, onSele
   const lossSource = lossSourceBreakdown(convertedTrades)
   const showLossSource = lossSource.sufficientData
   const showSetupPerformance = tier !== 'pro' || rankedSetupPerformance(convertedTrades).length > 0
-  const showInsights = showLossSource || showSetupPerformance
+  const showSlTpAdjustment = slTpAdjustmentStats(convertedTrades, slTpHistory).adjustedTradesCount > 0
+  // שלושת הכרטיסים הבאים (robust-munching-puffin.md סבב C2) הם Day Trading בלבד - חשבון
+  // בתבנית אחרת (או template===null) לעולם לא רואה אותם, גם לא כ-teaser. קריטי: הבדיקה
+  // הזו קודמת לכל שאר התנאים בכל אחד מהם.
+  const isDayTemplate = template === 'day'
+  const showDailyRiskBudget = isDayTemplate && dailyRiskBudget !== null
+  const showTimeOfDay = isDayTemplate && (tier !== 'pro' || performanceByHourOfDay(convertedTrades).length > 0)
+  const showRMultipleDistribution =
+    isDayTemplate && (tier !== 'pro' || rMultipleDistribution(convertedTrades).some((b) => b.count > 0))
+  const showInsights = showLossSource || showSetupPerformance || showSlTpAdjustment || showTimeOfDay || showRMultipleDistribution
 
   return (
     <div className={styles.wrapper}>
@@ -214,6 +258,22 @@ export function Dashboard({ trades, baseCurrency, tier, onOpenAccessCode, onSele
         {conversionError && <p className={styles.note}>{t('dashboard.conversionFailed')}</p>}
       </div>
 
+      {showDailyRiskBudget && (
+        <DailyRiskBudgetCard trades={convertedTrades} dailyRiskBudget={dailyRiskBudget as number} baseCurrency={baseCurrency} locale={locale} />
+      )}
+
+      {!hasClosedTrades ? (
+        <div className={`${styles.welcomeBanner} metal-panel holo-edge holo-edge--amber det-frame count-in`}>
+          <h3 className={styles.welcomeTitle}>{t('dashboard.welcomeTitle')}</h3>
+          <p className={styles.welcomeBody}>{t('dashboard.welcomeBody')}</p>
+          {onAddTrade && (
+            <button type="button" className={styles.welcomeCta} onClick={onAddTrade}>
+              {t('dashboard.welcomeCta')}
+            </button>
+          )}
+        </div>
+      ) : (
+        <>
       <div className={styles.heroGrid}>
         <div className={`${styles.kpiCard} ${styles.kpiHero} metal-panel holo-edge holo-edge--amber det-frame count-in`}>
           <div className={styles.kpiHeroTop}>
@@ -330,6 +390,8 @@ export function Dashboard({ trades, baseCurrency, tier, onOpenAccessCode, onSele
           </div>
         </div>
       </div>
+        </>
+      )}
 
       {showInsights && (
         <div className={styles.kpiGroup}>
@@ -338,6 +400,13 @@ export function Dashboard({ trades, baseCurrency, tier, onOpenAccessCode, onSele
             {showLossSource && <LossSourceCard trades={convertedTrades} baseCurrency={baseCurrency} locale={locale} />}
             {showSetupPerformance && (
               <SetupPerformanceCard trades={convertedTrades} baseCurrency={baseCurrency} locale={locale} tier={tier} onOpenAccessCode={onOpenAccessCode} />
+            )}
+            {showSlTpAdjustment && <SlTpAdjustmentCard trades={convertedTrades} history={slTpHistory} />}
+            {showTimeOfDay && (
+              <TimeOfDayPerformanceCard trades={convertedTrades} baseCurrency={baseCurrency} locale={locale} tier={tier} onOpenAccessCode={onOpenAccessCode} />
+            )}
+            {showRMultipleDistribution && (
+              <RMultipleDistributionCard trades={convertedTrades} tier={tier} onOpenAccessCode={onOpenAccessCode} />
             )}
           </div>
         </div>

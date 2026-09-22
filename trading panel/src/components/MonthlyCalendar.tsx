@@ -3,7 +3,7 @@ import { useMemo, useRef, useState } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
 import { CALENDAR_DOW, MONTH_NAMES } from '../i18n/translations'
 import { formatCurrency } from '../lib/format'
-import { dailyPnl, dayActivityLevel, winRate } from '../lib/stats'
+import { dailyPnl, dayActivityLevel, isTradeOpen, winRate } from '../lib/stats'
 import type { DailyPnl } from '../lib/stats'
 import { shareOrDownloadCanvas } from '../lib/canvasExport'
 import { renderMonthlyCalendarToCanvas } from '../lib/monthlyCalendarCanvas'
@@ -99,7 +99,7 @@ export function MonthlyCalendar({ trades, baseCurrency, onEditTrade }: MonthlyCa
   // המוצג - כך שלחיצה על צ'יפ Best/Worst Day תמיד עובדת גם אם הוא לא מתאים לחודש הנוכחי).
   const openDayTrades = useMemo(() => {
     if (!openDayKey) return []
-    return trades.filter((tr) => tr.pnl !== null && tr.exitAt && (tr.exitAt as string).slice(0, 10) === openDayKey)
+    return trades.filter((tr) => !isTradeOpen(tr) && tr.exitAt && (tr.exitAt as string).slice(0, 10) === openDayKey)
   }, [trades, openDayKey])
   const openDayDate = openDayKey ? new Date(`${openDayKey}T00:00:00`) : null
 
@@ -116,7 +116,7 @@ export function MonthlyCalendar({ trades, baseCurrency, onEditTrade }: MonthlyCa
   const monthClosedTrades = useMemo(
     () =>
       trades.filter((t) => {
-        if (t.pnl === null || !t.exitAt) return false
+        if (isTradeOpen(t) || !t.exitAt) return false
         const exit = new Date(t.exitAt)
         return exit.getFullYear() === cursor.year && exit.getMonth() === cursor.month
       }),

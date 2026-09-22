@@ -4,6 +4,7 @@ import { useLanguage } from '../i18n/LanguageContext'
 import { formatCurrency, formatDuration } from '../lib/format'
 import { computeLivePnl, liveRMultiple, slTpProgress } from '../lib/livePnl'
 import { LIVE_PRICE_REFRESH_MS, fetchOpenPositionPrices, type OpenPositionQuote } from '../lib/marketData'
+import { isTradeOpen } from '../lib/stats'
 import { tradingViewUrl } from '../lib/tradingView'
 import type { CurrencyCode, Trade } from '../types/trade'
 import styles from './OpenPositions.module.css'
@@ -14,7 +15,8 @@ interface OpenPositionsProps {
 }
 
 /**
- * "Open Positions Board": תצוגה חיה של הטריידים הפתוחים (`pnl === null`, ראה types/trade.ts),
+ * "Open Positions Board": תצוגה חיה של הטריידים הפתוחים (`isTradeOpen`, כלומר
+ * `exitPrice === null` - ראה `stats.ts`),
  * עם P&L שמחושב **לתצוגה בלבד** מול מחיר נוכחי (`computeLivePnl` - שום דבר לא נכתב ל-DB,
  * ראה שם). המחירים מגיעים מ-`open-positions-prices` (Edge Function ייעודית, לא watchlist-prices)
  * בפולינג של `LIVE_PRICE_REFRESH_MS` - **רק כל עוד המסך הזה מותקן/גלוי** (ה-hook הזה חי
@@ -28,7 +30,7 @@ export function OpenPositions({ trades, baseCurrency }: OpenPositionsProps) {
   // task packet: אין צורך בדיוק לשנייה, מספיק לרענן בקצב שהמחירים כבר מתרעננים בו).
   const [now, setNow] = useState(() => Date.now())
 
-  const openTrades = trades.filter((tr) => tr.pnl === null)
+  const openTrades = trades.filter(isTradeOpen)
 
   useEffect(() => {
     if (openTrades.length === 0) return

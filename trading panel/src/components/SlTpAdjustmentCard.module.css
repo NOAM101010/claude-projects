@@ -1,0 +1,70 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+  color: var(--text-h);
+}
+
+.summary {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-h);
+  line-height: 1.5;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rowLabel {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-h);
+  white-space: nowrap;
+}
+
+.chipWidened {
+  border-color: var(--pnl-neg-2);
+  color: var(--pnl-neg-2);
+}
+
+.chipTightened {
+  border-color: var(--pnl-pos-2);
+  color: var(--pnl-pos-2);
+}

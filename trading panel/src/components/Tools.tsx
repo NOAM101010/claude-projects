@@ -2,7 +2,14 @@ import { ExternalLink } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { AccountTier } from '../lib/accountApi'
-import { calculatePnl, calculatePositionSize } from '../lib/calculators'
+import {
+  calculateCagr,
+  calculateLiquidationPrice,
+  calculatePnl,
+  calculatePositionSize,
+  calculateScaleIn,
+  calculateScaleOut,
+} from '../lib/calculators'
 import { formatCurrency, formatDateTime } from '../lib/format'
 import { LIVE_PRICE_REFRESH_MS, fetchWatchlistPrices, type WatchlistQuote } from '../lib/marketData'
 import { canAddWatchlistSymbol, canSetWatchlistAlert, getWatchlistAlertLimit, getWatchlistSymbolLimit } from '../lib/tierLimits'
@@ -18,11 +25,22 @@ import {
   type WatchlistAlert,
   type WatchlistDirection,
 } from '../lib/watchlistApi'
+import { TEMPLATE_TOOLS } from '../lib/workspacesApi'
+import type { ToolsTab, WorkspaceTemplate } from '../lib/workspacesApi'
+import { TemplatePicker } from './TemplatePicker'
 import styles from './Tools.module.css'
 
-type ToolsTab = 'positionSize' | 'pnl' | 'watchlist'
 type RiskMode = 'amount' | 'percent'
 type TargetMode = 'price' | 'percent'
+
+/** לוגיקה טהורה: אם יש תבנית והטאב הנוכחי לא ברשימת הטאבים המותרת שלה (TEMPLATE_TOOLS) -
+ * מחזיר את הטאב הראשון המותר במקומו. מיוצאת כדי להיבדק בבדיקת-יחידה בלי תשתית רינדור
+ * (הפרויקט עדיין לא כולל React Testing Library - ראה ErrorBoundary.test.ts). */
+export function resolveActiveTab(template: WorkspaceTemplate | null, currentTab: ToolsTab): ToolsTab {
+  if (!template) return currentTab
+  const allowed = TEMPLATE_TOOLS[template]
+  return allowed.includes(currentTab) ? currentTab : allowed[0]
+}
 
 /** מנתח שדה טקסט מספרי לערך; מחזיר undefined אם ריק/לא תקין, כדי שהמחשבון יתייחס אליו כ"לא סופק". */
 function parseField(value: string): number | undefined {
@@ -252,6 +270,312 @@ function PnlCalculatorTool() {
       ) : (
         <p className={styles.resultsPlaceholder}>{t('tools.calculatorEmptyState')}</p>
       )}
+    </div>
+  )
+}
+
+function ScaleInCalculator() {
+  const { t, locale } = useLanguage()
+  const [existingEntryPrice, setExistingEntryPrice] = useState('')
+  const [existingQuantity, setExistingQuantity] = useState('')
+  const [addPrice, setAddPrice] = useState('')
+  const [addQuantity, setAddQuantity] = useState('')
+
+  const existingEntryPriceNum = parseField(existingEntryPrice)
+  const existingQuantityNum = parseField(existingQuantity)
+  const addPriceNum = parseField(addPrice)
+  const addQuantityNum = parseField(addQuantity)
+  const hasRequiredInputs =
+    existingEntryPriceNum !== undefined && existingQuantityNum !== undefined && addPriceNum !== undefined && addQuantityNum !== undefined
+
+  const result = calculateScaleIn({
+    existingEntryPrice: existingEntryPriceNum ?? 0,
+    existingQuantity: existingQuantityNum ?? 0,
+    addPrice: addPriceNum ?? 0,
+    addQuantity: addQuantityNum ?? 0,
+  })
+
+  return (
+    <div className={`${styles.card} metal-panel holo-edge`}>
+      <h2>{t('tools.scaleIn.title')}</h2>
+      <p className={styles.hint}>{t('tools.scaleIn.hint')}</p>
+
+      <div className={styles.row}>
+        <div className={styles.field}>
+          <label htmlFor="si-existing-entry">{t('tools.scaleIn.existingEntryPriceLabel')}</label>
+          <input
+            id="si-existing-entry"
+            type="number"
+            value={existingEntryPrice}
+            onChange={(e) => setExistingEntryPrice(e.target.value)}
+          />
+        </div>
+        <div className={styles.field}>
+          <label htmlFor="si-existing-qty">{t('tools.scaleIn.existingQuantityLabel')}</label>
+          <input id="si-existing-qty" type="number" value={existingQuantity} onChange={(e) => setExistingQuantity(e.target.value)} />
+        </div>
+      </div>
+
+      <div className={styles.row}>
+        <div className={styles.field}>
+          <label htmlFor="si-add-price">{t('tools.scaleIn.addPriceLabel')}</label>
+          <input id="si-add-price" type="number" value={addPrice} onChange={(e) => setAddPrice(e.target.value)} />
+        </div>
+        <div className={styles.field}>
+          <label htmlFor="si-add-qty">{t('tools.scaleIn.addQuantityLabel')}</label>
+          <input id="si-add-qty" type="number" value={addQuantity} onChange={(e) => setAddQuantity(e.target.value)} />
+        </div>
+      </div>
+
+      {hasRequiredInputs ? (
+        <div className={`${styles.resultsGrid} count-in`}>
+          <div className={`${styles.resultCard} ${styles.resultCardPrimary} det-frame`}>
+            <span className={styles.resultLabel}>{t('tools.scaleIn.resultAveragePrice')}</span>
+            <span key={result.newAveragePrice} className={`num ${styles.resultValuePrimary} value-pop`}>
+              {formatCurrency(result.newAveragePrice, 'USD', locale)}
+            </span>
+          </div>
+          <div className={styles.resultCard}>
+            <span className={styles.resultLabel}>{t('tools.scaleIn.resultTotalQuantity')}</span>
+            <span key={result.newTotalQuantity} className={`num ${styles.resultValue} value-pop`}>{result.newTotalQuantity}</span>
+          </div>
+        </div>
+      ) : (
+        <p className={styles.resultsPlaceholder}>{t('tools.calculatorEmptyState')}</p>
+      )}
+    </div>
+  )
+}
+
+function ScaleOutCalculator() {
+  const { t, locale } = useLanguage()
+  const [entryPrice, setEntryPrice] = useState('')
+  const [direction, setDirection] = useState<'long' | 'short'>('long')
+  const [totalQuantity, setTotalQuantity] = useState('')
+  const [sellPrice, setSellPrice] = useState('')
+  const [sellQuantity, setSellQuantity] = useState('')
+
+  const entryPriceNum = parseField(entryPrice)
+  const totalQuantityNum = parseField(totalQuantity)
+  const sellPriceNum = parseField(sellPrice)
+  const sellQuantityNum = parseField(sellQuantity)
+  const hasRequiredInputs =
+    entryPriceNum !== undefined && totalQuantityNum !== undefined && sellPriceNum !== undefined && sellQuantityNum !== undefined
+
+  const result = calculateScaleOut({
+    entryPrice: entryPriceNum ?? 0,
+    direction,
+    totalQuantity: totalQuantityNum ?? 0,
+    sellPrice: sellPriceNum ?? 0,
+    sellQuantity: sellQuantityNum ?? 0,
+  })
+
+  return (
+    <div className={`${styles.card} metal-panel holo-edge`}>
+      <h2>{t('tools.scaleOut.title')}</h2>
+      <p className={styles.hint}>{t('tools.scaleOut.hint')}</p>
+
+      <div className={styles.row}>
+        <div className={styles.field}>
+          <label htmlFor="so-entry">{t('tools.scaleOut.entryPriceLabel')}</label>
+          <input id="so-entry" type="number" value={entryPrice} onChange={(e) => setEntryPrice(e.target.value)} />
+        </div>
+        <div className={styles.field}>
+          <label>{t('tools.scaleOut.directionLabel')}</label>
+          <div className={styles.directionToggle}>
+            <button type="button" data-dir="long" data-active={direction === 'long'} onClick={() => setDirection('long')}>
+              Long
+            </button>
+            <button type="button" data-dir="short" data-active={direction === 'short'} onClick={() => setDirection('short')}>
+              Short
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className={styles.row}>
+        <div className={styles.field}>
+          <label htmlFor="so-total-qty">{t('tools.scaleOut.totalQuantityLabel')}</label>
+          <input id="so-total-qty" type="number" value={totalQuantity} onChange={(e) => setTotalQuantity(e.target.value)} />
+        </div>
+        <div className={styles.field}>
+          <label htmlFor="so-sell-qty">{t('tools.scaleOut.sellQuantityLabel')}</label>
+          <input id="so-sell-qty" type="number" value={sellQuantity} onChange={(e) => setSellQuantity(e.target.value)} />
+        </div>
+      </div>
+
+      <div className={styles.field}>
+        <label htmlFor="so-sell-price">{t('tools.scaleOut.sellPriceLabel')}</label>
+        <input id="so-sell-price" type="number" value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} />
+      </div>
+
+      {hasRequiredInputs ? (
+        <div className={`${styles.resultsGrid} count-in`}>
+          <div className={`${styles.resultCard} ${styles.resultCardPrimary} det-frame`}>
+            <span className={styles.resultLabel}>{t('tools.scaleOut.resultRealizedPnl')}</span>
+            <span
+              key={result.realizedPnl}
+              className={`num ${styles.resultValuePrimary} value-pop ${result.realizedPnl >= 0 ? styles.positive : styles.negative}`}
+            >
+              {formatCurrency(result.realizedPnl, 'USD', locale)}
+            </span>
+          </div>
+          <div className={styles.resultCard}>
+            <span className={styles.resultLabel}>{t('tools.scaleOut.resultRealizedPnlPercent')}</span>
+            <span
+              key={result.realizedPnlPercent}
+              className={`num ${styles.resultValue} value-pop ${result.realizedPnlPercent >= 0 ? styles.positive : styles.negative}`}
+            >
+              {result.realizedPnlPercent >= 0 ? '+' : ''}
+              {result.realizedPnlPercent.toFixed(2)}%
+            </span>
+          </div>
+          <div className={styles.resultCard}>
+            <span className={styles.resultLabel}>{t('tools.scaleOut.resultRemainingQuantity')}</span>
+            <span key={result.remainingQuantity} className={`num ${styles.resultValue} value-pop`}>{result.remainingQuantity}</span>
+          </div>
+        </div>
+      ) : (
+        <p className={styles.resultsPlaceholder}>{t('tools.calculatorEmptyState')}</p>
+      )}
+    </div>
+  )
+}
+
+function CagrCalculator() {
+  const { t } = useLanguage()
+  const [startValue, setStartValue] = useState('')
+  const [endValue, setEndValue] = useState('')
+  const [years, setYears] = useState('')
+
+  const startValueNum = parseField(startValue)
+  const endValueNum = parseField(endValue)
+  const yearsNum = parseField(years)
+  const hasRequiredInputs = startValueNum !== undefined && endValueNum !== undefined && yearsNum !== undefined
+
+  const result = calculateCagr({
+    startValue: startValueNum ?? 0,
+    endValue: endValueNum ?? 0,
+    years: yearsNum ?? 0,
+  })
+
+  return (
+    <div className={`${styles.card} metal-panel holo-edge`}>
+      <h2>{t('tools.cagr.title')}</h2>
+      <p className={styles.hint}>{t('tools.cagr.hint')}</p>
+
+      <div className={styles.row}>
+        <div className={styles.field}>
+          <label htmlFor="cagr-start">{t('tools.cagr.startValueLabel')}</label>
+          <input id="cagr-start" type="number" value={startValue} onChange={(e) => setStartValue(e.target.value)} />
+        </div>
+        <div className={styles.field}>
+          <label htmlFor="cagr-end">{t('tools.cagr.endValueLabel')}</label>
+          <input id="cagr-end" type="number" value={endValue} onChange={(e) => setEndValue(e.target.value)} />
+        </div>
+      </div>
+
+      <div className={styles.field}>
+        <label htmlFor="cagr-years">{t('tools.cagr.yearsLabel')}</label>
+        <input id="cagr-years" type="number" value={years} onChange={(e) => setYears(e.target.value)} />
+      </div>
+
+      {hasRequiredInputs ? (
+        <div className={`${styles.resultsGrid} count-in`}>
+          <div className={`${styles.resultCard} ${styles.resultCardWide} ${styles.resultCardPrimary} det-frame`}>
+            <span className={styles.resultLabel}>{t('tools.cagr.resultCagr')}</span>
+            <span
+              key={result.cagrPercent}
+              className={`num ${styles.resultValuePrimary} value-pop ${result.cagrPercent >= 0 ? styles.positive : styles.negative}`}
+            >
+              {result.cagrPercent >= 0 ? '+' : ''}
+              {result.cagrPercent.toFixed(2)}%
+            </span>
+          </div>
+        </div>
+      ) : (
+        <p className={styles.resultsPlaceholder}>{t('tools.calculatorEmptyState')}</p>
+      )}
+    </div>
+  )
+}
+
+function LiquidationCalculator() {
+  const { t, locale } = useLanguage()
+  const [entryPrice, setEntryPrice] = useState('')
+  const [leverage, setLeverage] = useState('')
+  const [direction, setDirection] = useState<'long' | 'short'>('long')
+  const [maintenanceMarginPercent, setMaintenanceMarginPercent] = useState('')
+
+  const entryPriceNum = parseField(entryPrice)
+  const leverageNum = parseField(leverage)
+  const maintenanceMarginPercentNum = parseField(maintenanceMarginPercent)
+  const hasRequiredInputs = entryPriceNum !== undefined && leverageNum !== undefined
+
+  const result = calculateLiquidationPrice({
+    entryPrice: entryPriceNum ?? 0,
+    leverage: leverageNum ?? 0,
+    direction,
+    maintenanceMarginPercent: maintenanceMarginPercentNum,
+  })
+
+  return (
+    <div className={`${styles.card} metal-panel holo-edge`}>
+      <h2>{t('tools.liquidation.title')}</h2>
+      <p className={styles.hint}>{t('tools.liquidation.hint')}</p>
+
+      <div className={styles.row}>
+        <div className={styles.field}>
+          <label htmlFor="liq-entry">{t('tools.liquidation.entryPriceLabel')}</label>
+          <input id="liq-entry" type="number" value={entryPrice} onChange={(e) => setEntryPrice(e.target.value)} />
+        </div>
+        <div className={styles.field}>
+          <label>{t('tools.liquidation.directionLabel')}</label>
+          <div className={styles.directionToggle}>
+            <button type="button" data-dir="long" data-active={direction === 'long'} onClick={() => setDirection('long')}>
+              Long
+            </button>
+            <button type="button" data-dir="short" data-active={direction === 'short'} onClick={() => setDirection('short')}>
+              Short
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className={styles.row}>
+        <div className={styles.field}>
+          <label htmlFor="liq-leverage">{t('tools.liquidation.leverageLabel')}</label>
+          <input id="liq-leverage" type="number" value={leverage} onChange={(e) => setLeverage(e.target.value)} />
+        </div>
+        <div className={styles.field}>
+          <label htmlFor="liq-mmp">{t('tools.liquidation.maintenanceMarginLabel')}</label>
+          <input
+            id="liq-mmp"
+            type="number"
+            value={maintenanceMarginPercent}
+            onChange={(e) => setMaintenanceMarginPercent(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {hasRequiredInputs ? (
+        <div className={`${styles.resultsGrid} count-in`}>
+          <div className={`${styles.resultCard} ${styles.resultCardPrimary} det-frame`}>
+            <span className={styles.resultLabel}>{t('tools.liquidation.resultLiquidationPrice')}</span>
+            <span key={result.liquidationPrice} className={`num ${styles.resultValuePrimary} value-pop`}>
+              {formatCurrency(result.liquidationPrice, 'USD', locale)}
+            </span>
+          </div>
+          <div className={styles.resultCard}>
+            <span className={styles.resultLabel}>{t('tools.liquidation.resultDistancePercent')}</span>
+            <span key={result.distancePercent} className={`num ${styles.resultValue} value-pop`}>{result.distancePercent.toFixed(2)}%</span>
+          </div>
+        </div>
+      ) : (
+        <p className={styles.resultsPlaceholder}>{t('tools.calculatorEmptyState')}</p>
+      )}
+
+      <p className={styles.hint}>{t('tools.liquidation.disclaimer')}</p>
     </div>
   )
 }
@@ -739,21 +1063,51 @@ function Watchlist({ accountId, tier, focusSignal, onOpenAccessCode }: Watchlist
  */
 interface ToolsProps {
   accountId: string
+  workspaceId: string
   tier: AccountTier
+  /** התבנית הנוכחית של ה-workspace - null = עדיין לא נבחרה (מציג את ה-prompt במקום הטאבים,
+   * לא "הכל פתוח" - ראה robust-munching-puffin.md). */
+  template: WorkspaceTemplate | null
   focusWatchlistSignal?: number
   /** פותח את מודל קוד הגישה (שדרוג) - מועבר עד ה-Watchlist, מוצג כשמגיעים למגבלת/דרגה של הדרגה. */
   onOpenAccessCode: () => void
+  /** נקרא אחרי שהתבנית נשמרה בהצלחה (TemplatePicker) - App.tsx מעדכן את ה-workspace ב-state. */
+  onTemplateSelected: (template: WorkspaceTemplate) => void
 }
 
-export function Tools({ accountId, tier, focusWatchlistSignal, onOpenAccessCode }: ToolsProps) {
+export function Tools({ accountId, workspaceId, tier, template, focusWatchlistSignal, onOpenAccessCode, onTemplateSelected }: ToolsProps) {
   const { t } = useLanguage()
   const [tab, setTab] = useState<ToolsTab>('positionSize')
+  const availableTabs = template ? TEMPLATE_TOOLS[template] : []
 
   // התראה בפעמון (App.tsx) מבקשת למקד את ה-Watchlist - עוברים לתת-הטאב הזה, ה-Watchlist
   // עצמה מטפלת בגלילה+פוקוס על שדה ה-Symbol (ראה focusSignal שם).
   useEffect(() => {
     if (focusWatchlistSignal) setTab('watchlist')
   }, [focusWatchlistSignal])
+
+  // אם הטאב הפעיל לא ברשימה המסוננת של התבנית (למשל עבר מ-Day ל-Long-term בעודו על
+  // positionSize, שם הוא לא קיים) - עובר אוטומטית לטאב הראשון הזמין. רץ גם ברגע שתבנית
+  // נבחרת לראשונה (template: null -> value).
+  useEffect(() => {
+    setTab((prev) => resolveActiveTab(template, prev))
+  }, [template])
+
+  if (!template) {
+    return (
+      <div className={styles.wrapper}>
+        <div className={styles.headerRow}>
+          <span className={`eyebrow ${styles.eyebrow}`}>{t('tools.eyebrow')}</span>
+          <h2 className={`hero-title ${styles.heroTitle}`}>{t('nav.tools')}</h2>
+        </div>
+        <div className={`${styles.card} metal-panel holo-edge`}>
+          <h2>{t('tools.selectTemplateTitle')}</h2>
+          <p className={styles.hint}>{t('tools.selectTemplateNote')}</p>
+        </div>
+        <TemplatePicker workspaceId={workspaceId} onSelected={onTemplateSelected} />
+      </div>
+    )
+  }
 
   return (
     <div className={styles.wrapper}>
@@ -764,22 +1118,52 @@ export function Tools({ accountId, tier, focusWatchlistSignal, onOpenAccessCode 
       </div>
 
       <div className={`${styles.subNav} btn-metal`}>
-        <button type="button" data-active={tab === 'positionSize'} onClick={() => setTab('positionSize')}>
-          {t('tools.positionSizeTab')}
-        </button>
-        <button type="button" data-active={tab === 'pnl'} onClick={() => setTab('pnl')}>
-          {t('tools.pnlTab')}
-        </button>
-        <button type="button" data-active={tab === 'watchlist'} onClick={() => setTab('watchlist')}>
-          {t('tools.watchlistTab')}
-        </button>
+        {availableTabs.includes('positionSize') && (
+          <button type="button" data-active={tab === 'positionSize'} onClick={() => setTab('positionSize')}>
+            {t('tools.positionSizeTab')}
+          </button>
+        )}
+        {availableTabs.includes('pnl') && (
+          <button type="button" data-active={tab === 'pnl'} onClick={() => setTab('pnl')}>
+            {t('tools.pnlTab')}
+          </button>
+        )}
+        {availableTabs.includes('watchlist') && (
+          <button type="button" data-active={tab === 'watchlist'} onClick={() => setTab('watchlist')}>
+            {t('tools.watchlistTab')}
+          </button>
+        )}
+        {availableTabs.includes('scaleIn') && (
+          <button type="button" data-active={tab === 'scaleIn'} onClick={() => setTab('scaleIn')}>
+            {t('tools.scaleInTab')}
+          </button>
+        )}
+        {availableTabs.includes('scaleOut') && (
+          <button type="button" data-active={tab === 'scaleOut'} onClick={() => setTab('scaleOut')}>
+            {t('tools.scaleOutTab')}
+          </button>
+        )}
+        {availableTabs.includes('cagr') && (
+          <button type="button" data-active={tab === 'cagr'} onClick={() => setTab('cagr')}>
+            {t('tools.cagrTab')}
+          </button>
+        )}
+        {availableTabs.includes('liquidation') && (
+          <button type="button" data-active={tab === 'liquidation'} onClick={() => setTab('liquidation')}>
+            {t('tools.liquidationTab')}
+          </button>
+        )}
       </div>
 
-      {tab === 'positionSize' && <PositionSizeCalculator />}
-      {tab === 'pnl' && <PnlCalculatorTool />}
-      {tab === 'watchlist' && (
+      {tab === 'positionSize' && availableTabs.includes('positionSize') && <PositionSizeCalculator />}
+      {tab === 'pnl' && availableTabs.includes('pnl') && <PnlCalculatorTool />}
+      {tab === 'watchlist' && availableTabs.includes('watchlist') && (
         <Watchlist accountId={accountId} tier={tier} focusSignal={focusWatchlistSignal} onOpenAccessCode={onOpenAccessCode} />
       )}
+      {tab === 'scaleIn' && availableTabs.includes('scaleIn') && <ScaleInCalculator />}
+      {tab === 'scaleOut' && availableTabs.includes('scaleOut') && <ScaleOutCalculator />}
+      {tab === 'cagr' && availableTabs.includes('cagr') && <CagrCalculator />}
+      {tab === 'liquidation' && availableTabs.includes('liquidation') && <LiquidationCalculator />}
     </div>
   )
 }

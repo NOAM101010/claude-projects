@@ -106,3 +106,158 @@ export function calculatePnl({
   return { profitLoss, profitLossPercent: investedCapital > 0 ? profitLossPercent : 0 }
 }
 
+export interface ScaleInInput {
+  existingEntryPrice: number
+  existingQuantity: number
+  addPrice: number
+  addQuantity: number
+}
+
+export interface ScaleInResult {
+  newAveragePrice: number
+  newTotalQuantity: number
+}
+
+/**
+ * ממוצע-משוקלל אחרי הוספה לפוזיציה קיימת (Scale-in): newAveragePrice = weighted average
+ * של שני המחירים לפי הכמויות. מחזיר אפסים אם הקלט לא תקין (כמויות/מחירים לא חיוביים/NaN).
+ */
+export function calculateScaleIn({ existingEntryPrice, existingQuantity, addPrice, addQuantity }: ScaleInInput): ScaleInResult {
+  if (
+    !Number.isFinite(existingEntryPrice) ||
+    !Number.isFinite(existingQuantity) ||
+    !Number.isFinite(addPrice) ||
+    !Number.isFinite(addQuantity) ||
+    existingEntryPrice <= 0 ||
+    existingQuantity <= 0 ||
+    addPrice <= 0 ||
+    addQuantity <= 0
+  ) {
+    return { newAveragePrice: 0, newTotalQuantity: 0 }
+  }
+
+  const newTotalQuantity = existingQuantity + addQuantity
+  const newAveragePrice = (existingEntryPrice * existingQuantity + addPrice * addQuantity) / newTotalQuantity
+
+  return { newAveragePrice, newTotalQuantity }
+}
+
+export interface ScaleOutInput {
+  entryPrice: number
+  direction: 'long' | 'short'
+  totalQuantity: number
+  sellPrice: number
+  sellQuantity: number
+}
+
+export interface ScaleOutResult {
+  realizedPnl: number
+  realizedPnlPercent: number
+  remainingQuantity: number
+}
+
+/**
+ * P&L ממומש ביציאה חלקית מפוזיציה (Scale-out) - אותה נוסחה בדיוק כמו `calculatePnl`
+ * (Long: (sellPrice-entryPrice)*sellQuantity | Short: הפוך), רק על `sellQuantity` ולא כל
+ * הפוזיציה. `remainingQuantity` = מה שנשאר אחרי המכירה. מחזיר אפסים בקלט לא תקין, כולל
+ * מכירת כמות גדולה מהפוזיציה כולה (sellQuantity > totalQuantity).
+ */
+export function calculateScaleOut({ entryPrice, direction, totalQuantity, sellPrice, sellQuantity }: ScaleOutInput): ScaleOutResult {
+  if (
+    !Number.isFinite(entryPrice) ||
+    !Number.isFinite(totalQuantity) ||
+    !Number.isFinite(sellPrice) ||
+    !Number.isFinite(sellQuantity) ||
+    entryPrice <= 0 ||
+    totalQuantity <= 0 ||
+    sellPrice <= 0 ||
+    sellQuantity <= 0 ||
+    sellQuantity > totalQuantity
+  ) {
+    return { realizedPnl: 0, realizedPnlPercent: 0, remainingQuantity: 0 }
+  }
+
+  const realizedPnl = direction === 'long' ? (sellPrice - entryPrice) * sellQuantity : (entryPrice - sellPrice) * sellQuantity
+  const rawPercent = ((sellPrice - entryPrice) / entryPrice) * 100
+  const realizedPnlPercent = direction === 'long' ? rawPercent : -rawPercent
+  const remainingQuantity = totalQuantity - sellQuantity
+
+  return { realizedPnl, realizedPnlPercent, remainingQuantity }
+}
+
+export interface CagrInput {
+  startValue: number
+  endValue: number
+  years: number
+}
+
+export interface CagrResult {
+  cagrPercent: number
+}
+
+/**
+ * קצב צמיחה שנתי מצטבר (CAGR) בין שני ערכים אמיתיים לאורך תקופה - מדד ריאלי, לא תחזית
+ * עתידית. cagrPercent = ((endValue/startValue)^(1/years) - 1) * 100. מחזיר אפס בקלט לא תקין
+ * (startValue/years לא חיוביים, endValue שלילי/NaN).
+ */
+export function calculateCagr({ startValue, endValue, years }: CagrInput): CagrResult {
+  if (
+    !Number.isFinite(startValue) ||
+    !Number.isFinite(endValue) ||
+    !Number.isFinite(years) ||
+    startValue <= 0 ||
+    endValue < 0 ||
+    years <= 0
+  ) {
+    return { cagrPercent: 0 }
+  }
+
+  const cagrPercent = ((endValue / startValue) ** (1 / years) - 1) * 100
+
+  return { cagrPercent }
+}
+
+export interface LiquidationPriceInput {
+  entryPrice: number
+  leverage: number
+  direction: 'long' | 'short'
+  /** אחוז מרג'ין תחזוקה נוסף (למשל 0.5 = 0.5%). ברירת מחדל 0 אם לא סופק. */
+  maintenanceMarginPercent?: number
+}
+
+export interface LiquidationPriceResult {
+  liquidationPrice: number
+  /** כמה אחוז המחיר צריך לזוז מהכניסה כדי להגיע לחיסול - ערך חיובי תמיד. */
+  distancePercent: number
+}
+
+/**
+ * מחיר חיסול משוער לפוזיציה ממונפת - מודל פשוט להערכה בלבד (isolated margin, בלי עמלות/
+ * ריבית מימון), לא מחליף את חישוב הבורסה/הברוקר בפועל. Long: entryPrice*(1-1/leverage+
+ * maintenanceMarginPercent/100); Short: entryPrice*(1+1/leverage-maintenanceMarginPercent/100).
+ * מחזיר אפסים בקלט לא תקין (entryPrice/leverage לא חיוביים).
+ */
+export function calculateLiquidationPrice({
+  entryPrice,
+  leverage,
+  direction,
+  maintenanceMarginPercent,
+}: LiquidationPriceInput): LiquidationPriceResult {
+  const mmp = maintenanceMarginPercent ?? 0
+
+  if (!Number.isFinite(entryPrice) || !Number.isFinite(leverage) || !Number.isFinite(mmp) || entryPrice <= 0 || leverage <= 0) {
+    return { liquidationPrice: 0, distancePercent: 0 }
+  }
+
+  const liquidationPrice =
+    direction === 'long' ? entryPrice * (1 - 1 / leverage + mmp / 100) : entryPrice * (1 + 1 / leverage - mmp / 100)
+
+  if (!Number.isFinite(liquidationPrice) || liquidationPrice < 0) {
+    return { liquidationPrice: 0, distancePercent: 0 }
+  }
+
+  const distancePercent = (Math.abs(entryPrice - liquidationPrice) / entryPrice) * 100
+
+  return { liquidationPrice, distancePercent }
+}
+

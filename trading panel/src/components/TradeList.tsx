@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
 import { formatCurrency, formatDate, formatDateTime } from '../lib/format'
-import { profitFactor, totalPnl, winRate } from '../lib/stats'
+import { isTradeOpen, profitFactor, totalPnl, winRate } from '../lib/stats'
 import { tradingViewUrl } from '../lib/tradingView'
 import { DEFAULT_TRADE_FILTERS, filterTrades, hasActiveFilters, type DateRangePreset, type DirectionFilter, type TradeFiltersState, type TypeFilter } from '../lib/tradeFilters'
 import type { Trade } from '../types/trade'
@@ -93,7 +93,7 @@ export function TradeList({ trades, filter, onClearFilter, onAdd, onEdit, onDele
   )
   const maxPositionValue = sorted.reduce((max, trade) => Math.max(max, trade.entryPrice * trade.quantity), 0)
 
-  const closedFiltered = useMemo(() => filtered.filter((t) => t.pnl !== null), [filtered])
+  const closedFiltered = useMemo(() => filtered.filter((t) => !isTradeOpen(t)), [filtered])
   const avgTrade = closedFiltered.length > 0 ? totalPnl(closedFiltered) / closedFiltered.length : 0
   const summaryPf = profitFactor(filtered)
   const summaryCurrency = filtered[0]?.currency ?? 'USD'
@@ -264,7 +264,13 @@ export function TradeList({ trades, filter, onClearFilter, onAdd, onEdit, onDele
               <tbody>
                 {sorted.map((trade, index) => {
                   const sizePercent = maxPositionValue > 0 ? ((trade.entryPrice * trade.quantity) / maxPositionValue) * 100 : 0
-                  const rowAccent = trade.pnl === null ? styles.rowNeutral : trade.pnl > 0 ? styles.rowPositive : trade.pnl < 0 ? styles.rowNegative : styles.rowNeutral
+                  const rowAccent = isTradeOpen(trade)
+                    ? styles.rowNeutral
+                    : (trade.pnl ?? 0) > 0
+                      ? styles.rowPositive
+                      : (trade.pnl ?? 0) < 0
+                        ? styles.rowNegative
+                        : styles.rowNeutral
                   // "טרי" מסומן רק על הטרייד העדכני ביותר בתצוגה הנוכחית (index 0 אחרי המיון
                   // לפי entryAt) - לא על כל שורה, כדי שהאפקט יישאר משמעותי ולא רועש.
                   const isFreshest = index === 0
@@ -295,11 +301,11 @@ export function TradeList({ trades, filter, onClearFilter, onAdd, onEdit, onDele
                         )}
                       </td>
                       <td className="num">
-                        {trade.pnl === null ? (
+                        {isTradeOpen(trade) ? (
                           <span className={styles.pnlOpen}>{t('common.open')}</span>
                         ) : (
-                          <span className={`${styles.pnl} ${trade.pnl >= 0 ? styles.pnlPositive : styles.pnlNegative}`}>
-                            {formatCurrency(trade.pnl, trade.currency, locale)}
+                          <span className={`${styles.pnl} ${(trade.pnl ?? 0) >= 0 ? styles.pnlPositive : styles.pnlNegative}`}>
+                            {formatCurrency(trade.pnl ?? 0, trade.currency, locale)}
                           </span>
                         )}
                       </td>
@@ -308,7 +314,7 @@ export function TradeList({ trades, filter, onClearFilter, onAdd, onEdit, onDele
                         <div className={styles.sizeTrack}>
                           <div
                             className={`${styles.sizeFill} ${
-                              trade.pnl === null ? styles.sizeNeutral : trade.pnl >= 0 ? styles.sizePositive : styles.sizeNegative
+                              isTradeOpen(trade) ? styles.sizeNeutral : (trade.pnl ?? 0) >= 0 ? styles.sizePositive : styles.sizeNegative
                             }`}
                             style={{ width: `${sizePercent}%` }}
                           />
@@ -348,11 +354,11 @@ export function TradeList({ trades, filter, onClearFilter, onAdd, onEdit, onDele
                     {trade.direction === 'long' ? 'Long' : 'Short'}
                   </span>
                 </div>
-                {trade.pnl === null ? (
+                {isTradeOpen(trade) ? (
                   <span className={styles.pnlOpen}>{t('common.open')}</span>
                 ) : (
-                  <span className={`${styles.pnl} ${trade.pnl >= 0 ? styles.pnlPositive : styles.pnlNegative}`}>
-                    {formatCurrency(trade.pnl, trade.currency, locale)}
+                  <span className={`${styles.pnl} ${(trade.pnl ?? 0) >= 0 ? styles.pnlPositive : styles.pnlNegative}`}>
+                    {formatCurrency(trade.pnl ?? 0, trade.currency, locale)}
                   </span>
                 )}
               </div>

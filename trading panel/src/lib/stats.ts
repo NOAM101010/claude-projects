@@ -1,3 +1,4 @@
+import type { SlTpField, SlTpHistoryEntry } from './slTpHistoryApi'
 import type { Trade } from '../types/trade'
 
 export interface PnlInput {
@@ -20,8 +21,21 @@ export function computePnl({ direction, entryPrice, exitPrice, quantity, fee }: 
   return raw - (fee ?? 0)
 }
 
+/**
+ * קריטריון קנוני יחיד ל"טרייד פתוח" - `exitPrice === null`, ולא `pnl`/`stopLoss`. פונקציה
+ * משותפת שכל הקוד (סטטיסטיקות כאן, `TradeList`/`OpenPositions`/`DesktopStatBar`/
+ * `MonthlyCalendar`/`tradeFilters.ts` וכו') חייב לקרוא לה, כדי שלא יהיו כמה בדיקות
+ * לא-עקביות שיכולות להתפצל זו מזו (ר' באג היסטורי: `pnl` יכול היה להישאר `null` אחרי
+ * ייבוא/מיזוג למרות ש-`exitPrice` כבר מולא - `importData.ts`/`mergeImport.ts` מתוקנים
+ * כעת לחשב `pnl` תמיד מ-`computePnl()` ברגע ש-`exitPrice` קיים, כדי ששני השדות לא
+ * ייצאו מסונכרנים).
+ */
+export function isTradeOpen(trade: Trade): boolean {
+  return trade.exitPrice === null
+}
+
 function closedTrades(trades: Trade[]): Trade[] {
-  return trades.filter((t) => t.pnl !== null)
+  return trades.filter((t) => !isTradeOpen(t))
 }
 
 /** אחוז טריידים סגורים עם רווח (pnl > 0), מתוך כלל הטריידים הסגורים. 0 אם אין טריידים סגורים. */
@@ -545,4 +559,153 @@ export function tradeOfTheMonth(trades: Trade[], referenceDate: Date = new Date(
 
   const best = closedThisMonth.reduce((best, t) => ((t.pnl ?? 0) > (best.pnl ?? 0) ? t : best))
   return { trade: best, closedCountInMonth: closedThisMonth.length }
+}
+
+export interface SlTpDirectionCounts {
+  /** התרחק ממחיר הכניסה לעומת הערך המקורי (יותר סיכון ב-SL, יעד רחוק יותר ב-TP) */
+  widened: number
+  /** התקרב למחיר הכניסה לעומת הערך המקורי (פחות סיכון ב-SL, יעד קרוב יותר ב-TP) */
+  tightened: number
+  /** אותו מרחק ממחיר הכניסה כמו הערך המקורי (הוזז אבל לא שינה מרחק, למשל 95→105 עם כניסה ב-100) */
+  unchanged: number
+}
+
+export interface SlTpAdjustmentStats {
+  /** מספר טריידים סגורים ייחודיים שעברו לפחות עדכון אחד ל-SL או TP (union, לא סכום) */
+  adjustedTradesCount: number
+  stopLoss: SlTpDirectionCounts
+  takeProfit: SlTpDirectionCounts
+}
+
+/**
+ * סטטיסטיקת התאמות SL/TP (רמה בסיסית - ללא win-rate analysis, לפי החלטה מראש). לוקחת
+ * רק טריידים **סגורים** (`exitPrice` לא null - ראה `isTradeOpen`) עם היסטוריית שינוי
+ * SL/TP (`trade_sl_tp_history`, ראה `slTpHistoryApi.ts`).
+ *
+ * "ערך מקורי" (baseline) לכל trade_id+field = ה-`oldValue` של רשומת ההיסטוריה עם ה-
+ * `changedAt` **הכי מוקדם** - לא הערך שהיה רגע לפני העריכה האחרונה. כך גם אחרי כמה
+ * עריכות רצופות, ההשוואה היא תמיד מול הערך הראשון-אי-פעם.
+ *
+ * הכיוון (widened/tightened) נקבע לפי מרחק אבסולוטי ממחיר הכניסה - המרחק הנוכחי
+ * (`trade.stopLoss`/`trade.takeProfit` החי) מול מרחק ה-baseline. אותה נוסחת מרחק לשני
+ * השדות (מתאימה את עצמה אוטומטית לכיוון long/short בלי לוגיקה נפרדת) - "התרחק
+ * ממחיר הכניסה" תמיד widened, "התקרב" תמיד tightened, בין אם זה SL (יותר/פחות סיכון)
+ * או TP (יעד רחוק/קרוב יותר).
+ *
+ * טרייד/שדה עם baseline null (השדה לא היה מוגדר מלכתחילה) או ערך נוכחי null (השדה
+ * נמחק) לא נספר בכיוון - אין מרחק תקף להשוואה - אבל עדיין נספר ב-`adjustedTradesCount`
+ * כי בכל זאת הייתה היסטוריית שינוי.
+ */
+export function slTpAdjustmentStats(trades: Trade[], history: SlTpHistoryEntry[]): SlTpAdjustmentStats {
+  const closed = closedTrades(trades)
+  const closedById = new Map(closed.map((t) => [t.id, t]))
+
+  const byTradeField = new Map<string, SlTpHistoryEntry[]>()
+  for (const entry of history) {
+    if (!closedById.has(entry.tradeId)) continue
+    const key = `${entry.tradeId}|${entry.field}`
+    const arr = byTradeField.get(key) ?? []
+    arr.push(entry)
+    byTradeField.set(key, arr)
+  }
+
+  const adjustedTradeIds = new Set<string>()
+  const stopLoss: SlTpDirectionCounts = { widened: 0, tightened: 0, unchanged: 0 }
+  const takeProfit: SlTpDirectionCounts = { widened: 0, tightened: 0, unchanged: 0 }
+
+  for (const [key, entries] of byTradeField) {
+    const separatorIndex = key.lastIndexOf('|')
+    const tradeId = key.slice(0, separatorIndex)
+    const field = key.slice(separatorIndex + 1) as SlTpField
+    const trade = closedById.get(tradeId)
+    if (!trade) continue
+    adjustedTradeIds.add(tradeId)
+
+    const oldest = entries.reduce((earliest, e) => (new Date(e.changedAt).getTime() < new Date(earliest.changedAt).getTime() ? e : earliest))
+    const baseline = oldest.oldValue
+    const current = field === 'stop_loss' ? trade.stopLoss : trade.takeProfit
+    if (baseline === null || current === null) continue
+
+    const baselineDistance = Math.abs(baseline - trade.entryPrice)
+    const currentDistance = Math.abs(current - trade.entryPrice)
+    const bucket = field === 'stop_loss' ? stopLoss : takeProfit
+    if (currentDistance > baselineDistance) bucket.widened += 1
+    else if (currentDistance < baselineDistance) bucket.tightened += 1
+    else bucket.unchanged += 1
+  }
+
+  return { adjustedTradesCount: adjustedTradeIds.size, stopLoss, takeProfit }
+}
+
+export interface DailyRiskBudgetUsage {
+  /** P&L נטו של טריידים שנסגרו היום (`exitAt` בתאריך המקומי של הריצה). 0 אם אין טריידים שנסגרו היום. */
+  netPnlToday: number
+  /** 0-100: כמה מהתקציב "נוצל" ע"י הפסד היום - 0 אם אין תקציב מוגדר או שהיום ברווח/מאוזן. */
+  budgetUsedPercent: number
+}
+
+/**
+ * שימוש בתקציב הסיכון היומי (Day Trading בלבד, `DailyRiskBudgetCard`) - משווה את ה-P&L
+ * הנטו של טריידים שנסגרו **היום** (זמן מקומי) מול `budget` שהמשתמש הגדיר ב-workspace.
+ * "נוצל" נמדד רק מול הפסד (`netPnlToday < 0`) - יום רווחי תמיד 0% נוצל, לא אחוז שלילי.
+ */
+export function dailyRiskBudgetUsage(trades: Trade[], budget: number | null): DailyRiskBudgetUsage {
+  const todayKey = new Date().toDateString()
+  const netPnlToday = closedTrades(trades)
+    .filter((t) => new Date(t.exitAt as string).toDateString() === todayKey)
+    .reduce((sum, t) => sum + (t.pnl ?? 0), 0)
+
+  if (budget === null || budget <= 0 || netPnlToday >= 0) {
+    return { netPnlToday, budgetUsedPercent: 0 }
+  }
+
+  return { netPnlToday, budgetUsedPercent: Math.min(100, (Math.abs(netPnlToday) / budget) * 100) }
+}
+
+const R_MULTIPLE_BUCKETS = ['<-2R', '-2..-1R', '-1..0R', '0..1R', '1..2R', '2..3R', '>3R'] as const
+
+export interface RMultipleBucket {
+  bucket: (typeof R_MULTIPLE_BUCKETS)[number]
+  count: number
+}
+
+function rMultipleBucket(r: number): RMultipleBucket['bucket'] {
+  if (r < -2) return '<-2R'
+  if (r < -1) return '-2..-1R'
+  if (r < 0) return '-1..0R'
+  if (r < 1) return '0..1R'
+  if (r < 2) return '1..2R'
+  if (r < 3) return '2..3R'
+  return '>3R'
+}
+
+/**
+ * התפלגות R-multiple לטריידים סגורים עם Stop Loss מוגדר - אותה נוסחת risk בדיוק כמו
+ * `avgRiskReward`/`liveRMultiple` (`risk = |entry - stop| * quantity`), `rMultiple = pnl / risk`.
+ * טריידים בלי stopLoss, או עם risk=0 (entry===stop, דגנרטיבי), מדולגים. כל 7 הדליים תמיד
+ * מופיעים בסדר קבוע - גם עם count=0 - כדי שההיסטוגרמה תמיד תציג את הטווח המלא, לא רק
+ * דליים שיש בהם דאטה.
+ */
+export function rMultipleDistribution(trades: Trade[]): RMultipleBucket[] {
+  const counts = new Map<RMultipleBucket['bucket'], number>(R_MULTIPLE_BUCKETS.map((b) => [b, 0]))
+
+  for (const t of trades) {
+    if (t.exitPrice === null || t.stopLoss === null) continue
+    const risk = Math.abs(t.entryPrice - t.stopLoss) * t.quantity
+    if (risk === 0) continue
+    const rMultiple = (t.pnl ?? 0) / risk
+    const bucket = rMultipleBucket(rMultiple)
+    counts.set(bucket, (counts.get(bucket) ?? 0) + 1)
+  }
+
+  return R_MULTIPLE_BUCKETS.map((bucket) => ({ bucket, count: counts.get(bucket) ?? 0 }))
+}
+
+/**
+ * פילוח טריידים סגורים לפי שעת כניסה (`entryAt`, זמן מקומי, 0-23) - אותה צורה בדיוק כמו
+ * `statsByDayOfWeek` (`GroupStats`), רק מפתח-קיבוץ שונה. `key` הוא מספר השעה כמחרוזת
+ * ("9"/"14") - פורמט תצוגה (למשל "9:00 AM") הוא אחריות ה-UI, לא הפונקציה הזו.
+ */
+export function performanceByHourOfDay(trades: Trade[]): GroupStats[] {
+  return groupClosedBy(trades, (t) => String(new Date(t.entryAt).getHours()))
 }

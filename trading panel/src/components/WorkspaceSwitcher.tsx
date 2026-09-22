@@ -2,17 +2,27 @@ import { useState } from 'react'
 import { Crown } from 'lucide-react'
 import { useLanguage } from '../i18n/LanguageContext'
 import { canCreateWorkspace } from '../lib/workspacesApi'
-import type { Workspace } from '../lib/workspacesApi'
+import type { Workspace, WorkspaceTemplate } from '../lib/workspacesApi'
 import type { AccountTier } from '../lib/accountApi'
 import { HIDE_NEW_WORKSPACE_BUTTON, HIDE_WORKSPACE_NAME_UI } from '../config/locks'
 import styles from './WorkspaceSwitcher.module.css'
+
+/** רשימת התבניות + מפתח שם - ר' TemplatePicker.tsx (אותו מיפוי, כפול בכוונה: כאן זו רק
+ * בחירת ברירת-מחדל אופציונלית ב-select פשוט, לא הכרטיסים המלאים עם תיאור). */
+const CREATE_TEMPLATE_OPTIONS: { value: WorkspaceTemplate; labelKey: 'templatePicker.day.name' | 'templatePicker.swing.name' | 'templatePicker.longterm.name' | 'templatePicker.crypto.name' }[] = [
+  { value: 'day', labelKey: 'templatePicker.day.name' },
+  { value: 'swing', labelKey: 'templatePicker.swing.name' },
+  { value: 'longterm', labelKey: 'templatePicker.longterm.name' },
+  { value: 'crypto', labelKey: 'templatePicker.crypto.name' },
+]
 
 interface WorkspaceSwitcherProps {
   workspaces: Workspace[]
   activeWorkspaceId: string
   tier: AccountTier
   onSwitch: (id: string) => void
-  onCreate: (name: string) => Promise<void>
+  /** template אופציונלי - Pro תמיד חופשי לבחור תבנית כבר ביצירה (ר' createWorkspace). */
+  onCreate: (name: string, template?: WorkspaceTemplate) => Promise<void>
   /** פותח את מודל קוד הגישה (שדרוג ל-Pro) - ראה trading-journal-plan.md סעיף 1/5. */
   onOpenAccessCode: () => void
 }
@@ -34,6 +44,7 @@ export function WorkspaceSwitcher({
   const { t } = useLanguage()
   const [showCreate, setShowCreate] = useState(false)
   const [name, setName] = useState('')
+  const [template, setTemplate] = useState<WorkspaceTemplate | ''>('')
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -63,6 +74,7 @@ export function WorkspaceSwitcher({
   const openCreate = () => {
     setError(null)
     setName('')
+    setTemplate('')
     setShowCreate(true)
   }
 
@@ -74,7 +86,7 @@ export function WorkspaceSwitcher({
     setCreating(true)
     setError(null)
     try {
-      await onCreate(name.trim())
+      await onCreate(name.trim(), template || undefined)
       setShowCreate(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : t('workspaceSwitcher.createFailed'))
@@ -115,6 +127,19 @@ export function WorkspaceSwitcher({
                 onChange={(e) => setName(e.target.value)}
                 autoFocus
               />
+              <select
+                className={styles.input}
+                value={template}
+                onChange={(e) => setTemplate(e.target.value as WorkspaceTemplate | '')}
+                aria-label={t('workspaceSwitcher.templateLabel')}
+              >
+                <option value="">{t('workspaceSwitcher.templateChooseLater')}</option>
+                {CREATE_TEMPLATE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {t(opt.labelKey)}
+                  </option>
+                ))}
+              </select>
               <div className={styles.actions}>
                 <button type="button" onClick={submitCreate} disabled={creating}>
                   {creating ? t('common.creating') : t('common.create')}

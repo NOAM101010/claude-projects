@@ -27,23 +27,7 @@
   width: 30px;
   height: 30px;
   flex-shrink: 0;
-  border-radius: 50%;
-  padding: 2px;
-  background: conic-gradient(from 140deg, var(--accent-2), #5a4522, var(--accent-2), #3a2e18, var(--accent-2));
-}
-
-.logoInner {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--metal-1);
-  font-family: var(--serif);
-  font-weight: 900;
-  font-size: 13px;
-  color: var(--accent-2);
+  object-fit: contain;
 }
 
 .brandText {
@@ -126,9 +110,29 @@
   flex-shrink: 0;
 }
 
-@media (min-width: 640px) {
+/* .navLabel קודם הופיע כבר ב-640px, בזמן ש-`.newButton` של WorkspaceSwitcher חזר לטקסט
+   מלא ("Upgrade to Pro...") כבר מעל 480px (ראה WorkspaceSwitcher.module.css) - בטווח
+   481-899px שני האזורים היו "מלאים" בו-זמנית ומציפים את ה-header, נמדד בדפדפן חי עם
+   חשבון Basic אמיתי: `document.documentElement.scrollWidth` > `clientWidth` ב-500px
+   (642, overflow 142px) וב-600px (653, overflow 53px). התיקון בשני קבצים ביחד: כאן
+   התוויות נדחות ל-900px, ובWorkspaceSwitcher.module.css `.upgradeText` מוסתר עד אותה
+   נקודה בדיוק (899px) - כך ששני הרכיבים תמיד באותו מצב "icon-only" יחד, בלי טווח-ביניים
+   שבו רק אחד מהם רחב. */
+@media (min-width: 900px) {
   .navLabel {
     display: inline;
+  }
+}
+
+/* טווח ביניים (480-899px): הניווט עצמו עדיין icon-only, אבל מכווץ מעט יותר (padding/gap)
+   כדי להשאיר עוד שוליים בטוחים. */
+@media (min-width: 480px) and (max-width: 899px) {
+  .nav {
+    gap: 3px;
+    padding: 4px;
+  }
+  .navButton {
+    padding: 8px 9px;
   }
 }
 

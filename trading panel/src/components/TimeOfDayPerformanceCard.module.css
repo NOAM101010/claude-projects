@@ -1,0 +1,144 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* כותרת קריאה בבירור - אותו טיפול בדיוק כמו LossSourceCard.module.css's .title, לא ה-.eyebrow
+   הקטן/העמום שמשמש לתוויות משניות בשאר האפליקציה. */
+.title {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+  color: var(--text-h);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.rowHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.rowLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-h);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowPnl {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  unicode-bidi: isolate;
+  white-space: nowrap;
+}
+
+.rowMeta {
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
+.positive {
+  color: var(--pnl-pos-2);
+}
+
+.negative {
+  color: var(--pnl-neg-2);
+}
+
+/* בר מדורג לכל setup - אורך יחסי לגודל ה-P&L הגדול ביותר בקבוצה, צבע לפי סימן. */
+.barTrack {
+  width: 100%;
+  height: 9px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: rgba(var(--overlay-tint), 0.05);
+  border: 1px solid var(--border);
+}
+
+/* קסקדה מדורגת: כל שורה מקבלת עיכוב-התחלה עולה לפי --row-index שלה (מוגדר inline ב-.row
+   ב-SetupPerformanceCard.tsx) - הבארים נחשפים אחד-אחרי-השני, לא כולם בו-זמנית כמו LossSourceCard's
+   בר דו-כיווני. */
+.barFill {
+  height: 100%;
+  transform-origin: left;
+  border-radius: inherit;
+  animation: bar-grow-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--row-index, 0) * 80ms);
+}
+
+.barFillPos {
+  background: var(--pnl-pos-2);
+}
+
+.barFillNeg {
+  background: var(--pnl-neg-2);
+}
+
+@keyframes bar-grow-in {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barFill {
+    animation: none;
+  }
+}
+
+/* טיזר מטושטש ל-non-pro - אותו דפוס בדיוק כמו WeeklyRecapCard.module.css's .lockedTeaser. */
+.lockedTeaser {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  filter: blur(4px);
+  opacity: 0.55;
+  pointer-events: none;
+  user-select: none;
+}
+
+.upgradeHint {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+
+.upgradeHint button {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  background: none;
+  color: var(--accent-2, var(--accent));
+  cursor: pointer;
+  text-decoration: underline;
+}

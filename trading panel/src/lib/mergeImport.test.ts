@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { importOrUpdateTrades } from './mergeImport'
+import { isTradeOpen } from './stats'
 import type { ParsedExcelRow } from './importExcel'
 import type { Trade } from '../types/trade'
 
@@ -78,6 +79,32 @@ describe('importOrUpdateTrades', () => {
     await importOrUpdateTrades('ws1', 'acc1', [{ ...matchingRow, pnl: 500, fee: 3 }], [breakEvenTrade])
     const patched = vi.mocked(updateTrade).mock.calls[0][1]
     expect(patched.pnl).toBe(0)
+  })
+
+  // תרחיש הבאג המקורי (CLAUDE.md task packet + stats.ts isTradeOpen): טרייד פתוח קיים
+  // (exitPrice null) מקבל exitPrice דרך מיזוג/ייבוא - pnl חייב להיות מחושב אז ולא להישאר
+  // null (שהיה גורם ל-isTradeOpen להתבלבל ולהמשיך להראות "Live" למרות שיש exit).
+  it('טרייד פתוח שמקבל exitPrice דרך מיזוג - מחשב pnl ונסגר (isTradeOpen הופך false)', async () => {
+    const { updateTrade } = await import('./tradesApi')
+    const openTrade: Trade = { ...existingTrade, exitAt: null, exitPrice: null, pnl: null }
+    const closingRow: ParsedExcelRow = { ...matchingRow, exitAt: '2026-01-10T00:00:00.000Z', exitPrice: 160, fee: 2 }
+    const result = await importOrUpdateTrades('ws1', 'acc1', [closingRow], [openTrade])
+    expect(result.updated).toBe(1)
+    const patched = vi.mocked(updateTrade).mock.calls[0][1]
+    expect(patched.exitPrice).toBe(160)
+    // computePnl(long, entry=150, exit=160, qty=10, fee=2) = (160-150)*10 - 2 = 98
+    expect(patched.pnl).toBe(98)
+    expect(isTradeOpen(patched)).toBe(false)
+  })
+
+  it('טרייד פתוח שמקבל exitPrice בלי pnl בקובץ - עדיין מחשב pnl (לא נשאר null)', async () => {
+    const { updateTrade } = await import('./tradesApi')
+    const openTrade: Trade = { ...existingTrade, exitAt: null, exitPrice: null, pnl: null, fee: null }
+    const closingRow: ParsedExcelRow = { ...matchingRow, exitAt: '2026-01-10T00:00:00.000Z', exitPrice: 160 }
+    await importOrUpdateTrades('ws1', 'acc1', [closingRow], [openTrade])
+    const patched = vi.mocked(updateTrade).mock.calls[0][1]
+    expect(patched.pnl).toBe(100) // computePnl(long, 150, 160, 10, fee null->0)
+    expect(patched.pnl).not.toBeNull()
   })
 
   it('unchanged אם אין שום שדה חסר להשלים - ולא נקראת updateTrade כלל', async () => {

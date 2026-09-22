@@ -7,6 +7,9 @@ vi.mock('./tradesApi', () => ({
 vi.mock('./watchlistApi', () => ({
   deleteAllWatchlistAlerts: vi.fn(async () => {}),
 }))
+vi.mock('./notificationsApi', () => ({
+  clearAllNotifications: vi.fn(async () => {}),
+}))
 
 describe('canCreateTrade', () => {
   it('חוסם דמו בהגיעו למגבלת 5 טריידים', () => {
@@ -27,9 +30,10 @@ describe('clearAccountTradingData', () => {
     vi.clearAllMocks()
   })
 
-  it('מוחקת את הטריידים של כל workspace בחשבון, ואת כל ה-watchlist שלו', async () => {
+  it('מוחקת את הטריידים של כל workspace בחשבון, את כל ה-watchlist שלו, ואת כל ההתראות שלו', async () => {
     const { deleteAllTradesInWorkspace } = await import('./tradesApi')
     const { deleteAllWatchlistAlerts } = await import('./watchlistApi')
+    const { clearAllNotifications } = await import('./notificationsApi')
 
     await clearAccountTradingData('acc-1', ['ws-1', 'ws-2'])
 
@@ -37,15 +41,18 @@ describe('clearAccountTradingData', () => {
     expect(deleteAllTradesInWorkspace).toHaveBeenNthCalledWith(1, 'ws-1')
     expect(deleteAllTradesInWorkspace).toHaveBeenNthCalledWith(2, 'ws-2')
     expect(deleteAllWatchlistAlerts).toHaveBeenCalledWith('acc-1')
+    expect(clearAllNotifications).toHaveBeenCalledWith('acc-1')
   })
 
-  it('לא נוגעת ב-watchlist/workspaces אחרים - workspaceIds ריק לא קורא ל-deleteAllTradesInWorkspace בכלל', async () => {
+  it('לא נוגעת ב-watchlist/workspaces אחרים - workspaceIds ריק לא קורא ל-deleteAllTradesInWorkspace בכלל, אבל עדיין מנקה watchlist+notifications', async () => {
     const { deleteAllTradesInWorkspace } = await import('./tradesApi')
     const { deleteAllWatchlistAlerts } = await import('./watchlistApi')
+    const { clearAllNotifications } = await import('./notificationsApi')
 
     await clearAccountTradingData('acc-1', [])
 
     expect(deleteAllTradesInWorkspace).not.toHaveBeenCalled()
     expect(deleteAllWatchlistAlerts).toHaveBeenCalledWith('acc-1')
+    expect(clearAllNotifications).toHaveBeenCalledWith('acc-1')
   })
 })

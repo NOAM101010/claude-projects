@@ -1,4 +1,5 @@
 import { deleteChartImage } from './chartImagesApi'
+import { recordSlTpChanges } from './slTpHistoryApi'
 import { getSupabase } from './supabase'
 import type { CurrencyCode, Direction, Setup, Trade, TradeInput } from '../types/trade'
 
@@ -115,11 +116,28 @@ export async function createTrade(workspaceId: string, accountId: string, trade:
   return rowToTrade(data as TradeRow)
 }
 
+/**
+ * מעדכנת טרייד קיים. לפני העדכון שולפת את ה-stop_loss/take_profit הישנים (שורה נפרדת,
+ * זולה) כדי לזהות שינוי ב-SL/TP ולשמור רשומת היסטוריה עליו (`recordSlTpChanges`,
+ * best-effort - ראה שם) - כך שגם `App.tsx` (עריכה ידנית) וגם `mergeImport.ts` (ייבוא/מיזוג)
+ * מקבלים את אותה שמירת היסטוריה בלי לשכפל את הלוגיקה בכל קורא.
+ */
 export async function updateTrade(id: string, trade: Trade): Promise<Trade> {
   const supabase = getSupabase()
+  const { data: previousRow, error: fetchError } = await supabase
+    .from('trades')
+    .select('stop_loss, take_profit')
+    .eq('id', id)
+    .single()
+  if (fetchError) throw fetchError
+
   const { id: _ignoredId, ...input } = trade
   const { data, error } = await supabase.from('trades').update(tradeInputToRow(input)).eq('id', id).select('*').single()
   if (error || !data) throw error ?? new Error('Failed to update trade')
+
+  const previous = previousRow as { stop_loss: number | null; take_profit: number | null }
+  await recordSlTpChanges(id, { stopLoss: previous.stop_loss, takeProfit: previous.take_profit }, { stopLoss: trade.stopLoss, takeProfit: trade.takeProfit })
+
   return rowToTrade(data as TradeRow)
 }
 

@@ -1,3 +1,4 @@
+import { computePnl } from './stats'
 import { createTrade } from './tradesApi'
 import { CURRENCIES } from '../types/trade'
 import type { CurrencyCode, Direction, Trade } from '../types/trade'
@@ -50,21 +51,33 @@ function validateTrade(raw: unknown, index: number): Trade {
     throw new Error(`Trade at index ${index} has an invalid exitAt`)
   }
 
+  const entryPrice = t.entryPrice as number
+  const quantity = t.quantity as number
+  const exitPrice = (t.exitPrice as number | null) ?? null
+  const fee = (t.fee as number | null) ?? null
+  // ה-pnl תמיד מחושב מחדש מ-exitPrice (computePnl) במקום להילקח "כמו שהוא" מהקובץ -
+  // כדי ש-pnl/exitPrice לעולם לא ייצאו מסונכרנים (למשל טרייד עם exitPrice מלא אבל pnl
+  // חסר/שגוי בקובץ המקור, שהיה גורם ל-isTradeOpen להתבלבל לפני התיקון הזה - ראה stats.ts).
+  // אין כאן סתירה עם עקרון "P&L immutability" (CLAUDE.md - שער המרה בדשבורד): זה עוסק
+  // בטרייד שכבר נשמר ב-DB, לא בערך שנכנס בזמן ייבוא/יצירה.
+  const pnl = exitPrice !== null
+    ? computePnl({ direction: t.direction as Direction, entryPrice, exitPrice, quantity, fee })
+    : null
+
   return {
     id: t.id as string,
     symbol: t.symbol as string,
     direction: t.direction,
     entryAt: t.entryAt as string,
-    entryPrice: t.entryPrice,
-    quantity: t.quantity,
+    entryPrice,
+    quantity,
     stopLoss: (t.stopLoss as number | null) ?? null,
     takeProfit: (t.takeProfit as number | null) ?? null,
     exitAt: (t.exitAt as string | null) ?? null,
-    exitPrice: (t.exitPrice as number | null) ?? null,
-    // כלל ברזל: ה-pnl נכנס בדיוק כפי שהיה בקובץ - לעולם לא מחושב מחדש (P&L immutability, ראה CLAUDE.md).
-    pnl: (t.pnl as number | null) ?? null,
+    exitPrice,
+    pnl,
     currency: t.currency,
-    fee: (t.fee as number | null) ?? null,
+    fee,
     notes: t.notes as string,
     setup: typeof t.setup === 'string' ? t.setup : undefined,
     chartImageUrl: typeof t.chartImageUrl === 'string' ? t.chartImageUrl : undefined,

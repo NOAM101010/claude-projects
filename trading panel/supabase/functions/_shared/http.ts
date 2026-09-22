@@ -17,5 +17,9 @@ export function preflightResponse(): Response {
 }
 
 export function errorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : 'שגיאה לא ידועה'
+  if (err instanceof Error) return err.message
+  if (typeof err === 'object' && err !== null && 'message' in err && typeof (err as { message: unknown }).message === 'string') {
+    return (err as { message: string }).message
+  }
+  return 'שגיאה לא ידועה'
 }

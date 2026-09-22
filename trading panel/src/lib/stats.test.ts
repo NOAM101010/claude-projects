@@ -6,14 +6,19 @@ import {
   bestTrade,
   computePnl,
   dailyPnl,
+  dailyRiskBudgetUsage,
   dayActivityLevel,
   drawdownCurve,
   equityCurve,
   expectancy,
+  isTradeOpen,
   lossSourceBreakdown,
   maxDrawdown,
+  performanceByHourOfDay,
   profitFactor,
   rankedSetupPerformance,
+  rMultipleDistribution,
+  slTpAdjustmentStats,
   statsByDayOfWeek,
   statsBySetup,
   statsBySymbol,
@@ -26,6 +31,7 @@ import {
   winRate,
   worstTrade,
 } from './stats'
+import type { SlTpHistoryEntry } from './slTpHistoryApi'
 import type { Trade } from '../types/trade'
 
 function makeTrade(overrides: Partial<Trade>): Trade {
@@ -55,6 +61,23 @@ function makeTrade(overrides: Partial<Trade>): Trade {
   })
   return base
 }
+
+describe('isTradeOpen', () => {
+  it('true כש-exitPrice הוא null, ללא קשר ל-stopLoss/takeProfit', () => {
+    const trade = makeTrade({ exitAt: null, exitPrice: null, stopLoss: 90, takeProfit: 120 })
+    expect(isTradeOpen(trade)).toBe(true)
+  })
+
+  it('false כש-exitPrice קיים, גם בלי stopLoss/takeProfit בכלל', () => {
+    const trade = makeTrade({ exitPrice: 110, stopLoss: null, takeProfit: null })
+    expect(isTradeOpen(trade)).toBe(false)
+  })
+
+  it('לא מושפע מ-pnl (רק exitPrice קובע) - טרייד עם exitPrice אבל pnl==null (למשל דאטה ישנה מלפני תיקון הבאג) עדיין נחשב סגור', () => {
+    const trade = { ...makeTrade({ exitPrice: 110 }), pnl: null }
+    expect(isTradeOpen(trade)).toBe(false)
+  })
+})
 
 describe('computePnl', () => {
   it('calculates long P&L correctly', () => {
@@ -535,5 +558,184 @@ describe('rankedSetupPerformance', () => {
       makeTrade({ setup: 'B', entryPrice: 100, exitPrice: 105 }), // +5 => B total +15
     ]
     expect(rankedSetupPerformance(trades).map((r) => r.key)).toEqual(['A', 'B'])
+  })
+})
+
+describe('slTpAdjustmentStats', () => {
+  function makeHistoryEntry(overrides: Partial<SlTpHistoryEntry>): SlTpHistoryEntry {
+    return {
+      id: overrides.id ?? crypto.randomUUID(),
+      tradeId: overrides.tradeId ?? 'trade-1',
+      field: overrides.field ?? 'stop_loss',
+      oldValue: overrides.oldValue ?? null,
+      newValue: overrides.newValue ?? null,
+      changedAt: overrides.changedAt ?? '2026-01-01T00:00:00.000Z',
+    }
+  }
+
+  it('מחזירה הכל-אפס כשאין טריידים ואין היסטוריה', () => {
+    expect(slTpAdjustmentStats([], [])).toEqual({
+      adjustedTradesCount: 0,
+      stopLoss: { widened: 0, tightened: 0, unchanged: 0 },
+      takeProfit: { widened: 0, tightened: 0, unchanged: 0 },
+    })
+  })
+
+  it('מחזירה הכל-אפס כשיש טריידים אבל אין להם היסטוריה', () => {
+    const trades = [makeTrade({ id: 'trade-1' })]
+    expect(slTpAdjustmentStats(trades, [])).toEqual({
+      adjustedTradesCount: 0,
+      stopLoss: { widened: 0, tightened: 0, unchanged: 0 },
+      takeProfit: { widened: 0, tightened: 0, unchanged: 0 },
+    })
+  })
+
+  it('מתעלמת מהיסטוריה של טרייד פתוח (exitPrice null) - לא נספר בכלל', () => {
+    const trades = [makeTrade({ id: 'trade-1', entryPrice: 100, exitPrice: null, stopLoss: 90 })]
+    const history = [makeHistoryEntry({ tradeId: 'trade-1', field: 'stop_loss', oldValue: 95, newValue: 90 })]
+    expect(slTpAdjustmentStats(trades, history).adjustedTradesCount).toBe(0)
+  })
+
+  it('מסווגת "widened" כשה-SL הנוכחי רחוק יותר ממחיר הכניסה לעומת ה-baseline', () => {
+    const trades = [makeTrade({ id: 'trade-1', entryPrice: 100, exitPrice: 110, stopLoss: 80 })]
+    const history = [makeHistoryEntry({ tradeId: 'trade-1', field: 'stop_loss', oldValue: 95, newValue: 80 })]
+    const result = slTpAdjustmentStats(trades, history)
+    expect(result.adjustedTradesCount).toBe(1)
+    expect(result.stopLoss).toEqual({ widened: 1, tightened: 0, unchanged: 0 })
+  })
+
+  it('מסווגת "tightened" כשה-SL הנוכחי קרוב יותר למחיר הכניסה לעומת ה-baseline', () => {
+    const trades = [makeTrade({ id: 'trade-1', entryPrice: 100, exitPrice: 110, stopLoss: 98 })]
+    const history = [makeHistoryEntry({ tradeId: 'trade-1', field: 'stop_loss', oldValue: 90, newValue: 98 })]
+    const result = slTpAdjustmentStats(trades, history)
+    expect(result.stopLoss).toEqual({ widened: 0, tightened: 1, unchanged: 0 })
+  })
+
+  it('מסווגת "unchanged" כשהמרחק ממחיר הכניסה נשאר זהה (95→105 עם כניסה ב-100)', () => {
+    const trades = [makeTrade({ id: 'trade-1', entryPrice: 100, exitPrice: 90, takeProfit: 105 })]
+    const history = [makeHistoryEntry({ tradeId: 'trade-1', field: 'take_profit', oldValue: 95, newValue: 105 })]
+    const result = slTpAdjustmentStats(trades, history)
+    expect(result.takeProfit).toEqual({ widened: 0, tightened: 0, unchanged: 1 })
+  })
+
+  it('לא מסווגת כיוון כש-baseline או הערך הנוכחי null (עדיין נספרת ב-adjustedTradesCount)', () => {
+    const trades = [makeTrade({ id: 'trade-1', entryPrice: 100, exitPrice: 110, stopLoss: null })]
+    const history = [makeHistoryEntry({ tradeId: 'trade-1', field: 'stop_loss', oldValue: 90, newValue: null })]
+    const result = slTpAdjustmentStats(trades, history)
+    expect(result.adjustedTradesCount).toBe(1)
+    expect(result.stopLoss).toEqual({ widened: 0, tightened: 0, unchanged: 0 })
+  })
+
+  it('"ערך מקורי" (baseline) = ה-oldValue של הרשומה הכי ישנה, לא זו שרגע לפני העדכון האחרון - אחרי 3 עריכות רצופות', () => {
+    // שרשרת עריכות אמיתית: 90 (מקורי) -> 80 -> 97 -> 95 (נוכחי/חי). כניסה ב-100.
+    // baseline נכון = 90 (מרחק 10) מול נוכחי 95 (מרחק 5) => tightened.
+    // baseline שגוי (לו היה נלקח מהעדכון הכי אחרון, 97, מרחק 3) מול נוכחי 95 (מרחק 5) => widened - כיוון הפוך!
+    // הרשומות מסופקות בסדר לא-כרונולוגי בכוונה, כדי לוודא שהפונקציה ממיינת לפי changedAt ולא סומכת על סדר המערך.
+    const trades = [makeTrade({ id: 'trade-1', entryPrice: 100, exitPrice: 110, stopLoss: 95 })]
+    const history = [
+      makeHistoryEntry({ tradeId: 'trade-1', field: 'stop_loss', oldValue: 97, newValue: 95, changedAt: '2026-01-03T00:00:00.000Z' }),
+      makeHistoryEntry({ tradeId: 'trade-1', field: 'stop_loss', oldValue: 90, newValue: 80, changedAt: '2026-01-01T00:00:00.000Z' }),
+      makeHistoryEntry({ tradeId: 'trade-1', field: 'stop_loss', oldValue: 80, newValue: 97, changedAt: '2026-01-02T00:00:00.000Z' }),
+    ]
+    const result = slTpAdjustmentStats(trades, history)
+    expect(result.adjustedTradesCount).toBe(1)
+    expect(result.stopLoss).toEqual({ widened: 0, tightened: 1, unchanged: 0 })
+  })
+
+  it('סופרת adjustedTradesCount כ-union (טרייד עם שינוי גם ב-SL וגם ב-TP נספר פעם אחת)', () => {
+    const trades = [makeTrade({ id: 'trade-1', entryPrice: 100, exitPrice: 110, stopLoss: 80, takeProfit: 130 })]
+    const history = [
+      makeHistoryEntry({ tradeId: 'trade-1', field: 'stop_loss', oldValue: 95, newValue: 80 }),
+      makeHistoryEntry({ tradeId: 'trade-1', field: 'take_profit', oldValue: 115, newValue: 130 }),
+    ]
+    const result = slTpAdjustmentStats(trades, history)
+    expect(result.adjustedTradesCount).toBe(1)
+    expect(result.stopLoss.widened).toBe(1)
+    expect(result.takeProfit.widened).toBe(1)
+  })
+})
+
+describe('dailyRiskBudgetUsage', () => {
+  it('budget=null - תמיד 0%, גם אם היה הפסד היום', () => {
+    const trades = [makeTrade({ exitAt: new Date().toISOString(), entryPrice: 100, exitPrice: 90, quantity: 10 })]
+    const result = dailyRiskBudgetUsage(trades, null)
+    expect(result.netPnlToday).toBe(-100)
+    expect(result.budgetUsedPercent).toBe(0)
+  })
+
+  it('יום רווחי - budgetUsedPercent תמיד 0%, גם עם budget מוגדר', () => {
+    const trades = [makeTrade({ exitAt: new Date().toISOString(), entryPrice: 100, exitPrice: 110, quantity: 10 })]
+    const result = dailyRiskBudgetUsage(trades, 200)
+    expect(result.netPnlToday).toBe(100)
+    expect(result.budgetUsedPercent).toBe(0)
+  })
+
+  it('מחשבת אחוז ניצול נכון על הפסד היום, קליפ ל-100', () => {
+    const trades = [makeTrade({ exitAt: new Date().toISOString(), entryPrice: 100, exitPrice: 90, quantity: 10 })]
+    expect(dailyRiskBudgetUsage(trades, 200).budgetUsedPercent).toBe(50)
+    expect(dailyRiskBudgetUsage(trades, 50).budgetUsedPercent).toBe(100)
+  })
+
+  it('budget<=0 - 0%, לא חלוקה ב-0/שלילי', () => {
+    const trades = [makeTrade({ exitAt: new Date().toISOString(), entryPrice: 100, exitPrice: 90, quantity: 10 })]
+    expect(dailyRiskBudgetUsage(trades, 0).budgetUsedPercent).toBe(0)
+    expect(dailyRiskBudgetUsage(trades, -50).budgetUsedPercent).toBe(0)
+  })
+
+  it('מתעלמת מטריידים שנסגרו בימים אחרים', () => {
+    const trades = [makeTrade({ exitAt: '2020-01-01T10:00:00.000Z', entryPrice: 100, exitPrice: 50, quantity: 10 })]
+    const result = dailyRiskBudgetUsage(trades, 100)
+    expect(result.netPnlToday).toBe(0)
+    expect(result.budgetUsedPercent).toBe(0)
+  })
+})
+
+describe('rMultipleDistribution', () => {
+  it('מחזירה תמיד את כל 7 הדליים, בסדר קבוע, גם ריקים', () => {
+    const buckets = rMultipleDistribution([])
+    expect(buckets.map((b) => b.bucket)).toEqual(['<-2R', '-2..-1R', '-1..0R', '0..1R', '1..2R', '2..3R', '>3R'])
+    expect(buckets.every((b) => b.count === 0)).toBe(true)
+  })
+
+  it('מדלגת על טריידים פתוחים, בלי stopLoss, או עם risk=0', () => {
+    const trades = [
+      makeTrade({ exitPrice: null }),
+      makeTrade({ exitPrice: 110, stopLoss: null }),
+      makeTrade({ exitPrice: 110, stopLoss: 100, entryPrice: 100 }), // risk=0
+    ]
+    const buckets = rMultipleDistribution(trades)
+    expect(buckets.every((b) => b.count === 0)).toBe(true)
+  })
+
+  it('מקבצת נכון לפי R-multiple (risk = |entry-stop|*qty, R = pnl/risk)', () => {
+    const trades = [
+      // entry 100, stop 90, qty 10 -> risk 100. exit 110 -> pnl 100 -> R=1 -> '0..1R' (בדיוק 1 נופל ל-'1..2R')
+      makeTrade({ entryPrice: 100, stopLoss: 90, quantity: 10, exitPrice: 150 }), // pnl 500, R=5 -> '>3R'
+      makeTrade({ entryPrice: 100, stopLoss: 90, quantity: 10, exitPrice: 80 }), // pnl -200, R=-2 -> '<-2R' (exactly -2 -> '-2..-1R'? -2 < -2 false, -2 < -1 true -> '-2..-1R')
+      makeTrade({ entryPrice: 100, stopLoss: 90, quantity: 10, exitPrice: 105 }), // pnl 50, R=0.5 -> '0..1R'
+    ]
+    const buckets = rMultipleDistribution(trades)
+    const byBucket = Object.fromEntries(buckets.map((b) => [b.bucket, b.count]))
+    expect(byBucket['>3R']).toBe(1)
+    expect(byBucket['-2..-1R']).toBe(1)
+    expect(byBucket['0..1R']).toBe(1)
+  })
+})
+
+describe('performanceByHourOfDay', () => {
+  it('מקבצת טריידים סגורים לפי שעת entryAt מקומית, באותה צורה כמו GroupStats', () => {
+    const trades = [
+      makeTrade({ entryAt: '2026-01-01T09:30:00.000Z', exitPrice: 110, entryPrice: 100 }),
+      makeTrade({ entryAt: '2026-01-02T09:15:00.000Z', exitPrice: 90, entryPrice: 100 }),
+      makeTrade({ entryAt: '2026-01-03T14:00:00.000Z', exitPrice: 120, entryPrice: 100 }),
+    ]
+    const result = performanceByHourOfDay(trades)
+    const hour9 = result.find((r) => r.key === String(new Date('2026-01-01T09:30:00.000Z').getHours()))
+    expect(hour9?.trades).toBe(2)
+  })
+
+  it('מתעלמת מטריידים פתוחים', () => {
+    const trades = [makeTrade({ exitPrice: null })]
+    expect(performanceByHourOfDay(trades)).toEqual([])
   })
 })

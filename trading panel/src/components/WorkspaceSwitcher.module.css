@@ -45,12 +45,15 @@
   flex-shrink: 0;
 }
 
-/* מתחת ל-480px (אותו breakpoint שבו `.brandText` נעלם ב-PillNav) הפיל הזה הופך
-   לאייקון-בלבד - הטקסט המלא "Upgrade to Pro for more workspaces" הוא שגורם
-   ל-`document.documentElement.scrollWidth` לחרוג מ-375px (ה-header הגלובלי לא
-   יכול להתכווץ מתחתיו, ראה PillNav.module.css: `.actions` הוא `flex-shrink: 0`).
-   נשאר נגיש דרך `aria-label`/`title` על הכפתור עצמו. */
-@media (max-width: 480px) {
+/* עד 899px (לא רק 480px) הפיל הזה הופך לאייקון-בלבד - חייב להתאים בדיוק לנקודת השבירה
+   שבה `.navLabel` מופיע ב-PillNav.module.css (`@media (min-width: 900px)`). כשהיה כאן
+   480px בלבד, נוצר טווח שבור 481-899px שבו גם הטקסט המלא "Upgrade to Pro for more
+   workspaces" כאן וגם תוויות הניווט המלאות שם רצו להופיע בו-זמנית - נמדד בדפדפן חי
+   (חשבון Basic אמיתי) `document.documentElement.scrollWidth` חורג מ-`clientWidth` ב-
+   500px (642 - overflow 142px) וב-600px (653 - overflow 53px), נקי רק מ-480px ומ-650px
+   ומעלה. ה-header הגלובלי לא יכול להתכווץ מתחת לזה (ראה PillNav.module.css: `.actions`
+   הוא `flex-shrink: 0`). נשאר נגיש דרך `aria-label`/`title` על הכפתור עצמו. */
+@media (max-width: 899px) {
   .newButton {
     padding: 7px 9px;
   }

@@ -5,9 +5,10 @@
 # demo-start/redeem: false - מנפיקות זהות (JWT) בעצמן, אין להן JWT קיים לבדוק מראש.
 # check-price-alerts: false - מופעלת ע"י pg_cron (net.http_post לא נושא JWT משתמש),
 #   מאומתת בעצמה מול CRON_SECRET (header ייעודי, לא APP_JWT_SECRET).
-# send-test-push/market-indices/watchlist-prices/open-positions-prices/exchange-rate:
-#   true (ברירת המחדל) - כולן דורשות Authorization: Bearer <access token> תקף שמונפק
-#   ע"י demo-start/redeem, ו-Gateway של Supabase מאמת את החתימה לפני שהבקשה מגיעה לקוד.
+# send-test-push/market-indices/watchlist-prices/open-positions-prices/exchange-rate/
+# device-status/disconnect-device/switch-template: true (ברירת המחדל) - כולן דורשות
+# Authorization: Bearer <access token> תקף שמונפק ע"י demo-start/redeem, ו-Gateway
+# של Supabase מאמת את החתימה לפני שהבקשה מגיעה לקוד.
 
 [functions.demo-start]
 verify_jwt = false
@@ -31,4 +32,13 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.exchange-rate]
+verify_jwt = true
+
+[functions.device-status]
+verify_jwt = true
+
+[functions.disconnect-device]
+verify_jwt = true
+
+[functions.switch-template]
 verify_jwt = true

@@ -30,9 +30,11 @@ import type { AccountTier } from './lib/accountApi'
 import { deleteChartImage } from './lib/chartImagesApi'
 import { ensureSession, getStoredSession, isCodeVerified } from './lib/session'
 import type { Session } from './lib/session'
+import { listSlTpHistoryForTrades } from './lib/slTpHistoryApi'
+import type { SlTpHistoryEntry } from './lib/slTpHistoryApi'
 import { createTrade, deleteTrade, listTrades, updateTrade } from './lib/tradesApi'
-import { createWorkspace, ensureWorkspace, listWorkspaces } from './lib/workspacesApi'
-import type { FieldSettings, Workspace } from './lib/workspacesApi'
+import { TEMPLATE_FIELD_DEFAULTS, createWorkspace, ensureWorkspace, listWorkspaces } from './lib/workspacesApi'
+import type { FieldSettings, Workspace, WorkspaceTemplate } from './lib/workspacesApi'
 import type { Trade } from './types/trade'
 import './App.css'
 
@@ -59,6 +61,10 @@ function App() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null)
   const [trades, setTrades] = useState<Trade[]>([])
+  // היסטוריית שינויי SL/TP של ה-workspace הפעיל (ראה slTpHistoryApi.ts) - נטענת יחד עם
+  // הטריידים עצמם (loadAccount/switchWorkspace) ומתרעננת אחרי כל עריכה (handleSave),
+  // כדי ש-Dashboard (slTpAdjustmentStats) תמיד יראה גם רשומות היסטוריה שנוספו זה עתה.
+  const [slTpHistory, setSlTpHistory] = useState<SlTpHistoryEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [tradesLoading, setTradesLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -109,12 +115,14 @@ function App() {
     const storedId = localStorage.getItem(ACTIVE_WORKSPACE_KEY)
     const initialWorkspace = ws.find((w) => w.id === storedId) ?? ws[0]
     const loadedTrades = await listTrades(initialWorkspace.id)
+    const loadedSlTpHistory = await listSlTpHistoryForTrades(loadedTrades.map((t) => t.id))
     setAccountId(session.accountId)
     setTier(account.tier)
     setDemoTradesCreated(account.demoTradesCreated)
     setWorkspaces(ws)
     setActiveWorkspaceId(initialWorkspace.id)
     setTrades(loadedTrades)
+    setSlTpHistory(loadedSlTpHistory)
   }
 
   useEffect(() => {
@@ -173,6 +181,11 @@ function App() {
     // מונה טריידי-הדמו מתעדכן בשרת ע"י טריגר DB בכל insert (008_demo_trades_created.sql) -
     // מעדכנים גם מקומית כדי שהמגבלה תשתקף מיד, בלי fetch נוסף לחשבון.
     if (!exists) setDemoTradesCreated((prev) => prev + 1)
+    // עריכת טרייד קיים עשויה הייתה ליצור רשומת היסטוריית SL/TP (updateTrade, best-effort) -
+    // מרעננים מהשרת במקום לנחש בצד קליינט אם/מה נוצר.
+    if (exists) {
+      setSlTpHistory(await listSlTpHistoryForTrades(trades.map((t) => t.id)))
+    }
     closeForm()
   }
 
@@ -235,6 +248,14 @@ function App() {
     setWorkspaces((prev) => prev.map((w) => (w.id === activeWorkspaceId ? { ...w, ...patch } : w)))
   }
 
+  /** נקרא אחרי ש-TemplatePicker כבר שמר את התבנית+fieldSettings ב-DB (ראה setWorkspaceTemplate) -
+   * מעדכן את שני השדות יחד ב-state המקומי, כמו handleFieldSettingsChange. */
+  const handleTemplateSelected = (template: WorkspaceTemplate) => {
+    setWorkspaces((prev) =>
+      prev.map((w) => (w.id === activeWorkspaceId ? { ...w, template, fieldSettings: TEMPLATE_FIELD_DEFAULTS[template] } : w)),
+    )
+  }
+
   const switchWorkspace = async (id: string) => {
     if (id === activeWorkspaceId) return
     closeForm()
@@ -243,8 +264,10 @@ function App() {
     setLoadError(null)
     try {
       const loadedTrades = await listTrades(id)
+      const loadedSlTpHistory = await listSlTpHistoryForTrades(loadedTrades.map((t) => t.id))
       setActiveWorkspaceId(id)
       setTrades(loadedTrades)
+      setSlTpHistory(loadedSlTpHistory)
       localStorage.setItem(ACTIVE_WORKSPACE_KEY, id)
       setFilter(null)
     } catch (err) {
@@ -254,9 +277,9 @@ function App() {
     }
   }
 
-  const handleCreateWorkspace = async (name: string) => {
+  const handleCreateWorkspace = async (name: string, template?: WorkspaceTemplate) => {
     if (!accountId) return
-    const created = await createWorkspace(accountId, tier, name)
+    const created = await createWorkspace(accountId, tier, name, template)
     setWorkspaces((prev) => [...prev, created])
     await switchWorkspace(created.id)
   }
@@ -436,8 +459,11 @@ function App() {
           ) : tab === 'journal' ? (
             <Journal
               trades={trades}
+              slTpHistory={slTpHistory}
               baseCurrency={workspace.baseCurrency}
               tier={tier}
+              template={workspace.template}
+              dailyRiskBudget={workspace.dailyRiskBudget}
               onOpenAccessCode={() => openAccessModal(t('dashboard.weeklyRecapModalHint'))}
               subTab={journalSubTab}
               onSubTabChange={setJournalSubTab}
@@ -452,9 +478,12 @@ function App() {
           ) : tab === 'tools' ? (
             <Tools
               accountId={accountId}
+              workspaceId={workspace.id}
               tier={tier}
+              template={workspace.template}
               focusWatchlistSignal={focusWatchlistSignal}
               onOpenAccessCode={() => openAccessModal(t('tools.watchlist.modalHint'))}
+              onTemplateSelected={handleTemplateSelected}
             />
           ) : tab === 'calendar' ? (
             <MonthlyCalendar trades={trades} baseCurrency={workspace.baseCurrency} onEditTrade={openEditForm} />
@@ -471,6 +500,7 @@ function App() {
               onTradesImported={handleTradesImported}
               onTradesUpdated={handleTradesUpdated}
               onOpenAccessCode={() => openAccessModal(t('workspaceSettings.modalHint'))}
+              onTemplateSelected={handleTemplateSelected}
             />
           )}
         </main>

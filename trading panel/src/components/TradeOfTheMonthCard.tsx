@@ -27,6 +27,9 @@ interface TradeOfTheMonthCardProps {
 
 /** אחוז שינוי אמיתי לפי כיוון הטרייד - long: (exit-entry)/entry, short: (entry-exit)/entry. */
 function pctChange(trade: Trade): number {
+  // שקול ל-isTradeOpen(trade) (ראה stats.ts) - נכתב כ-`trade.exitPrice === null` ישירות
+  // כדי ש-TS יצמצם את הטיפוס (narrowing) לשורה הבאה; isTradeOpen לא עוזר כאן כי TS לא
+  // יודע להסיק null-safety מקריאה לפונקציה חיצונית.
   if (trade.exitPrice === null) return 0
   const diff = trade.direction === 'long' ? trade.exitPrice - trade.entryPrice : trade.entryPrice - trade.exitPrice
   return trade.entryPrice === 0 ? 0 : (diff / trade.entryPrice) * 100

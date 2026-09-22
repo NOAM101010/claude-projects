@@ -1,6 +1,8 @@
 import { lazy, Suspense, useState } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { AccountTier } from '../lib/accountApi'
+import type { SlTpHistoryEntry } from '../lib/slTpHistoryApi'
+import type { WorkspaceTemplate } from '../lib/workspacesApi'
 import { TradeList } from './TradeList'
 import { DEFAULT_TRADE_FILTERS, type TradeFiltersState } from '../lib/tradeFilters'
 import type { TradeFilter } from '../App'
@@ -15,8 +17,13 @@ export type JournalSubTab = 'trades' | 'dashboard'
 
 interface JournalProps {
   trades: Trade[]
+  slTpHistory: SlTpHistoryEntry[]
   baseCurrency: CurrencyCode
   tier: AccountTier
+  /** תבנית ה-workspace הפעיל - מועבר עד ה-Dashboard (כרטיסי Day Trading בלבד, robust-munching-puffin.md סבב C2). */
+  template: WorkspaceTemplate | null
+  /** תקציב סיכון יומי (Day Trading בלבד) - מועבר עד `DailyRiskBudgetCard`. */
+  dailyRiskBudget: number | null
   /** פותח את מודל קוד הגישה (שדרוג) - מועבר עד ה-Dashboard (Weekly Recap, Pro-only). */
   onOpenAccessCode: () => void
   subTab: JournalSubTab
@@ -39,8 +46,11 @@ interface JournalProps {
  */
 export function Journal({
   trades,
+  slTpHistory,
   baseCurrency,
   tier,
+  template,
+  dailyRiskBudget,
   onOpenAccessCode,
   subTab,
   onSubTabChange,
@@ -83,11 +93,15 @@ export function Journal({
         <Suspense fallback={<p className="loadingState">{t('app.loading')}</p>}>
           <Dashboard
             trades={trades}
+            slTpHistory={slTpHistory}
             baseCurrency={baseCurrency}
             tier={tier}
+            template={template}
+            dailyRiskBudget={dailyRiskBudget}
             onOpenAccessCode={onOpenAccessCode}
             onSelectSymbol={onSelectSymbol}
             onSelectSetup={onSelectSetup}
+            onAddTrade={onAdd}
           />
         </Suspense>
       )}

@@ -1,3 +1,4 @@
+import { isTradeOpen } from './stats'
 import type { Trade } from '../types/trade'
 
 export type TypeFilter = 'all' | 'winning' | 'losing' | 'open'
@@ -100,10 +101,10 @@ export function matchesDateRange(
 
 function matchesType(trade: Trade, type: TypeFilter): boolean {
   if (type === 'all') return true
-  if (type === 'open') return trade.pnl === null
-  if (trade.pnl === null) return false
-  if (type === 'winning') return trade.pnl > 0
-  if (type === 'losing') return trade.pnl < 0
+  if (type === 'open') return isTradeOpen(trade)
+  if (isTradeOpen(trade)) return false
+  if (type === 'winning') return (trade.pnl ?? 0) > 0
+  if (type === 'losing') return (trade.pnl ?? 0) < 0
   return true
 }
 

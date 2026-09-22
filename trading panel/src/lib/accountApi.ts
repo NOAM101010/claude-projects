@@ -1,6 +1,7 @@
 import { getSupabase } from './supabase'
 import { deleteAllTradesInWorkspace } from './tradesApi'
 import { deleteAllWatchlistAlerts } from './watchlistApi'
+import { clearAllNotifications } from './notificationsApi'
 import type { Language } from '../i18n/translations'
 
 export type AccountTier = 'demo' | 'basic' | 'pro'
@@ -67,11 +68,13 @@ export function canCreateTrade(tier: AccountTier, demoTradesCreated: number): bo
  * את `deleteAccount` הקודם (ה-FK RESTRICT על access_codes.redeemed_by תוקן מאז ב-
  * 012_fix_delete_account_fk.sql, אבל מחיקת חשבון עדיין הייתה הורסת דרגת-מנוי/זהות
  * שהמשתמש לא רוצה לחשוף כפעולה בכלל). `push_subscriptions` נשארת בכוונה - רישום
- * push של מכשיר הוא לא "דאטה מסחרית" ומחיקתה הייתה שוברת התראות בלי תועלת.
+ * push של מכשיר הוא לא "דאטה מסחרית" ומחיקתה הייתה שוברת התראות בלי תועלת. גם מוחקת
+ * את `notifications` (התראות מחיר שכבר נשלחו) - הן דאטה מסחרית לכל דבר.
  */
 export async function clearAccountTradingData(accountId: string, workspaceIds: string[]): Promise<void> {
   for (const workspaceId of workspaceIds) {
     await deleteAllTradesInWorkspace(workspaceId)
   }
   await deleteAllWatchlistAlerts(accountId)
+  await clearAllNotifications(accountId)
 }

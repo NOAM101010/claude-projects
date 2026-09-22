@@ -1,3 +1,4 @@
+import { computePnl } from './stats'
 import { createTrade, updateTrade } from './tradesApi'
 import type { Trade } from '../types/trade'
 import type { ParsedExcelRow } from './importExcel'
@@ -20,8 +21,9 @@ function isEmpty(value: unknown): boolean {
   return value === null || value === undefined || value === ''
 }
 
-/** שדות שמותר להשלים (לא כולל id/symbol/direction/entryAt/entryPrice/quantity - אלה חלק מהמפתח הטבעי, לא "משלימים" אותם). */
-const FILLABLE_FIELDS = ['stopLoss', 'takeProfit', 'exitAt', 'exitPrice', 'pnl', 'fee', 'notes', 'setup'] as const
+/** שדות שמותר להשלים (לא כולל id/symbol/direction/entryAt/entryPrice/quantity - אלה חלק מהמפתח הטבעי, לא "משלימים" אותם).
+ * pnl **לא** ברשימה בכוונה - לעולם לא מולא/נדרס מה-`row` verbatim, ראה הטיפול הייעודי בו למטה. */
+const FILLABLE_FIELDS = ['stopLoss', 'takeProfit', 'exitAt', 'exitPrice', 'fee', 'notes', 'setup'] as const
 
 /** שדות "זהות" - עובדות קונקרטיות על איך הטרייד הספציפי הזה התנהל (איפה/מתי יצא, מה התוכנית/הערות
  * עליו) שהבדל בהן מוכיח חד-משמעית שמדובר בשני טריידים שונים. **לא** כולל pnl/fee בכוונה: אלה ערכים
@@ -61,7 +63,10 @@ export interface MergeImportResult {
  * מייבא שורות Excel חיצוניות: טרייד חדש (לא נמצא מפתח טבעי תואם) -> createTrade עם
  * UUID חדש (כמו importTrades הרגיל - אין id בקובץ חיצוני ממילא). טרייד קיים שתואם ->
  * משלים **רק** שדות שכרגע ריקים אצלו (P&L immutability: pnl קיים - כולל 0 - לעולם לא נדרס,
- * ראה CLAUDE.md). אם אין שום שדה להשלים, לא נשלחת קריאת API כלל (unchanged++).
+ * ראה CLAUDE.md). יוצא מן הכלל היחיד: אם exitPrice עכשיו מתמלא לראשונה (הטרייד היה פתוח),
+ * pnl מחושב מ-computePnl() באותו רגע - ראה הטיפול הייעודי למטה - כדי שטרייד שנסגר דרך
+ * הייבוא לא יישאר עם pnl=null (מסווג בטעות כ"פתוח", ראה stats.ts isTradeOpen). אם אין שום
+ * שדה להשלים, לא נשלחת קריאת API כלל (unchanged++).
  */
 export async function importOrUpdateTrades(
   workspaceId: string,
@@ -96,6 +101,11 @@ export async function importOrUpdateTrades(
 
     if (candidates.length === 0) {
       // אין טרייד קיים (או שכל מי שחולק את המפתח הגס נסתר בפועל ע"י שדה מבדיל) - טרייד חדש.
+      const rowExitPrice = row.exitPrice ?? null
+      const rowFee = row.fee ?? null
+      // pnl תמיד מחושב מ-computePnl() כש-exitPrice קיים, לא נלקח verbatim מהשורה - אותו
+      // עיקרון כמו parseTradesJson ב-importData.ts (ראה שם), כדי ש-pnl/exitPrice לא ייצאו
+      // מסונכרנים גם כשמקור הנתונים (Excel חיצוני) לא כולל pnl תקין.
       const newTrade: Trade = {
         id: crypto.randomUUID(),
         symbol: row.symbol,
@@ -106,10 +116,13 @@ export async function importOrUpdateTrades(
         stopLoss: row.stopLoss ?? null,
         takeProfit: row.takeProfit ?? null,
         exitAt: row.exitAt ?? null,
-        exitPrice: row.exitPrice ?? null,
-        pnl: row.pnl ?? null,
+        exitPrice: rowExitPrice,
+        pnl:
+          rowExitPrice !== null
+            ? computePnl({ direction: row.direction, entryPrice: row.entryPrice, exitPrice: rowExitPrice, quantity: row.quantity, fee: rowFee })
+            : null,
         currency: 'USD',
-        fee: row.fee ?? null,
+        fee: rowFee,
         notes: row.notes ?? '',
         setup: row.setup,
       }
@@ -138,6 +151,22 @@ export async function importOrUpdateTrades(
       }
     }
     // notes בטרייד קיים תמיד string ('' אם ריק) - לא null/undefined, ה-isEmpty הכללי כבר מכסה '' .
+
+    // pnl: מטופל בנפרד מ-FILLABLE_FIELDS, ולא verbatim מה-row בשום מצב (P&L immutability -
+    // ראה CLAUDE.md/tests). רק כש-exitPrice **עכשיו** מתמלא לראשונה (היה ריק אצל existing,
+    // ה-patch למעלה מילא אותו) מחשבים pnl מ-computePnl() - זה בדיוק תרחיש הבאג המקורי
+    // (טרייד פתוח שמקבל exitPrice בייבוא/מיזוג, שאמור להיסגר). אם exitPrice כבר היה קיים
+    // אצל existing (טרייד שכבר סגור), pnl נשאר לגמרי בלתי-נגוע - גם אם fee/שדות אחרים משתנים.
+    if (isEmpty(existing.exitPrice) && !isEmpty(patch.exitPrice)) {
+      const mergedFee = (patch.fee as number | null | undefined) ?? existing.fee
+      patch.pnl = computePnl({
+        direction: existing.direction,
+        entryPrice: existing.entryPrice,
+        exitPrice: patch.exitPrice as number,
+        quantity: existing.quantity,
+        fee: mergedFee,
+      })
+    }
 
     if (Object.keys(patch).length === 0) {
       unchanged += 1

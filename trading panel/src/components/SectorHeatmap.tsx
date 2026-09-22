@@ -25,12 +25,14 @@ const SECTOR_NAME_KEY: Record<SectorEtf, TranslationKey> = {
   XLC: 'sector.communication',
 }
 
-function heatClass(pct: number | null): string {
+/** טווח ניטרלי מצומצם ל-±0.05% (היה ±0.3%) - תנועה קטנה יותר מ-0.05% כבר מקבלת את
+ * צבע העוצמה הראשונה (`heat-pos1`/`heat-neg1`); רמות 1%/2% נשארות ללא שינוי. */
+export function heatClass(pct: number | null): string {
   if (pct == null) return 'heat-neu'
   if (pct >= 2) return 'heat-pos3'
   if (pct >= 1) return 'heat-pos2'
-  if (pct >= 0.3) return 'heat-pos1'
-  if (pct >= -0.3) return 'heat-neu'
+  if (pct > 0.05) return 'heat-pos1'
+  if (pct >= -0.05) return 'heat-neu'
   if (pct >= -1) return 'heat-neg1'
   if (pct >= -2) return 'heat-neg2'
   return 'heat-neg3'

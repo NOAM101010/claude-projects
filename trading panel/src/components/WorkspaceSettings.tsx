@@ -1,19 +1,23 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
 import { clearAccountTradingData } from '../lib/accountApi'
 import type { AccountTier } from '../lib/accountApi'
 import { HIDE_WORKSPACE_NAME_UI, LOCK_CURRENCY_TO_USD, LOCK_LANGUAGE_TO_ENGLISH } from '../config/locks'
 import { LanguageSwitcher } from './LanguageSwitcher'
+import { disconnectDevice, getDeviceStatus } from '../lib/deviceApi'
+import type { DeviceStatus } from '../lib/deviceApi'
 import { exportAsCsv, exportAsJson } from '../lib/exportData'
 import { importTrades, parseTradesJson } from '../lib/importData'
 import { parseTradesExcel } from '../lib/importExcel'
 import { importOrUpdateTrades } from '../lib/mergeImport'
 import { sendTestPush, subscribeToPush } from '../lib/pushApi'
 import { getStoredSession } from '../lib/session'
-import { renameWorkspace, updateFieldSettings, updateWorkspaceSettings } from '../lib/workspacesApi'
-import type { FieldSettings, Workspace } from '../lib/workspacesApi'
+import { redeemTemplateSwitchCode } from '../lib/templateSwitchApi'
+import { canSelectTemplateDirectly, renameWorkspace, updateFieldSettings, updateWorkspaceSettings } from '../lib/workspacesApi'
+import type { FieldSettings, Workspace, WorkspaceTemplate } from '../lib/workspacesApi'
 import { CURRENCIES } from '../types/trade'
 import type { Trade } from '../types/trade'
+import { TemplatePicker } from './TemplatePicker'
 import styles from './WorkspaceSettings.module.css'
 
 interface WorkspaceSettingsProps {
@@ -35,6 +39,9 @@ interface WorkspaceSettingsProps {
   onTradesUpdated: (updated: Trade[]) => void
   /** פותח את מודל קוד הגישה - להזנת קוד Pro/שדרוג. */
   onOpenAccessCode: () => void
+  /** נקרא אחרי שהתבנית נשמרה בהצלחה (TemplatePicker) - זהה ל-App.tsx's handleTemplateSelected
+   * שכבר מועבר ל-Tools, כאן משמש כדי לעדכן את אותו state כשהבחירה קורית מכאן. */
+  onTemplateSelected: (template: WorkspaceTemplate) => void
 }
 
 /**
@@ -55,8 +62,16 @@ export function WorkspaceSettings({
   onTradesImported,
   onTradesUpdated,
   onOpenAccessCode,
+  onTemplateSelected,
 }: WorkspaceSettingsProps) {
   const { t } = useLanguage()
+
+  const TEMPLATE_LABELS: Record<WorkspaceTemplate, string> = {
+    day: t('templatePicker.day.name'),
+    swing: t('templatePicker.swing.name'),
+    longterm: t('templatePicker.longterm.name'),
+    crypto: t('templatePicker.crypto.name'),
+  }
 
   const FIELD_LABELS: Record<keyof FieldSettings, string> = {
     stopLoss: t('tradeForm.stopLossLabel'),
@@ -82,6 +97,12 @@ export function WorkspaceSettings({
   const [nameSaving, setNameSaving] = useState(false)
   const [currencySaving, setCurrencySaving] = useState(false)
 
+  // תקציב סיכון יומי (Day Trading בלבד - robust-munching-puffin.md סבב C2). מחרוזת מקומית
+  // (לא number) כדי לאפשר שדה ריק/מצב עריכה חופשי בזמן הקלדה, בדיוק כמו `name` למעלה -
+  // שמירה קורית ב-onBlur, לא בכל הקשה.
+  const [riskBudgetInput, setRiskBudgetInput] = useState(workspace.dailyRiskBudget === null ? '' : String(workspace.dailyRiskBudget))
+  const [riskBudgetSaving, setRiskBudgetSaving] = useState(false)
+
   const [clearStep, setClearStep] = useState<0 | 1 | 2>(0)
   const [confirmText, setConfirmText] = useState('')
   const [clearing, setClearing] = useState(false)
@@ -92,6 +113,82 @@ export function WorkspaceSettings({
   const [pushStatus, setPushStatus] = useState<string | null>(null)
   const [testSending, setTestSending] = useState(false)
   const [testStatus, setTestStatus] = useState<string | null>(null)
+
+  const [deviceStatus, setDeviceStatus] = useState<DeviceStatus | null>(null)
+  const [deviceStatusError, setDeviceStatusError] = useState<string | null>(null)
+  const [disconnectingIndex, setDisconnectingIndex] = useState<number | null>(null)
+
+  // בחירת/החלפת תבנית (robust-munching-puffin.md סבב B) - שני מסלולים נפרדים לפי הרשאה:
+  // canSelectTemplateDirectly (Demo/Pro, או Basic בבחירה הראשונה) פותח את TemplatePicker
+  // ישירות (כותב ישירות ללקוח - מותר, ר' 027_protect_workspace_template.sql). Basic עם
+  // תבנית כבר קיימת **חייב** לעבור דרך switch-template Edge Function שמקבלת קוד+תבנית
+  // יחד וכותבת את שתיהן תחת service_role - טריגר ה-DB חוסם כל כתיבה ישירה של הלקוח כאן,
+  // אז אין עוד שלב-ביניים של "פתח TemplatePicker אחרי קוד תקין" כמו שהיה בטיוטה הראשונה.
+  const canPickTemplateDirectly = canSelectTemplateDirectly(tier, workspace.template)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [switchFormOpen, setSwitchFormOpen] = useState(false)
+  const [switchCode, setSwitchCode] = useState('')
+  const [switchTemplate, setSwitchTemplate] = useState<WorkspaceTemplate | ''>('')
+  const [switchSubmitting, setSwitchSubmitting] = useState(false)
+  const [switchError, setSwitchError] = useState<string | null>(null)
+
+  const handleTemplatePicked = (template: WorkspaceTemplate) => {
+    onTemplateSelected(template)
+    setPickerOpen(false)
+  }
+
+  const submitSwitchForm = async (e: FormEvent) => {
+    e.preventDefault()
+    const session = getStoredSession()
+    if (!session || !switchCode.trim() || !switchTemplate) return
+    setSwitchSubmitting(true)
+    setSwitchError(null)
+    try {
+      await redeemTemplateSwitchCode(session.accessToken, workspace.id, switchCode.trim(), switchTemplate)
+      onTemplateSelected(switchTemplate)
+      setSwitchFormOpen(false)
+      setSwitchCode('')
+      setSwitchTemplate('')
+    } catch (err) {
+      setSwitchError(err instanceof Error ? err.message : t('workspaceSettings.templateSwitchFailed'))
+    } finally {
+      setSwitchSubmitting(false)
+    }
+  }
+
+  useEffect(() => {
+    if (tier === 'demo') return
+    const session = getStoredSession()
+    if (!session) return
+    let cancelled = false
+    getDeviceStatus(session.accessToken)
+      .then((status) => {
+        if (!cancelled) setDeviceStatus(status)
+      })
+      .catch((err) => {
+        if (!cancelled) setDeviceStatusError(err instanceof Error ? err.message : t('workspaceSettings.deviceStatusFailed'))
+      })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tier])
+
+  const handleDisconnectDevice = async (index: number) => {
+    const session = getStoredSession()
+    if (!session) return
+    setDisconnectingIndex(index)
+    setDeviceStatusError(null)
+    try {
+      await disconnectDevice(session.accessToken, index)
+      const refreshed = await getDeviceStatus(session.accessToken)
+      setDeviceStatus(refreshed)
+    } catch (err) {
+      setDeviceStatusError(err instanceof Error ? err.message : t('workspaceSettings.deviceDisconnectFailed'))
+    } finally {
+      setDisconnectingIndex(null)
+    }
+  }
 
   const [importing, setImporting] = useState(false)
   const [importStatus, setImportStatus] = useState<string | null>(null)
@@ -140,6 +237,28 @@ export function WorkspaceSettings({
       setError(err instanceof Error ? err.message : t('workspaceSettings.currencyChangeFailed'))
     } finally {
       setCurrencySaving(false)
+    }
+  }
+
+  /** מחרוזת ריקה = מבטל את התקציב (null) - כל ערך אחר מנותח כמספר, שלילי/NaN לא נשמר. */
+  const saveRiskBudget = async () => {
+    const trimmed = riskBudgetInput.trim()
+    const parsed = trimmed === '' ? null : Number(trimmed)
+    if (parsed !== null && (Number.isNaN(parsed) || parsed < 0)) {
+      setRiskBudgetInput(workspace.dailyRiskBudget === null ? '' : String(workspace.dailyRiskBudget))
+      return
+    }
+    if (parsed === workspace.dailyRiskBudget) return
+    setRiskBudgetSaving(true)
+    setError(null)
+    try {
+      await updateWorkspaceSettings(workspace.id, { dailyRiskBudget: parsed })
+      onWorkspaceUpdated({ dailyRiskBudget: parsed })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('workspaceSettings.dailyRiskBudgetSaveFailed'))
+      setRiskBudgetInput(workspace.dailyRiskBudget === null ? '' : String(workspace.dailyRiskBudget))
+    } finally {
+      setRiskBudgetSaving(false)
     }
   }
 
@@ -326,6 +445,164 @@ export function WorkspaceSettings({
 
       <div className={styles.section}>
         <div className={styles.sectionHead}>
+          <h3 className={styles.sectionTitle}>{t('workspaceSettings.templateTitle')}</h3>
+          <span className={styles.sectionHint}>{t('workspaceSettings.templateHint')}</span>
+        </div>
+        <div className={`${styles.card} glass`}>
+          <div className={styles.rowLine}>
+            <span className={styles.rowLbl}>{t('workspaceSettings.templateCurrentLabel')}</span>
+            <span className={styles.tierChip}>
+              {workspace.template ? TEMPLATE_LABELS[workspace.template] : t('workspaceSettings.templateNotSelected')}
+            </span>
+          </div>
+
+          {!canPickTemplateDirectly && !pickerOpen && (
+            <p className={styles.hint} style={{ marginTop: 14 }}>
+              {t('workspaceSettings.templateSwitchHint')}
+            </p>
+          )}
+
+          {!pickerOpen && !switchFormOpen && (
+            <div className={styles.actions}>
+              <button
+                type="button"
+                className={styles.actionAmber}
+                onClick={() => {
+                  setSwitchError(null)
+                  setSwitchCode('')
+                  setSwitchTemplate('')
+                  if (canPickTemplateDirectly) setPickerOpen(true)
+                  else setSwitchFormOpen(true)
+                }}
+              >
+                {workspace.template ? t('workspaceSettings.templateChangeButton') : t('workspaceSettings.templateChooseButton')}
+              </button>
+            </div>
+          )}
+
+          {switchFormOpen && !pickerOpen && (
+            <form className="count-in" onSubmit={submitSwitchForm} style={{ marginTop: 14 }}>
+              <div className={styles.rowLine}>
+                <span className={styles.rowLbl}>{t('workspaceSettings.templateSwitchNewLabel')}</span>
+                <select
+                  className={styles.textInput}
+                  value={switchTemplate}
+                  onChange={(e) => setSwitchTemplate(e.target.value as WorkspaceTemplate | '')}
+                  disabled={switchSubmitting}
+                >
+                  <option value="" disabled>
+                    {t('workspaceSwitcher.templateChooseLater')}
+                  </option>
+                  {(['day', 'swing', 'longterm', 'crypto'] as const).map((tpl) => (
+                    <option key={tpl} value={tpl}>
+                      {TEMPLATE_LABELS[tpl]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className={styles.rowLine}>
+                <span className={styles.rowLbl}>{t('accessCode.title')}</span>
+                <input
+                  className={styles.textInput}
+                  value={switchCode}
+                  onChange={(e) => setSwitchCode(e.target.value)}
+                  placeholder={t('accessCode.placeholder')}
+                  disabled={switchSubmitting}
+                />
+              </div>
+              <div className={styles.actions}>
+                <button
+                  type="submit"
+                  className={styles.actionAmber}
+                  disabled={switchSubmitting || !switchCode.trim() || !switchTemplate}
+                >
+                  {switchSubmitting ? t('accessCode.checking') : t('workspaceSettings.templateSwitchConfirm')}
+                </button>
+                <button type="button" onClick={() => setSwitchFormOpen(false)} disabled={switchSubmitting}>
+                  {t('common.cancel')}
+                </button>
+              </div>
+            </form>
+          )}
+          {switchError && <p className={styles.status}>{switchError}</p>}
+
+          {pickerOpen && (
+            <div className="count-in" style={{ marginTop: 14 }}>
+              <TemplatePicker workspaceId={workspace.id} onSelected={handleTemplatePicked} />
+              <div className={styles.actions} style={{ marginTop: 10 }}>
+                <button type="button" onClick={() => setPickerOpen(false)}>
+                  {t('common.cancel')}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* תקציב סיכון יומי - Day Trading בלבד (robust-munching-puffin.md סבב C2), אותו דפוס
+              של סעיף מותנה-בתבנית כמו שאר הסעיף הזה. */}
+          {workspace.template === 'day' && (
+            <div className={styles.rowLine}>
+              <span className={styles.rowLbl}>
+                {t('workspaceSettings.dailyRiskBudgetLabel')}
+                <span className={styles.rowSub}>{t('workspaceSettings.dailyRiskBudgetHint')}</span>
+              </span>
+              <input
+                className={styles.textInput}
+                type="number"
+                min="0"
+                step="any"
+                inputMode="decimal"
+                placeholder={t('workspaceSettings.dailyRiskBudgetPlaceholder')}
+                value={riskBudgetInput}
+                onChange={(e) => setRiskBudgetInput(e.target.value)}
+                onBlur={saveRiskBudget}
+                disabled={riskBudgetSaving}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* מוצג גם כש-deviceStatus נשאר null (ה-fetch נכשל, למשל device-status עוד לא פרוס) -
+          כל עוד יש deviceStatusError, כדי שהמשתמש יראה הודעת שגיאה ברורה במקום שהסעיף
+          כולו ייעלם בלי הסבר. אם אין לא deviceStatus.hasCode ולא שגיאה (עדיין טוען, או
+          שהחשבון פשוט לא מימש קוד) - לא מציגים כלום, כמו קודם. */}
+      {tier !== 'demo' && (deviceStatus?.hasCode || deviceStatusError) && (
+        <div className={styles.section}>
+          <div className={styles.sectionHead}>
+            <h3 className={styles.sectionTitle}>{t('workspaceSettings.devicesTitle')}</h3>
+            <span className={styles.sectionHint}>{t('workspaceSettings.devicesHint')}</span>
+          </div>
+          <div className={`${styles.card} glass`}>
+            {deviceStatus?.hasCode &&
+              (deviceStatus.unlimitedDevices ? (
+                <p className={styles.hint}>{t('workspaceSettings.devicesUnlimited')}</p>
+              ) : (
+                <div className={styles.list}>
+                  {deviceStatus.deviceIndexes.map((index) => {
+                    const cooldownActive = deviceStatus.cooldownRemainingDays > 0
+                    const disabled = cooldownActive || disconnectingIndex !== null
+                    return (
+                      <div className={styles.rowLine} key={index}>
+                        <span className={styles.rowLbl}>{t('workspaceSettings.deviceLabel', { n: index + 1 })}</span>
+                        <button type="button" onClick={() => handleDisconnectDevice(index)} disabled={disabled}>
+                          {disconnectingIndex === index
+                            ? t('workspaceSettings.disconnecting')
+                            : cooldownActive
+                              ? t('workspaceSettings.disconnectCooldown', { days: deviceStatus.cooldownRemainingDays })
+                              : t('workspaceSettings.disconnectButton')}
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              ))}
+            {deviceStatusError && <p className={styles.status}>{deviceStatusError}</p>}
+          </div>
+        </div>
+      )}
+
+      <div className={styles.section}>
+        <div className={styles.sectionHead}>
           <h3 className={styles.sectionTitle}>{t('workspaceSettings.optionalFieldsTitle')}</h3>
           <span className={styles.sectionHint}>{t('workspaceSettings.optionalFieldsHint')}</span>
         </div>
@@ -450,6 +727,16 @@ export function WorkspaceSettings({
               )}
             </div>
           )}
+        </div>
+      </div>
+
+      <div className={styles.section}>
+        <div className={styles.sectionHead}>
+          <h3 className={styles.sectionTitle}>{t('workspaceSettings.contactTitle')}</h3>
+          <span className={styles.sectionHint}>{t('workspaceSettings.contactHint')}</span>
+        </div>
+        <div className={`${styles.card} glass`}>
+          <p className={styles.hint}>{t('workspaceSettings.contactText')}</p>
         </div>
       </div>
 

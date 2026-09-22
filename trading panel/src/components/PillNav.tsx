@@ -41,9 +41,7 @@ export function PillNav({ tab, onChangeTab, actions }: PillNavProps) {
     <header className={`${styles.header} glass-blur`}>
       <div className={styles.inner}>
         <div className={`${styles.brand} btn-metal`}>
-          <span className={styles.logo}>
-            <span className={styles.logoInner}>T</span>
-          </span>
+          <img src="/icons/logo-mark.png" alt="" className={styles.logo} />
           <span className={styles.brandText}>TradePanel</span>
         </div>
 

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { importTrades, parseTradesJson } from './importData'
+import { isTradeOpen } from './stats'
 import type { Trade } from '../types/trade'
 
 vi.mock('./tradesApi', () => ({
@@ -17,9 +18,9 @@ const trade: Trade = {
   takeProfit: 110,
   exitAt: '2026-01-02T10:00:00.000Z',
   exitPrice: 105,
-  pnl: 50,
+  pnl: 50, // matches computePnl(long, 100, 105, 10, fee=0) - keep fee at 0 so this fixture stays a valid round-trip after the pnl-recompute fix below
   currency: 'USD',
-  fee: 1,
+  fee: 0,
   notes: 'note',
   setup: 'Breakout',
 }
@@ -61,6 +62,23 @@ describe('parseTradesJson', () => {
     expect(parsed[0].pnl).toBeNull()
     expect(parsed[0].setup).toBeUndefined()
   })
+
+  // תרחיש הבאג המקורי (ראה stats.ts isTradeOpen + CLAUDE.md task packet): קובץ מיובא עם
+  // exitPrice מלא אבל pnl שנשאר null (שדה חסר/לא ממופה במקור) - לפני התיקון היה נשאר
+  // מסונכרן-לא-נכון ומסווג בטעות כ"Live" בכל מקום שבדק pnl===null. עכשיו pnl תמיד מחושב
+  // מחדש מ-exitPrice, כך שהטרייד מסווג נכון כסגור גם אם הקובץ המקורי היה חסר/שגוי.
+  it('מחשב מחדש pnl מ-exitPrice כש-pnl בקובץ נשאר null - הטרייד מסווג נכון כסגור', () => {
+    const mismatched = { ...trade, exitPrice: 105, pnl: null }
+    const parsed = parseTradesJson(JSON.stringify([mismatched]))
+    expect(parsed[0].pnl).toBe(50) // computePnl(long, 100, 105, qty 10, fee 0)
+    expect(isTradeOpen(parsed[0])).toBe(false)
+  })
+
+  it('מתעלם מ-pnl שגוי/לא-מסונכרן בקובץ ומחשב את הערך הנכון מ-exitPrice', () => {
+    const wrongPnl = { ...trade, pnl: 99999 }
+    const parsed = parseTradesJson(JSON.stringify([wrongPnl]))
+    expect(parsed[0].pnl).toBe(50)
+  })
 })
 
 describe('importTrades', () => {
@@ -96,7 +114,7 @@ describe('importTrades', () => {
     expect(result.skipped).toBe(0)
   })
 
-  it('לעולם לא מחשב מחדש pnl - הערך נכנס verbatim מהקובץ', async () => {
+  it('importTrades עצמו לא נוגע ב-pnl - מקבל טריידים כבר-מעובדים (אחרי parseTradesJson) ומעביר אותם ל-createTrade כמות שהם', async () => {
     const result = await importTrades('ws1', 'acc1', [{ ...trade, pnl: 12345 }], [])
     expect(result.importedTrades[0].pnl).toBe(12345)
   })

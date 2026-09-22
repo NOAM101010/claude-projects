@@ -1,6 +1,6 @@
 import { useLanguage } from '../i18n/LanguageContext'
 import { formatCurrency } from '../lib/format'
-import { totalPnl, winRate } from '../lib/stats'
+import { isTradeOpen, totalPnl, winRate } from '../lib/stats'
 import type { Trade } from '../types/trade'
 import type { Workspace } from '../lib/workspacesApi'
 import styles from './DesktopStatBar.module.css'
@@ -19,7 +19,7 @@ function localDateKey(d: Date): string {
 function todaysPnl(trades: Trade[]): number {
   const today = localDateKey(new Date())
   return trades
-    .filter((t) => t.pnl !== null && t.exitAt !== null && localDateKey(new Date(t.exitAt)) === today)
+    .filter((t) => !isTradeOpen(t) && t.exitAt !== null && localDateKey(new Date(t.exitAt)) === today)
     .reduce((sum, t) => sum + (t.pnl ?? 0), 0)
 }
 
@@ -37,7 +37,7 @@ export function DesktopStatBar({ trades, baseCurrency }: DesktopStatBarProps) {
   const total = totalPnl(trades)
   const today = todaysPnl(trades)
   const wr = winRate(trades)
-  const openCount = trades.filter((t) => t.pnl === null).length
+  const openCount = trades.filter(isTradeOpen).length
 
   return (
     <div className={`${styles.bar} metal-panel`} aria-hidden={false}>
