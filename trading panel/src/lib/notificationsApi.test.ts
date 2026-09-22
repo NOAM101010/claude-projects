@@ -12,6 +12,7 @@ function makeNotification(overrides: Partial<AppNotification>): AppNotification 
     message: overrides.message ?? 'AAPL is now $191.50 (above your target of $190.00)',
     createdAt: overrides.createdAt ?? '2026-09-14T10:00:00.000Z',
     readAt: overrides.readAt ?? null,
+    direction: overrides.direction ?? 'above',
   }
 }
 

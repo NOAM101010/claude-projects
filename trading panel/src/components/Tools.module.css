@@ -426,8 +426,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .liveDot::before {
+  .liveDot::before,
+  .liveDotTile,
+  .tile,
+  .tile:hover {
     animation: none;
+    transition: none;
+    transform: none;
   }
 }
 
@@ -471,27 +476,168 @@
   padding: 18px 4px;
 }
 
-.statusChip {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 9px;
-  border-radius: 999px;
-  font-size: 10.5px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  background: var(--pnl-pos-bg);
-  color: var(--pnl-pos-2);
-  align-self: flex-end;
+/* ============ Watchlist tiles (active alerts) - card grid w/ directional glow,
+   design-explore/watchlist-tiles-directions.html direction 1. History below stays the
+   plain row list (.watchlistList/.watchlistRow) - it's inactive/read-only, no live glow. ============ */
+.watchlistGrid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  padding: 0;
+  margin: 0;
 }
 
-/* watch-only row (no target price set yet) - deliberately neutral, not the same
-   green as an armed alert, so it never reads as "an alert is active" (see
-   `tools.watchlist.statusWatching` - was a real bug, this chip used to always
-   say "Active" even when `noAlertSet` was showing right next to it). */
-.statusChipWatching {
-  background: var(--metal-mid);
+@media (max-width: 760px) {
+  .watchlistGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .watchlistGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tile {
+  position: relative;
+  overflow: hidden;
+  padding: 14px 15px;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.18s ease;
+}
+
+.tile:hover {
+  transform: translateY(-2px);
+}
+
+.tile::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+}
+
+.tileUp {
+  border-color: rgba(34, 197, 94, 0.28);
+  box-shadow: inset 0 1px 0 var(--metal-hi), var(--shadow), 0 0 26px -14px rgba(34, 197, 94, 0.5);
+}
+
+.tileUp::before {
+  background: linear-gradient(90deg, transparent, var(--pnl-pos-2), transparent);
+}
+
+.tileDown {
+  border-color: rgba(239, 68, 68, 0.24);
+  box-shadow: inset 0 1px 0 var(--metal-hi), var(--shadow), 0 0 26px -14px rgba(239, 68, 68, 0.42);
+}
+
+.tileDown::before {
+  background: linear-gradient(90deg, transparent, var(--pnl-neg-2), transparent);
+}
+
+.tileTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tileSymbol {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--text-h);
+  text-decoration: none;
+}
+
+.tileSymbol:hover {
+  text-decoration: underline;
+}
+
+.tileSymbol .externalIcon {
+  flex-shrink: 0;
+  opacity: 0.4;
+  transition: opacity 0.15s ease;
+}
+
+.tileSymbol:hover .externalIcon {
+  opacity: 0.85;
+}
+
+/* Same breathing-dot language as .liveDot (Watchlist rows historically) - here it's
+   just the dot itself, inline before the symbol, since the tile layout has no room
+   for the uppercase "LIVE" label next to it. */
+.liveDotTile {
+  flex-shrink: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--pnl-pos-2);
+  animation: watchlist-live-pulse 1.8s ease-out infinite;
+}
+
+.tileChange {
+  font-weight: 700;
+  font-size: 12.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.tileChangeUp {
+  color: var(--pnl-pos-2);
+  background: var(--pnl-pos-bg);
+}
+
+.tileChangeDown {
+  color: var(--pnl-neg-2);
+  background: var(--pnl-neg-bg);
+}
+
+.tilePrice {
+  font-weight: 800;
+  font-size: 22px;
+  color: var(--text-h);
+  line-height: 1;
+}
+
+.tileMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
   color: var(--text-dim);
+}
+
+.tileTarget {
+  min-width: 0;
+}
+
+.tileBadge {
+  flex-shrink: 0;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-label);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 7px;
+}
+
+.tileActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .historyHeader {

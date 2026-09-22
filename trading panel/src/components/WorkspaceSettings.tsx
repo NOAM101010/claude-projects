@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
+import type { TranslationKey } from '../i18n/translations'
 import { clearAccountTradingData } from '../lib/accountApi'
 import type { AccountTier } from '../lib/accountApi'
 import { HIDE_WORKSPACE_NAME_UI, LOCK_CURRENCY_TO_USD, LOCK_LANGUAGE_TO_ENGLISH } from '../config/locks'
@@ -195,6 +196,11 @@ export function WorkspaceSettings({
   const [importErrors, setImportErrors] = useState<string[]>([])
   /** 'success' = כל השורות עברו, 'partial' = חלק מהשורות/שגיאות, 'error' = כלום לא עבר (0 נוצרו/עודכנו/ללא שינוי). */
   const [importTone, setImportTone] = useState<'success' | 'partial' | 'error' | null>(null)
+  const [importFileName, setImportFileName] = useState<string | null>(null)
+  /** Breakdown לכרטיס-הסיכום (import-export-feedback-directions.html כיוון 3) - נגזר
+   * מאותם מספרים שכבר מחושבים ל-importStatus, לא דאטה נוספת. ריק = בלי stat-grid
+   * (המקרה שבו אף שורה לא זוהתה בכלל). */
+  const [importStats, setImportStats] = useState<{ key: string; labelKey: TranslationKey; value: number; tone: 'created' | 'updated' | 'skipped' }[]>([])
   const importInputRef = useRef<HTMLInputElement>(null)
 
   const toggle = async (key: keyof FieldSettings) => {
@@ -301,6 +307,8 @@ export function WorkspaceSettings({
     setImportStatus(null)
     setImportErrors([])
     setImportTone(null)
+    setImportStats([])
+    setImportFileName(file.name)
     try {
       if (file.name.toLowerCase().endsWith('.xlsx')) {
         const buffer = await file.arrayBuffer()
@@ -328,6 +336,11 @@ export function WorkspaceSettings({
             }),
           )
           setImportTone(errors.length > 0 || result.ambiguous > 0 ? 'partial' : 'success')
+          setImportStats([
+            { key: 'created', labelKey: 'workspaceSettings.importStatCreated', value: result.created, tone: 'created' },
+            { key: 'updated', labelKey: 'workspaceSettings.importStatUpdated', value: result.updated, tone: 'updated' },
+            { key: 'unchanged', labelKey: 'workspaceSettings.importStatUnchanged', value: result.unchanged, tone: 'skipped' },
+          ])
         }
         if (result.ambiguous > 0) {
           setImportErrors((prev) => [...prev, t('workspaceSettings.importAmbiguous', { count: result.ambiguous })])
@@ -339,10 +352,15 @@ export function WorkspaceSettings({
         onTradesImported(result.importedTrades)
         setImportStatus(t('workspaceSettings.importResult', { imported: result.imported, skipped: result.skipped }))
         setImportTone(result.imported > 0 ? (result.skipped > 0 ? 'partial' : 'success') : 'error')
+        setImportStats([
+          { key: 'imported', labelKey: 'workspaceSettings.importStatImported', value: result.imported, tone: 'created' },
+          { key: 'skipped', labelKey: 'workspaceSettings.importStatSkipped', value: result.skipped, tone: 'skipped' },
+        ])
       }
     } catch (err) {
       setImportStatus(err instanceof Error ? err.message : t('workspaceSettings.importFailed'))
       setImportTone('error')
+      setImportStats([])
     } finally {
       setImporting(false)
     }
@@ -714,7 +732,48 @@ export function WorkspaceSettings({
                     : styles.importResultPartial
               }`}
             >
+              <div className={styles.importResultHead}>
+                <span
+                  className={`${styles.importResultIcon} ${
+                    importTone === 'error' ? styles.importResultIconError : styles.importResultIconOk
+                  }`}
+                  aria-hidden="true"
+                >
+                  {importTone === 'error' ? '!' : '✓'}
+                </span>
+                <div>
+                  <p className={styles.importResultTitle}>
+                    {t(
+                      importTone === 'success'
+                        ? 'workspaceSettings.importResultTitleSuccess'
+                        : importTone === 'error'
+                          ? 'workspaceSettings.importResultTitleError'
+                          : 'workspaceSettings.importResultTitlePartial',
+                    )}
+                  </p>
+                  {importFileName && <p className={styles.importResultFile}>{importFileName}</p>}
+                </div>
+              </div>
               <p className={styles.importResultText}>{importStatus}</p>
+              {importStats.length > 0 && (
+                <div className={styles.importStatGrid}>
+                  {importStats.map((stat) => (
+                    <div
+                      key={stat.key}
+                      className={`${styles.importStatCell} ${
+                        stat.tone === 'created'
+                          ? styles.importStatCellCreated
+                          : stat.tone === 'updated'
+                            ? styles.importStatCellUpdated
+                            : styles.importStatCellSkipped
+                      }`}
+                    >
+                      <span className={`num ${styles.importStatValue}`}>{stat.value}</span>
+                      <span className={styles.importStatLabel}>{t(stat.labelKey)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               {importErrors.length > 0 && (
                 <ul className={styles.importResultList}>
                   {importErrors.slice(0, 5).map((err, i) => (

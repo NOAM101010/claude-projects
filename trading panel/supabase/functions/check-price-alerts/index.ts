@@ -100,6 +100,7 @@ Deno.serve(async (req) => {
           account_id: alert.account_id,
           symbol: alert.symbol,
           message,
+          direction: alert.direction,
         })
       } catch {
         // best-effort - ראה הערה למעלה.

@@ -1,9 +1,14 @@
 import { ExternalLink } from 'lucide-react'
+import { useState } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { TranslationKey } from '../i18n/translations'
 import type { SectorEtf, SectorQuote } from '../lib/marketData'
 import { tradingViewUrl } from '../lib/tradingView'
 import styles from './SectorHeatmap.module.css'
+
+/** כמה סקטורים בקצה העליון/תחתון נחשבים "מוביל/מפגר היום" בדירוג היחסי (מתוך 11) -
+ * ראה sector-heatmap-hover-directions.html כיוון 3. */
+const RANK_EDGE_COUNT = 3
 
 interface SectorHeatmapProps {
   sectors: SectorQuote[]
@@ -43,9 +48,29 @@ export function heatClass(pct: number | null): string {
  * (Day Trading/Swing/Long-term), לא ל-Crypto. הדאטה מגיעה מ-fetchStockIndices (Home.tsx
  * טוען פעם אחת ומזין גם את כרטיסי המדדים וגם כאן, כדי לא לכפול קריאות ל-Edge Function).
  */
+/** דירוג יחסי של סקטור בתוך המערך הממוין (Top-3 = מוביל, Bottom-3 = מפגר, השאר אמצע) -
+ * מחושב חי מתוך אותו `sorted` שכבר בונה את הגריד, לא דאטה חדשה. */
+function rankOf(index: number, total: number): 'lead' | 'lag' | 'mid' {
+  if (index < RANK_EDGE_COUNT) return 'lead'
+  if (index >= total - RANK_EDGE_COUNT) return 'lag'
+  return 'mid'
+}
+
 export function SectorHeatmap({ sectors, loading }: SectorHeatmapProps) {
   const { t } = useLanguage()
   const sorted = [...sectors].sort((a, b) => (b.changePercent ?? -999) - (a.changePercent ?? -999))
+  // הסקטור הפעיל כרגע (hover/focus) - נשאר "תקוע" על האחרון עד hover/focus הבא, בדיוק
+  // כמו פאנל-הפרטים הקבוע ב-sector-heatmap-hover-directions.html כיוון 3 (לא ננקה ב-mouseleave).
+  const [activeEtf, setActiveEtf] = useState<SectorEtf | null>(null)
+  const activeIndex = activeEtf ? sorted.findIndex((s) => s.etf === activeEtf) : -1
+  const active = activeIndex >= 0 ? sorted[activeIndex] : null
+  const activeRank = activeIndex >= 0 ? rankOf(activeIndex, sorted.length) : null
+
+  const rankLabelKey: Record<'lead' | 'lag' | 'mid', TranslationKey> = {
+    lead: 'home.sectorHeatmapRankLead',
+    lag: 'home.sectorHeatmapRankLag',
+    mid: 'home.sectorHeatmapRankMid',
+  }
 
   return (
     <div className={styles.wrapper}>
@@ -57,7 +82,13 @@ export function SectorHeatmap({ sectors, loading }: SectorHeatmapProps) {
         {loading || sorted.length === 0
           ? Array.from({ length: 11 }).map((_, i) => <div key={i} className={`${styles.cell} shimmer`} />)
           : sorted.map((s) => (
-              <div key={s.etf} className={`${styles.cell} ${heatClass(s.changePercent)}`} title={t(SECTOR_NAME_KEY[s.etf])}>
+              <div
+                key={s.etf}
+                className={`${styles.cell} ${heatClass(s.changePercent)} ${activeEtf === s.etf ? styles.cellActive : ''}`}
+                title={t(SECTOR_NAME_KEY[s.etf])}
+                onMouseEnter={() => setActiveEtf(s.etf)}
+                onFocus={() => setActiveEtf(s.etf)}
+              >
                 <a href={tradingViewUrl(s.etf)} target="_blank" rel="noopener noreferrer" className={styles.etf}>
                   {s.etf}
                   <ExternalLink size={8} className={styles.externalIcon} />
@@ -67,6 +98,26 @@ export function SectorHeatmap({ sectors, loading }: SectorHeatmapProps) {
                 </span>
               </div>
             ))}
+      </div>
+      <div className={`${styles.detailPanel} metal-panel`}>
+        {active && activeRank ? (
+          <>
+            <div className={styles.detailMain}>
+              <span className={styles.detailName}>{t(SECTOR_NAME_KEY[active.etf])}</span>
+              <span className={styles.detailEtf}>{active.etf}</span>
+            </div>
+            <span className={`${styles.detailBadge} ${styles[`detailBadge_${activeRank}`]}`}>{t(rankLabelKey[activeRank])}</span>
+            <span
+              className={`num ${styles.detailPct} ${
+                active.changePercent != null ? (active.changePercent >= 0 ? styles.detailPctUp : styles.detailPctDown) : ''
+              }`}
+            >
+              {active.changePercent != null ? `${active.changePercent >= 0 ? '+' : ''}${active.changePercent.toFixed(2)}%` : '—'}
+            </span>
+          </>
+        ) : (
+          <span className={styles.detailEmpty}>{t('home.sectorHeatmapDetailHint')}</span>
+        )}
       </div>
     </div>
   )

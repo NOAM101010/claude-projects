@@ -104,6 +104,30 @@ export async function listTrades(workspaceId: string): Promise<Trade[]> {
   return allRows.map(rowToTrade)
 }
 
+/** סכום P&L גולמי (בלי המרת שער - אותה פשטות בדיוק כמו DesktopStatBar's `totalPnl`,
+ * ראה LOCK_CURRENCY_TO_USD) לכל workspace ב-`workspaceIds`, לתצוגת preview ב-
+ * WorkspaceSwitcher.tsx (כרטיסי-preview, workspace-switcher-cards-directions.html כיוון 1).
+ * שולפת רק את שתי העמודות שצריך (`workspace_id`,`pnl`) במקום `listTrades` המלא - זול
+ * משמעותית לרשימה של עד 5 workspaces (מגבלת Pro). מסננת גם לפי `account_id` במפורש
+ * (לא רק RLS) - בידוד לקוחות, אותה מוסכמה כמו שאר הפרויקט. טריידים פתוחים (pnl null)
+ * לא נספרים, בדיוק כמו totalPnl. */
+export async function getWorkspacePnlTotals(accountId: string, workspaceIds: string[]): Promise<Record<string, number>> {
+  const totals: Record<string, number> = {}
+  if (workspaceIds.length === 0) return totals
+  const supabase = getSupabase()
+  const { data, error } = await supabase
+    .from('trades')
+    .select('workspace_id, pnl')
+    .eq('account_id', accountId)
+    .in('workspace_id', workspaceIds)
+    .not('pnl', 'is', null)
+  if (error) throw error
+  for (const row of data as { workspace_id: string; pnl: number | null }[]) {
+    totals[row.workspace_id] = (totals[row.workspace_id] ?? 0) + (row.pnl ?? 0)
+  }
+  return totals
+}
+
 export async function createTrade(workspaceId: string, accountId: string, trade: Trade): Promise<Trade> {
   const supabase = getSupabase()
   const { id: _ignoredId, ...input } = trade

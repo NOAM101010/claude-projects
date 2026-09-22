@@ -327,12 +327,99 @@
 .importResult {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px 14px;
-  border-radius: 10px;
+  gap: 10px;
+  padding: 14px 15px;
+  border-radius: 12px;
   border: 1px solid var(--border);
   background: rgba(var(--overlay-tint), 0.02);
   margin-top: 12px;
+}
+
+/* ============ Result-card head + stat-grid (breakdown), import-export-feedback-directions.html
+   כיוון 3 - replaces the old single text line. ============ */
+.importResultHead {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.importResultIcon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.importResultIconOk {
+  background: var(--pnl-pos-bg);
+  color: var(--pnl-pos-2);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+}
+
+.importResultIconError {
+  background: var(--pnl-neg-bg);
+  color: var(--pnl-neg-2);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.importResultTitle {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-h);
+}
+
+.importResultFile {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-dim);
+  font-family: var(--mono);
+}
+
+.importStatGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.importStatCell {
+  border-radius: 9px;
+  padding: 9px 10px;
+  text-align: center;
+  border: 1px solid var(--border);
+  background: rgba(var(--overlay-tint), 0.02);
+}
+
+.importStatValue {
+  display: block;
+  font-weight: 800;
+  font-size: 18px;
+}
+
+.importStatCellCreated .importStatValue {
+  color: var(--pnl-pos-2);
+}
+
+.importStatCellUpdated .importStatValue {
+  color: var(--accent-2);
+}
+
+.importStatCellSkipped .importStatValue {
+  color: var(--text-dim);
+}
+
+.importStatLabel {
+  display: block;
+  margin-top: 2px;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
 }
 
 .importResultText {

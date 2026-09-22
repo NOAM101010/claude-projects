@@ -884,63 +884,69 @@ function Watchlist({ accountId, tier, focusSignal, onOpenAccessCode }: Watchlist
             </button>
           </div>
         ) : (
-          <ul className={styles.watchlistList}>
+          <ul className={styles.watchlistGrid}>
             {activeAlerts.map((alert) => {
               const quote = quotes[alert.symbol.toUpperCase()]
+              // כיוון ה-glow נגזר מ-changePercent האמיתי (24h) - null/0 = ניטרלי, בלי לזייף כיוון.
+              const dirClass =
+                quote && quote.changePercent > 0 ? styles.tileUp : quote && quote.changePercent < 0 ? styles.tileDown : ''
               return (
-                <li key={alert.id} className={`${styles.watchlistRow} det-frame`}>
-                  <div className={styles.watchlistSymbolBlock}>
+                <li key={alert.id} className={`${styles.tile} ${dirClass} metal-panel holo-edge`}>
+                  <div className={styles.tileTop}>
                     <a
                       href={tradingViewUrl(alert.symbol)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={styles.watchlistSymbol}
+                      className={styles.tileSymbol}
                     >
+                      {quote && <span className={styles.liveDotTile} aria-hidden="true" />}
                       {alert.symbol}
-                      <ExternalLink size={12} className={styles.externalIcon} />
+                      <ExternalLink size={11} className={styles.externalIcon} />
                     </a>
+                    {quote && (
+                      <span className={`num ${styles.tileChange} ${dirClass ? (dirClass === styles.tileUp ? styles.tileChangeUp : styles.tileChangeDown) : ''}`}>
+                        {quote.changePercent >= 0 ? '+' : ''}
+                        {quote.changePercent.toFixed(2)}%
+                      </span>
+                    )}
+                  </div>
+                  <div className={`num ${styles.tilePrice}`}>
+                    {quote ? formatCurrency(quote.price, 'USD', locale) : t('tools.watchlist.unavailable')}
+                  </div>
+                  <div className={styles.tileMeta}>
                     {alert.targetPrice !== null && alert.direction !== null ? (
-                      <span className={styles.hint}>
+                      <span className={styles.tileTarget}>
                         {t('tools.watchlist.targetLabel')}: {alert.direction === 'above' ? '≥' : '≤'}{' '}
                         {formatCurrency(alert.targetPrice, 'USD', locale)}
                       </span>
                     ) : (
-                      <span className={styles.hint}>{t('tools.watchlist.noAlertSet')}</span>
+                      <span className={styles.tileTarget}>{t('tools.watchlist.noAlertSet')}</span>
                     )}
-                    <span className={styles.hint}>
-                      {t('tools.watchlist.createdLabel')}: {formatDateTime(alert.createdAt, locale)}
-                    </span>
-                  </div>
-                  <div className={styles.watchlistPriceBlock}>
                     {alert.targetPrice !== null && alert.direction !== null ? (
-                      <span className={styles.statusChip}>{t('tools.watchlist.statusActive')}</span>
+                      <span className={styles.tileBadge}>{t('tools.watchlist.statusActive')}</span>
                     ) : (
-                      <span className={`${styles.statusChip} ${styles.statusChipWatching}`}>
-                        {t('tools.watchlist.statusWatching')}
-                      </span>
+                      <span className={styles.tileBadge}>{t('tools.watchlist.statusWatching')}</span>
                     )}
-                    {quote && <span className={styles.liveDot}>{t('tools.watchlist.liveLabel')}</span>}
-                    <span className={styles.resultLabel}>{t('tools.watchlist.currentPriceLabel')}</span>
-                    <span className={`num ${styles.resultValue}`}>
-                      {quote ? formatCurrency(quote.price, 'USD', locale) : t('tools.watchlist.unavailable')}
-                    </span>
                   </div>
-                  {alert.targetPrice === null && (
-                    <button
-                      type="button"
-                      className={`${styles.watchlistAddButton} btn-metal`}
-                      onClick={() => {
-                        setSettingAlertId(settingAlertId === alert.id ? null : alert.id)
-                        setSetAlertPrice('')
-                        setSetAlertDirection('above')
-                      }}
-                    >
-                      {t('tools.watchlist.setAlertButton')}
+                  <span className={styles.hint}>{t('tools.watchlist.createdLabel')}: {formatDateTime(alert.createdAt, locale)}</span>
+                  <div className={styles.tileActions}>
+                    {alert.targetPrice === null && (
+                      <button
+                        type="button"
+                        className={`${styles.watchlistAddButton} btn-metal`}
+                        onClick={() => {
+                          setSettingAlertId(settingAlertId === alert.id ? null : alert.id)
+                          setSetAlertPrice('')
+                          setSetAlertDirection('above')
+                        }}
+                      >
+                        {t('tools.watchlist.setAlertButton')}
+                      </button>
+                    )}
+                    <button type="button" className={styles.watchlistDeleteBtn} onClick={() => handleDelete(alert.id)}>
+                      {t('tools.watchlist.deleteButton')}
                     </button>
-                  )}
-                  <button type="button" className={styles.watchlistDeleteBtn} onClick={() => handleDelete(alert.id)}>
-                    {t('tools.watchlist.deleteButton')}
-                  </button>
+                  </div>
                   {settingAlertId === alert.id && (
                     <div className={styles.watchlistSetAlertForm}>
                       {atAlertLimit ? (

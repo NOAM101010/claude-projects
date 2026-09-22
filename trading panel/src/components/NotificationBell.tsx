@@ -1,4 +1,4 @@
-import { Bell, X } from 'lucide-react'
+import { ArrowDownRight, ArrowUpRight, Bell, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useModalEscape } from '../hooks/useModalEscape'
@@ -190,7 +190,16 @@ export function NotificationBell({ accountId, onOpenWatchlist }: { accountId: st
                       }
                     }}
                   >
-                    {notification.readAt === null && <span className={styles.dot} aria-hidden="true" />}
+                    {notification.direction ? (
+                      <span
+                        className={`${styles.dirIcon} ${notification.direction === 'above' ? styles.dirIconUp : styles.dirIconDown}`}
+                        aria-hidden="true"
+                      >
+                        {notification.direction === 'above' ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
+                      </span>
+                    ) : (
+                      notification.readAt === null && <span className={styles.dot} aria-hidden="true" />
+                    )}
                     <div className={styles.itemBody}>
                       <span className={styles.itemSymbol}>{notification.symbol}</span>
                       <span className={styles.itemMessage}>{notification.message}</span>

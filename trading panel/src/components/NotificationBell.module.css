@@ -219,6 +219,30 @@
   background: var(--accent-2);
 }
 
+/* Direction icon (above/below target) shown instead of .dot once `direction` is known -
+   see notificationsApi.ts/030_notification_direction.sql. Older rows with direction=null
+   still fall back to the plain unread dot above, never a broken/missing icon. */
+.dirIcon {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dirIconUp {
+  background: var(--pnl-pos-bg);
+  color: var(--pnl-pos-2);
+}
+
+.dirIconDown {
+  background: var(--pnl-neg-bg);
+  color: var(--pnl-neg-2);
+}
+
 .itemBody {
   display: flex;
   flex-direction: column;

@@ -403,6 +403,7 @@ function App() {
           actions={
             <>
               <WorkspaceSwitcher
+                accountId={accountId}
                 workspaces={workspaces}
                 activeWorkspaceId={workspace.id}
                 tier={tier}

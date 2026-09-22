@@ -5,22 +5,85 @@
   gap: 8px;
 }
 
-.select {
+/* ============ Trigger button (replaces the old plain <select>) ============ */
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font: inherit;
   font-size: 12.5px;
   font-weight: 600;
-  padding: 7px 11px;
+  padding: 6px 11px 6px 8px;
   border-radius: 9px;
   border: 1px solid var(--border);
   background: rgba(var(--overlay-tint), 0.03);
   color: var(--text-h);
   cursor: pointer;
+  max-width: 180px;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 
-.select:hover {
+.trigger:hover {
   border-color: var(--border-hi);
   background: var(--card-hi);
+}
+
+.triggerName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.triggerBadge,
+.wsBadge {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #0b0d12;
+}
+
+.triggerBadge {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  font-size: 9px;
+}
+
+.wsBadge {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  font-size: 10px;
+}
+
+/* Template badge colors - workspace-switcher-cards-directions.html כיוון 1. No-template
+   workspaces (template=null, still allowed pre-pick) get a neutral metal badge instead of
+   a fabricated color, showing the workspace name's first letter. */
+.badge_day {
+  background: linear-gradient(135deg, #f2b94a, #d99a2b);
+}
+
+.badge_swing {
+  background: linear-gradient(135deg, #6fd0e8, #3aa6c4);
+}
+
+.badge_long {
+  background: linear-gradient(135deg, #9d8ce8, #6f5ecf);
+}
+
+.badge_crypto {
+  background: linear-gradient(135deg, #5ce0b8, #2fae8c);
+}
+
+.badge_none {
+  background: var(--metal-mid);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
 }
 
 .newButton {
@@ -60,6 +123,9 @@
   .upgradeText {
     display: none;
   }
+  .trigger {
+    max-width: 120px;
+  }
 }
 
 .newButton:hover {
@@ -68,16 +134,122 @@
   transform: translateY(-1px);
 }
 
-.createBox {
+/* ============ Dropdown (preview cards, direction 1) ============ */
+.dropdown {
   position: absolute;
   top: calc(100% + 8px);
   inset-inline-start: 0;
   z-index: 5;
+  width: 260px;
+  padding: 8px;
+}
+
+.cardList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wsCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: rgba(var(--overlay-tint), 0.02);
+  font: inherit;
+  cursor: pointer;
+  text-align: start;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.wsCard:hover {
+  border-color: var(--border-hi);
+  background: rgba(var(--overlay-tint), 0.045);
+  transform: translateY(-1px);
+}
+
+.wsCardActive {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+}
+
+.wsMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* RTL fix (matches the real bug caught + fixed in the mockup round): without
+   `direction:ltr` here, text-overflow ellipsis on a long English workspace name in an
+   RTL document truncates from the wrong side ("Swing Trading" → "...ing Trading" instead
+   of "Swing Tra..."). text-align stays start so it still reads naturally in both LTR/RTL. */
+.wsName {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-h);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  direction: ltr;
+  text-align: start;
+}
+
+.wsSub {
+  font-size: 10.5px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wsPnl {
+  flex-shrink: 0;
+  font-weight: 700;
+  font-size: 12.5px;
+}
+
+.wsPnlPos {
+  color: var(--pnl-pos-2);
+}
+
+.wsPnlNeg {
+  color: var(--pnl-neg-2);
+}
+
+.newButtonInDropdown {
+  width: 100%;
+  margin-top: 6px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--accent-2);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.newButtonInDropdown:hover {
+  border-color: rgba(var(--amber-hot-rgb), 0.55);
+}
+
+.createBoxInline {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  min-width: 240px;
-  padding: 14px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
 }
 
 .input {
@@ -148,4 +320,16 @@
   margin: 0;
   font-size: 12px;
   color: var(--pnl-neg-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wsCard,
+  .newButton,
+  .trigger {
+    transition: none;
+  }
+  .wsCard:hover,
+  .newButton:hover {
+    transform: none;
+  }
 }

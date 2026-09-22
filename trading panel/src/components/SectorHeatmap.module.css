@@ -131,3 +131,87 @@
   font-size: 13px;
   font-weight: 900;
 }
+
+/* Active (hover/focus) cell highlight - amber ring, matches the connector-glow language
+   used elsewhere in the app (WorkspaceSwitcher's createBox, etc). */
+.cellActive {
+  border-color: var(--accent-2);
+  box-shadow: 0 0 0 1px rgba(var(--amber-rgb), 0.5), 0 0 14px -4px rgba(var(--amber-hot-rgb), 0.6);
+}
+
+/* Fixed detail panel below the grid - design-explore/sector-heatmap-hover-directions.html
+   direction 3. Stays mounted (not conditionally rendered) so the grid's height never shifts
+   on hover - only its contents swap between empty-hint and the active sector's readout. */
+.detailPanel {
+  margin-top: 14px;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 52px;
+}
+
+.detailEmpty {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.detailMain {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.detailName {
+  font-family: var(--serif);
+  font-weight: 900;
+  color: var(--text-h);
+  font-size: 16px;
+}
+
+.detailEtf {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.detailPct {
+  font-weight: 800;
+  font-size: 20px;
+  margin-inline-start: auto;
+  color: var(--text-h);
+}
+
+.detailPctUp {
+  color: var(--pnl-pos-2);
+}
+
+.detailPctDown {
+  color: var(--pnl-neg-2);
+}
+
+.detailBadge {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  background: rgba(var(--overlay-tint), 0.05);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+
+.detailBadge_lead {
+  color: var(--pnl-pos-2);
+  background: var(--pnl-pos-bg);
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.detailBadge_lag {
+  color: var(--pnl-neg-2);
+  background: var(--pnl-neg-bg);
+  border-color: rgba(239, 68, 68, 0.35);
+}

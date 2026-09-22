@@ -6,6 +6,9 @@ export interface AppNotification {
   message: string
   createdAt: string
   readAt: string | null
+  /** 'above'/'below' - null for notifications created before 030_notification_direction.sql
+   * (no icon shown for those, see NotificationBell.tsx). */
+  direction: 'above' | 'below' | null
 }
 
 interface NotificationRow {
@@ -14,6 +17,7 @@ interface NotificationRow {
   message: string
   created_at: string
   read_at: string | null
+  direction: 'above' | 'below' | null
 }
 
 /** מגבלת שליפה סבירה לפעמון ה-header - אין UI ל"טען עוד" בשלב הזה, 50 מספיק בהרבה
@@ -27,6 +31,7 @@ function fromRow(row: NotificationRow): AppNotification {
     message: row.message,
     createdAt: row.created_at,
     readAt: row.read_at,
+    direction: row.direction,
   }
 }
 
