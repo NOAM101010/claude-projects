@@ -90,7 +90,7 @@ export function ChartImageThumbnail({ path, variant = 'thumb' }: ChartImageThumb
     <>
       <button
         type="button"
-        className={styles.thumbButton}
+        className={`${styles.thumbButton} det-frame`}
         onClick={() => setExpanded(true)}
         disabled={!url}
         aria-label={t('chartImage.viewFull')}

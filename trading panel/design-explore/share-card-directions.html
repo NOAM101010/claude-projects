@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>TradePanel — Share Card Directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@700;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07080b;
+    --metal-1: #0c0e11;
+    --metal-2: #15181d;
+    --metal-mid: #101216;
+    --text-h: #f2f2f4;
+    --text-dim: #74747c;
+    --text-label: rgba(253, 246, 232, 0.82);
+    --pnl-pos: #22c55e;
+    --pnl-pos-2: #4ade80;
+    --pnl-pos-bg: rgba(34, 197, 94, 0.14);
+    --pnl-neg: #ef4444;
+    --pnl-neg-2: #f87171;
+    --pnl-neg-bg: rgba(239, 68, 68, 0.14);
+    --accent: #d99a2b;
+    --accent-2: #e8b341;
+    --amber-rgb: 217, 154, 43;
+    --amber-hot-rgb: 232, 179, 65;
+    --border: rgba(255, 255, 255, 0.09);
+    --serif: 'Frank Ruhl Libre', Georgia, serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: #030405;
+    color: var(--text-h);
+    font-family: var(--mono);
+    padding: 56px 32px 120px;
+  }
+
+  .lab-header { max-width: 1200px; margin: 0 auto 48px; }
+  .lab-header .kicker {
+    font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--accent-2); font-weight: 700; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 9px;
+  }
+  .lab-header .kicker::before { content: ''; width: 22px; height: 1px; background: linear-gradient(90deg, var(--accent-2), transparent); }
+  .lab-header h1 { font-family: var(--serif); font-size: 30px; margin: 0 0 10px; color: var(--text-h); font-weight: 900; }
+  .lab-header p { font-size: 13.5px; color: var(--text-dim); max-width: 720px; line-height: 1.7; margin: 0; }
+
+  .section { max-width: 1200px; margin: 0 auto 88px; }
+  .section-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 22px; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
+  .section-head .num {
+    font-family: var(--serif); font-size: 22px; color: var(--accent-2); font-weight: 900;
+  }
+  .section-head h2 { font-family: var(--serif); font-size: 22px; margin: 0; color: var(--text-h); font-weight: 700; }
+  .section-head .tag {
+    font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-dim);
+    border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; margin-inline-start: auto;
+  }
+  .section-note { font-size: 12.5px; color: var(--text-dim); line-height: 1.7; margin: 14px 0 26px; max-width: 780px; }
+
+  .cards-row { display: flex; gap: 40px; flex-wrap: wrap; align-items: flex-start; }
+  .card-frame { flex: 0 0 auto; }
+  .card-frame .stage {
+    width: 400px; height: 400px;
+    position: relative;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 30px 70px -30px rgba(0,0,0,0.85);
+  }
+  .card-frame .caption {
+    margin-top: 14px; font-size: 11.5px; color: var(--text-dim); max-width: 400px; line-height: 1.6;
+  }
+  .card-frame .caption b { color: var(--text-label); font-weight: 600; }
+
+  /* ============ shared micro-brand + disclaimer, all variants ============ */
+  .tp-brand {
+    position: absolute;
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--mono); font-weight: 700; letter-spacing: 0.08em;
+    color: var(--text-dim);
+    z-index: 5;
+  }
+  .tp-brand .mark {
+    width: 14px; height: 14px; border-radius: 3px;
+    background: linear-gradient(155deg, var(--accent-2), var(--accent));
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: var(--serif); font-weight: 900; color: #16110a; font-size: 9px;
+  }
+  .tp-disclaimer {
+    position: absolute; left: 24px; right: 24px; bottom: 12px;
+    font-size: 7px; letter-spacing: 0.01em; text-align: center; color: rgba(255,255,255,0.28);
+    line-height: 1.5; font-family: 'Heebo', sans-serif; z-index: 5;
+  }
+
+  /* ============ 1. MINIMALIST ============ */
+  .card-minimal {
+    width: 100%; height: 100%;
+    background: radial-gradient(120% 100% at 50% 0%, #101216 0%, #07080b 55%, #030405 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .card-minimal .eyebrow-row {
+    position: absolute; top: 30px; left: 0; right: 0;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+  .card-minimal .symbol {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.32em; color: var(--text-dim); font-weight: 700;
+  }
+  .card-minimal .month {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.18em; color: rgba(255,255,255,0.32); font-weight: 500;
+  }
+  .card-minimal .pnl-figure {
+    font-family: var(--mono); font-weight: 800; font-size: 68px; letter-spacing: -0.01em;
+    color: var(--pnl-pos-2); line-height: 1;
+    text-shadow: 0 0 60px rgba(74, 222, 128, 0.35);
+  }
+  .card-minimal .pct-figure {
+    margin-top: 14px; font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--pnl-pos-2);
+    background: var(--pnl-pos-bg); padding: 5px 14px; border-radius: 999px; letter-spacing: 0.02em;
+  }
+  .card-minimal .hairline {
+    position: absolute; bottom: 64px; left: 50%; transform: translateX(-50%);
+    width: 40px; height: 1px; background: linear-gradient(90deg, transparent, var(--accent-2), transparent);
+  }
+  .card-minimal .tp-brand { bottom: 30px; left: 0; right: 0; justify-content: center; }
+
+  /* ============ 2. STATISTIC / BADGE ============ */
+  .card-stat {
+    width: 100%; height: 100%;
+    background: linear-gradient(165deg, var(--metal-2) 0%, var(--metal-mid) 45%, var(--metal-1) 100%);
+    border: 1px solid rgba(255,255,255,0.08);
+    position: relative;
+    padding: 26px 26px 0;
+    display: flex; flex-direction: column;
+  }
+  .card-stat::after {
+    content: '';
+    position: absolute; inset: 10px;
+    pointer-events: none;
+    background:
+      linear-gradient(rgba(var(--amber-hot-rgb), 0.4) 0 0) 0 0 / 9px 1px no-repeat,
+      linear-gradient(rgba(var(--amber-hot-rgb), 0.4) 0 0) 0 0 / 1px 9px no-repeat,
+      linear-gradient(rgba(var(--amber-hot-rgb), 0.4) 0 0) 100% 0 / 9px 1px no-repeat,
+      linear-gradient(rgba(var(--amber-hot-rgb), 0.4) 0 0) 100% 0 / 1px 9px no-repeat,
+      linear-gradient(rgba(var(--amber-hot-rgb), 0.4) 0 0) 0 100% / 9px 1px no-repeat,
+      linear-gradient(rgba(var(--amber-hot-rgb), 0.4) 0 0) 0 100% / 1px 9px no-repeat,
+      linear-gradient(rgba(var(--amber-hot-rgb), 0.4) 0 0) 100% 100% / 9px 1px no-repeat,
+      linear-gradient(rgba(var(--amber-hot-rgb), 0.4) 0 0) 100% 100% / 1px 9px no-repeat;
+    opacity: 0.75;
+  }
+  .card-stat .head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-top: 4px;
+  }
+  .card-stat .eyebrow {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--accent-2); display: flex; align-items: center; gap: 7px;
+  }
+  .card-stat .eyebrow::before { content: ''; width: 16px; height: 1px; background: linear-gradient(90deg, var(--accent-2), transparent); }
+  .card-stat .month-chip { font-size: 9px; color: var(--text-dim); letter-spacing: 0.08em; }
+  .card-stat .headline {
+    text-align: center; margin-top: 6px;
+  }
+  .card-stat .headline .sym {
+    font-family: var(--serif); font-size: 30px; font-weight: 900; color: var(--text-h); line-height: 1;
+  }
+  .card-stat .headline .pnl {
+    font-family: var(--mono); font-size: 40px; font-weight: 800; color: var(--pnl-pos-2); margin-top: 4px; line-height: 1;
+  }
+  .card-stat .grid {
+    margin-top: auto; margin-bottom: 40px;
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px;
+    background: rgba(255,255,255,0.07); border-radius: 8px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.07);
+  }
+  .card-stat .cell {
+    background: rgba(255,255,255,0.02); padding: 12px 14px; text-align: center;
+  }
+  .card-stat .cell .l { font-size: 8px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-dim); font-weight: 700; }
+  .card-stat .cell .v { font-family: var(--mono); font-size: 19px; font-weight: 800; color: var(--text-h); margin-top: 5px; }
+  .card-stat .cell .v.pos { color: var(--pnl-pos-2); }
+  .card-stat .cell .v.neg { color: var(--pnl-neg-2); }
+  .card-stat .tp-brand { bottom: 30px; left: 0; right: 0; justify-content: center; }
+  .card-stat .badge-icon {
+    top: 46px; right: 24px; position: absolute;
+    font-size: 9px; letter-spacing: 0.1em; color: #16110a; font-weight: 800;
+    background: linear-gradient(155deg, var(--accent-2), var(--accent));
+    padding: 4px 9px; border-radius: 999px;
+  }
+
+  /* ============ 3. CANDLESTICK MOTIF ============ */
+  .card-candle {
+    width: 100%; height: 100%;
+    background: linear-gradient(180deg, #0a0c10 0%, #07080b 60%, #050608 100%);
+    position: relative; overflow: hidden;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .card-candle .candles {
+    position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center;
+    gap: 10px; padding: 0 20px 0; opacity: 0.5; filter: blur(0.3px);
+  }
+  .card-candle .candle { width: 14px; display: flex; flex-direction: column; align-items: center; }
+  .candle .wick { width: 1.5px; background: currentColor; opacity: 0.55; }
+  .candle .body { width: 100%; border-radius: 2px; }
+  .candle.up { color: var(--pnl-pos-2); }
+  .candle.up .body { background: linear-gradient(180deg, rgba(74,222,128,0.9), rgba(34,197,94,0.55)); }
+  .candle.down { color: var(--pnl-neg-2); }
+  .candle.down .body { background: linear-gradient(180deg, rgba(248,113,113,0.85), rgba(239,68,68,0.5)); }
+  .card-candle .vignette {
+    position: absolute; inset: 0;
+    background: radial-gradient(70% 55% at 50% 42%, rgba(7,8,11,0.15) 0%, rgba(7,8,11,0.92) 78%, #07080b 100%);
+  }
+  .card-candle .content { position: relative; z-index: 3; text-align: center; }
+  .card-candle .eyebrow {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.28em; color: var(--accent-2); margin-bottom: 10px;
+  }
+  .card-candle .sym {
+    font-family: var(--serif); font-size: 46px; font-weight: 900; color: var(--text-h); line-height: 1;
+  }
+  .card-candle .pnl {
+    font-family: var(--mono); font-size: 52px; font-weight: 800; color: var(--pnl-pos-2); margin-top: 10px; line-height: 1;
+    text-shadow: 0 0 40px rgba(74,222,128,0.3);
+  }
+  .card-candle .pct {
+    font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--pnl-pos-2); margin-top: 10px; letter-spacing: 0.04em;
+  }
+  .card-candle .meta {
+    margin-top: 18px; font-family: var(--mono); font-size: 9.5px; color: var(--text-dim); letter-spacing: 0.1em;
+  }
+  .card-candle .tp-brand { top: 24px; left: 0; right: 0; justify-content: center; z-index: 4; }
+
+  /* ============ 3b. monthly-summary variant of candlestick, for size B row ============ */
+  .card-candle.is-summary .sym { font-size: 26px; letter-spacing: 0.02em; }
+  .card-candle.is-summary .pnl { font-size: 44px; }
+  .card-candle.is-summary .statline {
+    display: flex; gap: 22px; justify-content: center; margin-top: 22px;
+  }
+  .card-candle.is-summary .statline .s { text-align: center; }
+  .card-candle.is-summary .statline .s .l { font-size: 8px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-dim); font-weight: 700; }
+  .card-candle.is-summary .statline .s .v { font-family: var(--mono); font-size: 17px; font-weight: 800; color: var(--text-h); margin-top: 5px; }
+
+  .switch-note { max-width: 780px; font-size: 12px; color: var(--text-dim); line-height: 1.7; margin-top: 10px; }
+  .switch-note b { color: var(--accent-2); }
+</style>
+</head>
+<body>
+
+  <div class="lab-header">
+    <div class="kicker">TradePanel — Design Exploration</div>
+    <h1>Share-card directions (alternative to the existing Calendar export)</h1>
+    <p>
+      Three additional share-image templates for "Trade of the Month" / monthly summary, on top of the existing
+      wide calendar PNG (unchanged, still the default). Each is a real 1:1 square, meant to stand alone as a photo
+      on Instagram/X/Stories — not a screenshot of the app. All three carry the same tiny TradePanel mark + the exact
+      legal disclaimer already used in <code>monthlyCalendarCanvas.ts</code> ("TradePanel is a personal record-keeping
+      tool only and does not constitute investment advice of any kind."). Shown here at 400×400 CSS px for
+      side-by-side review; production export should render at 1080×1080 canvas, same proportions.
+    </p>
+  </div>
+
+  <!-- ======================= 1. MINIMALIST ======================= -->
+  <div class="section">
+    <div class="section-head">
+      <span class="num">01</span>
+      <h2>Minimalist — quote-card</h2>
+      <span class="tag">1:1 · single number</span>
+    </div>
+    <p class="section-note">
+      Almost entirely negative space. One giant P&amp;L figure carries the whole card, everything else recedes —
+      closer to a meditation-app quote card than a trading dashboard. Best for a single standout trade someone
+      wants to post with zero explanation needed.
+    </p>
+    <div class="cards-row">
+      <div class="card-frame">
+        <div class="stage">
+          <div class="card-minimal">
+            <div class="eyebrow-row">
+              <span class="symbol">NVDA</span>
+              <span class="month">TRADE OF THE MONTH · SEP 2026</span>
+            </div>
+            <div class="pnl-figure">+$21.07</div>
+            <div class="pct-figure">+0.84%</div>
+            <div class="hairline"></div>
+            <div class="tp-brand"><span class="mark">T</span>TRADEPANEL</div>
+            <div class="tp-disclaimer">TradePanel is a personal record-keeping tool only and does not constitute investment advice of any kind.</div>
+          </div>
+        </div>
+        <p class="caption"><b>Winning trade variant</b> — symbol + month tiny at top, P&amp;L is the only large element, pct badge as secondary confirmation.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================= 2. DRAMATIC / STATISTIC ======================= -->
+  <div class="section">
+    <div class="section-head">
+      <span class="num">02</span>
+      <h2>Statistic — achievement badge</h2>
+      <span class="tag">1:1 · full monthly recap</span>
+    </div>
+    <p class="section-note">
+      Reads like a sports-app "badge earned" screen: headline result up top, then a 2×2 stat grid (Win Rate,
+      Profit Factor, Trades, Best Trade) below it. Best for the monthly-summary share (not a single trade) —
+      more information-dense, feels like a season stat card rather than a single quote.
+    </p>
+    <div class="cards-row">
+      <div class="card-frame">
+        <div class="stage">
+          <div class="card-stat">
+            <div class="head">
+              <span class="eyebrow">SEPTEMBER 2026</span>
+              <span class="month-chip">CLOSED</span>
+            </div>
+            <div class="badge-icon">★ TOP MONTH</div>
+            <div class="headline">
+              <div class="sym">NVDA</div>
+              <div class="pnl">+$21.07</div>
+            </div>
+            <div class="grid">
+              <div class="cell"><div class="l">Win Rate</div><div class="v pos">64.6%</div></div>
+              <div class="cell"><div class="l">Profit Factor</div><div class="v pos">2.31</div></div>
+              <div class="cell"><div class="l">Trades</div><div class="v">48</div></div>
+              <div class="cell"><div class="l">Best Trade</div><div class="v pos">+$21.07</div></div>
+            </div>
+            <div class="tp-brand"><span class="mark">T</span>TRADEPANEL</div>
+            <div class="tp-disclaimer">TradePanel is a personal record-keeping tool only and does not constitute investment advice of any kind.</div>
+          </div>
+        </div>
+        <p class="caption"><b>Monthly-summary variant</b> — det-frame HUD corners (same motif as the app's hero panels), amber "TOP MONTH" badge top-right, stat grid instead of a single figure.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================= 3. CANDLESTICK MOTIF ======================= -->
+  <div class="section">
+    <div class="section-head">
+      <span class="num">03</span>
+      <h2>Candlestick — trading-native backdrop</h2>
+      <span class="tag">1:1 · decorative candle motif</span>
+    </div>
+    <p class="section-note">
+      Uses a soft, out-of-focus green/red candlestick strip as a backdrop (same visual language as the access-gate/
+      launch screen), heavily vignetted so numbers stay perfectly legible on top. Feels the most "trading app"
+      of the three. Shown in both a single-trade framing and a monthly-summary framing (same backdrop, different content block).
+    </p>
+    <div class="cards-row">
+      <div class="card-frame">
+        <div class="stage">
+          <div class="card-candle">
+            <div class="candles">
+              <div class="candle up"><div class="wick" style="height:14px"></div><div class="body" style="height:38px"></div><div class="wick" style="height:8px"></div></div>
+              <div class="candle down"><div class="wick" style="height:10px"></div><div class="body" style="height:52px"></div><div class="wick" style="height:16px"></div></div>
+              <div class="candle up"><div class="wick" style="height:20px"></div><div class="body" style="height:70px"></div><div class="wick" style="height:6px"></div></div>
+              <div class="candle up"><div class="wick" style="height:8px"></div><div class="body" style="height:96px"></div><div class="wick" style="height:22px"></div></div>
+              <div class="candle down"><div class="wick" style="height:16px"></div><div class="body" style="height:44px"></div><div class="wick" style="height:10px"></div></div>
+              <div class="candle up"><div class="wick" style="height:12px"></div><div class="body" style="height:120px"></div><div class="wick" style="height:14px"></div></div>
+              <div class="candle up"><div class="wick" style="height:24px"></div><div class="body" style="height:150px"></div><div class="wick" style="height:8px"></div></div>
+              <div class="candle down"><div class="wick" style="height:10px"></div><div class="body" style="height:60px"></div><div class="wick" style="height:18px"></div></div>
+              <div class="candle up"><div class="wick" style="height:14px"></div><div class="body" style="height:88px"></div><div class="wick" style="height:10px"></div></div>
+              <div class="candle up"><div class="wick" style="height:18px"></div><div class="body" style="height:130px"></div><div class="wick" style="height:12px"></div></div>
+            </div>
+            <div class="vignette"></div>
+            <div class="tp-brand"><span class="mark">T</span>TRADEPANEL</div>
+            <div class="content">
+              <div class="eyebrow">TRADE OF THE MONTH</div>
+              <div class="sym">NVDA</div>
+              <div class="pnl">+$21.07</div>
+              <div class="pct">+0.84% · SEP 2026</div>
+              <div class="meta">LONG · BEST OF 48 TRADES</div>
+            </div>
+            <div class="tp-disclaimer">TradePanel is a personal record-keeping tool only and does not constitute investment advice of any kind.</div>
+          </div>
+        </div>
+        <p class="caption"><b>Single-trade framing</b> — blurred candle strip behind a vignette, symbol/P&amp;L/meta stacked centrally.</p>
+      </div>
+
+      <div class="card-frame">
+        <div class="stage">
+          <div class="card-candle is-summary">
+            <div class="candles">
+              <div class="candle up"><div class="wick" style="height:14px"></div><div class="body" style="height:38px"></div><div class="wick" style="height:8px"></div></div>
+              <div class="candle down"><div class="wick" style="height:10px"></div><div class="body" style="height:52px"></div><div class="wick" style="height:16px"></div></div>
+              <div class="candle up"><div class="wick" style="height:20px"></div><div class="body" style="height:70px"></div><div class="wick" style="height:6px"></div></div>
+              <div class="candle up"><div class="wick" style="height:8px"></div><div class="body" style="height:96px"></div><div class="wick" style="height:22px"></div></div>
+              <div class="candle down"><div class="wick" style="height:16px"></div><div class="body" style="height:44px"></div><div class="wick" style="height:10px"></div></div>
+              <div class="candle up"><div class="wick" style="height:12px"></div><div class="body" style="height:120px"></div><div class="wick" style="height:14px"></div></div>
+              <div class="candle up"><div class="wick" style="height:24px"></div><div class="body" style="height:150px"></div><div class="wick" style="height:8px"></div></div>
+              <div class="candle down"><div class="wick" style="height:10px"></div><div class="body" style="height:60px"></div><div class="wick" style="height:18px"></div></div>
+              <div class="candle up"><div class="wick" style="height:14px"></div><div class="body" style="height:88px"></div><div class="wick" style="height:10px"></div></div>
+              <div class="candle up"><div class="wick" style="height:18px"></div><div class="body" style="height:130px"></div><div class="wick" style="height:12px"></div></div>
+            </div>
+            <div class="vignette"></div>
+            <div class="tp-brand"><span class="mark">T</span>TRADEPANEL</div>
+            <div class="content">
+              <div class="eyebrow">SEPTEMBER 2026 RECAP</div>
+              <div class="sym">+$418.60</div>
+              <div class="pnl" style="font-size:22px; margin-top:2px; color:var(--text-dim); font-weight:600;">NET MONTHLY P&amp;L</div>
+              <div class="statline">
+                <div class="s"><div class="l">Win Rate</div><div class="v">64.6%</div></div>
+                <div class="s"><div class="l">P. Factor</div><div class="v">2.31</div></div>
+                <div class="s"><div class="l">Trades</div><div class="v">48</div></div>
+              </div>
+            </div>
+            <div class="tp-disclaimer">TradePanel is a personal record-keeping tool only and does not constitute investment advice of any kind.</div>
+          </div>
+        </div>
+        <p class="caption"><b>Monthly-summary framing</b> — same backdrop, headline swaps to net P&amp;L + 3-stat row.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <span class="num">—</span>
+      <h2>Implementation notes for the builder</h2>
+      <span class="tag">not built here</span>
+    </div>
+    <p class="switch-note">
+      All three would follow the exact pattern already established by <code>tradeCardCanvas.ts</code> /
+      <code>monthlyCalendarCanvas.ts</code>: a new <code>renderXCanvas(canvas, data)</code> function per template
+      (or one function with a <code>variant</code> param), colors pulled live via <code>readCssVar()</code> (never
+      hardcoded), same <code>shareOrDownloadCanvas()</code> export path. Suggested production size <b>1080×1080</b>
+      (vs. the existing calendar's 1200×1500 and Trade-of-the-Month's 1080×1920 — both taller formats). The user
+      would pick a template via a small selector next to the existing Share button on
+      <code>TradeOfTheMonthCard.tsx</code> (and a monthly-recap equivalent for variants 2/3-summary) — the existing
+      wide calendar export stays the default, these are additive options, per the task brief.
+    </p>
+  </div>
+
+</body>
+</html>

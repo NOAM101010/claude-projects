@@ -248,7 +248,7 @@
   border-radius: 999px;
   background: rgba(var(--overlay-tint), 0.12);
   border: 1px solid var(--border);
-  transition: background 0.2s ease, border-color 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.35s ease;
   pointer-events: none;
 }
 
@@ -267,6 +267,10 @@
 .switch input:checked ~ .switchTrack {
   background: rgba(var(--amber-rgb), 0.9);
   border-color: rgba(var(--amber-rgb), 0.9);
+  /* soft halo that settles in around the track once "on" - static, not pulsing. Settings is
+     deliberately the calmest screen in the app (see progress.md), so this stays a one-time
+     settle transition instead of an ambient loop. */
+  box-shadow: 0 0 0 4px rgba(var(--amber-rgb), 0.14), 0 0 16px 0 rgba(var(--amber-hot-rgb), 0.35);
 }
 
 .switch input:checked ~ .switchKnob {

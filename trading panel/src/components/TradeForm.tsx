@@ -475,7 +475,7 @@ export function TradeForm({
         {previewLoading && <p className={styles.optional}>{t('tradeForm.previewLoading')}</p>}
         {previewUrl && !removeExistingImage && (
           <div className={styles.imagePreviewWrap}>
-            <button type="button" className={styles.imagePreviewButton} onClick={() => setShowFullImage(true)}>
+            <button type="button" className={`${styles.imagePreviewButton} det-frame`} onClick={() => setShowFullImage(true)}>
               <img src={previewUrl} alt={t('tradeForm.previewAlt')} className={styles.imagePreview} />
             </button>
             <button type="button" className={styles.removeImageButton} onClick={handleRemoveImage} disabled={saving}>

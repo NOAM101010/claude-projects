@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TradePanel — Settings: מתגי on/off ברמת מגע פרימיום</title>
+<!--
+  WorkspaceSettings.module.css's .switch/.switchTrack/.switchKnob כבר קיימים (track+knob
+  amber, transition transform/background) - זו המסך "הכי רגוע" בכוונה (ראה progress.md:
+  "Settings is deliberately the calmest screen"), אז 3 הכיוונים כאן מוסיפים תחושת "מגע"
+  ברגע הלחיצה בלבד (transform/opacity, one-shot, לא לולאה), לא מוסיפים תנועה סביבתית.
+  1) Shine sweep - הבזק אור חד-פעמי חולף על פני ה-knob ברגע ההחלפה.
+  2) Glow settle - הילה רכה שמתעצמת סביב ה-track כשמצב "on" מתיישב, לא פועמת.
+  3) Metal click - ה-knob עצמו מקבל גימור מתכתי+shine פנימי, עם bounce קטן בלבד ב-transform.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@700;900&family=JetBrains+Mono:wght@500;600;700;800&family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#07080b; --bg-2:#0b0d12; --overlay-tint:255,255,255; --amber-hot-rgb:232,179,65;
+    --border: rgba(255,255,255,0.09); --text:#a3a3ab; --text-h:#f2f2f4; --text-dim:#74747c;
+    --text-label: rgba(253,246,232,.82);
+    --accent:#d99a2b; --accent-2:#e8b341; --amber-rgb:217,154,43; --ink-rgb:0,0,0;
+    --metal-1:#0c0e11; --metal-2:#15181d; --metal-mid:#101216; --metal-edge: rgba(255,255,255,.08); --metal-hi: rgba(255,255,255,.06);
+    --shadow: 0 18px 40px -22px rgba(0,0,0,.75);
+    --serif:'Frank Ruhl Libre', Georgia, serif; --mono:'JetBrains Mono', ui-monospace, monospace; --sans:'Heebo', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  body{ min-height:100vh; padding:40px 22px 80px; }
+  .num{direction:ltr;unicode-bidi:isolate;font-family:var(--mono);}
+  .wrap{ max-width:760px; margin:0 auto; }
+  h1{ font-family:var(--serif); font-weight:900; color:var(--text-h); font-size:26px; margin:0 0 6px; }
+  .lede{ color:var(--text-dim); font-size:13px; margin:0 0 10px; max-width:640px; line-height:1.6; }
+  .section-title{ font-family:var(--serif); font-weight:900; color:var(--text-h); font-size:19px; margin:44px 0 4px; }
+  .section-note{ color:var(--text-dim); font-size:12.5px; margin:0 0 16px; max-width:620px; line-height:1.6; }
+  .replay-hint{ font-family:var(--mono); font-size:10.5px; color:var(--accent-2); letter-spacing:.04em; margin:0 0 14px; }
+
+  .metal-panel{ position:relative; border:1px solid var(--metal-edge); border-radius:14px;
+    background: linear-gradient(180deg, var(--metal-2) 0%, var(--metal-mid) 55%, var(--metal-1) 100%);
+    box-shadow: inset 0 1px 0 var(--metal-hi), var(--shadow); }
+
+  .rows{ display:flex; flex-direction:column; }
+  .toggle-row{ display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 18px; cursor:pointer; }
+  .toggle-row + .toggle-row{ border-top:1px solid var(--border); }
+  .row-text{ display:flex; flex-direction:column; gap:2px; }
+  .row-label{ font-size:13.5px; font-weight:600; color:var(--text-h); }
+  .row-hint{ font-size:11.5px; color:var(--text-dim); }
+
+  /* base switch geometry shared by all 3 directions - matches the real component's
+     42x24 track / 18px knob so this reads as the actual control, not a mockup prop */
+  .switch{ position:relative; display:inline-block; width:42px; height:24px; flex-shrink:0; }
+  .switch input{ position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer; }
+  .track{ position:absolute; inset:0; border-radius:999px; background:rgba(255,255,255,.12); border:1px solid var(--border);
+    transition:background .2s ease, border-color .2s ease; pointer-events:none; overflow:hidden; }
+  .knob{ position:absolute; top:2px; right:2px; width:18px; height:18px; border-radius:50%; background:var(--text-dim);
+    transition:transform .2s cubic-bezier(.3,.9,.4,1.1), background .2s ease; pointer-events:none; }
+  input:checked ~ .track{ background:rgba(var(--amber-rgb),.9); border-color:rgba(var(--amber-rgb),.9); }
+  input:checked ~ .knob{ transform:translateX(-20px); background:rgba(var(--ink-rgb),.85); }
+  input:focus-visible ~ .track{ outline:2px solid rgba(var(--amber-rgb),.6); outline-offset:2px; }
+
+  /* ============ DIRECTION 1: shine sweep on the knob ============ */
+  .knob1::after{ content:''; position:absolute; inset:0; border-radius:50%;
+    background:linear-gradient(120deg, transparent 30%, rgba(255,255,255,.85) 48%, transparent 66%);
+    transform:translateX(-140%); opacity:0; }
+  input:checked ~ .knob1::after{ animation:shine-sweep .55s ease .05s 1 both; }
+  @keyframes shine-sweep{ 0%{ transform:translateX(-140%); opacity:0; } 30%{ opacity:.9; } 100%{ transform:translateX(140%); opacity:0; } }
+
+  /* ============ DIRECTION 2: glow settle around the track ============ */
+  .track2{ transition:background .2s ease, border-color .2s ease, box-shadow .35s ease; }
+  input:checked ~ .track2{ box-shadow:0 0 0 4px rgba(var(--amber-rgb),.14), 0 0 16px 0 rgba(var(--amber-hot-rgb),.35); }
+
+  /* ============ DIRECTION 3: metal-finish knob with inner shine + settle bounce ============ */
+  .knob3{ background:linear-gradient(155deg, #cfcfd4 0%, var(--text-dim) 55%, #55555c 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.55), inset 0 -2px 2px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.4); }
+  input:checked ~ .knob3{ background:linear-gradient(155deg, #2a2115 0%, rgba(var(--ink-rgb),.85) 55%, #0a0805 100%);
+    box-shadow: inset 0 1px 0 rgba(var(--amber-hot-rgb),.55), inset 0 -2px 2px rgba(0,0,0,.5), 0 1px 3px rgba(0,0,0,.5);
+    animation:knob-settle .28s cubic-bezier(.34,1.56,.64,1) both; }
+  @keyframes knob-settle{ 0%{ transform:translateX(-20px) scale(.9); } 60%{ transform:translateX(-20px) scale(1.12); } 100%{ transform:translateX(-20px) scale(1); } }
+
+  @media (prefers-reduced-motion: reduce){
+    .knob1::after{ animation:none !important; display:none; }
+    .track2{ transition:background .2s ease, border-color .2s ease; }
+    input:checked ~ .knob3{ animation:none; }
+  }
+
+  .replay-btn{ font-family:var(--mono); font-size:10.5px; letter-spacing:.06em; color:var(--text-dim); background:none;
+    border:1px solid var(--border); border-radius:999px; padding:4px 10px; cursor:pointer; margin-bottom:16px; }
+  .replay-btn:hover{ color:var(--text-h); border-color:var(--border-hi); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Settings — מתגים ברמת מגע פרימיום</h1>
+    <p class="lede">Settings נשאר המסך הרגוע ביותר בכוונה — התוספת כאן היא תגובה רגעית (one-shot) ללחיצה עצמה, לא תנועה סביבתית שרצה כל הזמן. כל תג מתחיל כבוי; לחיצה עליו מדליקה אותו ומריצה את אפקט המעבר, בדיוק כמו ב-Settings האמיתי.</p>
+
+    <div class="section-title">01 · הבזק אור חד-פעמי על ה-knob</div>
+    <p class="section-note">ברגע ההחלפה ל-on, קו אור דק חולף פעם אחת על פני הכפתור העגול — מרגיש כמו "לחיצת אישור" מכנית, לא כמו הבהוב חוזר.</p>
+    <div class="rows metal-panel">
+      <label class="toggle-row"><span class="row-text"><span class="row-label">מחיר בסיס דולר</span><span class="row-hint">הצג ערכים ב-USD גם כשהמטבע המקומי שונה</span></span>
+        <span class="switch"><input type="checkbox"/><span class="track"></span><span class="knob knob1"></span></span>
+      </label>
+      <label class="toggle-row"><span class="row-text"><span class="row-label">התראות מחיר</span><span class="row-hint">קבלת התראה כשסימבול חוצה יעד</span></span>
+        <span class="switch"><input type="checkbox" checked/><span class="track"></span><span class="knob knob1"></span></span>
+      </label>
+    </div>
+
+    <div class="section-title">02 · הילה רכה שמתיישבת סביב ה-track</div>
+    <p class="section-note">כשמצב "on" מתיישב, glow חם ועדין נבנה סביב ה-track עצמו (לא סביב כל השורה) — נשאר סטטי כל עוד המתג דלוק, לא פועם.</p>
+    <div class="rows metal-panel">
+      <label class="toggle-row"><span class="row-text"><span class="row-label">שדות פרו מורחבים</span><span class="row-hint">מציג שדות ניתוח נוספים בטופס הוספת טרייד</span></span>
+        <span class="switch"><input type="checkbox"/><span class="track track2"></span><span class="knob"></span></span>
+      </label>
+      <label class="toggle-row"><span class="row-text"><span class="row-label">תזכורת יומן יומית</span><span class="row-hint">התראה עדינה בסוף היום אם לא נכתבו notes</span></span>
+        <span class="switch"><input type="checkbox" checked/><span class="track track2"></span><span class="knob"></span></span>
+      </label>
+    </div>
+
+    <div class="section-title">03 · גימור מתכתי + התיישבות קטנה</div>
+    <p class="section-note">ה-knob עצמו מקבל גרדיאנט מתכתי עם shine פנימי במקום צבע שטוח, ומתיישב ב-scale קטן ברגע ההחלפה — מרגיש כמו כפתור פיזי על קונסולה, לא checkbox.</p>
+    <div class="rows metal-panel">
+      <label class="toggle-row"><span class="row-text"><span class="row-label">שמירת מיקום גלילה</span><span class="row-hint">חוזר לאותו מקום ביומן בטעינה הבאה</span></span>
+        <span class="switch"><input type="checkbox"/><span class="track"></span><span class="knob knob3"></span></span>
+      </label>
+      <label class="toggle-row"><span class="row-text"><span class="row-label">תצוגת אחוזים בלבד</span><span class="row-hint">מסתיר סכומי דולר גולמיים בדשבורד</span></span>
+        <span class="switch"><input type="checkbox" checked/><span class="track"></span><span class="knob knob3"></span></span>
+      </label>
+    </div>
+  </div>
+</body>
+</html>

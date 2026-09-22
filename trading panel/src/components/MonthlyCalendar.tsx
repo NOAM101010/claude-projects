@@ -8,6 +8,7 @@ import type { DailyPnl } from '../lib/stats'
 import { shareOrDownloadCanvas } from '../lib/canvasExport'
 import { renderMonthlyCalendarToCanvas } from '../lib/monthlyCalendarCanvas'
 import { DailyTradingView } from './DailyTradingView'
+import { EmptyState } from './EmptyState'
 import { TradeOfTheMonthCard } from './TradeOfTheMonthCard'
 import type { CurrencyCode, Trade } from '../types/trade'
 import styles from './MonthlyCalendar.module.css'
@@ -271,10 +272,7 @@ export function MonthlyCalendar({ trades, baseCurrency, onEditTrade }: MonthlyCa
       </div>
 
       {monthEntries.length === 0 && (
-        <div className={styles.empty}>
-          <p className={styles.emptyTitle}>{t('monthlyCalendar.noTradesInMonth')}</p>
-          <p className={styles.emptyHint}>{t('monthlyCalendar.noTradesInMonthHint')}</p>
-        </div>
+        <EmptyState illustration="calendar" title={t('monthlyCalendar.noTradesInMonth')} hint={t('monthlyCalendar.noTradesInMonthHint')} />
       )}
 
       <canvas ref={canvasRef} className={styles.hiddenCanvas} aria-hidden="true" />

@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TradePanel — כרטיס חדש: מגבלת טריידים ביום (Day template)</title>
+<!--
+  4 כיוונים לכרטיס "מגבלת טריידים ביום" (X מתוך Y היום, Day template בלבד):
+  1) רגיל - progress bar שטוח, זהה בדיוק לסגנון DailyRiskBudgetCard הקיים היום.
+  2) Gauge מעגלי - טבעת התקדמות (SVG conic) עם המספר במרכז, מרגיש כמו מד-מהירות.
+  3) נקודות מצטברות - 6 "כדורים" שמתמלאים אחד-אחד ככל שנפתחים טריידים היום, קריא
+     מהבזק ראשון גם בלי לקרוא מספרים.
+  4) רצועה אנכית (thermometer) - טור עולה שממלא כלפי מעלה, מתאים לכרטיס צר בגריד.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@700;900&family=JetBrains+Mono:wght@500;600;700;800&family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#07080b; --bg-2:#0b0d12; --overlay-tint:255,255,255; --amber-hot-rgb:232,179,65;
+    --border: rgba(255,255,255,0.09); --text:#a3a3ab; --text-h:#f5f5f7; --text-dim:#9c9ca6;
+    --pos:#22c55e; --pos-2:#4ade80; --neg:#ef4444; --neg-2:#f87171;
+    --accent:#d99a2b; --accent-2:#e8b341; --amber-rgb:217,154,43;
+    --metal-1:#0c0e11; --metal-2:#15181d; --metal-mid:#101216;
+    --serif:'Frank Ruhl Libre', Georgia, serif; --mono:'JetBrains Mono', ui-monospace, monospace; --sans:'Heebo', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  body{ min-height:100vh; padding:40px 22px 60px; }
+  .num{direction:ltr;unicode-bidi:isolate;font-family:var(--mono);font-variant-numeric:tabular-nums;}
+  .wrap{ max-width:1200px; margin:0 auto; }
+  h1{ font-family:var(--serif); font-weight:900; color:var(--text-h); font-size:26px; margin:0 0 6px; }
+  .lede{ color:var(--text-dim); font-size:13px; margin:0 0 34px; }
+  .row{ display:grid; grid-template-columns:repeat(4,1fr); gap:20px; margin-bottom:44px; }
+  @media (max-width:1100px){ .row{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:560px){ .row{ grid-template-columns:1fr; } }
+  .variant-label{ font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-2); margin-bottom:10px; display:block; }
+
+  .metal-panel{ position:relative; border:1px solid rgba(255,255,255,.08); border-radius:14px;
+    background: linear-gradient(180deg, var(--metal-2) 0%, var(--metal-mid) 55%, var(--metal-1) 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 18px 40px -22px rgba(0,0,0,.75); }
+  .holo-edge{ position:relative; isolation:isolate; }
+  .holo-edge::after{ content:''; position:absolute; inset:0; border-radius:inherit; padding:1px; pointer-events:none;
+    background: linear-gradient(180deg, rgba(var(--overlay-tint),.1) 0%, rgba(var(--overlay-tint),.02) 28%, transparent 58%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; opacity:.7; }
+  .holo-edge--amber::after{ background: linear-gradient(180deg, rgba(var(--amber-hot-rgb),.35) 0%, rgba(var(--amber-rgb),.06) 32%, transparent 60%); }
+  .det-frame{ position:relative; }
+  .det-frame::before{ content:''; position:absolute; inset:8px; pointer-events:none; z-index:1; opacity:.4;
+    background: linear-gradient(rgba(var(--amber-hot-rgb),.45) 0 0) 0 0/10px 1px no-repeat,
+      linear-gradient(rgba(var(--amber-hot-rgb),.45) 0 0) 0 0/1px 10px no-repeat,
+      linear-gradient(rgba(var(--amber-hot-rgb),.45) 0 0) 100% 0/10px 1px no-repeat,
+      linear-gradient(rgba(var(--amber-hot-rgb),.45) 0 0) 100% 0/1px 10px no-repeat,
+      linear-gradient(rgba(var(--amber-hot-rgb),.45) 0 0) 0 100%/10px 1px no-repeat,
+      linear-gradient(rgba(var(--amber-hot-rgb),.45) 0 0) 0 100%/1px 10px no-repeat,
+      linear-gradient(rgba(var(--amber-hot-rgb),.45) 0 0) 100% 100%/10px 1px no-repeat,
+      linear-gradient(rgba(var(--amber-hot-rgb),.45) 0 0) 100% 100%/1px 10px no-repeat; }
+
+  .card{ border-radius:14px; padding:18px 20px; display:flex; flex-direction:column; gap:10px; min-height:210px; }
+  .card h3{ margin:0; font-size:13px; font-weight:800; color:var(--text-h); font-family:var(--sans); }
+
+  /* ---- variant 1: baseline (matches DailyRiskBudgetCard exactly) ---- */
+  .v1-top{ display:flex; justify-content:space-between; align-items:baseline; margin-top:4px; }
+  .v1-count{ font-family:var(--mono); font-weight:800; font-size:26px; color:var(--text-h); }
+  .v1-count.warn{ color:var(--accent-2); }
+  .v1-count.danger{ color:var(--neg-2); }
+  .v1-of{ font-family:var(--mono); font-size:11.5px; color:var(--text-dim); }
+  .v1-track{ height:9px; border-radius:999px; background:rgba(255,255,255,.06); overflow:hidden; margin-top:2px; }
+  .v1-fill{ height:100%; border-radius:999px; background:linear-gradient(90deg, var(--accent), var(--accent-2)); transition:width .4s ease; }
+  .v1-fill.danger{ background:linear-gradient(90deg, #ef4444, #f87171); }
+  .v1-meta{ font-family:var(--mono); font-size:11px; color:var(--text-dim); margin-top:auto; }
+
+  /* ---- variant 2: circular gauge ---- */
+  .v2-body{ display:flex; align-items:center; gap:18px; margin-top:auto; margin-bottom:auto; }
+  .v2-gauge{ position:relative; width:104px; height:104px; flex:none; }
+  .v2-gauge svg{ transform:rotate(-90deg); }
+  .v2-gauge .track{ fill:none; stroke:rgba(255,255,255,.08); stroke-width:9; }
+  .v2-gauge .fill{ fill:none; stroke:var(--accent-2); stroke-width:9; stroke-linecap:round; transition:stroke-dashoffset .5s ease; }
+  .v2-gauge .fill.danger{ stroke:var(--neg-2); }
+  .v2-center{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .v2-center .n{ font-family:var(--mono); font-weight:800; font-size:24px; color:var(--text-h); line-height:1; }
+  .v2-center .d{ font-family:var(--mono); font-size:10px; color:var(--text-dim); }
+  .v2-side .lbl{ font-family:var(--mono); font-size:10.5px; text-transform:uppercase; color:var(--text-dim); letter-spacing:.06em; }
+  .v2-side .val{ font-family:var(--mono); font-weight:800; font-size:15px; color:var(--accent-2); margin-top:6px; }
+
+  /* ---- variant 3: filling dots ---- */
+  .v3-body{ margin-top:auto; margin-bottom:auto; }
+  .v3-dots{ display:flex; gap:9px; margin-bottom:10px; }
+  .v3-dot{ width:26px; height:26px; border-radius:50%; border:2px solid rgba(255,255,255,.14); position:relative; display:flex; align-items:center; justify-content:center; }
+  .v3-dot.filled{ border-color:var(--accent-2); background:radial-gradient(circle at 35% 30%, var(--accent-2), var(--accent)); box-shadow:0 0 12px -2px rgba(232,179,65,.7); }
+  .v3-dot.filled::after{ content:''; }
+  .v3-dot.last-danger{ border-color:var(--neg-2); background:radial-gradient(circle at 35% 30%, var(--neg-2), var(--neg)); box-shadow:0 0 12px -2px rgba(239,68,68,.6); }
+  .v3-txt{ font-family:var(--mono); font-size:12px; color:var(--text-dim); }
+  .v3-txt b{ color:var(--text-h); font-size:15px; }
+
+  /* ---- variant 4: vertical thermometer ---- */
+  .v4-body{ display:flex; align-items:flex-end; gap:16px; margin-top:auto; margin-bottom:auto; }
+  .v4-therm{ width:22px; height:100px; border-radius:11px; background:rgba(255,255,255,.06); position:relative; overflow:hidden; flex:none; border:1px solid rgba(255,255,255,.1); }
+  .v4-fill{ position:absolute; bottom:0; left:0; right:0; background:linear-gradient(180deg, var(--accent-2), var(--accent)); border-radius:0 0 11px 11px; transition:height .4s ease; }
+  .v4-fill.danger{ background:linear-gradient(180deg, #f87171, #ef4444); }
+  .v4-marks{ position:absolute; inset:0; display:flex; flex-direction:column-reverse; justify-content:space-between; padding:4px 0; }
+  .v4-marks span{ height:1px; background:rgba(0,0,0,.35); width:100%; }
+  .v4-info .n{ font-family:var(--mono); font-weight:800; font-size:24px; color:var(--text-h); }
+  .v4-info .d{ font-family:var(--mono); font-size:11px; color:var(--text-dim); margin-top:4px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>מגבלת טריידים ביום</h1>
+    <p class="lede">Day Trading בלבד · X מתוך Y טריידים שנפתחו היום · דוגמה: 4 מתוך 6</p>
+
+    <div class="row">
+      <div>
+        <span class="variant-label">01 · רגיל (כמו היום)</span>
+        <div class="card metal-panel holo-edge">
+          <h3>מגבלת טריידים היום</h3>
+          <div class="v1-top">
+            <span class="v1-count num warn">4</span>
+            <span class="v1-of">מתוך 6 טריידים</span>
+          </div>
+          <div class="v1-track"><div class="v1-fill" style="width:67%"></div></div>
+          <span class="v1-meta">67% מהמגבלה היומית נוצלה</span>
+        </div>
+      </div>
+
+      <div>
+        <span class="variant-label">02 · טבעת מדידה (Gauge)</span>
+        <div class="card metal-panel holo-edge holo-edge--amber det-frame">
+          <h3>מגבלת טריידים היום</h3>
+          <div class="v2-body">
+            <div class="v2-gauge">
+              <svg width="104" height="104" viewBox="0 0 104 104">
+                <circle class="track" cx="52" cy="52" r="44"/>
+                <circle class="fill" cx="52" cy="52" r="44" stroke-dasharray="276.5" stroke-dashoffset="91.3"/>
+              </svg>
+              <div class="v2-center"><span class="n num">4</span><span class="d">מתוך 6</span></div>
+            </div>
+            <div class="v2-side">
+              <div class="lbl">נותרו היום</div>
+              <div class="val num">2 טריידים</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <span class="variant-label">03 · נקודות מצטברות</span>
+        <div class="card metal-panel holo-edge">
+          <h3>מגבלת טריידים היום</h3>
+          <div class="v3-body">
+            <div class="v3-dots">
+              <div class="v3-dot filled"></div>
+              <div class="v3-dot filled"></div>
+              <div class="v3-dot filled"></div>
+              <div class="v3-dot filled"></div>
+              <div class="v3-dot"></div>
+              <div class="v3-dot"></div>
+            </div>
+            <div class="v3-txt"><b class="num">4</b> נפתחו · <b class="num">2</b> נותרו היום</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <span class="variant-label">04 · מד-חום אנכי</span>
+        <div class="card metal-panel holo-edge">
+          <h3>מגבלת טריידים היום</h3>
+          <div class="v4-body">
+            <div class="v4-therm">
+              <div class="v4-fill" style="height:67%"></div>
+              <div class="v4-marks"><span></span><span></span><span></span><span></span><span></span></div>
+            </div>
+            <div class="v4-info">
+              <div class="n num">4 / 6</div>
+              <div class="d">67% מהמגבלה היומית</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h1 style="font-size:20px;">מצב חריגה (5 מתוך 6 - קרוב לגבול)</h1>
+    <p class="lede">אותם 4 כיוונים, ליד המגבלה - כדי לבדוק את שפת האזהרה בכל אחד</p>
+    <div class="row">
+      <div>
+        <span class="variant-label">01 · רגיל</span>
+        <div class="card metal-panel holo-edge holo-edge--amber det-frame">
+          <h3>מגבלת טריידים היום</h3>
+          <div class="v1-top"><span class="v1-count num danger">6</span><span class="v1-of">מתוך 6 טריידים</span></div>
+          <div class="v1-track"><div class="v1-fill danger" style="width:100%"></div></div>
+          <span class="v1-meta">המגבלה היומית מוצתה במלואה</span>
+        </div>
+      </div>
+      <div>
+        <span class="variant-label">02 · Gauge</span>
+        <div class="card metal-panel holo-edge holo-edge--amber det-frame">
+          <h3>מגבלת טריידים היום</h3>
+          <div class="v2-body">
+            <div class="v2-gauge">
+              <svg width="104" height="104" viewBox="0 0 104 104">
+                <circle class="track" cx="52" cy="52" r="44"/>
+                <circle class="fill danger" cx="52" cy="52" r="44" stroke-dasharray="276.5" stroke-dashoffset="0"/>
+              </svg>
+              <div class="v2-center"><span class="n num" style="color:var(--neg-2);">6</span><span class="d">מתוך 6</span></div>
+            </div>
+            <div class="v2-side"><div class="lbl">נותרו היום</div><div class="val num" style="color:var(--neg-2);">0 טריידים</div></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <span class="variant-label">03 · נקודות</span>
+        <div class="card metal-panel holo-edge holo-edge--amber det-frame">
+          <h3>מגבלת טריידים היום</h3>
+          <div class="v3-body">
+            <div class="v3-dots">
+              <div class="v3-dot filled"></div><div class="v3-dot filled"></div><div class="v3-dot filled"></div>
+              <div class="v3-dot filled"></div><div class="v3-dot filled"></div><div class="v3-dot last-danger"></div>
+            </div>
+            <div class="v3-txt"><b class="num" style="color:var(--neg-2);">6</b> נפתחו · המגבלה הושגה</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <span class="variant-label">04 · מד-חום</span>
+        <div class="card metal-panel holo-edge holo-edge--amber det-frame">
+          <h3>מגבלת טריידים היום</h3>
+          <div class="v4-body">
+            <div class="v4-therm"><div class="v4-fill danger" style="height:100%"></div><div class="v4-marks"><span></span><span></span><span></span><span></span><span></span></div></div>
+            <div class="v4-info"><div class="n num" style="color:var(--neg-2);">6 / 6</div><div class="d">המגבלה היומית הושגה</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -258,27 +258,6 @@
   color: var(--pnl-neg-2);
 }
 
-.empty {
-  text-align: center;
-  padding: 56px 16px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.emptyTitle {
-  font-weight: 700;
-  font-size: 15px;
-  color: var(--text-h);
-}
-
-.emptyHint {
-  color: var(--text-dim);
-  font-size: 13px;
-  max-width: 42ch;
-}
-
 .cards {
   display: flex;
   flex-direction: column;

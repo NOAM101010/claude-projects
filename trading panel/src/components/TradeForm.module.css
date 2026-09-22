@@ -296,6 +296,21 @@
   width: 96px;
   height: 64px;
   object-fit: cover;
+  transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.imagePreviewButton:hover .imagePreview {
+  transform: scale(1.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .imagePreview {
+    transition: none;
+  }
+
+  .imagePreviewButton:hover .imagePreview {
+    transform: none;
+  }
 }
 
 .removeImageButton {

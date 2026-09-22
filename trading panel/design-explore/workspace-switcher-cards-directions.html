@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TradePanel — WorkspaceSwitcher: כרטיסי-preview במקום רשימת-טקסט</title>
+<!--
+  3 כיוונים ל-dropdown החלפת workspace (WorkspaceSwitcher.tsx כיום: <select> טקסט
+  פשוט - רק שם, בלי שום נתון). דוגמה: 3 workspaces ריאליסטיים (Day/Swing/Long-term).
+  ביצועים: hover רק transform/opacity.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@700;900&family=JetBrains+Mono:wght@500;600;700;800&family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#07080b; --bg-2:#0b0d12; --overlay-tint:255,255,255; --amber-hot-rgb:232,179,65;
+    --border: rgba(255,255,255,0.09); --border-hi: rgba(255,255,255,.18); --text:#a3a3ab; --text-h:#f5f5f7; --text-dim:#9c9ca6;
+    --accent:#d99a2b; --accent-2:#e8b341; --amber-rgb:217,154,43; --accent-border: rgba(var(--amber-rgb),.4); --accent-bg: rgba(var(--amber-rgb),.14);
+    --pos-2:#4ade80; --neg-2:#f27a7a;
+    --metal-1:#0c0e11; --metal-2:#15181d; --metal-mid:#101216;
+    --serif:'Frank Ruhl Libre', Georgia, serif; --mono:'JetBrains Mono', ui-monospace, monospace; --sans:'Heebo', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  body{ min-height:100vh; padding:40px 22px 80px; }
+  .num{direction:ltr;unicode-bidi:isolate;font-family:var(--mono);font-variant-numeric:tabular-nums;}
+  .wrap{ max-width:1100px; margin:0 auto; }
+  h1{ font-family:var(--serif); font-weight:900; color:var(--text-h); font-size:26px; margin:0 0 6px; }
+  .lede{ color:var(--text-dim); font-size:13px; margin:0 0 10px; max-width:760px; line-height:1.6; }
+  .section-title{ font-family:var(--serif); font-weight:900; color:var(--text-h); font-size:19px; margin:46px 0 4px; }
+  .section-note{ color:var(--text-dim); font-size:12.5px; margin:0 0 18px; max-width:720px; line-height:1.6; }
+  .metal-panel{ position:relative; border:1px solid rgba(255,255,255,.08); border-radius:14px;
+    background: linear-gradient(180deg, var(--metal-2) 0%, var(--metal-mid) 55%, var(--metal-1) 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 18px 40px -22px rgba(0,0,0,.75); }
+  .holo-edge{ position:relative; isolation:isolate; }
+  .holo-edge::after{ content:''; position:absolute; inset:0; border-radius:inherit; padding:1px; pointer-events:none;
+    background: linear-gradient(180deg, rgba(var(--amber-hot-rgb),.32) 0%, rgba(var(--amber-rgb),.05) 32%, transparent 58%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; opacity:.75; }
+  .demo-stage{ padding:60px 24px 24px; border-radius:14px; position:relative; min-height:340px; }
+  .trigger{ display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:var(--text-h);
+    padding:7px 11px; border-radius:9px; border:1px solid var(--border); background:rgba(255,255,255,.03); }
+
+  /* ============ DIRECTION 1: כרטיסי-preview ============ */
+  .dd1{ position:absolute; top:104px; right:24px; width:250px; display:flex; flex-direction:column; gap:7px; padding:10px; border-radius:12px; }
+  .ws-card{ display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:9px; border:1px solid var(--border);
+    background:rgba(255,255,255,.02); cursor:pointer; transition: border-color .15s ease, background .15s ease, transform .15s ease; }
+  .ws-card:hover{ border-color:var(--border-hi); background:rgba(255,255,255,.045); transform: translateY(-1px); }
+  .ws-card.active{ border-color: var(--accent-border); background: var(--accent-bg); }
+  .ws-badge{ flex-shrink:0; width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); font-size:9px; font-weight:800; letter-spacing:.02em; text-transform:uppercase; color:#0b0d12; }
+  .ws-badge.day{ background:linear-gradient(135deg,#f2b94a,#d99a2b); }
+  .ws-badge.swing{ background:linear-gradient(135deg,#6fd0e8,#3aa6c4); }
+  .ws-badge.long{ background:linear-gradient(135deg,#9d8ce8,#6f5ecf); }
+  .ws-main{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
+  .ws-name{ font-size:13px; font-weight:700; color:var(--text-h); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; direction:ltr; text-align:right; }
+  .ws-sub{ font-size:10.5px; color:var(--text-dim); }
+  .ws-pnl{ flex-shrink:0; font-family:var(--mono); font-weight:700; font-size:12.5px; }
+  .ws-pnl.pos{ color:var(--pos-2); }
+  .ws-pnl.neg{ color:var(--neg-2); }
+
+  /* ============ DIRECTION 2: גריד 2 עמודות ============ */
+  .dd2{ position:absolute; top:104px; right:24px; width:290px; display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:10px; border-radius:12px; }
+  .ws-tile{ display:flex; flex-direction:column; gap:6px; padding:11px 10px; border-radius:10px; border:1px solid var(--border);
+    background:rgba(255,255,255,.02); cursor:pointer; transition: border-color .15s ease, background .15s ease, transform .15s ease; }
+  .ws-tile:hover{ border-color:var(--border-hi); transform: translateY(-1px); }
+  .ws-tile.active{ border-color: var(--accent-border); background: var(--accent-bg); }
+  .ws-tile .tile-top{ display:flex; align-items:center; justify-content:space-between; }
+  .tile-dot{ width:7px; height:7px; border-radius:50%; }
+  .tile-dot.day{ background:var(--accent-2); }
+  .tile-dot.swing{ background:#6fd0e8; }
+  .tile-dot.long{ background:#9d8ce8; }
+  .ws-tile .ws-name{ font-size:12.5px; }
+  .ws-tile .ws-pnl{ font-size:12px; }
+  .tile-full{ grid-column: 1 / -1; }
+
+  /* ============ DIRECTION 3: רשימה + progress-bar זעיר ============ */
+  .dd3{ position:absolute; top:104px; right:24px; width:270px; display:flex; flex-direction:column; gap:3px; padding:10px; border-radius:12px; }
+  .ws-row{ display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:9px; cursor:pointer;
+    transition: background .15s ease; }
+  .ws-row:hover{ background:rgba(255,255,255,.04); }
+  .ws-row.active{ background: var(--accent-bg); }
+  .ws-row-main{ flex:1; min-width:0; }
+  .ws-row-top{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .ws-row .ws-name{ font-size:12.5px; }
+  .ws-row .ws-pnl{ font-size:11.5px; }
+  .bar-track{ height:3px; border-radius:2px; background:rgba(255,255,255,.08); margin-top:5px; overflow:hidden; }
+  .bar-fill{ height:100%; border-radius:2px; transition: transform .2s ease; transform-origin: right center; }
+  .bar-fill.pos{ background: linear-gradient(90deg, var(--pos-2), #22c55e); }
+  .bar-fill.neg{ background: linear-gradient(90deg, var(--neg-2), #e14d4d); }
+
+  @media (prefers-reduced-motion: reduce){
+    .ws-card, .ws-tile, .bar-fill{ transition:none !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>WorkspaceSwitcher — כרטיסי-preview בדרופדאון</h1>
+    <p class="lede">
+      כיום ה-dropdown הוא <span style="font-family:var(--mono)">&lt;select&gt;</span> עם שם בלבד - שום נתון עד שנכנסים פנימה.
+      דוגמה: 3 workspaces ריאליסטיים (Day Trading -$186.40 החודש, Swing Trading +$4,218.60, Long-term +12.4%).
+    </p>
+
+    <!-- ============ DIRECTION 1 ============ -->
+    <div class="section-title">01 · כרטיסי-preview (שם + badge תבנית + Total P&amp;L)</div>
+    <p class="section-note">כל שורה הופכת לכרטיס מלא: badge צבעוני לפי תבנית (Day/Swing/Long-term/Crypto), שם, ותת-כותרת קטנה + P&amp;L מהיר בצד. הכי עשיר מידעית, אבל גם הכי גבוה (מתאים ל-Pro עם עד כמה workspaces).</p>
+    <div class="demo-stage metal-panel">
+      <div class="trigger">Swing Trading ▾</div>
+      <div class="dd1 metal-panel holo-edge">
+        <div class="ws-card">
+          <span class="ws-badge day">D</span>
+          <div class="ws-main"><span class="ws-name">Day Trading</span><span class="ws-sub">Day · 14 trades החודש</span></div>
+          <span class="ws-pnl neg num">-$186.40</span>
+        </div>
+        <div class="ws-card active">
+          <span class="ws-badge swing">S</span>
+          <div class="ws-main"><span class="ws-name">Swing Trading</span><span class="ws-sub">Swing · פעיל כרגע</span></div>
+          <span class="ws-pnl pos num">+$4,218.60</span>
+        </div>
+        <div class="ws-card">
+          <span class="ws-badge long">L</span>
+          <div class="ws-main"><span class="ws-name">Long-term</span><span class="ws-sub">Long-term · תיק</span></div>
+          <span class="ws-pnl pos num">+12.4%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ DIRECTION 2 ============ -->
+    <div class="section-title">02 · גריד קומפקטי 2 עמודות</div>
+    <p class="section-note">אותו מידע (שם + P&amp;L) אבל בפריסת אריחים 2×2 - קצר יותר אנכית, טוב יותר כשיש 3-5 workspaces ולא רוצים dropdown ארוך. נקודת-צבע קטנה במקום badge מלא - יותר "שקט".</p>
+    <div class="demo-stage metal-panel">
+      <div class="trigger">Swing Trading ▾</div>
+      <div class="dd2 metal-panel holo-edge">
+        <div class="ws-tile">
+          <div class="tile-top"><span class="tile-dot day"></span><span class="ws-pnl neg num">-$186</span></div>
+          <span class="ws-name">Day Trading</span>
+        </div>
+        <div class="ws-tile active">
+          <div class="tile-top"><span class="tile-dot swing"></span><span class="ws-pnl pos num">+$4,219</span></div>
+          <span class="ws-name">Swing Trading</span>
+        </div>
+        <div class="ws-tile tile-full">
+          <div class="tile-top"><span class="tile-dot long"></span><span class="ws-pnl pos num">+12.4%</span></div>
+          <span class="ws-name">Long-term</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ DIRECTION 3 ============ -->
+    <div class="section-title">03 · רשימה + progress-bar זעיר (P&amp;L יחסי)</div>
+    <p class="section-note">הכי צנוע - נשאר כרשימה, אבל כל שורה מקבלת פס-קדמה דק מתחת שמראה את גודל ה-P&amp;L יחסית לגדול מבין ה-workspaces (לא ערך מוחלט - יחסי, כדי שלא "יתפוצץ" עם מספרים שונים בסדרי-גודל). ירוק/אדום בלבד, בלי badge צבעוני לתבנית.</p>
+    <div class="demo-stage metal-panel">
+      <div class="trigger">Swing Trading ▾</div>
+      <div class="dd3 metal-panel holo-edge">
+        <div class="ws-row">
+          <div class="ws-row-main">
+            <div class="ws-row-top"><span class="ws-name">Day Trading</span><span class="ws-pnl neg num">-$186.40</span></div>
+            <div class="bar-track"><div class="bar-fill neg" style="transform:scaleX(0.09)"></div></div>
+          </div>
+        </div>
+        <div class="ws-row active">
+          <div class="ws-row-main">
+            <div class="ws-row-top"><span class="ws-name">Swing Trading</span><span class="ws-pnl pos num">+$4,218.60</span></div>
+            <div class="bar-track"><div class="bar-fill pos" style="transform:scaleX(1)"></div></div>
+          </div>
+        </div>
+        <div class="ws-row">
+          <div class="ws-row-main">
+            <div class="ws-row-top"><span class="ws-name">Long-term</span><span class="ws-pnl pos num">+12.4%</span></div>
+            <div class="bar-track"><div class="bar-fill pos" style="transform:scaleX(0.35)"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

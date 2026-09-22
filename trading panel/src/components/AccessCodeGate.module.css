@@ -35,21 +35,121 @@
   gap: 14px;
   padding: 34px 30px;
   border-radius: 18px;
+  overflow: hidden;
   box-shadow: 0 0 0 1px rgba(var(--amber-rgb), 0.18), 0 0 60px -18px rgba(var(--amber-rgb), 0.4), var(--shadow);
 }
 
+/* Slow, mostly-transparent scan-line sweep across the card — decorative chrome
+   only (transform-only), loops continuously (unlike the once-only typewriter below). */
+.scan {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+.scan::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 46%;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(var(--amber-hot-rgb), 0.07) 45%,
+    rgba(var(--amber-hot-rgb), 0.14) 50%,
+    rgba(var(--amber-hot-rgb), 0.07) 55%,
+    transparent 100%
+  );
+  transform: translateY(-120%);
+  animation: gate-scan-sweep 5.5s ease-in-out infinite;
+}
+
+@keyframes gate-scan-sweep {
+  0% {
+    transform: translateY(-120%);
+  }
+  50% {
+    transform: translateY(120%);
+  }
+  100% {
+    transform: translateY(120%);
+  }
+}
+
 .eyebrow {
+  position: relative;
+  z-index: 2;
   margin-bottom: 2px;
 }
 
+/* Live-typing reveal on first mount only (not a loop): the title wipes in with a
+   blinking caret at its leading edge, then settles. clip-path is transform-safe
+   (no layout thrash). clip-path's inset() only understands physical edges, so the
+   reveal direction is swapped explicitly for RTL below (border-inline-end places
+   the caret on the correct leading edge automatically either way). */
 .title {
+  position: relative;
+  z-index: 2;
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
   font-size: clamp(30px, 6.5vw, 44px);
+  border-inline-end: 2px solid var(--accent-2);
+  clip-path: inset(0 0 0 0);
+  animation: gate-title-reveal-ltr 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s both,
+    gate-caret-blink 0.75s step-end 0.15s 2;
+}
+
+:global(html[dir='rtl']) .title {
+  animation-name: gate-title-reveal-rtl, gate-caret-blink;
+}
+
+@keyframes gate-title-reveal-ltr {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes gate-title-reveal-rtl {
+  from {
+    clip-path: inset(0 0 0 100%);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes gate-caret-blink {
+  from,
+  to {
+    border-color: transparent;
+  }
+  50% {
+    border-color: var(--accent-2);
+  }
 }
 
 .hint {
+  position: relative;
+  z-index: 2;
   margin: 0;
   font-size: 12.5px;
   color: var(--text-dim);
+  opacity: 0;
+  animation: gate-hint-fadein 0.4s ease 1.05s forwards;
+}
+
+@keyframes gate-hint-fadein {
+  to {
+    opacity: 1;
+  }
 }
 
 .input {
@@ -98,4 +198,22 @@
   margin: 0;
   font-size: 12.5px;
   color: var(--pnl-pos-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scan::before {
+    animation: none;
+    opacity: 0;
+  }
+
+  .title {
+    animation: none;
+    clip-path: inset(0 0 0 0);
+    border-inline-end-color: transparent;
+  }
+
+  .hint {
+    animation: none;
+    opacity: 1;
+  }
 }

@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TradePanel — Import/Export: פידבק מתקדם (WorkspaceSettings)</title>
+<!--
+  3 כיוונים לשדרוג פידבק ה-import/export ב-WorkspaceSettings.tsx (כיום: פס תוצאה
+  חד-שורתי success/partial/error עם count-in + רשימת שגיאות מתחתיו - עובד, אבל
+  לא מתאר תהליך/לא "מרגיש כמו UI ייעודי"). ביצועים: הכל transform/opacity, בר
+  ההתקדמות עצמו מתקדם עם transform:scaleX (לא width).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@700;900&family=JetBrains+Mono:wght@500;600;700;800&family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#07080b; --bg-2:#0b0d12; --overlay-tint:255,255,255; --amber-hot-rgb:232,179,65;
+    --border: rgba(255,255,255,0.09); --text:#a3a3ab; --text-h:#f5f5f7; --text-dim:#9c9ca6;
+    --accent:#d99a2b; --accent-2:#e8b341; --amber-rgb:217,154,43; --accent-border: rgba(var(--amber-rgb),.4); --accent-bg: rgba(var(--amber-rgb),.14);
+    --pos:#22c55e; --pos-2:#4ade80; --pos-rgb:34,197,94;
+    --neg:#e14d4d; --neg-2:#f27a7a; --neg-rgb:225,77,77;
+    --metal-1:#0c0e11; --metal-2:#15181d; --metal-mid:#101216;
+    --serif:'Frank Ruhl Libre', Georgia, serif; --mono:'JetBrains Mono', ui-monospace, monospace; --sans:'Heebo', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  body{ min-height:100vh; padding:40px 22px 80px; }
+  .num{direction:ltr;unicode-bidi:isolate;font-family:var(--mono);font-variant-numeric:tabular-nums;}
+  .wrap{ max-width:1100px; margin:0 auto; }
+  h1{ font-family:var(--serif); font-weight:900; color:var(--text-h); font-size:26px; margin:0 0 6px; }
+  .lede{ color:var(--text-dim); font-size:13px; margin:0 0 10px; max-width:780px; line-height:1.6; }
+  .section-title{ font-family:var(--serif); font-weight:900; color:var(--text-h); font-size:19px; margin:46px 0 4px; }
+  .section-note{ color:var(--text-dim); font-size:12.5px; margin:0 0 18px; max-width:740px; line-height:1.6; }
+  .metal-panel{ position:relative; border:1px solid rgba(255,255,255,.08); border-radius:14px;
+    background: linear-gradient(180deg, var(--metal-2) 0%, var(--metal-mid) 55%, var(--metal-1) 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 18px 40px -22px rgba(0,0,0,.75); }
+  .holo-edge{ position:relative; isolation:isolate; }
+  .holo-edge::after{ content:''; position:absolute; inset:0; border-radius:inherit; padding:1px; pointer-events:none;
+    background: linear-gradient(180deg, rgba(var(--amber-hot-rgb),.32) 0%, rgba(var(--amber-rgb),.05) 32%, transparent 58%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; opacity:.75; }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  @media (max-width:860px){ .row2{ grid-template-columns:1fr; } }
+  .demo-card{ border-radius:14px; padding:18px; }
+  .btn-row{ display:flex; gap:8px; margin-bottom:14px; }
+  .btn{ font: inherit; font-size:12px; font-weight:700; padding:7px 13px; border-radius:8px; border:1px solid var(--accent-border);
+    background: var(--accent-bg); color: var(--accent-2); cursor:pointer; transition: border-color .15s ease, background .15s ease, transform .15s ease; }
+  .btn:hover{ transform: translateY(-1px); }
+  .btn.ghost{ background: rgba(255,255,255,.03); color: var(--text-h); border-color: var(--border); }
+  @keyframes count-in{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
+  .count-in{ animation: count-in .4s cubic-bezier(.2,.8,.2,1) both; }
+
+  /* ============ DIRECTION 1: PROGRESS BAR עם שלבים ============ */
+  .stages{ display:flex; align-items:center; gap:0; margin-bottom:10px; overflow:hidden; }
+  .stage{ display:flex; flex-direction:column; align-items:center; gap:6px; flex:1; position:relative; }
+  .stage-dot{ width:20px; height:20px; border-radius:50%; border:1.5px solid var(--border); background:rgba(255,255,255,.03);
+    display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:9px; font-weight:800; color:var(--text-dim);
+    transition: border-color .2s ease, background .2s ease, transform .2s ease, color .2s ease; z-index:2; }
+  .stage-connector{ position:absolute; top:9px; right:50%; width:100%; height:2px; background:var(--border); z-index:1; }
+  .stage:first-child .stage-connector{ display:none; }
+  .stage-lbl{ font-size:10px; color:var(--text-dim); text-align:center; }
+  .stage.done .stage-dot{ border-color: rgba(var(--amber-rgb),.6); background: var(--accent); color:#0b0d12; }
+  .stage.done .stage-lbl{ color: var(--text-h); }
+  .stage.done .stage-connector{ background: linear-gradient(90deg, var(--accent), rgba(var(--amber-rgb),.4)); }
+  .stage.active .stage-dot{ border-color: var(--accent-2); background: rgba(var(--amber-rgb),.18); color: var(--accent-2); transform: scale(1.12); }
+  .stage.active .stage-lbl{ color: var(--accent-2); }
+  .bar-track{ height:4px; border-radius:3px; background: rgba(255,255,255,.07); overflow:hidden; margin:14px 0 4px; }
+  .bar-fill{ height:100%; border-radius:3px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transform-origin: right center; transition: transform .5s cubic-bezier(.3,.75,.35,1); }
+  .bar-status{ font-family:var(--mono); font-size:11px; color:var(--text-dim); }
+
+  /* ============ DIRECTION 2: TOAST ============ */
+  .toast-stage{ position:relative; min-height:150px; border-radius:12px; background:rgba(255,255,255,.015); border:1px dashed var(--border); }
+  .toast{ position:absolute; bottom:14px; left:14px; right:14px; display:flex; align-items:flex-start; gap:10px; padding:12px 13px;
+    border-radius:11px; opacity:0; transform: translateY(10px) scale(.98); transition: opacity .25s ease, transform .25s cubic-bezier(.3,.75,.35,1); }
+  .toast.shown{ opacity:1; transform: translateY(0) scale(1); }
+  .toast-icon{ flex-shrink:0; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+  .toast.success{ background: rgba(var(--pos-rgb),.12); border:1px solid rgba(var(--pos-rgb),.35); }
+  .toast.success .toast-icon{ background: rgba(var(--pos-rgb),.25); color: var(--pos-2); }
+  .toast.error{ background: rgba(var(--neg-rgb),.12); border:1px solid rgba(var(--neg-rgb),.35); }
+  .toast.error .toast-icon{ background: rgba(var(--neg-rgb),.25); color: var(--neg-2); }
+  .toast-body{ flex:1; min-width:0; }
+  .toast-title{ font-size:12.5px; font-weight:700; color:var(--text-h); margin:0 0 2px; }
+  .toast-text{ font-size:11.5px; color:var(--text-dim); margin:0; line-height:1.5; }
+  .toast-close{ flex-shrink:0; width:20px; height:20px; border-radius:5px; border:none; background:transparent; color:var(--text-dim); cursor:pointer; }
+
+  /* ============ DIRECTION 3: כרטיס-סיכום מפורט ============ */
+  .result-card{ border-radius:12px; padding:14px 15px; }
+  .result-head{ display:flex; align-items:center; gap:9px; margin-bottom:12px; }
+  .result-icon{ width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .result-icon.ok{ background: rgba(var(--pos-rgb),.16); color:var(--pos-2); border:1px solid rgba(var(--pos-rgb),.35); }
+  .result-title{ font-size:13.5px; font-weight:700; color:var(--text-h); }
+  .result-sub{ font-size:11px; color:var(--text-dim); }
+  .stat-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px; }
+  .stat-cell{ border-radius:9px; padding:9px 10px; text-align:center; border:1px solid var(--border); background:rgba(255,255,255,.02); }
+  .stat-cell .n{ font-family:var(--mono); font-weight:800; font-size:18px; display:block; }
+  .stat-cell.created .n{ color: var(--pos-2); }
+  .stat-cell.updated .n{ color: var(--accent-2); }
+  .stat-cell.skipped .n{ color: var(--text-dim); }
+  .stat-cell .lbl{ font-size:9.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-dim); margin-top:2px; display:block; }
+  .breakdown{ border-radius:9px; border:1px solid var(--border); background:rgba(255,255,255,.015); overflow:hidden; }
+  .breakdown-row{ display:flex; align-items:center; justify-content:space-between; padding:7px 11px; font-size:11.5px; }
+  .breakdown-row + .breakdown-row{ border-top:1px solid var(--border); }
+  .breakdown-row .tk{ font-family:var(--mono); color:var(--text-h); }
+  .breakdown-row .rs{ color:var(--neg-2); font-size:11px; }
+
+  @media (prefers-reduced-motion: reduce){
+    .stage-dot, .stage-connector, .bar-fill, .toast, .count-in, .btn{ transition:none !important; animation:none !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Import/Export — פידבק מתקדם</h1>
+    <p class="lede">
+      כיום: פס תוצאה חד-שורתי (success/partial/error) עם רשימת שגיאות עד 5 שורות - עובד, אבל לא מתאר את התהליך
+      תוך כדי ולא נותן breakdown ברור. כל תנועה כאן transform/opacity בלבד (הבר עצמו: <span style="font-family:var(--mono)">transform:scaleX</span>, לא width).
+    </p>
+
+    <!-- ============ DIRECTION 1 ============ -->
+    <div class="section-title">01 · Progress Bar אמיתי עם שלבים</div>
+    <p class="section-note">3 שלבים מפורשים (קורא קובץ → מנתח שורות → שומר) עם נקודות שמתמלאות אחת-אחת וקו מחבר שנצבע מאחוריהן, ובר אחוזים כללי מתחת. הכי שימושי לקבצים גדולים שבאמת לוקחים זמן.</p>
+    <div class="row2">
+      <div>
+        <span style="font-family:var(--mono); font-size:10.5px; color:var(--accent-2); letter-spacing:.08em; text-transform:uppercase; display:block; margin-bottom:9px;">באמצע - שלב 2</span>
+        <div class="demo-card metal-panel holo-edge">
+          <div class="stages">
+            <div class="stage done"><span class="stage-connector"></span><span class="stage-dot">✓</span><span class="stage-lbl">קורא קובץ</span></div>
+            <div class="stage active"><span class="stage-connector"></span><span class="stage-dot num">2</span><span class="stage-lbl">מנתח שורות</span></div>
+            <div class="stage"><span class="stage-connector"></span><span class="stage-dot num">3</span><span class="stage-lbl">שומר</span></div>
+          </div>
+          <div class="bar-track"><div class="bar-fill" style="transform:scaleX(0.55)"></div></div>
+          <span class="bar-status num">מעבד שורה 88 מתוך 160...</span>
+        </div>
+      </div>
+      <div>
+        <span style="font-family:var(--mono); font-size:10.5px; color:var(--pos-2); letter-spacing:.08em; text-transform:uppercase; display:block; margin-bottom:9px;">הושלם</span>
+        <div class="demo-card metal-panel holo-edge">
+          <div class="stages">
+            <div class="stage done"><span class="stage-connector"></span><span class="stage-dot">✓</span><span class="stage-lbl">קורא קובץ</span></div>
+            <div class="stage done"><span class="stage-connector"></span><span class="stage-dot">✓</span><span class="stage-lbl">מנתח שורות</span></div>
+            <div class="stage done"><span class="stage-connector"></span><span class="stage-dot">✓</span><span class="stage-lbl">שומר</span></div>
+          </div>
+          <div class="bar-track"><div class="bar-fill" style="transform:scaleX(1)"></div></div>
+          <span class="bar-status num" style="color:var(--pos-2)">✓ הושלם - 143 נוצרו, 12 עודכנו</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ DIRECTION 2 ============ -->
+    <div class="section-title">02 · Toast Success/Error ייעודי (לא alert דפדפן)</div>
+    <p class="section-note">התראה צפה שיושבת מעל ה-UI, נעלמת אחרי כמה שניות או בלחיצת X - מרגיש כמו מוצר אמיתי, לא הודעת דפדפן. לחצו על הכפתורים להדגמה.</p>
+    <div class="row2">
+      <div>
+        <div class="demo-card metal-panel holo-edge">
+          <div class="btn-row">
+            <button class="btn" onclick="showToast('t-success')">הרץ ייבוא מוצלח</button>
+            <button class="btn ghost" onclick="showToast('t-error')">הרץ ייבוא שנכשל</button>
+          </div>
+          <div class="toast-stage">
+            <div class="toast success" id="t-success">
+              <span class="toast-icon">✓</span>
+              <div class="toast-body"><p class="toast-title">הייבוא הושלם</p><p class="toast-text">143 טריידים נוצרו, 12 עודכנו, 5 ללא שינוי.</p></div>
+              <button class="toast-close" onclick="hideToast('t-success')">✕</button>
+            </div>
+            <div class="toast error" id="t-error">
+              <span class="toast-icon">!</span>
+              <div class="toast-body"><p class="toast-title">הייבוא נכשל</p><p class="toast-text">לא זוהו כותרות מוכרות בקובץ. בדקו את הפורמט ונסו שוב.</p></div>
+              <button class="toast-close" onclick="hideToast('t-error')">✕</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <span style="font-family:var(--mono); font-size:10.5px; color:var(--text-dim); letter-spacing:.08em; text-transform:uppercase; display:block; margin-bottom:9px;">מצב קבוע (ללא לחיצה)</span>
+        <div class="demo-card metal-panel holo-edge">
+          <div class="toast-stage" style="min-height:110px;">
+            <div class="toast success shown" style="position:relative; bottom:auto; left:auto; right:auto; margin:14px;">
+              <span class="toast-icon">✓</span>
+              <div class="toast-body"><p class="toast-title">הייבוא הושלם</p><p class="toast-text">143 טריידים נוצרו, 12 עודכנו, 5 ללא שינוי.</p></div>
+              <button class="toast-close">✕</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ DIRECTION 3 ============ -->
+    <div class="section-title">03 · כרטיס-סיכום מפורט (breakdown)</div>
+    <p class="section-note">במקום שורת טקסט אחת - כרטיס עם 3 מספרים גדולים (נוצרו/עודכנו/דולגו) ורשימת breakdown קצרה לשורות שדולגו ולמה. הכי שקוף כשיש בעיות אמיתיות בקובץ שהמשתמש צריך להבין ולתקן.</p>
+    <div class="row2">
+      <div>
+        <span style="font-family:var(--mono); font-size:10.5px; color:var(--text-dim); letter-spacing:.08em; text-transform:uppercase; display:block; margin-bottom:9px;">הצלחה חלקית</span>
+        <div class="result-card metal-panel holo-edge count-in">
+          <div class="result-head">
+            <span class="result-icon ok">✓</span>
+            <div><div class="result-title">הייבוא הושלם עם כמה דילוגים</div><div class="result-sub">trades-2026-q3.xlsx</div></div>
+          </div>
+          <div class="stat-grid">
+            <div class="stat-cell created"><span class="n num">143</span><span class="lbl">נוצרו</span></div>
+            <div class="stat-cell updated"><span class="n num">12</span><span class="lbl">עודכנו</span></div>
+            <div class="stat-cell skipped"><span class="n num">3</span><span class="lbl">דולגו</span></div>
+          </div>
+          <div class="breakdown">
+            <div class="breakdown-row"><span class="tk num">שורה 42 · TSLA</span><span class="rs">חסר תאריך כניסה</span></div>
+            <div class="breakdown-row"><span class="tk num">שורה 77 · NVDA</span><span class="rs">כמות שאינה מספר</span></div>
+            <div class="breakdown-row"><span class="tk num">שורה 91 · —</span><span class="rs">שורה ריקה</span></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <span style="font-family:var(--mono); font-size:10.5px; color:var(--pos-2); letter-spacing:.08em; text-transform:uppercase; display:block; margin-bottom:9px;">הצלחה מלאה (בלי breakdown)</span>
+        <div class="result-card metal-panel holo-edge count-in">
+          <div class="result-head">
+            <span class="result-icon ok">✓</span>
+            <div><div class="result-title">הייבוא הושלם בהצלחה</div><div class="result-sub">trades-2026-q3.xlsx</div></div>
+          </div>
+          <div class="stat-grid">
+            <div class="stat-cell created"><span class="n num">160</span><span class="lbl">נוצרו</span></div>
+            <div class="stat-cell updated"><span class="n num">0</span><span class="lbl">עודכנו</span></div>
+            <div class="stat-cell skipped"><span class="n num">0</span><span class="lbl">דולגו</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  var toastTimers = {};
+  function showToast(id){
+    var el = document.getElementById(id);
+    document.querySelectorAll('.toast-stage .toast').forEach(function(t){ t.classList.remove('shown'); });
+    if (toastTimers[id]) clearTimeout(toastTimers[id]);
+    requestAnimationFrame(function(){ el.classList.add('shown'); });
+    toastTimers[id] = setTimeout(function(){ el.classList.remove('shown'); }, 3200);
+  }
+  function hideToast(id){
+    document.getElementById(id).classList.remove('shown');
+    if (toastTimers[id]) clearTimeout(toastTimers[id]);
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TradePanel — דשבורד מלא: כיוון ג׳ "צמצום כמות, לא הסתרה"</title>
+<!--
+  כיוון ג׳ — "צמצום כמות, לא מידע": הבעיה היא כמות-כרטיסים, לא כמות-נתונים. אז
+  5 אריחי Performance דקים -> 2 כרטיסים רחבים ("כלכלת עסקאות" + "סיכון"); 5 כרטיסי
+  Insights -> 3 כרטיסים עשירים (כל אחד משלב 2 תובנות קרובות-לוגית: מקור הפסדים+
+  התאמות סטופ יחד תחת "איכות ביצוע", סטאפ+שעה יחד תחת "דפוסי ביצועים", R-Multiple
+  נשאר עצמאי כי הוא לא שייך טבעית לאף אחד מהשניים). התוצאה: אותו מידע, פחות "קופסאות
+  לספור" בגלילה.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=JetBrains+Mono:wght@500;600;700;800&family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#07080b; --bg-2:#0b0d12; --overlay-tint:255,255,255; --amber-hot-rgb:232,179,65;
+    --border: rgba(255,255,255,0.09); --text:#a3a3ab; --text-h:#f5f5f7; --text-dim:#9c9ca6;
+    --pos:#22c55e; --pos-2:#4ade80; --neg:#ef4444; --neg-2:#f87171;
+    --accent:#d99a2b; --accent-2:#e8b341; --amber-rgb:217,154,43; --chip-pos:#4ade80; --chip-neg:#f87171;
+    --metal-1:#0c0e11; --metal-2:#15181d; --metal-mid:#101216;
+    --serif:'Frank Ruhl Libre', Georgia, serif; --mono:'JetBrains Mono', ui-monospace, monospace; --sans:'Heebo', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  body{ min-height:100vh; padding-bottom:60px;
+    background: radial-gradient(ellipse 900px 500px at 85% -10%, rgba(217,154,43,.08), transparent 55%), var(--bg); }
+  .num{direction:ltr;unicode-bidi:isolate;font-family:var(--mono);font-variant-numeric:tabular-nums;}
+  .wrap{max-width:1320px; margin:0 auto; padding:0 22px;}
+  @media (min-width:1880px){ .wrap{max-width:1600px;} }
+
+  .metal-panel{ position:relative; border:1px solid rgba(255,255,255,.08); border-radius:16px;
+    background: linear-gradient(180deg, var(--metal-2) 0%, var(--metal-mid) 55%, var(--metal-1) 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 18px 40px -22px rgba(0,0,0,.75); }
+  .holo-edge{ position:relative; isolation:isolate; }
+  .holo-edge::after{ content:''; position:absolute; inset:0; border-radius:inherit; padding:1px; pointer-events:none;
+    background: linear-gradient(180deg, rgba(var(--overlay-tint),.1) 0%, rgba(var(--overlay-tint),.02) 28%, transparent 58%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; opacity:.7; }
+  .holo-edge--amber::after{ background: linear-gradient(180deg, rgba(var(--amber-hot-rgb),.35) 0%, rgba(var(--amber-rgb),.06) 32%, transparent 60%); }
+  .det-chip{ direction:ltr; display:inline-flex; align-items:center; gap:6px; padding:3px 9px; border:1px solid rgba(var(--amber-rgb),.4);
+    background:rgba(6,8,13,.75); border-radius:999px; font-family:var(--mono); font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:rgba(245,225,190,.86); }
+  .det-chip--up{ border-color:rgba(34,197,94,.45); color:var(--chip-pos); }
+  .det-chip--down{ border-color:rgba(239,68,68,.45); color:var(--chip-neg); }
+
+  .eyebrow{ display:inline-flex; align-items:center; gap:9px; font-size:11.5px; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:var(--text-dim); font-family:var(--mono); }
+  .eyebrow::before{content:''; width:22px; height:1px; background:linear-gradient(90deg, var(--accent-2), transparent);}
+  .page-head{ padding:26px 0 20px; }
+  .page-title{font-family:var(--serif); font-weight:900; font-size:clamp(24px,3.2vw,34px); color:var(--text-h); margin:6px 0 0;}
+  .page-note{ margin:8px 0 0; font-size:13px; color:var(--text-dim); }
+  .section{ padding-top:30px; }
+  .section-head{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:8px;}
+  .section-title{font-family:var(--serif); font-weight:900; font-size:19px; color:var(--text-h); margin:0;}
+  .section-hint{font-family:var(--mono); font-size:11px; color:var(--text-dim); letter-spacing:.08em; text-transform:uppercase;}
+
+  .hero-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:860px){ .hero-grid{grid-template-columns:1fr;} }
+  .hero-kpi{ border-radius:20px; padding:24px 28px; }
+  .hero-top{ display:flex; align-items:center; justify-content:space-between; }
+  .hero-lbl{ font-family:var(--mono); font-size:12px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:#fdf6e8; opacity:.92; }
+  .hero-val{ font-family:var(--mono); font-weight:800; font-size:clamp(34px,5vw,52px); color:var(--text-h); line-height:1; margin:14px 0 6px; direction:ltr; text-align:left; }
+  .hero-val.pos{ color:var(--pos-2); } .hero-val.neg{ color:var(--neg-2); }
+  .hero-chips{ display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; }
+
+  /* ==== NEW: 2 wide "economics" cards instead of 5 thin tiles ==== */
+  .wide-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:860px){ .wide-grid{grid-template-columns:1fr;} }
+  .wide-card{ border-radius:16px; padding:20px 24px; }
+  .wide-card h4{ margin:0 0 14px; font-size:14px; color:var(--text-h); font-weight:800; }
+  .wide-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .wide-stat .lbl{ font-size:11px; font-weight:700; text-transform:uppercase; color:#fdf6e8; opacity:.85; font-family:var(--mono); margin-bottom:6px; }
+  .wide-stat .val{ font-family:var(--mono); font-size:22px; font-weight:800; direction:ltr; }
+  .wide-stat .val.pos{ color:var(--pos-2); } .wide-stat .val.neg{ color:var(--neg-2); }
+
+  .behavior-grid{ display:grid; grid-template-columns:1fr 2fr; gap:12px; }
+  @media (max-width:860px){ .behavior-grid{grid-template-columns:1fr;} }
+  .streak-card{ border-radius:14px; padding:14px 18px; display:flex; flex-direction:column; justify-content:center; gap:4px;
+    background:linear-gradient(160deg, rgba(217,154,43,.09), rgba(217,154,43,.015) 60%), #0d0f14; border-color:rgba(217,154,43,.2)!important; }
+  .streak-top{ display:flex; align-items:center; gap:8px; }
+  .streak-num{ font-family:var(--mono); font-weight:800; font-size:28px; color:var(--accent-2); }
+  .streak-sub{ font-size:13.5px; font-weight:800; color:#fdf6e8; opacity:.9; text-transform:uppercase; }
+  .behavior-secondary{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; padding:14px 18px; border-radius:14px; }
+  .bstat .lbl{ font-size:11.5px; color:#fdf6e8; opacity:.85; font-family:var(--mono); text-transform:uppercase; margin-bottom:4px; }
+  .bstat .val{ font-family:var(--mono); font-weight:800; font-size:21px; }
+
+  /* ==== NEW: 3 rich insight cards instead of 5 thin ones ==== */
+  .insights-grid{ display:grid; grid-template-columns:1.2fr 1.2fr .8fr; gap:14px; align-items:stretch; }
+  @media (max-width:1100px){ .insights-grid{grid-template-columns:1fr 1fr;} }
+  @media (max-width:640px){ .insights-grid{grid-template-columns:1fr;} }
+  .icard{ border-radius:16px; padding:18px 20px; display:flex; flex-direction:column; gap:14px; }
+  .icard-head{ display:flex; align-items:center; gap:10px; }
+  .icard-head .icon{ width:30px; height:30px; border-radius:9px; background:rgba(217,154,43,.12); border:1px solid rgba(217,154,43,.32); display:flex; align-items:center; justify-content:center; font-size:14px; flex:none; }
+  .icard-head h4{ margin:0; font-size:14px; color:var(--text-h); font-weight:800; }
+  .icard-sub{ display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-top:1px solid var(--border); }
+  .icard-sub:first-of-type{ border-top:none; padding-top:0; }
+  .icard-sub .lbl{ font-size:12px; color:var(--text-dim); max-width:65%; line-height:1.4; }
+  .icard-sub .val{ font-family:var(--mono); font-weight:800; font-size:17px; direction:ltr; white-space:nowrap; }
+  .icard-sub .val.pos{ color:var(--pos-2); } .icard-sub .val.neg{ color:var(--neg-2); }
+  .icard-single .metric{ font-family:var(--mono); font-weight:800; font-size:26px; margin-top:auto; direction:ltr; }
+  .icard-single p{ margin:0; font-size:12px; color:var(--text-dim); line-height:1.5; }
+
+  .heat-mini{ display:flex; flex-wrap:wrap; gap:4px; }
+  .heat-mini span{ width:14px; height:14px; border-radius:4px; }
+  .cal-panel{ border-radius:18px; padding:22px 24px; }
+  .charts-grid{ display:grid; grid-template-columns:1.5fr 1fr; gap:16px; }
+  @media (max-width:900px){ .charts-grid{grid-template-columns:1fr;} }
+  .chart-panel{ border-radius:18px; padding:20px; }
+  .equity-svg, .month-svg{ width:100%; height:190px; display:block; }
+  .groups-grid, .spotlight-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:860px){ .groups-grid, .spotlight-grid{grid-template-columns:1fr;} }
+  .group-panel, .spot-panel{ border-radius:18px; padding:18px; }
+  .group-header{ display:grid; grid-template-columns:1.6fr .8fr .8fr 1.2fr; gap:8px; padding:0 10px 10px; font-family:var(--mono); font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-dim); }
+  .group-row{ display:grid; grid-template-columns:1.6fr .8fr .8fr 1.2fr; gap:8px; align-items:center; padding:9px 10px; border-radius:10px; border:1px solid var(--border); background:rgba(255,255,255,.02); margin-bottom:6px; }
+  .group-key{ font-family:var(--mono); font-weight:700; color:var(--text-h); direction:ltr; }
+  .group-num{ font-family:var(--mono); font-size:12.5px; direction:ltr; }
+  .group-num.pos{ color:var(--pos-2); } .group-num.neg{ color:var(--neg-2); }
+  footer{padding:40px 0 0; text-align:center; font-family:var(--mono); font-size:10px; letter-spacing:.14em; color:var(--text-dim); text-transform:uppercase;}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="page-head">
+      <span class="eyebrow">USD · 48 טריידים סגורים</span>
+      <h1 class="page-title">לוח בקרה</h1>
+      <p class="page-note">כל הנתונים מוצגים לפי מטבע הבסיס של התיק</p>
+    </div>
+
+    <div class="hero-grid">
+      <div class="hero-kpi metal-panel holo-edge holo-edge--amber">
+        <div class="hero-top"><span class="hero-lbl">Total P&amp;L</span></div>
+        <div class="hero-val pos num">+$18,420</div>
+        <div class="hero-chips"><span class="det-chip det-chip--up">Win Rate · 64.6%</span><span class="det-chip">48 / 3</span></div>
+      </div>
+      <div class="hero-kpi metal-panel holo-edge">
+        <div class="hero-top"><span class="hero-lbl">Max Drawdown</span></div>
+        <div class="hero-val neg num">-$3,180</div>
+        <div class="hero-chips"><span class="det-chip det-chip--down">12% משיא ההון</span></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <span class="eyebrow" style="margin-bottom:12px; display:inline-flex;">ביצועים</span>
+      <div class="wide-grid">
+        <div class="wide-card metal-panel holo-edge">
+          <h4>כלכלת עסקאות</h4>
+          <div class="wide-row">
+            <div class="wide-stat"><div class="lbl">Profit Factor</div><div class="val pos num">2.31</div></div>
+            <div class="wide-stat"><div class="lbl">Expectancy</div><div class="val pos num">+$184</div></div>
+            <div class="wide-stat"><div class="lbl">Avg Win</div><div class="val pos num">+$612</div></div>
+          </div>
+        </div>
+        <div class="wide-card metal-panel holo-edge">
+          <h4>סיכון</h4>
+          <div class="wide-row">
+            <div class="wide-stat"><div class="lbl">Avg Loss</div><div class="val neg num">-$286</div></div>
+            <div class="wide-stat"><div class="lbl">Avg R:R</div><div class="val num">1:2.14</div></div>
+            <div class="wide-stat"><div class="lbl">עמלות</div><div class="val num">$102.43</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <span class="eyebrow" style="margin-bottom:12px; display:inline-flex;">התנהגות</span>
+      <div class="behavior-grid">
+        <div class="streak-card metal-panel holo-edge">
+          <div class="streak-top"><span style="font-size:16px;">🔥</span><div class="streak-num num">5</div></div>
+          <div class="streak-sub">רצף ניצחונות נוכחי</div>
+        </div>
+        <div class="behavior-secondary metal-panel holo-edge">
+          <div class="bstat"><div class="lbl">רצף שיא</div><div class="val pos num">8</div></div>
+          <div class="bstat"><div class="lbl">רצף הפסדים שיא</div><div class="val neg num">3</div></div>
+          <div class="bstat"><div class="lbl">החזקה ממוצעת</div><div class="val num">2.1 / 4.6</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <span class="eyebrow" style="margin-bottom:12px; display:inline-flex;">תובנות</span>
+      <div class="insights-grid">
+        <div class="icard metal-panel holo-edge">
+          <div class="icard-head"><span class="icon">🎯</span><h4>איכות ביצוע</h4></div>
+          <div class="icard-sub"><span class="lbl">62% מההפסדים מכניסה מוקדמת מדי</span><span class="val neg num">-$1,840</span></div>
+          <div class="icard-sub"><span class="lbl">9 טריידים עם הרחבת סטופ אחרי כניסה</span><span class="val num">9/48</span></div>
+        </div>
+        <div class="icard metal-panel holo-edge">
+          <div class="icard-head"><span class="icon">📊</span><h4>דפוסי ביצועים</h4></div>
+          <div class="icard-sub"><span class="lbl">הסטאפ החזק ביותר: Breakout</span><span class="val pos num">78%</span></div>
+          <div class="icard-sub"><span class="lbl">השעה הרווחית ביותר: 10:00-11:00</span><span class="val pos num">+$92</span></div>
+        </div>
+        <div class="icard icard-single metal-panel holo-edge">
+          <div class="icard-head"><span class="icon">📐</span><h4>פילוח R-Multiple</h4></div>
+          <p>רוב הטריידים המנצחים נסגרים בין 1R ל-2R</p>
+          <div class="metric">14 טריידים</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h2 class="section-title">מפת חום P&amp;L</h2><span class="section-hint">2026</span></div>
+      <div class="cal-panel metal-panel holo-edge"><div class="heat-mini" id="heat"></div></div>
+    </div>
+
+    <div class="section">
+      <div class="charts-grid">
+        <div class="chart-panel metal-panel holo-edge">
+          <div class="section-head"><h2 class="section-title">עקומת הון</h2></div>
+          <svg class="equity-svg" viewBox="0 0 600 190" preserveAspectRatio="none"><path fill="none" stroke="#e8b341" stroke-width="2.4" d="M0,165 L80,153 L160,136 L240,115 L320,95 L400,74 L480,54 L560,28 L600,20"/></svg>
+        </div>
+        <div class="chart-panel metal-panel holo-edge">
+          <div class="section-head"><h2 class="section-title">טריידים לפי חודש</h2></div>
+          <svg class="month-svg" viewBox="0 0 460 150" preserveAspectRatio="none">
+            <rect x="10" y="98" width="30" height="42" rx="4" fill="#e8b341" opacity=".8"/>
+            <rect x="73" y="84" width="30" height="56" rx="4" fill="#e8b341" opacity=".8"/>
+            <rect x="136" y="70" width="30" height="70" rx="4" fill="#e8b341" opacity=".8"/>
+            <rect x="199" y="92" width="30" height="48" rx="4" fill="#e8b341" opacity=".8"/>
+            <rect x="262" y="55" width="30" height="85" rx="4" fill="#e8b341" opacity=".8"/>
+            <rect x="325" y="70" width="30" height="70" rx="4" fill="#e8b341" opacity=".8"/>
+            <rect x="388" y="32" width="30" height="108" rx="4" fill="#e8b341" opacity=".8"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="spotlight-grid">
+        <div class="spot-panel metal-panel holo-edge"><div class="section-head"><h2 class="section-title">הכי טוב / הכי גרוע</h2></div><p style="font-size:13px;">NVDA <span class="pos num">+$1,240</span> · AMD <span class="neg num">-$620</span></p></div>
+        <div class="spot-panel metal-panel holo-edge"><div class="section-head"><h2 class="section-title">סיכום שבועי</h2></div><p style="font-size:13px;">שבוע חיובי: 7 מתוך 9 טריידים</p></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="groups-grid">
+        <div class="group-panel metal-panel holo-edge">
+          <div class="section-head"><h2 class="section-title">לפי סימבול</h2></div>
+          <div class="group-header"><span>סימבול</span><span>טריידים</span><span>Win%</span><span>P&amp;L</span></div>
+          <div class="group-row"><span class="group-key">NVDA</span><span class="group-num">9</span><span class="group-num">78%</span><span class="group-num pos">+$4,820</span></div>
+          <div class="group-row"><span class="group-key">TSLA</span><span class="group-num">7</span><span class="group-num">57%</span><span class="group-num pos">+$1,240</span></div>
+        </div>
+        <div class="group-panel metal-panel holo-edge">
+          <div class="section-head"><h2 class="section-title">לפי יום בשבוע</h2></div>
+          <div class="group-header"><span>יום</span><span>טריידים</span><span>Win%</span><span>P&amp;L</span></div>
+          <div class="group-row"><span class="group-key">שני</span><span class="group-num">11</span><span class="group-num">73%</span><span class="group-num pos">+$3,920</span></div>
+          <div class="group-row"><span class="group-key">שלישי</span><span class="group-num">9</span><span class="group-num">67%</span><span class="group-num pos">+$2,180</span></div>
+        </div>
+      </div>
+    </div>
+
+    <footer>TradePanel · כיוון ג׳ — צמצום כמות, לא הסתרה</footer>
+  </div>
+
+<script>
+  const rnd = (function(seed){ return function(){ seed = (seed*9301+49297)%233280; return seed/233280; }; })(42);
+  let html='';
+  for(let i=0;i<70;i++){
+    const v = rnd();
+    let bg = 'rgba(255,255,255,.05)';
+    if(v>0.85) bg='rgba(34,197,94,.55)'; else if(v>0.68) bg='rgba(34,197,94,.3)';
+    else if(v<0.15) bg='rgba(239,68,68,.55)'; else if(v<0.32) bg='rgba(239,68,68,.3)';
+    html += `<span style="background:${bg}"></span>`;
+  }
+  document.getElementById('heat').innerHTML = html;
+</script>
+</body>
+</html>

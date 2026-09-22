@@ -41,6 +41,13 @@
   --chip-neg: #f87171;
   --chip-accent: #e8b341;
 
+  /* Ice/cold — dedicated tone for a losing streak's gauge (StreakCard). Deliberately
+     NOT --pnl-neg (red would still read as a visual "penalty") and not just a blue tint
+     of the amber flame - a distinct cool hue, same tonal principle as the ❄️ icon it replaces. */
+  --cold: #5fb8dd;
+  --cold-2: #8fd4ee;
+  --cold-rgb: 95, 184, 221;
+
   /* Amber — the single warm accent: brand + generic money figures only */
   --accent: #d99a2b;
   --accent-2: #e8b341;
@@ -198,6 +205,11 @@
   --sweep-color: rgba(160, 107, 28, 0.06);
 
   --text-label: var(--text-dim);
+
+  /* deepened for AA contrast against paper, same relationship as --pnl-neg's light variant */
+  --cold: #2f7fa3;
+  --cold-2: #1f5f7d;
+  --cold-rgb: 47, 127, 163;
 }
 
 * {
@@ -464,6 +476,9 @@ select optgroup {
     rgba(var(--amber-rgb), 0.06) 32%,
     transparent 60%
   );
+}
+.holo-edge--cold::after {
+  background: linear-gradient(180deg, rgba(var(--cold-rgb), 0.35) 0%, rgba(var(--cold-rgb), 0.06) 32%, transparent 60%);
 }
 
 /* ==== detection-frame corners — HUD language for hero surfaces ==== */

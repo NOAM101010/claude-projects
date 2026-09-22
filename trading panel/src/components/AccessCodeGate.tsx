@@ -34,6 +34,7 @@ export function AccessCodeGate({ onVerified }: AccessCodeGateProps) {
       <StaticCandleBackground className={styles.candles} />
       <AnimatedBackground className={styles.background} />
       <form className={`${styles.dialog} metal-panel holo-edge holo-edge--amber det-frame count-in`} onSubmit={handleSubmit}>
+        <div className={styles.scan} aria-hidden="true" />
         <span className={`eyebrow ${styles.eyebrow}`}>TradePanel</span>
         <h1 className={`hero-title ${styles.title}`}>{t('accessCode.title')}</h1>
         <p className={styles.hint}>{t('accessCode.hint')}</p>

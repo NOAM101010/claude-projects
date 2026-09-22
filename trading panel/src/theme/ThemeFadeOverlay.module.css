@@ -1,0 +1,26 @@
+/* Direction 1 from theme-transition-directions.html: a near-black overlay ramps up to ~0.5
+   opacity, the theme attribute flips at its darkest point (see ThemeContext's setTheme), then
+   it fades back out. opacity-only (no width/height/box-shadow), fixed above everything. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-gate, 9999);
+  pointer-events: none;
+  opacity: 0;
+  background: #000;
+  transition: opacity 0.28s ease;
+}
+
+.overlayActive {
+  opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay {
+    transition: none;
+  }
+
+  .overlayActive {
+    opacity: 0;
+  }
+}

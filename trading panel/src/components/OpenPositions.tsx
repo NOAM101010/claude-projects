@@ -1,4 +1,4 @@
-import { Clock, ExternalLink, Radar, Radio } from 'lucide-react'
+import { Clock, ExternalLink, Radio } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
 import { formatCurrency, formatDuration } from '../lib/format'
@@ -7,6 +7,7 @@ import { LIVE_PRICE_REFRESH_MS, fetchOpenPositionPrices, type OpenPositionQuote 
 import { isTradeOpen } from '../lib/stats'
 import { tradingViewUrl } from '../lib/tradingView'
 import type { CurrencyCode, Trade } from '../types/trade'
+import { EmptyState } from './EmptyState'
 import styles from './OpenPositions.module.css'
 
 interface OpenPositionsProps {
@@ -66,11 +67,7 @@ export function OpenPositions({ trades, baseCurrency }: OpenPositionsProps) {
           <span className={`eyebrow ${styles.eyebrow}`}>{t('openPositions.eyebrow')}</span>
           <h2 className={`hero-title ${styles.heroTitle}`}>{t('nav.openPositions')}</h2>
         </div>
-        <div className={`${styles.emptyCard} metal-panel holo-edge count-in`}>
-          <Radar size={30} className={styles.emptyIcon} />
-          <p className={styles.emptyTitle}>{t('openPositions.emptyTitle')}</p>
-          <p className={styles.emptyHint}>{t('openPositions.emptyHint')}</p>
-        </div>
+        <EmptyState illustration="candle" title={t('openPositions.emptyTitle')} hint={t('openPositions.emptyHint')} />
       </div>
     )
   }

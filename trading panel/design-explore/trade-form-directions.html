@@ -1,0 +1,929 @@
+<!doctype html>
+<!--
+  TradePanel — כיווני עיצוב לטופס Add/Edit Trade (TradeForm.tsx)
+  =================================================================
+  מוקאפ סטטי בלבד (HTML+CSS+vanilla JS), לא נוגע ב-src/. שפת העיצוב: "Cinematic Terminal"
+  (metal-panel / glass / holo-edge / det-frame, אמבר #d99a2b/#e8b341, Frank Ruhl Libre לכותרות,
+  JetBrains Mono למספרים) — אותם טוקנים כמו src/index.css ו-screen-journal.html/screen-dashboard.html.
+
+  הרעיון המוביל: "כרטיס טיסה / טיקט מסחר" — פאנל P&L חי בצד, לא בסוף הטופס כמו היום.
+  שדות הקלט האמיתיים (type=number/text/date) מחוברים ל-JS מינימלי (oninput) שמעדכן את
+  הפאנל בזמן אמת - זה עובד בפועל במוקאפ הזה, לא רק "אמור לעבוד".
+
+  3 כיוונים, כל אחד ב-section נפרד:
+    1. "טיקט מסחר" - 2 עמודות: קלט מימין (RTL), פאנל טיקט sticky משמאל.
+    2. "כרטיס בורסה קומפקטי" - עמודה צרה אחת, הפאנל החי הופך ל-header דביק של הטופס עצמו.
+    3. "שלבים" (Entry → Exit → Meta) - ניווט קטנה בין 3 שלבים, שבב P&L חי תמיד גלוי למעלה.
+
+  שדות זהים בכל השלושה, אותו סדר מושגי כמו TradeForm.tsx האמיתי:
+  Symbol, Direction, Entry date+price, Quantity, Currency, Stop Loss, Take Profit,
+  Exit date+price, Fee, Setup, Notes, Chart image. שום שדה לא נוסף/הוסר - רק פריסה/ויזואליה.
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TradePanel — כיווני עיצוב: טופס טרייד</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=JetBrains+Mono:wght@500;600;700;800&family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#07080b; --bg-2:#0b0d12;
+    --overlay-tint: 255,255,255;
+    --card: rgba(255,255,255,.035); --card-hi: rgba(255,255,255,.06);
+    --border: rgba(255,255,255,.09); --border-hi: rgba(255,255,255,.17);
+    --text:#a3a3ab; --text-h:#f2f2f4; --text-dim:#74747c;
+    --pos:#22c55e; --pos-2:#4ade80; --pos-bg: rgba(34,197,94,.14); --pos-glow: rgba(34,197,94,.4);
+    --neg:#ef4444; --neg-2:#f87171; --neg-bg: rgba(239,68,68,.14); --neg-glow: rgba(239,68,68,.4);
+    --accent:#d99a2b; --accent-2:#e8b341; --accent-bg: rgba(217,154,43,.14); --accent-border: rgba(217,154,43,.4);
+    --on-accent:#16110a; --amber-rgb:217,154,43; --amber-hot-rgb:232,179,65;
+    --metal-1:#0c0e11; --metal-2:#15181d; --metal-mid:#101216; --metal-edge: rgba(255,255,255,.08); --metal-hi: rgba(255,255,255,.06);
+    --shadow: 0 18px 40px -22px rgba(0,0,0,.75);
+    --serif:'Frank Ruhl Libre', Georgia, serif;
+    --mono:'JetBrains Mono', ui-monospace, monospace;
+    --sans:'Heebo', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(ellipse 900px 500px at 85% -10%, rgba(217,154,43,.08), transparent 55%),
+      radial-gradient(ellipse 700px 600px at 0% 110%, rgba(34,197,94,.05), transparent 55%),
+      var(--bg);
+    padding-bottom:80px;
+  }
+  .num{direction:ltr;unicode-bidi:isolate;font-family:var(--mono);font-variant-numeric:tabular-nums;}
+
+  /* ==== shared surface language (copied from src/index.css tokens, not the real classes) ==== */
+  .glass{
+    background: linear-gradient(180deg, rgba(255,255,255,.045) 0%, rgba(255,255,255,.015) 100%), var(--bg-2);
+    border:1px solid var(--border); border-radius:14px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.05), var(--shadow);
+  }
+  .metal-panel{
+    position:relative; border:1px solid var(--metal-edge); border-radius:16px;
+    background: linear-gradient(180deg, var(--metal-2) 0%, var(--metal-mid) 55%, var(--metal-1) 100%);
+    box-shadow: inset 0 1px 0 var(--metal-hi), var(--shadow);
+  }
+  .holo-edge{ position:relative; isolation:isolate; }
+  .holo-edge::after{
+    content:''; position:absolute; inset:0; border-radius:inherit; padding:1px; pointer-events:none;
+    background: linear-gradient(180deg, rgba(255,255,255,.1) 0%, rgba(255,255,255,.02) 28%, transparent 58%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude; opacity:.7; z-index:1;
+  }
+  .holo-edge--amber::after{
+    background: linear-gradient(180deg, rgba(var(--amber-hot-rgb),.4) 0%, rgba(var(--amber-rgb),.08) 32%, transparent 60%);
+  }
+  .det-frame{ position:relative; }
+  .det-frame::before{
+    content:''; position:absolute; inset:8px; pointer-events:none; z-index:1;
+    background:
+      linear-gradient(rgba(var(--amber-hot-rgb),.5) 0 0) 0 0/10px 1px no-repeat,
+      linear-gradient(rgba(var(--amber-hot-rgb),.5) 0 0) 0 0/1px 10px no-repeat,
+      linear-gradient(rgba(var(--amber-hot-rgb),.5) 0 0) 100% 0/10px 1px no-repeat,
+      linear-gradient(rgba(var(--amber-hot-rgb),.5) 0 0) 100% 0/1px 10px no-repeat,
+      linear-gradient(rgba(var(--amber-hot-rgb),.5) 0 0) 0 100%/10px 1px no-repeat,
+      linear-gradient(rgba(var(--amber-hot-rgb),.5) 0 0) 0 100%/1px 10px no-repeat,
+      linear-gradient(rgba(var(--amber-hot-rgb),.5) 0 0) 100% 100%/10px 1px no-repeat,
+      linear-gradient(rgba(var(--amber-hot-rgb),.5) 0 0) 100% 100%/1px 10px no-repeat;
+    opacity:.5;
+  }
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:9px; font-size:10.5px; font-weight:700;
+    letter-spacing:.24em; text-transform:uppercase; color:var(--text-dim); font-family:var(--mono);
+  }
+  .eyebrow::before{content:''; width:22px; height:1px; background:linear-gradient(90deg, var(--accent-2), transparent);}
+
+  /* ==== page chrome (nav between directions, not part of any real screen) ==== */
+  .meta-nav{
+    position:sticky; top:0; z-index:50; display:flex; gap:8px; padding:14px 22px; flex-wrap:wrap;
+    background:rgba(5,6,8,.9); backdrop-filter: blur(10px); border-bottom:1px solid var(--border);
+  }
+  .meta-nav a{
+    font-family:var(--mono); font-size:11.5px; font-weight:700; letter-spacing:.03em; text-decoration:none;
+    color:var(--text-dim); border:1px solid var(--border); border-radius:999px; padding:7px 14px;
+    transition: color .15s, border-color .15s, background .15s;
+  }
+  .meta-nav a:hover{ color:var(--accent-2); border-color:var(--accent-border); background:rgba(var(--amber-rgb),.08); }
+
+  .wrap{max-width:1320px; margin:0 auto; padding:0 22px;}
+  .dir-head{ padding:44px 0 20px; }
+  .dir-head .dnum{ font-family:var(--mono); font-size:11px; font-weight:700; color:var(--accent-2); letter-spacing:.14em; }
+  .dir-title{ font-family:var(--serif); font-weight:900; font-size:clamp(22px,3vw,30px); color:var(--text-h); margin:6px 0 8px; }
+  .dir-desc{ font-size:13.5px; color:var(--text-dim); max-width:760px; line-height:1.6; margin:0; }
+  .dir-sep{ border:none; border-top:1px solid var(--border); margin:52px 0 0; }
+
+  /* ==== generic field styling, shared by all 3 directions (matches TradeForm.module.css) ==== */
+  .field{ display:flex; flex-direction:column; gap:7px; min-width:0; }
+  .field label{ font-size:12.5px; font-weight:600; letter-spacing:.02em; color:var(--text-dim); }
+  .field .optional{ font-weight:400; color:var(--text-dim); font-size:11.5px; }
+  .field input, .field select, .field textarea{
+    font:inherit; padding:11px 13px; border-radius:10px; border:1px solid var(--border);
+    background: rgba(255,255,255,.03); color:var(--text-h); width:100%; box-sizing:border-box;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .field input:hover, .field select:hover, .field textarea:hover{ border-color:var(--border-hi); }
+  .field input:focus, .field select:focus, .field textarea:focus{
+    outline:none; border-color:var(--accent-border); background: rgba(var(--amber-rgb),.06);
+  }
+  .field input[type='text'], .field input[type='number']{
+    direction:ltr; text-align:right; font-family:var(--mono); font-variant-numeric:tabular-nums;
+  }
+  .field textarea{ resize:vertical; min-height:70px; font-family:var(--sans); direction:rtl; text-align:right; }
+  .direction-toggle{ display:flex; gap:8px; }
+  .direction-toggle button{
+    flex:1; padding:11px; border-radius:10px; border:1px solid var(--border); background:rgba(255,255,255,.02);
+    color:var(--text); font:inherit; font-weight:700; cursor:pointer; transition: all .15s;
+  }
+  .direction-toggle button[data-active='true'][data-dir='long']{
+    background:var(--pos-bg); color:var(--pos-2); border-color:rgba(34,197,94,.45); box-shadow: inset 0 0 20px -10px rgba(34,197,94,.5);
+  }
+  .direction-toggle button[data-active='true'][data-dir='short']{
+    background:var(--neg-bg); color:var(--neg-2); border-color:rgba(239,68,68,.45); box-shadow: inset 0 0 20px -10px rgba(239,68,68,.5);
+  }
+  .group-label{
+    font-family:var(--mono); font-size:10.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--accent-2); margin:0 0 2px; display:flex; align-items:center; gap:8px;
+  }
+  .group-label::after{ content:''; flex:1; height:1px; background:linear-gradient(90deg, var(--border), transparent); }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .row3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+  @media (max-width:520px){ .row2, .row3{ grid-template-columns:1fr; } }
+
+  .actions{ display:flex; gap:10px; margin-top:6px; }
+  .actions button{
+    font:inherit; font-weight:700; padding:13px 18px; border-radius:10px; border:none; cursor:pointer; flex:1;
+    transition: transform .15s ease, filter .15s ease;
+  }
+  .actions button:hover{ transform:translateY(-1px); }
+  .btn-submit{ background:linear-gradient(180deg, var(--accent-2), var(--accent)); color:var(--on-accent); box-shadow:0 10px 24px -12px rgba(var(--amber-rgb),.55); }
+  .btn-submit:hover{ filter:brightness(1.06); }
+  .btn-cancel{ background:rgba(255,255,255,.03); color:var(--text-h); border:1px solid var(--border) !important; }
+
+  .file-row{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .file-btn{
+    font:inherit; font-size:12.5px; font-weight:600; padding:10px 16px; border-radius:9px;
+    border:1px solid var(--border); background:rgba(255,255,255,.03); color:var(--text-h); cursor:pointer;
+  }
+  .file-name{ font-size:12.5px; color:var(--text-dim); }
+
+  /* ==== ticket / receipt panel (shared bones, each direction tweaks layout) ==== */
+  .ticket{ padding:22px; display:flex; flex-direction:column; gap:16px; }
+  .ticket-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .ticket-sym{ font-family:var(--mono); font-weight:800; font-size:26px; color:var(--text-h); direction:ltr; letter-spacing:-.01em; }
+  .ticket-badge{
+    font-family:var(--mono); font-size:10.5px; font-weight:700; padding:4px 11px; border-radius:999px;
+    text-transform:uppercase; letter-spacing:.08em; border:1px solid transparent;
+  }
+  .ticket-badge.long{ background:var(--pos-bg); color:var(--pos-2); border-color:rgba(34,197,94,.35); }
+  .ticket-badge.short{ background:var(--neg-bg); color:var(--neg-2); border-color:rgba(239,68,68,.35); }
+  .ticket-perf{ position:relative; padding-top:16px; }
+  .ticket-perf::before{
+    content:''; position:absolute; top:0; left:-22px; right:-22px; border-top:1.5px dashed var(--border-hi);
+  }
+  .ticket-perf::after, .ticket-perf-notch-l, .ticket-perf-notch-r{ content:''; }
+  .notch{ position:absolute; top:-9px; width:18px; height:18px; border-radius:50%; background:var(--bg); }
+  .notch.l{ left:-31px; } .notch.r{ right:-31px; }
+
+  .pnl-label{ font-family:var(--mono); font-size:10.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--text-dim); }
+  .pnl-value{ font-family:var(--mono); font-weight:800; font-size:34px; direction:ltr; margin-top:4px; line-height:1; }
+  .pnl-value.pos{ color:var(--pos-2); text-shadow:0 0 26px rgba(74,222,128,.35); }
+  .pnl-value.neg{ color:var(--neg-2); text-shadow:0 0 26px rgba(248,113,113,.3); }
+  .pnl-value.neutral{ color:var(--text-dim); font-size:22px; text-shadow:none; }
+  .pnl-sub{ font-family:var(--mono); font-size:11.5px; color:var(--text-dim); margin-top:6px; direction:ltr; }
+
+  .rr-row{ display:flex; gap:10px; }
+  .rr-cell{ flex:1; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:rgba(255,255,255,.02); }
+  .rr-cell .l{ font-family:var(--mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--text-dim); }
+  .rr-cell .v{ font-family:var(--mono); font-size:15px; font-weight:700; color:var(--text-h); margin-top:3px; direction:ltr; }
+  .rr-cell.risk .v{ color:var(--neg-2); } .rr-cell.reward .v{ color:var(--pos-2); }
+
+  /* number-line: entry / exit / stop / take positioned proportionally */
+  .numline-wrap{ margin-top:2px; }
+  .numline-lbl{ display:flex; justify-content:space-between; font-family:var(--mono); font-size:9.5px; color:var(--text-dim); margin-bottom:8px; direction:ltr;}
+  .numline{ position:relative; height:6px; border-radius:99px; background:rgba(255,255,255,.06); }
+  .numline .seg{ position:absolute; top:0; bottom:0; border-radius:99px; }
+  .numline .seg.risk{ background:linear-gradient(90deg, var(--neg), var(--neg-2)); opacity:.55; }
+  .numline .seg.reward{ background:linear-gradient(90deg, var(--pos), var(--pos-2)); opacity:.55; }
+  .numline .mark{ position:absolute; top:50%; width:12px; height:12px; border-radius:50%; transform:translate(50%,-50%); border:2px solid var(--bg-2); }
+  .numline .mark.entry{ background:var(--accent-2); box-shadow:0 0 10px rgba(var(--amber-rgb),.6); z-index:3; }
+  .numline .mark.stop{ background:var(--neg-2); z-index:2; }
+  .numline .mark.take{ background:var(--pos-2); z-index:2; }
+  .numline .mark.exit{ background:var(--text-h); width:9px; height:9px; z-index:4; }
+  .numline-tags{ position:relative; height:16px; margin-top:6px; font-family:var(--mono); font-size:9px; }
+  .numline-tags span{ position:absolute; transform:translateX(50%); color:var(--text-dim); white-space:nowrap; }
+
+  .stat-strip{ display:grid; grid-template-columns:repeat(3,1fr); gap:1px; border-radius:10px; overflow:hidden; border:1px solid var(--border); background:var(--border); }
+  .stat-cell{ background:var(--bg-2); padding:10px 12px; }
+  .stat-cell .l{ font-family:var(--mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--text-dim); }
+  .stat-cell .v{ font-family:var(--mono); font-size:13px; font-weight:700; color:var(--text-h); margin-top:3px; direction:ltr; }
+
+  /* ============================================================ */
+  /* DIRECTION 1 — 2-column ticket layout                          */
+  /* ============================================================ */
+  .d1-layout{ display:grid; grid-template-columns: 1fr 340px; gap:26px; align-items:start; }
+  .d1-fields{ display:flex; flex-direction:column; gap:22px; padding:26px; }
+  .d1-ticket-col{ position:sticky; top:80px; }
+  @media (max-width:900px){
+    .d1-layout{ grid-template-columns:1fr; }
+    .d1-ticket-col{ position:static; order:-1; }
+  }
+
+  /* ============================================================ */
+  /* DIRECTION 2 — compact card, live panel as sticky form header  */
+  /* ============================================================ */
+  .d2-card{ max-width:520px; margin:0 auto; overflow:hidden; }
+  .d2-scroll{ max-height:640px; overflow-y:auto; }
+  .d2-ticket-header{
+    position:sticky; top:0; z-index:5; padding:20px 24px 18px;
+    background: linear-gradient(180deg, var(--metal-2) 0%, var(--metal-mid) 90%);
+    border-bottom:1px solid var(--border);
+  }
+  .d2-fields{ display:flex; flex-direction:column; gap:20px; padding:24px; }
+
+  /* ============================================================ */
+  /* DIRECTION 3 — stepped Entry / Exit / Meta                     */
+  /* ============================================================ */
+  .d3-card{ max-width:640px; margin:0 auto; padding:24px; display:flex; flex-direction:column; gap:20px; }
+  .d3-chip-row{
+    display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    padding:14px 18px; border-radius:12px;
+  }
+  .d3-chip-sym{ display:flex; align-items:center; gap:10px; }
+  .d3-chip-pnl{ font-family:var(--mono); font-weight:800; font-size:19px; direction:ltr; }
+  .d3-steps-nav{ display:flex; gap:6px; padding:4px; border-radius:11px; border:1px solid var(--border); background:rgba(255,255,255,.02); }
+  .d3-steps-nav button{
+    flex:1; font:inherit; font-family:var(--mono); font-size:11.5px; font-weight:700; letter-spacing:.03em;
+    padding:9px 10px; border-radius:8px; border:none; background:transparent; color:var(--text-dim); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:6px; transition: all .15s;
+  }
+  .d3-steps-nav button .n{
+    width:16px; height:16px; border-radius:50%; border:1px solid currentColor; font-size:9px;
+    display:inline-flex; align-items:center; justify-content:center;
+  }
+  .d3-steps-nav button.active{ background:rgba(var(--amber-rgb),.14); color:var(--accent-2); }
+  .d3-step-panel{ display:none; flex-direction:column; gap:16px; }
+  .d3-step-panel.active{ display:flex; }
+  .d3-step-nav-btns{ display:flex; gap:10px; margin-top:4px; }
+  .d3-step-nav-btns button{
+    font:inherit; font-weight:700; padding:12px 18px; border-radius:10px; cursor:pointer; flex:1; border:1px solid var(--border);
+    background:rgba(255,255,255,.03); color:var(--text-h);
+  }
+  .d3-step-nav-btns button.primary{ background:linear-gradient(180deg, var(--accent-2), var(--accent)); color:var(--on-accent); border:none; }
+</style>
+</head>
+<body>
+
+<div class="meta-nav">
+  <a href="#d1">כיוון 1 · טיקט מסחר (2 עמודות)</a>
+  <a href="#d2">כיוון 2 · כרטיס בורסה קומפקטי</a>
+  <a href="#d3">כיוון 3 · שלבים (Entry → Exit → Meta)</a>
+</div>
+
+<!-- ============================================================ -->
+<!-- DIRECTION 1: "טיקט מסחר" - פריסת 2 עמודות                    -->
+<!-- עמודת קלט מימין (סדר קריאה RTL רגיל), פאנל טיקט sticky        -->
+<!-- משמאל - ב-CSS grid עם direction rtl הפריט הראשון במקור נופל   -->
+<!-- מימין באופן טבעי, לכן אין צורך ב-order הפוך.                  -->
+<!-- ============================================================ -->
+<section id="d1" class="wrap">
+  <div class="dir-head">
+    <span class="dnum">כיוון 1 / 3</span>
+    <h2 class="dir-title">טיקט מסחר — פריסת 2 עמודות</h2>
+    <p class="dir-desc">
+      כל שדות הקלט מקובצים לפי שלב (כניסה / ניהול סיכון / יציאה / מטא) בעמודה הרחבה מימין.
+      משמאל, פאנל "טיקט" דביק (sticky) בסגנון כרטיס טיסה/קבלה — מראה תוך כדי הקלדה: סימבול+כיוון גדולים,
+      יחס R:R מחושב מהסטופ/טייק מול הכניסה, P&amp;L חי ברגע שממלאים מחיר יציאה, וציר מספרים ויזואלי
+      Stop ↔ Entry ↔ Take/Exit.
+    </p>
+  </div>
+
+  <div class="d1-layout">
+    <form class="glass d1-fields" onsubmit="return false">
+      <div class="field">
+        <div class="group-label">פרטי כניסה</div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="d1-symbol">סימבול</label>
+          <input id="d1-symbol" type="text" placeholder="AAPL" value="NVDA" oninput="d1update()">
+        </div>
+        <div class="field">
+          <label>כיוון</label>
+          <div class="direction-toggle" id="d1-dir-toggle">
+            <button type="button" data-dir="long" data-active="true" onclick="d1setDir('long')">Long</button>
+            <button type="button" data-dir="short" data-active="false" onclick="d1setDir('short')">Short</button>
+          </div>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="d1-entry-date">תאריך כניסה</label>
+          <input id="d1-entry-date" type="date" value="2026-09-15">
+        </div>
+        <div class="field">
+          <label for="d1-entry-price">מחיר כניסה</label>
+          <input id="d1-entry-price" type="number" step="any" min="0" value="118.40" oninput="d1update()">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="d1-qty">כמות</label>
+          <input id="d1-qty" type="number" step="any" min="0" value="92" oninput="d1update()">
+        </div>
+        <div class="field">
+          <label for="d1-currency">מטבע</label>
+          <select id="d1-currency" onchange="d1update()">
+            <option value="USD" selected>USD</option>
+            <option value="ILS">ILS</option>
+            <option value="EUR">EUR</option>
+            <option value="GBP">GBP</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="group-label">ניהול סיכון <span class="optional">אופציונלי</span></div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="d1-stop">סטופ לוס <span class="optional">אופציונלי</span></label>
+          <input id="d1-stop" type="number" step="any" value="113.80" oninput="d1update()">
+        </div>
+        <div class="field">
+          <label for="d1-take">טייק פרופיט <span class="optional">אופציונלי</span></label>
+          <input id="d1-take" type="number" step="any" value="129.50" oninput="d1update()">
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="group-label">פרטי יציאה <span class="optional">אופציונלי</span></div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="d1-exit-date">תאריך יציאה <span class="optional">השאירו ריק אם עדיין פתוח</span></label>
+          <input id="d1-exit-date" type="date" oninput="d1update()">
+        </div>
+        <div class="field">
+          <label for="d1-exit-price">מחיר יציאה</label>
+          <input id="d1-exit-price" type="number" step="any" min="0" placeholder="—" oninput="d1update()">
+        </div>
+      </div>
+      <div class="field">
+        <label for="d1-fee">עמלה <span class="optional">אופציונלי</span></label>
+        <input id="d1-fee" type="number" step="any" min="0" value="1.5" oninput="d1update()">
+      </div>
+
+      <div class="field">
+        <div class="group-label">מטא</div>
+      </div>
+      <div class="field">
+        <label for="d1-setup">סטאפ <span class="optional">אופציונלי</span></label>
+        <select id="d1-setup"><option value="">ללא הגדרה</option><option>Breakout</option><option>Pullback</option><option>Gap & Go</option></select>
+      </div>
+      <div class="field">
+        <label for="d1-notes">הערות <span class="optional">אופציונלי</span></label>
+        <textarea id="d1-notes" placeholder="הערות חופשיות על הטרייד..."></textarea>
+      </div>
+      <div class="field">
+        <label>תמונת גרף <span class="optional">אופציונלי</span></label>
+        <div class="file-row">
+          <button type="button" class="file-btn">בחירת קובץ</button>
+          <span class="file-name">לא נבחר קובץ</span>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button type="submit" class="btn-submit">הוספת טרייד</button>
+        <button type="button" class="btn-cancel">ביטול</button>
+      </div>
+    </form>
+
+    <div class="d1-ticket-col">
+      <div class="metal-panel holo-edge holo-edge--amber det-frame ticket">
+        <div class="ticket-head">
+          <div>
+            <span class="eyebrow">TRADE TICKET</span>
+            <div class="ticket-sym" id="d1t-symbol">NVDA</div>
+          </div>
+          <span class="ticket-badge long" id="d1t-badge">LONG</span>
+        </div>
+
+        <div class="ticket-perf">
+          <div class="notch l"></div><div class="notch r"></div>
+          <div class="pnl-label">P&amp;L חי</div>
+          <div class="pnl-value neutral num" id="d1t-pnl">—</div>
+          <div class="pnl-sub" id="d1t-pnl-sub">ממתין למחיר יציאה</div>
+        </div>
+
+        <div class="rr-row">
+          <div class="rr-cell risk"><div class="l">Risk</div><div class="v num" id="d1t-risk">—</div></div>
+          <div class="rr-cell reward"><div class="l">Reward</div><div class="v num" id="d1t-reward">—</div></div>
+          <div class="rr-cell"><div class="l">R:R</div><div class="v num" id="d1t-rr">—</div></div>
+        </div>
+
+        <div class="numline-wrap">
+          <div class="numline-lbl"><span id="d1t-lo">—</span><span id="d1t-hi">—</span></div>
+          <div class="numline" id="d1t-line">
+            <div class="seg risk" id="d1t-seg-risk"></div>
+            <div class="seg reward" id="d1t-seg-reward"></div>
+            <div class="mark stop" id="d1t-mark-stop" style="display:none"></div>
+            <div class="mark entry" id="d1t-mark-entry"></div>
+            <div class="mark take" id="d1t-mark-take" style="display:none"></div>
+            <div class="mark exit" id="d1t-mark-exit" style="display:none"></div>
+          </div>
+        </div>
+
+        <div class="stat-strip">
+          <div class="stat-cell"><div class="l">Qty</div><div class="v num" id="d1t-qty">92</div></div>
+          <div class="stat-cell"><div class="l">Entry</div><div class="v num" id="d1t-entry">118.40</div></div>
+          <div class="stat-cell"><div class="l">Fee</div><div class="v num" id="d1t-fee">1.50</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="dir-sep">
+
+<!-- ============================================================ -->
+<!-- DIRECTION 2: "כרטיס בורסה" קומפקטי                            -->
+<!-- טופס צר (כמו כרטיס מניה פיזי), הפאנל החי משולב כ-header       -->
+<!-- דביק בתוך הכרטיס עצמו - תמיד גלוי בגלילה, לא רק בטעינה.       -->
+<!-- ============================================================ -->
+<section id="d2" class="wrap">
+  <div class="dir-head">
+    <span class="dnum">כיוון 2 / 3</span>
+    <h2 class="dir-title">כרטיס בורסה — קומפקטי, פאנל חי כ-Header דביק</h2>
+    <p class="dir-desc">
+      במקום שתי עמודות רחבות — טופס צר יחיד (כמו כרטיס מניה פיזי), עם ה"טיקט" משולב כ-header
+      שנשאר דביק בראש הכרטיס לאורך כל הגלילה (נסו לגלול בפנים — הכרטיס עצמו מוגבל בגובה כדי
+      להדגים sticky בפועל, בטופס האמיתי זה יהיה גובה המודל/העמוד).
+    </p>
+  </div>
+
+  <div class="metal-panel holo-edge holo-edge--amber d2-card">
+    <div class="d2-ticket-header">
+      <div class="ticket-head">
+        <div>
+          <span class="eyebrow">LIVE TICKET</span>
+          <div class="ticket-sym" id="d2t-symbol" style="font-size:22px;">TSLA</div>
+        </div>
+        <span class="ticket-badge short" id="d2t-badge">SHORT</span>
+      </div>
+      <div class="rr-row" style="margin-top:14px;">
+        <div class="rr-cell risk"><div class="l">Risk</div><div class="v num" id="d2t-risk">—</div></div>
+        <div class="rr-cell reward"><div class="l">Reward</div><div class="v num" id="d2t-reward">—</div></div>
+        <div class="rr-cell"><div class="l">P&amp;L</div><div class="v num neutral" id="d2t-pnl">—</div></div>
+      </div>
+      <div class="numline-wrap" style="margin-top:12px;">
+        <div class="numline" id="d2t-line">
+          <div class="seg risk" id="d2t-seg-risk"></div>
+          <div class="seg reward" id="d2t-seg-reward"></div>
+          <div class="mark stop" id="d2t-mark-stop" style="display:none"></div>
+          <div class="mark entry" id="d2t-mark-entry"></div>
+          <div class="mark take" id="d2t-mark-take" style="display:none"></div>
+          <div class="mark exit" id="d2t-mark-exit" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="d2-scroll">
+      <form class="d2-fields" onsubmit="return false">
+        <div class="field">
+          <label for="d2-symbol">סימבול</label>
+          <input id="d2-symbol" type="text" value="TSLA" oninput="d2update()">
+        </div>
+        <div class="field">
+          <label>כיוון</label>
+          <div class="direction-toggle" id="d2-dir-toggle">
+            <button type="button" data-dir="long" data-active="false" onclick="d2setDir('long')">Long</button>
+            <button type="button" data-dir="short" data-active="true" onclick="d2setDir('short')">Short</button>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="d2-entry-date">תאריך כניסה</label>
+            <input id="d2-entry-date" type="date" value="2026-09-14">
+          </div>
+          <div class="field">
+            <label for="d2-entry-price">מחיר כניסה</label>
+            <input id="d2-entry-price" type="number" step="any" min="0" value="244.10" oninput="d2update()">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="d2-qty">כמות</label>
+            <input id="d2-qty" type="number" step="any" min="0" value="64" oninput="d2update()">
+          </div>
+          <div class="field">
+            <label for="d2-currency">מטבע</label>
+            <select id="d2-currency" onchange="d2update()">
+              <option value="USD" selected>USD</option>
+              <option value="ILS">ILS</option>
+              <option value="EUR">EUR</option>
+            </select>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="d2-stop">סטופ לוס <span class="optional">אופציונלי</span></label>
+            <input id="d2-stop" type="number" step="any" value="249.90" oninput="d2update()">
+          </div>
+          <div class="field">
+            <label for="d2-take">טייק פרופיט <span class="optional">אופציונלי</span></label>
+            <input id="d2-take" type="number" step="any" value="230.00" oninput="d2update()">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="d2-exit-date">תאריך יציאה <span class="optional">אופציונלי</span></label>
+            <input id="d2-exit-date" type="date" oninput="d2update()">
+          </div>
+          <div class="field">
+            <label for="d2-exit-price">מחיר יציאה</label>
+            <input id="d2-exit-price" type="number" step="any" min="0" placeholder="—" oninput="d2update()">
+          </div>
+        </div>
+        <div class="field">
+          <label for="d2-fee">עמלה <span class="optional">אופציונלי</span></label>
+          <input id="d2-fee" type="number" step="any" min="0" value="1.5" oninput="d2update()">
+        </div>
+        <div class="field">
+          <label for="d2-setup">סטאפ <span class="optional">אופציונלי</span></label>
+          <select id="d2-setup"><option value="">ללא הגדרה</option><option>Breakdown</option><option>Reversal</option></select>
+        </div>
+        <div class="field">
+          <label for="d2-notes">הערות <span class="optional">אופציונלי</span></label>
+          <textarea id="d2-notes"></textarea>
+        </div>
+        <div class="field">
+          <label>תמונת גרף <span class="optional">אופציונלי</span></label>
+          <div class="file-row">
+            <button type="button" class="file-btn">בחירת קובץ</button>
+            <span class="file-name">לא נבחר קובץ</span>
+          </div>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn-submit">הוספת טרייד</button>
+          <button type="button" class="btn-cancel">ביטול</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<hr class="dir-sep">
+
+<!-- ============================================================ -->
+<!-- DIRECTION 3 (אופציונלי): שלבים Entry → Exit → Meta            -->
+<!-- ניווט קטנה בין 3 שלבים, שבב P&L חי דק תמיד גלוי למעלה         -->
+<!-- (כל השדות נשארים ב-DOM כל הזמן - רק מוסתרים ב-CSS - כך        -->
+<!-- שהערכים לא נמחקים במעבר בין שלבים והשבב תמיד מעודכן).         -->
+<!-- ============================================================ -->
+<section id="d3" class="wrap">
+  <div class="dir-head">
+    <span class="dnum">כיוון 3 / 3 · אופציונלי</span>
+    <h2 class="dir-title">שלבים — Entry → Exit → Meta</h2>
+    <p class="dir-desc">
+      הבדל אחר מהשניים הקודמים: הטופס מתחלק לשלושה שלבים עם ניווט קטנה, ושבב P&amp;L חי דק
+      נשאר גלוי תמיד מעל השלבים (לא פאנל מלא) - פחות "יקר" ויזואלית, מתאים יותר למסך צר/מודל.
+    </p>
+  </div>
+
+  <div class="metal-panel holo-edge holo-edge--amber d3-card">
+    <div class="d3-chip-row glass" style="background:rgba(255,255,255,.02);">
+      <div class="d3-chip-sym">
+        <span class="ticket-sym" style="font-size:18px;" id="d3t-symbol">AMD</span>
+        <span class="ticket-badge long" id="d3t-badge">LONG</span>
+      </div>
+      <div>
+        <span class="pnl-label" style="margin-inline-end:8px;">P&amp;L</span>
+        <span class="d3-chip-pnl neutral num" id="d3t-pnl">—</span>
+      </div>
+    </div>
+
+    <div class="d3-steps-nav">
+      <button class="active" data-step="1" onclick="d3goto(1)"><span class="n">1</span> כניסה</button>
+      <button data-step="2" onclick="d3goto(2)"><span class="n">2</span> יציאה</button>
+      <button data-step="3" onclick="d3goto(3)"><span class="n">3</span> מטא</button>
+    </div>
+
+    <form onsubmit="return false">
+      <div class="d3-step-panel active" data-panel="1">
+        <div class="field">
+          <label for="d3-symbol">סימבול</label>
+          <input id="d3-symbol" type="text" value="AMD" oninput="d3update()">
+        </div>
+        <div class="field">
+          <label>כיוון</label>
+          <div class="direction-toggle" id="d3-dir-toggle">
+            <button type="button" data-dir="long" data-active="true" onclick="d3setDir('long')">Long</button>
+            <button type="button" data-dir="short" data-active="false" onclick="d3setDir('short')">Short</button>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="d3-entry-date">תאריך כניסה</label>
+            <input id="d3-entry-date" type="date" value="2026-09-13">
+          </div>
+          <div class="field">
+            <label for="d3-entry-price">מחיר כניסה</label>
+            <input id="d3-entry-price" type="number" step="any" min="0" value="158.20" oninput="d3update()">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="d3-qty">כמות</label>
+            <input id="d3-qty" type="number" step="any" min="0" value="78" oninput="d3update()">
+          </div>
+          <div class="field">
+            <label for="d3-currency">מטבע</label>
+            <select id="d3-currency" onchange="d3update()">
+              <option value="USD" selected>USD</option>
+              <option value="ILS">ILS</option>
+            </select>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="d3-stop">סטופ לוס <span class="optional">אופציונלי</span></label>
+            <input id="d3-stop" type="number" step="any" value="151.00" oninput="d3update()">
+          </div>
+          <div class="field">
+            <label for="d3-take">טייק פרופיט <span class="optional">אופציונלי</span></label>
+            <input id="d3-take" type="number" step="any" value="169.50" oninput="d3update()">
+          </div>
+        </div>
+        <div class="d3-step-nav-btns">
+          <button type="button" class="primary" onclick="d3goto(2)">המשך ליציאה ←</button>
+        </div>
+      </div>
+
+      <div class="d3-step-panel" data-panel="2">
+        <div class="row2">
+          <div class="field">
+            <label for="d3-exit-date">תאריך יציאה <span class="optional">אופציונלי</span></label>
+            <input id="d3-exit-date" type="date" oninput="d3update()">
+          </div>
+          <div class="field">
+            <label for="d3-exit-price">מחיר יציאה</label>
+            <input id="d3-exit-price" type="number" step="any" min="0" placeholder="—" oninput="d3update()">
+          </div>
+        </div>
+        <div class="field">
+          <label for="d3-fee">עמלה <span class="optional">אופציונלי</span></label>
+          <input id="d3-fee" type="number" step="any" min="0" value="1.5" oninput="d3update()">
+        </div>
+        <div class="d3-step-nav-btns">
+          <button type="button" onclick="d3goto(1)">→ חזרה לכניסה</button>
+          <button type="button" class="primary" onclick="d3goto(3)">המשך למטא ←</button>
+        </div>
+      </div>
+
+      <div class="d3-step-panel" data-panel="3">
+        <div class="field">
+          <label for="d3-setup">סטאפ <span class="optional">אופציונלי</span></label>
+          <select id="d3-setup"><option value="">ללא הגדרה</option><option>Breakout</option><option>Pullback</option></select>
+        </div>
+        <div class="field">
+          <label for="d3-notes">הערות <span class="optional">אופציונלי</span></label>
+          <textarea id="d3-notes"></textarea>
+        </div>
+        <div class="field">
+          <label>תמונת גרף <span class="optional">אופציונלי</span></label>
+          <div class="file-row">
+            <button type="button" class="file-btn">בחירת קובץ</button>
+            <span class="file-name">לא נבחר קובץ</span>
+          </div>
+        </div>
+        <div class="d3-step-nav-btns">
+          <button type="button" onclick="d3goto(2)">→ חזרה ליציאה</button>
+          <button type="submit" class="primary">הוספת טרייד</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</section>
+
+<script>
+  // ==== shared pure calc, mirrors computePnl() in src/lib/stats.ts ====
+  const CCY_SYM = { USD:'$', ILS:'₪', EUR:'€', GBP:'£' };
+  function fmtMoney(n, ccy){
+    const sym = CCY_SYM[ccy] || '';
+    const sign = n < 0 ? '-' : '';
+    return `${sign}${sym}${Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+  }
+  function computePnl(direction, entry, exit, qty, fee){
+    const raw = direction === 'long' ? (exit - entry) * qty : (entry - exit) * qty;
+    return raw - (fee || 0);
+  }
+
+  function updateTicket(p){
+    // p = { symbol, direction, entry, qty, ccy, stop, take, exitPrice, fee,
+    //       elSymbol, elBadge, elPnl, elPnlSub, elRisk, elReward, elRR,
+    //       elLine, elSegRisk, elSegReward, elMarkStop, elMarkEntry, elMarkTake, elMarkExit,
+    //       elLo, elHi, elQty, elEntry, elFee, pnlIsBig }
+    if (p.elSymbol) p.elSymbol.textContent = p.symbol || '—';
+    if (p.elBadge){
+      p.elBadge.textContent = p.direction === 'long' ? 'LONG' : 'SHORT';
+      p.elBadge.className = 'ticket-badge ' + p.direction;
+    }
+
+    const entry = Number(p.entry), qty = Number(p.qty);
+    const hasEntry = !Number.isNaN(entry) && entry > 0;
+    const hasQty = !Number.isNaN(qty) && qty > 0;
+    const stop = p.stop !== '' && p.stop != null ? Number(p.stop) : null;
+    const take = p.take !== '' && p.take != null ? Number(p.take) : null;
+    const exitPrice = p.exitPrice !== '' && p.exitPrice != null ? Number(p.exitPrice) : null;
+    const fee = p.fee !== '' && p.fee != null ? Number(p.fee) : 0;
+
+    // ---- live P&L ----
+    if (hasEntry && hasQty && exitPrice !== null && !Number.isNaN(exitPrice)){
+      const pnl = computePnl(p.direction, entry, exitPrice, qty, fee);
+      const cls = pnl >= 0 ? 'pos' : 'neg';
+      if (p.elPnl){
+        p.elPnl.textContent = (pnl >= 0 ? '+' : '') + fmtMoney(pnl, p.ccy);
+        p.elPnl.className = (p.pnlIsBig ? 'pnl-value ' : 'd3-chip-pnl ') + cls;
+      }
+      if (p.elPnlSub) p.elPnlSub.textContent = pnl >= 0 ? 'טרייד רווחי' : 'טרייד מפסיד';
+    } else {
+      if (p.elPnl){
+        p.elPnl.textContent = '—';
+        p.elPnl.className = (p.pnlIsBig ? 'pnl-value neutral' : 'd3-chip-pnl neutral');
+      }
+      if (p.elPnlSub) p.elPnlSub.textContent = 'ממתין למחיר יציאה';
+    }
+
+    // ---- risk / reward / R:R ----
+    let risk = null, reward = null;
+    if (hasEntry && hasQty && stop !== null && !Number.isNaN(stop)){
+      risk = Math.abs(entry - stop) * qty;
+    }
+    if (hasEntry && hasQty && take !== null && !Number.isNaN(take)){
+      reward = Math.abs(take - entry) * qty;
+    }
+    if (p.elRisk) p.elRisk.textContent = risk !== null ? fmtMoney(risk, p.ccy) : '—';
+    if (p.elReward) p.elReward.textContent = reward !== null ? fmtMoney(reward, p.ccy) : '—';
+    if (p.elRR) p.elRR.textContent = (risk !== null && reward !== null && risk > 0) ? (reward / risk).toFixed(2) : '—';
+
+    // ---- number line: stop <-> entry <-> take, exit plotted if present ----
+    if (p.elLine && hasEntry){
+      const points = [entry];
+      if (stop !== null && !Number.isNaN(stop)) points.push(stop);
+      if (take !== null && !Number.isNaN(take)) points.push(take);
+      if (exitPrice !== null && !Number.isNaN(exitPrice)) points.push(exitPrice);
+      const lo = Math.min(...points), hi = Math.max(...points);
+      const span = hi - lo || 1;
+      const pct = (v) => ((v - lo) / span) * 100;
+
+      if (p.elLo) p.elLo.textContent = fmtMoney(lo, p.ccy);
+      if (p.elHi) p.elHi.textContent = fmtMoney(hi, p.ccy);
+
+      p.elMarkEntry.style.right = pct(entry) + '%';
+
+      if (stop !== null && !Number.isNaN(stop)){
+        p.elMarkStop.style.display = 'block';
+        p.elMarkStop.style.right = pct(stop) + '%';
+        const a = Math.min(pct(entry), pct(stop)), b = Math.max(pct(entry), pct(stop));
+        p.elSegRisk.style.right = a + '%'; p.elSegRisk.style.width = (b - a) + '%';
+      } else {
+        p.elMarkStop.style.display = 'none';
+        p.elSegRisk.style.width = '0%';
+      }
+      if (take !== null && !Number.isNaN(take)){
+        p.elMarkTake.style.display = 'block';
+        p.elMarkTake.style.right = pct(take) + '%';
+        const a = Math.min(pct(entry), pct(take)), b = Math.max(pct(entry), pct(take));
+        p.elSegReward.style.right = a + '%'; p.elSegReward.style.width = (b - a) + '%';
+      } else {
+        p.elMarkTake.style.display = 'none';
+        p.elSegReward.style.width = '0%';
+      }
+      if (exitPrice !== null && !Number.isNaN(exitPrice)){
+        p.elMarkExit.style.display = 'block';
+        p.elMarkExit.style.right = pct(exitPrice) + '%';
+      } else {
+        p.elMarkExit.style.display = 'none';
+      }
+    }
+
+    if (p.elQty) p.elQty.textContent = hasQty ? qty.toLocaleString('en-US') : '—';
+    if (p.elEntry) p.elEntry.textContent = hasEntry ? entry.toFixed(2) : '—';
+    if (p.elFeeOut) p.elFeeOut.textContent = fee ? fee.toFixed(2) : '0.00';
+  }
+
+  // ==== Direction 1 wiring ====
+  let d1dir = 'long';
+  function d1setDir(dir){
+    d1dir = dir;
+    document.querySelectorAll('#d1-dir-toggle button').forEach(b => b.dataset.active = (b.dataset.dir === dir));
+    d1update();
+  }
+  function d1update(){
+    updateTicket({
+      symbol: document.getElementById('d1-symbol').value.toUpperCase(),
+      direction: d1dir,
+      entry: document.getElementById('d1-entry-price').value,
+      qty: document.getElementById('d1-qty').value,
+      ccy: document.getElementById('d1-currency').value,
+      stop: document.getElementById('d1-stop').value,
+      take: document.getElementById('d1-take').value,
+      exitPrice: document.getElementById('d1-exit-price').value,
+      fee: document.getElementById('d1-fee').value,
+      pnlIsBig: true,
+      elSymbol: document.getElementById('d1t-symbol'),
+      elBadge: document.getElementById('d1t-badge'),
+      elPnl: document.getElementById('d1t-pnl'),
+      elPnlSub: document.getElementById('d1t-pnl-sub'),
+      elRisk: document.getElementById('d1t-risk'),
+      elReward: document.getElementById('d1t-reward'),
+      elRR: document.getElementById('d1t-rr'),
+      elLine: document.getElementById('d1t-line'),
+      elSegRisk: document.getElementById('d1t-seg-risk'),
+      elSegReward: document.getElementById('d1t-seg-reward'),
+      elMarkStop: document.getElementById('d1t-mark-stop'),
+      elMarkEntry: document.getElementById('d1t-mark-entry'),
+      elMarkTake: document.getElementById('d1t-mark-take'),
+      elMarkExit: document.getElementById('d1t-mark-exit'),
+      elLo: document.getElementById('d1t-lo'),
+      elHi: document.getElementById('d1t-hi'),
+      elQty: document.getElementById('d1t-qty'),
+      elEntry: document.getElementById('d1t-entry'),
+      elFeeOut: document.getElementById('d1t-fee'),
+    });
+  }
+
+  // ==== Direction 2 wiring ====
+  let d2dir = 'short';
+  function d2setDir(dir){
+    d2dir = dir;
+    document.querySelectorAll('#d2-dir-toggle button').forEach(b => b.dataset.active = (b.dataset.dir === dir));
+    d2update();
+  }
+  function d2update(){
+    updateTicket({
+      symbol: document.getElementById('d2-symbol').value.toUpperCase(),
+      direction: d2dir,
+      entry: document.getElementById('d2-entry-price').value,
+      qty: document.getElementById('d2-qty').value,
+      ccy: document.getElementById('d2-currency').value,
+      stop: document.getElementById('d2-stop').value,
+      take: document.getElementById('d2-take').value,
+      exitPrice: document.getElementById('d2-exit-price').value,
+      fee: document.getElementById('d2-fee').value,
+      pnlIsBig: false,
+      elSymbol: document.getElementById('d2t-symbol'),
+      elBadge: document.getElementById('d2t-badge'),
+      elPnl: document.getElementById('d2t-pnl'),
+      elRisk: document.getElementById('d2t-risk'),
+      elReward: document.getElementById('d2t-reward'),
+      elLine: document.getElementById('d2t-line'),
+      elSegRisk: document.getElementById('d2t-seg-risk'),
+      elSegReward: document.getElementById('d2t-seg-reward'),
+      elMarkStop: document.getElementById('d2t-mark-stop'),
+      elMarkEntry: document.getElementById('d2t-mark-entry'),
+      elMarkTake: document.getElementById('d2t-mark-take'),
+      elMarkExit: document.getElementById('d2t-mark-exit'),
+    });
+  }
+
+  // ==== Direction 3 wiring ====
+  let d3dir = 'long';
+  function d3setDir(dir){
+    d3dir = dir;
+    document.querySelectorAll('#d3-dir-toggle button').forEach(b => b.dataset.active = (b.dataset.dir === dir));
+    d3update();
+  }
+  function d3goto(step){
+    document.querySelectorAll('.d3-steps-nav button').forEach(b => b.classList.toggle('active', Number(b.dataset.step) === step));
+    document.querySelectorAll('.d3-step-panel').forEach(p => p.classList.toggle('active', Number(p.dataset.panel) === step));
+  }
+  function d3update(){
+    updateTicket({
+      symbol: document.getElementById('d3-symbol').value.toUpperCase(),
+      direction: d3dir,
+      entry: document.getElementById('d3-entry-price').value,
+      qty: document.getElementById('d3-qty').value,
+      ccy: document.getElementById('d3-currency').value,
+      stop: document.getElementById('d3-stop').value,
+      take: document.getElementById('d3-take').value,
+      exitPrice: document.getElementById('d3-exit-price').value,
+      fee: document.getElementById('d3-fee').value,
+      pnlIsBig: false,
+      elSymbol: document.getElementById('d3t-symbol'),
+      elBadge: document.getElementById('d3t-badge'),
+      elPnl: document.getElementById('d3t-pnl'),
+    });
+  }
+
+  // initial paint for all 3 directions using the pre-filled demo values
+  d1update();
+  d2update();
+  d3update();
+</script>
+</body>
+</html>

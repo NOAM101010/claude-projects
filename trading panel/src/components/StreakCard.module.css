@@ -11,21 +11,24 @@
 .top {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
-.flame {
-  font-size: 20px;
-  line-height: 1;
-  filter: grayscale(1);
-  opacity: 0.4;
-  transition: filter 0.2s ease, opacity 0.2s ease;
+.topMain {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
-.flameWin,
-.flameLoss {
-  filter: none;
-  opacity: 1;
+.gaugeWrap {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gaugeSvg {
+  display: block;
 }
 
 .label {
@@ -56,7 +59,7 @@
 }
 
 .negative {
-  color: var(--pnl-neg-2);
+  color: var(--cold-2);
 }
 
 .hint {
@@ -75,10 +78,6 @@
   padding: 20px 26px;
   height: 100%;
   box-sizing: border-box;
-}
-
-.flameLg {
-  font-size: 36px;
 }
 
 .lgMain {

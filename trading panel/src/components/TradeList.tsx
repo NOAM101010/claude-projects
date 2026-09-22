@@ -9,6 +9,7 @@ import { DEFAULT_TRADE_FILTERS, filterTrades, hasActiveFilters, type DateRangePr
 import type { Trade } from '../types/trade'
 import type { TradeFilter } from '../App'
 import { ChartImageThumbnail } from './ChartImageThumbnail'
+import { EmptyState } from './EmptyState'
 import styles from './TradeList.module.css'
 
 interface TradeListProps {
@@ -240,10 +241,11 @@ export function TradeList({ trades, filter, onClearFilter, onAdd, onEdit, onDele
       )}
 
       {sorted.length === 0 ? (
-        <div className={styles.empty}>
-          <p className={styles.emptyTitle}>{filter || advActive ? t('tradeList.emptyFiltered') : t('tradeList.emptyAll')}</p>
-          <p className={styles.emptyHint}>{filter || advActive ? t('tradeList.emptyFilteredHint') : t('tradeList.emptyAllHint')}</p>
-        </div>
+        <EmptyState
+          illustration="target"
+          title={filter || advActive ? t('tradeList.emptyFiltered') : t('tradeList.emptyAll')}
+          hint={filter || advActive ? t('tradeList.emptyFilteredHint') : t('tradeList.emptyAllHint')}
+        />
       ) : (
         <>
           <div className={styles.tableWrapper}>

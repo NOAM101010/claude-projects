@@ -491,29 +491,3 @@
   unicode-bidi: isolate;
 }
 
-/* ==== empty state - dashed frame, same tone as TradeList's empty state ==== */
-.emptyCard {
-  text-align: center;
-  padding: 56px 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
-
-.emptyIcon {
-  color: var(--accent-2);
-  opacity: 0.7;
-  margin-bottom: 4px;
-}
-
-.emptyTitle {
-  font-weight: 700;
-  font-size: 15px;
-}
-
-.emptyHint {
-  color: var(--text-dim);
-  font-size: 13px;
-  max-width: 42ch;
-}

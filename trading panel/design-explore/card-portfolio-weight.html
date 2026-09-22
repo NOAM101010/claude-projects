@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TradePanel — כרטיס חדש: משקל תיק (Long-term template)</title>
+<!--
+  4 כיוונים לכרטיס "משקל תיק" (% מהתיק שכל פוזיציה פתוחה תופסת, Long-term בלבד):
+  1) רגיל - טבלת שורות עם progress-bar אופקי לכל פוזיציה, זהה בסגנון לטבלאות
+     GroupTable הקיימות היום (By Symbol/By Day).
+  2) Donut chart - פילוח עוגה עם מקרא צדדי, טוב לתפיסה מיידית של "מי הכי גדול".
+  3) Treemap - ריבועים בגודל יחסי לאחוז, טוב כשיש הרבה פוזיציות ורוצים לזהות
+     ריכוזיות בסריקה אחת בלי לקרוא מספרים.
+  4) רגיל אך עם אזהרת ריכוזיות - כמו (1) + det-chip אדום כשפוזיציה בודדת עוברת סף (35%+).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@700;900&family=JetBrains+Mono:wght@500;600;700;800&family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#07080b; --bg-2:#0b0d12; --overlay-tint:255,255,255; --amber-hot-rgb:232,179,65;
+    --border: rgba(255,255,255,0.09); --text:#a3a3ab; --text-h:#f5f5f7; --text-dim:#9c9ca6;
+    --pos:#22c55e; --pos-2:#4ade80; --neg:#ef4444; --neg-2:#f87171;
+    --accent:#d99a2b; --accent-2:#e8b341; --amber-rgb:217,154,43; --chip-neg:#f87171;
+    --metal-1:#0c0e11; --metal-2:#15181d; --metal-mid:#101216;
+    --serif:'Frank Ruhl Libre', Georgia, serif; --mono:'JetBrains Mono', ui-monospace, monospace; --sans:'Heebo', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  body{ min-height:100vh; padding:40px 22px 60px; }
+  .num{direction:ltr;unicode-bidi:isolate;font-family:var(--mono);font-variant-numeric:tabular-nums;}
+  .wrap{ max-width:1200px; margin:0 auto; }
+  h1{ font-family:var(--serif); font-weight:900; color:var(--text-h); font-size:26px; margin:0 0 6px; }
+  .lede{ color:var(--text-dim); font-size:13px; margin:0 0 34px; }
+  .row{ display:grid; grid-template-columns:repeat(2,1fr); gap:20px; }
+  @media (max-width:900px){ .row{ grid-template-columns:1fr; } }
+  .variant-label{ font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-2); margin-bottom:10px; display:block; }
+
+  .metal-panel{ position:relative; border:1px solid rgba(255,255,255,.08); border-radius:14px;
+    background: linear-gradient(180deg, var(--metal-2) 0%, var(--metal-mid) 55%, var(--metal-1) 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 18px 40px -22px rgba(0,0,0,.75); }
+  .holo-edge{ position:relative; isolation:isolate; }
+  .holo-edge::after{ content:''; position:absolute; inset:0; border-radius:inherit; padding:1px; pointer-events:none;
+    background: linear-gradient(180deg, rgba(var(--overlay-tint),.1) 0%, rgba(var(--overlay-tint),.02) 28%, transparent 58%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; opacity:.7; }
+  .holo-edge--amber::after{ background: linear-gradient(180deg, rgba(var(--amber-hot-rgb),.35) 0%, rgba(var(--amber-rgb),.06) 32%, transparent 60%); }
+  .det-chip{ direction:ltr; display:inline-flex; align-items:center; gap:6px; padding:3px 9px; border:1px solid rgba(var(--amber-rgb),.4);
+    background:rgba(6,8,13,.75); border-radius:999px; font-family:var(--mono); font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:rgba(245,225,190,.86); }
+  .det-chip--down{ border-color:rgba(239,68,68,.45); color:var(--chip-neg); }
+
+  .card{ border-radius:14px; padding:18px 20px; }
+  .card h3{ margin:0 0 16px; font-size:13px; font-weight:800; color:var(--text-h); font-family:var(--sans); display:flex; align-items:center; justify-content:space-between; }
+
+  /* ---- variant 1 & 4: table with horizontal bars ---- */
+  .plist{ display:flex; flex-direction:column; gap:12px; }
+  .prow{ display:grid; grid-template-columns:64px 1fr 56px; align-items:center; gap:12px; }
+  .prow .sym{ font-family:var(--mono); font-weight:700; color:var(--text-h); font-size:13px; direction:ltr; }
+  .prow .bar-track{ height:10px; border-radius:999px; background:rgba(255,255,255,.06); overflow:hidden; position:relative; }
+  .prow .bar-fill{ height:100%; border-radius:999px; background:linear-gradient(90deg, var(--accent), var(--accent-2)); }
+  .prow .bar-fill.danger{ background:linear-gradient(90deg, #ef4444, #f87171); }
+  .prow .pct{ font-family:var(--mono); font-weight:800; color:var(--text-h); font-size:13.5px; text-align:left; direction:ltr; }
+  .prow .pct.danger{ color:var(--neg-2); }
+  .cash-row{ font-family:var(--mono); font-size:11px; color:var(--text-dim); margin-top:6px; padding-top:10px; border-top:1px solid var(--border); display:flex; justify-content:space-between; }
+
+  /* ---- variant 2: donut ---- */
+  .donut-body{ display:flex; align-items:center; gap:22px; }
+  .donut-legend{ display:flex; flex-direction:column; gap:9px; flex:1; }
+  .leg-row{ display:flex; align-items:center; gap:9px; font-size:12.5px; }
+  .leg-sw{ width:11px; height:11px; border-radius:3px; flex:none; }
+  .leg-row .sym{ font-family:var(--mono); font-weight:700; color:var(--text-h); direction:ltr; }
+  .leg-row .pct{ margin-inline-start:auto; font-family:var(--mono); font-weight:800; color:var(--text-dim); direction:ltr; }
+
+  /* ---- variant 3: treemap ---- */
+  .treemap{ display:grid; grid-template-columns:repeat(6,1fr); grid-template-rows:repeat(6,1fr); gap:5px; height:210px; }
+  .tblock{ border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; position:relative; overflow:hidden; border:1px solid rgba(255,255,255,.08); }
+  .tblock .sym{ font-family:var(--mono); font-weight:800; color:#fff; font-size:13px; direction:ltr; text-shadow:0 1px 3px rgba(0,0,0,.5); }
+  .tblock .pct{ font-family:var(--mono); font-size:10.5px; color:rgba(255,255,255,.85); direction:ltr; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>משקל תיק</h1>
+    <p class="lede">Long-term בלבד · % מהתיק שכל פוזיציה פתוחה תופסת = (עלות פוזיציה / שווי תיק כולל) × 100</p>
+
+    <div class="row" style="margin-bottom:44px;">
+      <div>
+        <span class="variant-label">01 · רגיל (בסגנון GroupTable הקיים)</span>
+        <div class="card metal-panel holo-edge">
+          <h3>משקל תיק <span style="font-family:var(--mono); font-size:11px; color:var(--text-dim); font-weight:600;">שווי כולל: $84,200</span></h3>
+          <div class="plist">
+            <div class="prow"><span class="sym">NVDA</span><div class="bar-track"><div class="bar-fill" style="width:29%"></div></div><span class="pct num">29%</span></div>
+            <div class="prow"><span class="sym">MSFT</span><div class="bar-track"><div class="bar-fill" style="width:22%"></div></div><span class="pct num">22%</span></div>
+            <div class="prow"><span class="sym">AAPL</span><div class="bar-track"><div class="bar-fill" style="width:18%"></div></div><span class="pct num">18%</span></div>
+            <div class="prow"><span class="sym">GOOGL</span><div class="bar-track"><div class="bar-fill" style="width:14%"></div></div><span class="pct num">14%</span></div>
+            <div class="prow"><span class="sym">AMZN</span><div class="bar-track"><div class="bar-fill" style="width:9%"></div></div><span class="pct num">9%</span></div>
+          </div>
+          <div class="cash-row"><span>מזומן פנוי</span><span class="num">8% · $6,700</span></div>
+        </div>
+      </div>
+
+      <div>
+        <span class="variant-label">02 · Donut Chart</span>
+        <div class="card metal-panel holo-edge">
+          <h3>משקל תיק <span style="font-family:var(--mono); font-size:11px; color:var(--text-dim); font-weight:600;">$84,200</span></h3>
+          <div class="donut-body">
+            <svg width="140" height="140" viewBox="0 0 42 42">
+              <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="rgba(255,255,255,.06)" stroke-width="6"></circle>
+              <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#e8b341" stroke-width="6" stroke-dasharray="29 71" stroke-dashoffset="0" transform="rotate(-90 21 21)"></circle>
+              <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#d99a2b" stroke-width="6" stroke-dasharray="22 78" stroke-dashoffset="-29" transform="rotate(-90 21 21)"></circle>
+              <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#4ade80" stroke-width="6" stroke-dasharray="18 82" stroke-dashoffset="-51" transform="rotate(-90 21 21)"></circle>
+              <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#22c55e" stroke-width="6" stroke-dasharray="14 86" stroke-dashoffset="-69" transform="rotate(-90 21 21)"></circle>
+              <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="rgba(255,255,255,.28)" stroke-width="6" stroke-dasharray="17 83" stroke-dashoffset="-83" transform="rotate(-90 21 21)"></circle>
+              <text x="21" y="19" text-anchor="middle" font-family="JetBrains Mono" font-size="5.5" font-weight="800" fill="#f5f5f7">5</text>
+              <text x="21" y="25" text-anchor="middle" font-family="JetBrains Mono" font-size="3" fill="#9c9ca6">פוזיציות</text>
+            </svg>
+            <div class="donut-legend">
+              <div class="leg-row"><span class="leg-sw" style="background:#e8b341;"></span><span class="sym">NVDA</span><span class="pct">29%</span></div>
+              <div class="leg-row"><span class="leg-sw" style="background:#d99a2b;"></span><span class="sym">MSFT</span><span class="pct">22%</span></div>
+              <div class="leg-row"><span class="leg-sw" style="background:#4ade80;"></span><span class="sym">AAPL</span><span class="pct">18%</span></div>
+              <div class="leg-row"><span class="leg-sw" style="background:#22c55e;"></span><span class="sym">GOOGL</span><span class="pct">14%</span></div>
+              <div class="leg-row"><span class="leg-sw" style="background:rgba(255,255,255,.28);"></span><span class="sym">AMZN + מזומן</span><span class="pct">17%</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row" style="margin-bottom:44px;">
+      <div>
+        <span class="variant-label">03 · Treemap (ריבועים יחסיים)</span>
+        <div class="card metal-panel holo-edge">
+          <h3>משקל תיק <span style="font-family:var(--mono); font-size:11px; color:var(--text-dim); font-weight:600;">$84,200</span></h3>
+          <div class="treemap">
+            <div class="tblock" style="grid-column:1/4; grid-row:1/4; background:linear-gradient(150deg,#e8b341,#b57a1f);"><span class="sym">NVDA</span><span class="pct">29%</span></div>
+            <div class="tblock" style="grid-column:4/6; grid-row:1/4; background:linear-gradient(150deg,#d99a2b,#a06818);"><span class="sym">MSFT</span><span class="pct">22%</span></div>
+            <div class="tblock" style="grid-column:6/7; grid-row:1/4; background:linear-gradient(150deg,#4ade80,#22c55e);"><span class="sym">AAPL</span><span class="pct">18%</span></div>
+            <div class="tblock" style="grid-column:1/3; grid-row:4/7; background:linear-gradient(150deg,#22c55e,#16803f);"><span class="sym">GOOGL</span><span class="pct">14%</span></div>
+            <div class="tblock" style="grid-column:3/5; grid-row:4/7; background:linear-gradient(150deg,#7d7d86,#4a4a52);"><span class="sym">AMZN</span><span class="pct">9%</span></div>
+            <div class="tblock" style="grid-column:5/7; grid-row:4/7; background:rgba(255,255,255,.05); border-style:dashed;"><span class="sym" style="color:var(--text-dim); text-shadow:none;">מזומן</span><span class="pct" style="color:var(--text-dim);">8%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <span class="variant-label">04 · רגיל + אזהרת ריכוזיות (סף 35%+)</span>
+        <div class="card metal-panel holo-edge holo-edge--amber">
+          <h3>משקל תיק <span class="det-chip det-chip--down">ריכוזיות גבוהה</span></h3>
+          <div class="plist">
+            <div class="prow"><span class="sym">NVDA</span><div class="bar-track"><div class="bar-fill danger" style="width:42%"></div></div><span class="pct num danger">42%</span></div>
+            <div class="prow"><span class="sym">MSFT</span><div class="bar-track"><div class="bar-fill" style="width:22%"></div></div><span class="pct num">22%</span></div>
+            <div class="prow"><span class="sym">AAPL</span><div class="bar-track"><div class="bar-fill" style="width:18%"></div></div><span class="pct num">18%</span></div>
+            <div class="prow"><span class="sym">GOOGL</span><div class="bar-track"><div class="bar-fill" style="width:10%"></div></div><span class="pct num">10%</span></div>
+          </div>
+          <div class="cash-row"><span>מזומן פנוי</span><span class="num">8% · $6,700</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

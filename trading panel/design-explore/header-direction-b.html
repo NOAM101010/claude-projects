@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TradePanel — Header כיוון B: Badge + Popover תבניות</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@700;900&family=JetBrains+Mono:wght@500;600;700;800&family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#07080b; --bg-2:#0b0d12; --overlay-tint:255,255,255;
+    --card: rgba(255,255,255,.035); --border: rgba(255,255,255,.09); --border-hi: rgba(255,255,255,.17);
+    --text:#a3a3ab; --text-h:#f2f2f4; --text-dim:#74747c; --text-label: rgba(253,246,232,.82);
+    --pnl-pos-2:#4ade80; --pnl-neg-2:#f87171;
+    --accent:#d99a2b; --accent-2:#e8b341; --amber-rgb:217,154,43; --amber-hot-rgb:232,179,65;
+    --metal-1:#0c0e11; --metal-1-rgb:12,14,17; --metal-2:#15181d; --metal-mid:#101216;
+    --metal-edge: rgba(255,255,255,.08); --metal-hi: rgba(255,255,255,.06); --ink-rgb:0,0,0;
+    --serif:'Frank Ruhl Libre', Georgia, serif; --mono:'JetBrains Mono', ui-monospace, monospace; --sans:'Heebo', system-ui, sans-serif;
+    --shadow: 0 18px 40px -22px rgba(0,0,0,.75);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  body{min-height:100vh; padding-bottom:60px;
+    background: radial-gradient(ellipse 900px 500px at 15% -5%, rgba(217,154,43,.05), transparent 55%), var(--bg);
+  }
+  .num{direction:ltr;unicode-bidi:isolate;font-family:var(--mono);font-variant-numeric:tabular-nums;}
+
+  .glass-blur{ backdrop-filter: blur(20px) saturate(140%); -webkit-backdrop-filter: blur(20px) saturate(140%); }
+  .metal-panel{ position:relative; border:1px solid var(--metal-edge); border-radius:14px;
+    background: linear-gradient(180deg, var(--metal-2) 0%, var(--metal-mid) 55%, var(--metal-1) 100%);
+    box-shadow: inset 0 1px 0 var(--metal-hi), var(--shadow); }
+  .btn-metal{ border:1px solid var(--metal-edge); border-radius:11px;
+    background: linear-gradient(180deg, var(--metal-2) 0%, var(--metal-mid) 55%, var(--metal-1) 100%);
+    box-shadow: inset 0 1px 0 var(--metal-hi), inset 0 -10px 16px -12px rgba(0,0,0,.75), 0 1px 2px rgba(0,0,0,.5);
+    transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease, color .16s ease, background .2s ease; }
+  .btn-metal:hover{ transform:translateY(-1px); border-color:var(--border-hi); }
+  .btn-metal--active{ background: linear-gradient(180deg, rgba(232,179,65,.14) 0%, rgba(232,179,65,.055) 55%, rgba(232,179,65,.03) 100%);
+    border-color: rgba(232,179,65,.32); color:var(--accent-2);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08), inset 0 0 22px -8px rgba(232,179,65,.35); }
+  .eyebrow{ display:inline-flex; align-items:center; gap:9px; font-size:10px; font-weight:700; letter-spacing:.24em;
+    text-transform:uppercase; color:var(--text-dim); font-family:var(--mono); }
+  .eyebrow::before{content:''; width:22px; height:1px; background:linear-gradient(90deg, var(--accent-2), transparent);}
+  .det-chip{ direction:ltr; display:inline-flex; align-items:center; gap:6px; padding:3px 9px;
+    border:1px solid rgba(217,154,43,.4); background:rgba(6,8,13,.75); border-radius:999px;
+    font-family:var(--mono); font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:rgba(245,225,190,.86); white-space:nowrap; }
+
+  /* ============ header ============ */
+  header.app-header{ position:sticky; top:0; z-index:20; background:linear-gradient(180deg, rgba(7,8,11,.9), rgba(7,8,11,.7)); border-bottom:1px solid var(--border); }
+  .header-inner{ max-width:1080px; margin:0 auto; padding:12px 16px; display:flex; align-items:center; gap:10px; }
+
+  .brand-cluster{ display:flex; align-items:center; gap:8px; flex-shrink:0; position:relative; }
+  .brand{ display:flex; align-items:center; gap:9px; padding:6px 14px 6px 8px; border-radius:13px; }
+  .logo{ width:30px; height:30px; border-radius:9px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    background: radial-gradient(circle at 30% 25%, rgba(232,179,65,.9), rgba(217,154,43,.3) 60%, transparent 75%), var(--metal-1);
+    border:1px solid rgba(232,179,65,.35); font-family:var(--serif); font-weight:900; font-size:13px; color:var(--accent-2); }
+  .brand-text{ font-size:14px; font-weight:900; letter-spacing:-.01em; color:var(--text-h); white-space:nowrap; }
+
+  /* ===== template badge: single pill that opens a popover ===== */
+  .tpl-badge{ display:flex; align-items:center; gap:7px; padding:6px 10px 6px 12px; border-radius:999px;
+    cursor:pointer; position:relative; }
+  .tpl-badge .dot{ width:7px; height:7px; border-radius:50%; background:var(--accent-2); box-shadow:0 0 0 3px rgba(232,179,65,.18); }
+  .tpl-badge .lbl{ font-family:var(--mono); font-size:11.5px; font-weight:700; letter-spacing:.05em; color:var(--accent-2); white-space:nowrap; }
+  .tpl-badge .chev{ width:12px; height:12px; color:var(--text-dim); transition:transform .18s ease; }
+  .tpl-badge[aria-expanded="true"] .chev{ transform:rotate(180deg); }
+  .tpl-badge-label-long{ display:inline; }
+  @media (max-width:640px){ .tpl-badge-label-long{ display:none; } }
+
+  .tpl-popover{ position:absolute; top:calc(100% + 10px); right:0; z-index:35; width:270px;
+    border-radius:16px; padding:8px; border:1px solid rgba(232,179,65,.28);
+    background: linear-gradient(180deg, #15181d 0%, #0c0e11 100%);
+    box-shadow: 0 30px 60px -24px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.05);
+    opacity:0; transform: translateY(-6px) scale(.97); pointer-events:none; transition: opacity .16s ease, transform .16s ease; }
+  .tpl-popover.open{ opacity:1; transform:translateY(0) scale(1); pointer-events:auto; }
+  .tpl-popover-title{ font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--text-dim); padding:8px 10px 6px; }
+  .tpl-opt{ display:flex; align-items:center; gap:10px; width:100%; padding:9px 10px; border-radius:10px;
+    background:none; border:none; text-align:right; color:var(--text-h); cursor:pointer; font:inherit; font-size:13.5px; }
+  .tpl-opt:hover:not([data-locked="true"]){ background:rgba(255,255,255,.045); }
+  .tpl-opt[data-active="true"]{ background:rgba(232,179,65,.1); color:var(--accent-2); }
+  .tpl-opt[data-locked="true"]{ color:rgba(163,163,171,.5); cursor:not-allowed; }
+  .tpl-opt svg.ic{ width:16px; height:16px; flex-shrink:0; }
+  .tpl-opt .opt-name{ flex:1; font-weight:600; }
+  .tpl-opt .opt-check{ width:14px; height:14px; color:var(--accent-2); flex-shrink:0; }
+  .tpl-opt .opt-lock{ display:flex; align-items:center; gap:5px; flex-shrink:0; }
+  .tpl-opt .opt-lock svg{ width:12px; height:12px; }
+  .tpl-popover-foot{ margin-top:4px; padding:10px 10px 6px; border-top:1px solid var(--border); }
+  .tpl-upgrade{ display:block; width:100%; text-align:center; padding:9px; border-radius:10px; font:inherit; font-size:12.5px;
+    font-weight:800; letter-spacing:.02em; border:none; cursor:pointer; color:#16110a;
+    background:linear-gradient(180deg, var(--accent-2), var(--accent)); }
+
+  nav.pill-nav{ flex:1; min-width:0; display:flex; align-items:center; justify-content:center; gap:5px;
+    padding:5px; border-radius:13px; border:1px solid var(--metal-edge); background: rgba(12,14,17,.75); overflow-x:auto; }
+  nav.pill-nav::-webkit-scrollbar{ display:none; }
+  .nav-btn{ display:flex; align-items:center; gap:7px; padding:8px 12px; border-radius:9px; font:inherit; font-size:13.5px;
+    font-weight:600; color:var(--text-dim); white-space:nowrap; cursor:pointer; transition:color .16s ease; background:none; border:none; }
+  .nav-btn[data-active="true"]{ color:var(--accent-2); }
+  .nav-btn:hover:not([data-active="true"]){ color:var(--text-h); }
+  .nav-btn svg{ width:16px; height:16px; flex-shrink:0; }
+  .nav-label{ display:none; }
+
+  .settings-btn{ display:flex; align-items:center; justify-content:center; width:38px; height:38px; flex-shrink:0;
+    border-radius:11px; color:var(--text-dim); cursor:pointer; background:none; border:none; }
+  .settings-btn svg{ width:17px; height:17px; }
+  .settings-btn:hover{ color:var(--text-h); }
+
+  .header-actions{ display:flex; align-items:center; gap:8px; flex-shrink:0; }
+  .tier-chip{ font-family:var(--mono); font-size:10.5px; font-weight:700; letter-spacing:.08em; padding:6px 11px;
+    border-radius:999px; border:1px solid rgba(232,179,65,.35); color:var(--accent-2); background:rgba(232,179,65,.08); white-space:nowrap; }
+
+  @media (min-width:900px){ .nav-label{ display:inline; } }
+  @media (min-width:480px) and (max-width:899px){ nav.pill-nav{gap:3px; padding:4px;} .nav-btn{padding:8px 9px;} }
+  @media (max-width:480px){ .brand-text{display:none;} }
+
+  /* ==== the actual ask: real breathing room on genuinely wide desktop ==== */
+  @media (min-width:1024px){
+    .header-inner{ max-width:1600px; padding:18px 40px; gap:26px; }
+    .brand-cluster{ gap:16px; }
+    nav.pill-nav{ gap:10px; padding:8px 10px; }
+    .nav-btn{ padding:10px 18px; font-size:14px; }
+    .header-actions{ gap:14px; }
+  }
+  @media (min-width:1600px){
+    .header-inner{ max-width:1880px; padding:20px 56px; gap:34px; }
+  }
+
+  /* ============ page body (context only) ============ */
+  .wrap{ max-width:1080px; margin:0 auto; padding:0 22px; }
+  @media (min-width:1024px){ .wrap{ max-width:1600px; padding:0 40px; } }
+  @media (min-width:1600px){ .wrap{ max-width:1880px; padding:0 56px; } }
+  .page-head{ padding:30px 0 22px; }
+  .page-title{ font-family:var(--serif); font-weight:900; font-size:clamp(24px,3.2vw,34px); color:var(--text-h); margin:6px 0 0; }
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:22px; }
+  @media (max-width:760px){ .kpi-row{ grid-template-columns:repeat(2,1fr); } }
+  .kpi{ border-radius:14px; padding:16px 18px; }
+  .kpi .lbl{ font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-label); font-family:var(--mono); }
+  .kpi .val{ font-family:var(--mono); font-size:22px; font-weight:800; color:var(--text-h); margin-top:8px; direction:ltr; }
+  .kpi .val.pos{ color:var(--pnl-pos-2); }
+  .demo-note{ margin-top:34px; text-align:center; font-family:var(--mono); font-size:11px; letter-spacing:.08em; color:var(--text-dim); }
+  .demo-note b{ color:var(--accent-2); }
+</style>
+</head>
+<body>
+
+  <header class="app-header glass-blur">
+    <div class="header-inner">
+      <div class="brand-cluster">
+        <div class="brand btn-metal">
+          <span class="logo">TP</span>
+          <span class="brand-text">TradePanel</span>
+        </div>
+
+        <!-- ===== Template switcher: single badge -> popover ===== -->
+        <button type="button" class="tpl-badge btn-metal" id="tplBadgeBtn" aria-expanded="false" aria-haspopup="true">
+          <span class="dot"></span>
+          <span class="lbl">Swing <span class="tpl-badge-label-long">Trading</span></span>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+
+        <div class="tpl-popover" id="tplPopover" role="menu">
+          <div class="tpl-popover-title">בחר תבנית מסחר</div>
+
+          <button type="button" class="tpl-opt" data-active="false" role="menuitem">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            <span class="opt-name">Day Trading</span>
+          </button>
+
+          <button type="button" class="tpl-opt" data-active="true" role="menuitem">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12c2-4 4-4 6 0s4 4 6 0 4-4 6 0"/></svg>
+            <span class="opt-name">Swing Trading</span>
+            <svg class="opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>
+          </button>
+
+          <button type="button" class="tpl-opt" data-locked="true" role="menuitem" disabled>
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 19l5-9 4 5 3-6 6 10z"/></svg>
+            <span class="opt-name">Long-term Investing</span>
+            <span class="opt-lock det-chip">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a4 4 0 0 0-4 4v2H7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-1V6a4 4 0 0 0-4-4zm0 2a2 2 0 0 1 2 2v2h-4V6a2 2 0 0 1 2-2z"/></svg>
+              PRO
+            </span>
+          </button>
+
+          <button type="button" class="tpl-opt" data-locked="true" role="menuitem" disabled>
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 9.5h4a1.5 1.5 0 0 1 0 3H9m0 0h4.5a1.5 1.5 0 0 1 0 3H9m1.5-9V8m0 8v1"/></svg>
+            <span class="opt-name">Crypto</span>
+            <span class="opt-lock det-chip">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a4 4 0 0 0-4 4v2H7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-1V6a4 4 0 0 0-4-4zm0 2a2 2 0 0 1 2 2v2h-4V6a2 2 0 0 1 2-2z"/></svg>
+              PRO
+            </span>
+          </button>
+
+          <div class="tpl-popover-foot">
+            <button type="button" class="tpl-upgrade">שדרג ל-Pro · בחירה חופשית</button>
+          </div>
+        </div>
+      </div>
+
+      <nav class="pill-nav" aria-label="Tabs">
+        <button type="button" class="nav-btn" data-active="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/></svg>
+          <span class="nav-label">בית</span>
+        </button>
+        <button type="button" class="nav-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h13a2 2 0 0 1 2 2v14l-3-2-3 2-3-2-3 2-3-2-3 2V6a2 2 0 0 1 2-2z"/></svg>
+          <span class="nav-label">יומן</span>
+        </button>
+        <button type="button" class="nav-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/></svg>
+          <span class="nav-label">פוזיציות</span>
+        </button>
+        <button type="button" class="nav-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+          <span class="nav-label">כלים</span>
+        </button>
+        <button type="button" class="nav-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
+          <span class="nav-label">יומן שנתי</span>
+        </button>
+      </nav>
+
+      <button type="button" class="settings-btn" title="הגדרות">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1z"/></svg>
+      </button>
+
+      <div class="header-actions">
+        <span class="tier-chip">BASIC</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="page-head">
+      <span class="eyebrow">USD · תבנית פעילה: Swing Trading</span>
+      <h1 class="page-title">לוח בקרה</h1>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi metal-panel"><div class="lbl">Total P&amp;L</div><div class="val pos num">+$18,420</div></div>
+      <div class="kpi metal-panel"><div class="lbl">Win Rate</div><div class="val num">64.6%</div></div>
+      <div class="kpi metal-panel"><div class="lbl">Profit Factor</div><div class="val num">2.31</div></div>
+      <div class="kpi metal-panel"><div class="lbl">Streak</div><div class="val num">5W</div></div>
+    </div>
+    <p class="demo-note">כיוון B — badge יחיד ("Swing Trading") ליד הלוגו שנפתח לפופאובר עם 4 האפשרויות. Long-term/Crypto מנוטרלים + תג <b>PRO</b> + כפתור שדרוג בתחתית. לחצו על ה-badge כדי לבדוק. שנו רוחב חלון לבדיקת המרווחים ב-1024px/1600px.</p>
+  </div>
+
+<script>
+  const badge = document.getElementById('tplBadgeBtn');
+  const pop = document.getElementById('tplPopover');
+  badge.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const open = pop.classList.toggle('open');
+    badge.setAttribute('aria-expanded', open ? 'true':'false');
+  });
+  document.addEventListener('click', (e)=>{
+    if(!pop.contains(e.target) && e.target!==badge){ pop.classList.remove('open'); badge.setAttribute('aria-expanded','false'); }
+  });
+  document.querySelectorAll('.tpl-opt:not([data-locked="true"])').forEach(opt=>{
+    opt.addEventListener('click', ()=>{
+      document.querySelectorAll('.tpl-opt').forEach(o=>{ if(!o.dataset.locked){ o.dataset.active='false'; o.querySelector('.opt-check')?.remove(); }});
+      opt.dataset.active='true';
+      if(!opt.querySelector('.opt-check')){
+        const check = document.createElementNS('http://www.w3.org/2000/svg','svg');
+        check.setAttribute('class','opt-check'); check.setAttribute('viewBox','0 0 24 24'); check.setAttribute('fill','none');
+        check.setAttribute('stroke','currentColor'); check.setAttribute('stroke-width','3');
+        check.innerHTML = '<path d="M5 13l4 4L19 7"/>';
+        opt.appendChild(check);
+      }
+      const lbl = opt.querySelector('.opt-name').textContent;
+      badge.querySelector('.lbl').innerHTML = lbl.split(' ')[0] + ' <span class="tpl-badge-label-long">' + lbl.split(' ').slice(1).join(' ') + '</span>';
+      pop.classList.remove('open'); badge.setAttribute('aria-expanded','false');
+    });
+  });
+  document.querySelectorAll('.nav-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.nav-btn').forEach(b=>b.dataset.active='false');
+      btn.dataset.active='true';
+    });
+  });
+</script>
+</body>
+</html>
