@@ -1,9 +1,9 @@
 -- TradePanel — RUN-THIS-NEXT.sql
--- 030_notification_direction.sql — הוסף עמודת direction להתראות, כדי שפעמון ההתראות
--- יראה אייקון חץ אמיתי (מעל/מתחת יעד) במקום נקודה גנרית. הרץ פעם אחת ב-Supabase SQL
--- Editor (הפרויקט: osxzjswbasniwmuhwjyc).
---
--- אחרי שזה רץ בהצלחה: `supabase functions deploy check-price-alerts` (מהתיקייה
--- C:\CLAUDE AI\trading panel) כדי שהתראות חדשות יתחילו לכתוב direction בפועל.
+-- 031_day_longterm_template_extras.sql — שני שדות אופציונליים חדשים ל-workspaces:
+-- מגבלת-טריידים-ביום (Day) ומשקל-תיק (Long-term). הרץ פעם אחת ב-Supabase SQL Editor
+-- (הפרויקט: osxzjswbasniwmuhwjyc). אין צורך בפריסת Edge Function אחרי זה - שני השדות
+-- נקראים/נכתבים ישירות מהקליינט (בדיוק כמו daily_risk_budget הקיים).
 
-alter table notifications add column direction text null check (direction in ('above', 'below'));
+alter table workspaces
+  add column if not exists max_trades_per_day integer null,
+  add column if not exists total_portfolio_value numeric null;
