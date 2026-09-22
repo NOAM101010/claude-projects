@@ -24,6 +24,10 @@ interface JournalProps {
   template: WorkspaceTemplate | null
   /** תקציב סיכון יומי (Day Trading בלבד) - מועבר עד `DailyRiskBudgetCard`. */
   dailyRiskBudget: number | null
+  /** מגבלת טריידים ביום (Day Trading בלבד) - מועבר עד `DayTradeLimitCard`. */
+  maxTradesPerDay: number | null
+  /** שווי תיק כולל (Long-term בלבד) - מועבר עד `PortfolioWeightCard`. */
+  totalPortfolioValue: number | null
   /** פותח את מודל קוד הגישה (שדרוג) - מועבר עד ה-Dashboard (Weekly Recap, Pro-only). */
   onOpenAccessCode: () => void
   subTab: JournalSubTab
@@ -51,6 +55,8 @@ export function Journal({
   tier,
   template,
   dailyRiskBudget,
+  maxTradesPerDay,
+  totalPortfolioValue,
   onOpenAccessCode,
   subTab,
   onSubTabChange,
@@ -98,6 +104,8 @@ export function Journal({
             tier={tier}
             template={template}
             dailyRiskBudget={dailyRiskBudget}
+            maxTradesPerDay={maxTradesPerDay}
+            totalPortfolioValue={totalPortfolioValue}
             onOpenAccessCode={onOpenAccessCode}
             onSelectSymbol={onSelectSymbol}
             onSelectSetup={onSelectSetup}

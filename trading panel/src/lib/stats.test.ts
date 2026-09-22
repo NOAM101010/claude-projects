@@ -8,6 +8,7 @@ import {
   dailyPnl,
   dailyRiskBudgetUsage,
   dayActivityLevel,
+  dayTradeLimitUsage,
   drawdownCurve,
   equityCurve,
   expectancy,
@@ -15,6 +16,7 @@ import {
   lossSourceBreakdown,
   maxDrawdown,
   performanceByHourOfDay,
+  portfolioWeights,
   profitFactor,
   rankedSetupPerformance,
   rMultipleDistribution,
@@ -687,6 +689,52 @@ describe('dailyRiskBudgetUsage', () => {
     const result = dailyRiskBudgetUsage(trades, 100)
     expect(result.netPnlToday).toBe(0)
     expect(result.budgetUsedPercent).toBe(0)
+  })
+})
+
+describe('dayTradeLimitUsage', () => {
+  it('סופרת רק טריידים שנפתחו היום (entryAt), מתעלמת מטריידים שנפתחו בימים אחרים', () => {
+    const trades = [
+      makeTrade({ entryAt: new Date().toISOString() }),
+      makeTrade({ entryAt: new Date().toISOString() }),
+      makeTrade({ entryAt: '2020-01-01T10:00:00.000Z' }),
+    ]
+    const result = dayTradeLimitUsage(trades, 5)
+    expect(result.tradesOpenedToday).toBe(2)
+    expect(result.limitReached).toBe(false)
+  })
+
+  it('limitReached=true כשההיום שווה או עובר את המגבלה', () => {
+    const trades = [makeTrade({ entryAt: new Date().toISOString() }), makeTrade({ entryAt: new Date().toISOString() })]
+    expect(dayTradeLimitUsage(trades, 2).limitReached).toBe(true)
+    expect(dayTradeLimitUsage(trades, 3).limitReached).toBe(false)
+  })
+
+  it('maxTradesPerDay=null - limitReached תמיד false', () => {
+    const trades = [makeTrade({ entryAt: new Date().toISOString() })]
+    expect(dayTradeLimitUsage(trades, null).limitReached).toBe(false)
+  })
+})
+
+describe('portfolioWeights', () => {
+  it('totalPortfolioValue=null או <=0 - תמיד []', () => {
+    const trades = [makeTrade({ exitPrice: null, entryPrice: 100, quantity: 10 })]
+    expect(portfolioWeights(trades, null)).toEqual([])
+    expect(portfolioWeights(trades, 0)).toEqual([])
+    expect(portfolioWeights(trades, -100)).toEqual([])
+  })
+
+  it('מחשבת משקל רק לפוזיציות פתוחות, ממוינות מהגדול לקטן', () => {
+    const trades = [
+      makeTrade({ symbol: 'AAPL', exitPrice: null, entryPrice: 100, quantity: 10 }), // $1000
+      makeTrade({ symbol: 'MSFT', exitPrice: null, entryPrice: 50, quantity: 40 }), // $2000
+      makeTrade({ symbol: 'NVDA', exitPrice: 120, entryPrice: 100, quantity: 10 }), // closed - excluded
+    ]
+    const result = portfolioWeights(trades, 10000)
+    expect(result).toEqual([
+      { symbol: 'MSFT', positionValue: 2000, weightPercent: 20 },
+      { symbol: 'AAPL', positionValue: 1000, weightPercent: 10 },
+    ])
   })
 })
 

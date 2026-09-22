@@ -113,6 +113,15 @@ export function WorkspaceSettings({
   const [riskBudgetInput, setRiskBudgetInput] = useState(workspace.dailyRiskBudget === null ? '' : String(workspace.dailyRiskBudget))
   const [riskBudgetSaving, setRiskBudgetSaving] = useState(false)
 
+  // מגבלת טריידים ביום (Day Trading בלבד - special-design round) ושווי תיק כולל (Long-term
+  // בלבד) - אותו דפוס מחרוזת-מקומית + שמירה ב-onBlur בדיוק כמו riskBudgetInput למעלה.
+  const [maxTradesInput, setMaxTradesInput] = useState(workspace.maxTradesPerDay === null ? '' : String(workspace.maxTradesPerDay))
+  const [maxTradesSaving, setMaxTradesSaving] = useState(false)
+  const [portfolioValueInput, setPortfolioValueInput] = useState(
+    workspace.totalPortfolioValue === null ? '' : String(workspace.totalPortfolioValue),
+  )
+  const [portfolioValueSaving, setPortfolioValueSaving] = useState(false)
+
   const [clearStep, setClearStep] = useState<0 | 1 | 2>(0)
   const [confirmText, setConfirmText] = useState('')
   const [clearing, setClearing] = useState(false)
@@ -291,6 +300,50 @@ export function WorkspaceSettings({
       setRiskBudgetInput(workspace.dailyRiskBudget === null ? '' : String(workspace.dailyRiskBudget))
     } finally {
       setRiskBudgetSaving(false)
+    }
+  }
+
+  /** מחרוזת ריקה = מבטל את המגבלה (null) - כל ערך אחר מנותח כמספר שלם, שלילי/NaN/לא-שלם לא נשמר. */
+  const saveMaxTradesPerDay = async () => {
+    const trimmed = maxTradesInput.trim()
+    const parsed = trimmed === '' ? null : Number(trimmed)
+    if (parsed !== null && (!Number.isInteger(parsed) || parsed < 0)) {
+      setMaxTradesInput(workspace.maxTradesPerDay === null ? '' : String(workspace.maxTradesPerDay))
+      return
+    }
+    if (parsed === workspace.maxTradesPerDay) return
+    setMaxTradesSaving(true)
+    setError(null)
+    try {
+      await updateWorkspaceSettings(workspace.id, { maxTradesPerDay: parsed })
+      onWorkspaceUpdated({ maxTradesPerDay: parsed })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('workspaceSettings.maxTradesPerDaySaveFailed'))
+      setMaxTradesInput(workspace.maxTradesPerDay === null ? '' : String(workspace.maxTradesPerDay))
+    } finally {
+      setMaxTradesSaving(false)
+    }
+  }
+
+  /** מחרוזת ריקה = מבטל את שווי התיק (null) - כל ערך אחר מנותח כמספר, שלילי/NaN לא נשמר. */
+  const savePortfolioValue = async () => {
+    const trimmed = portfolioValueInput.trim()
+    const parsed = trimmed === '' ? null : Number(trimmed)
+    if (parsed !== null && (Number.isNaN(parsed) || parsed < 0)) {
+      setPortfolioValueInput(workspace.totalPortfolioValue === null ? '' : String(workspace.totalPortfolioValue))
+      return
+    }
+    if (parsed === workspace.totalPortfolioValue) return
+    setPortfolioValueSaving(true)
+    setError(null)
+    try {
+      await updateWorkspaceSettings(workspace.id, { totalPortfolioValue: parsed })
+      onWorkspaceUpdated({ totalPortfolioValue: parsed })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('workspaceSettings.totalPortfolioValueSaveFailed'))
+      setPortfolioValueInput(workspace.totalPortfolioValue === null ? '' : String(workspace.totalPortfolioValue))
+    } finally {
+      setPortfolioValueSaving(false)
     }
   }
 
@@ -600,6 +653,51 @@ export function WorkspaceSettings({
                 onChange={(e) => setRiskBudgetInput(e.target.value)}
                 onBlur={saveRiskBudget}
                 disabled={riskBudgetSaving}
+              />
+            </div>
+          )}
+
+          {/* מגבלת טריידים ביום - Day Trading בלבד (special-design round), אותו דפוס בדיוק
+              כמו תקציב הסיכון היומי למעלה. */}
+          {workspace.template === 'day' && (
+            <div className={styles.rowLine}>
+              <span className={styles.rowLbl}>
+                {t('workspaceSettings.maxTradesPerDayLabel')}
+                <span className={styles.rowSub}>{t('workspaceSettings.maxTradesPerDayHint')}</span>
+              </span>
+              <input
+                className={styles.textInput}
+                type="number"
+                min="0"
+                step="1"
+                inputMode="numeric"
+                placeholder={t('workspaceSettings.maxTradesPerDayPlaceholder')}
+                value={maxTradesInput}
+                onChange={(e) => setMaxTradesInput(e.target.value)}
+                onBlur={saveMaxTradesPerDay}
+                disabled={maxTradesSaving}
+              />
+            </div>
+          )}
+
+          {/* שווי תיק כולל - Long-term בלבד (special-design round), אותו דפוס. */}
+          {workspace.template === 'longterm' && (
+            <div className={styles.rowLine}>
+              <span className={styles.rowLbl}>
+                {t('workspaceSettings.totalPortfolioValueLabel')}
+                <span className={styles.rowSub}>{t('workspaceSettings.totalPortfolioValueHint')}</span>
+              </span>
+              <input
+                className={styles.textInput}
+                type="number"
+                min="0"
+                step="any"
+                inputMode="decimal"
+                placeholder={t('workspaceSettings.totalPortfolioValuePlaceholder')}
+                value={portfolioValueInput}
+                onChange={(e) => setPortfolioValueInput(e.target.value)}
+                onBlur={savePortfolioValue}
+                disabled={portfolioValueSaving}
               />
             </div>
           )}

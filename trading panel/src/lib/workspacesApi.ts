@@ -60,6 +60,12 @@ export interface Workspace {
   /** תקציב סיכון יומי (Day Trading בלבד, robust-munching-puffin.md סבב C2) - null = לא
    * הוגדר. משמש רק ל-`DailyRiskBudgetCard`/`dailyRiskBudgetUsage`, לא נאכף על שמירת טריידים. */
   dailyRiskBudget: number | null
+  /** מגבלת מספר טריידים ביום (Day Trading בלבד, special-design round) - null = לא הוגדרה.
+   * משמש רק ל-`DayTradeLimitCard`/`dayTradeLimitUsage`, לא נאכף על שמירת טריידים. */
+  maxTradesPerDay: number | null
+  /** שווי תיק כולל (Long-term בלבד, special-design round) - null = לא הוגדר. משמש רק
+   * ל-`PortfolioWeightCard`/`portfolioWeights`, לא נאכף על שמירת טריידים. */
+  totalPortfolioValue: number | null
 }
 
 interface WorkspaceRow {
@@ -70,6 +76,8 @@ interface WorkspaceRow {
   base_currency: CurrencyCode
   template: WorkspaceTemplate | null
   daily_risk_budget: number | null
+  max_trades_per_day: number | null
+  total_portfolio_value: number | null
 }
 
 function fromRow(row: WorkspaceRow): Workspace {
@@ -84,6 +92,9 @@ function fromRow(row: WorkspaceRow): Workspace {
     template: row.template ?? null,
     // אותו עיקרון בדיוק - מכסה מצב שלפני מיגרציה 028 (row.daily_risk_budget === undefined).
     dailyRiskBudget: row.daily_risk_budget ?? null,
+    // אותו עיקרון - מכסה מצב שלפני מיגרציה 031 (row.max_trades_per_day/total_portfolio_value === undefined).
+    maxTradesPerDay: row.max_trades_per_day ?? null,
+    totalPortfolioValue: row.total_portfolio_value ?? null,
   }
 }
 
@@ -191,15 +202,25 @@ export interface WorkspaceSettingsPatch {
   name?: string
   baseCurrency?: CurrencyCode
   dailyRiskBudget?: number | null
+  maxTradesPerDay?: number | null
+  totalPortfolioValue?: number | null
 }
 
-/** עדכון גנרי של שם/מטבע בסיס/תקציב סיכון יומי. לא נוגע ב-field_settings (ראה `updateFieldSettings`). */
+/** עדכון גנרי של שם/מטבע בסיס/תקציב סיכון יומי/מגבלת טריידים יומית/שווי תיק כולל. לא נוגע ב-field_settings (ראה `updateFieldSettings`). */
 export async function updateWorkspaceSettings(workspaceId: string, patch: WorkspaceSettingsPatch): Promise<void> {
   const supabase = getSupabase()
-  const row: { name?: string; base_currency?: CurrencyCode; daily_risk_budget?: number | null } = {}
+  const row: {
+    name?: string
+    base_currency?: CurrencyCode
+    daily_risk_budget?: number | null
+    max_trades_per_day?: number | null
+    total_portfolio_value?: number | null
+  } = {}
   if (patch.name !== undefined) row.name = patch.name
   if (patch.baseCurrency !== undefined) row.base_currency = patch.baseCurrency
   if (patch.dailyRiskBudget !== undefined) row.daily_risk_budget = patch.dailyRiskBudget
+  if (patch.maxTradesPerDay !== undefined) row.max_trades_per_day = patch.maxTradesPerDay
+  if (patch.totalPortfolioValue !== undefined) row.total_portfolio_value = patch.totalPortfolioValue
 
   const { error } = await supabase.from('workspaces').update(row).eq('id', workspaceId)
   if (error) throw error

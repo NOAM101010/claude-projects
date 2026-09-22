@@ -662,6 +662,49 @@ export function dailyRiskBudgetUsage(trades: Trade[], budget: number | null): Da
   return { netPnlToday, budgetUsedPercent: Math.min(100, (Math.abs(netPnlToday) / budget) * 100) }
 }
 
+export interface DayTradeLimitUsage {
+  /** מספר טריידים שנפתחו **היום** (`entryAt` בתאריך המקומי של הריצה). */
+  tradesOpenedToday: number
+  /** true אם `tradesOpenedToday` הגיע או עבר את `maxTradesPerDay` (false אם אין מגבלה מוגדרת). */
+  limitReached: boolean
+}
+
+/**
+ * שימוש במגבלת הטריידים היומית (Day Trading בלבד, `DayTradeLimitCard`) - סופר טריידים
+ * שנפתחו **היום** (זמן מקומי, לפי `entryAt` - לא `exitAt` כמו `dailyRiskBudgetUsage`, כי
+ * המגבלה נועדה למנוע פתיחת יותר מדי פוזיציות חדשות, לא קשורה לסגירה) מול `maxTradesPerDay`
+ * שהמשתמש הגדיר ב-workspace.
+ */
+export function dayTradeLimitUsage(trades: Trade[], maxTradesPerDay: number | null): DayTradeLimitUsage {
+  const todayKey = new Date().toDateString()
+  const tradesOpenedToday = trades.filter((t) => new Date(t.entryAt).toDateString() === todayKey).length
+  return { tradesOpenedToday, limitReached: maxTradesPerDay !== null && tradesOpenedToday >= maxTradesPerDay }
+}
+
+export interface PortfolioWeight {
+  symbol: string
+  /** עלות הפוזיציה הפתוחה - `entryPrice * quantity`, לא ה-P&L שלה (משקל תיק נמדד לפי הון מושקע, לא רווח/הפסד). */
+  positionValue: number
+  /** אחוז מתוך `totalPortfolioValue` - `(positionValue / totalPortfolioValue) * 100`. */
+  weightPercent: number
+}
+
+/**
+ * משקל כל פוזיציה פתוחה מתוך שווי התיק הכולל (Long-term בלבד, `PortfolioWeightCard`) -
+ * `[]` אם אין שווי תיק מוגדר (או לא חיובי) או שאין אף פוזיציה פתוחה. ממוין מהגדול לקטן,
+ * כדי שה-treemap תמיד יציג את הפוזיציות המרכזיות ראשונות.
+ */
+export function portfolioWeights(trades: Trade[], totalPortfolioValue: number | null): PortfolioWeight[] {
+  if (totalPortfolioValue === null || totalPortfolioValue <= 0) return []
+  return trades
+    .filter((t) => isTradeOpen(t))
+    .map((t) => {
+      const positionValue = t.entryPrice * t.quantity
+      return { symbol: t.symbol, positionValue, weightPercent: (positionValue / totalPortfolioValue) * 100 }
+    })
+    .sort((a, b) => b.weightPercent - a.weightPercent)
+}
+
 const R_MULTIPLE_BUCKETS = ['<-2R', '-2..-1R', '-1..0R', '0..1R', '1..2R', '2..3R', '>3R'] as const
 
 export interface RMultipleBucket {

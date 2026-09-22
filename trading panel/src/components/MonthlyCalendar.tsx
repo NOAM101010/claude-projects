@@ -3,15 +3,19 @@ import { useMemo, useRef, useState } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
 import { CALENDAR_DOW, MONTH_NAMES } from '../i18n/translations'
 import { formatCurrency, formatCurrencyCompact } from '../lib/format'
-import { dailyPnl, dayActivityLevel, isTradeOpen, winRate } from '../lib/stats'
+import { dailyPnl, dayActivityLevel, isTradeOpen, profitFactor, winRate } from '../lib/stats'
 import type { DailyPnl } from '../lib/stats'
 import { shareOrDownloadCanvas } from '../lib/canvasExport'
 import { renderMonthlyCalendarToCanvas } from '../lib/monthlyCalendarCanvas'
+import { renderCandlestickCardCanvas } from '../lib/candlestickCardCanvas'
 import { DailyTradingView } from './DailyTradingView'
 import { EmptyState } from './EmptyState'
 import { TradeOfTheMonthCard } from './TradeOfTheMonthCard'
 import type { CurrencyCode, Trade } from '../types/trade'
 import styles from './MonthlyCalendar.module.css'
+
+/** אותו טיפוס theme כמו ב-`TradeOfTheMonthCard.tsx` (special-design round, פריט 4). */
+type ShareTheme = 'default' | 'candlestick'
 
 interface MonthlyCalendarProps {
   trades: Trade[]
@@ -113,6 +117,7 @@ export function MonthlyCalendar({ trades, baseCurrency, onEditTrade }: MonthlyCa
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [sharing, setSharing] = useState(false)
+  const [shareTheme, setShareTheme] = useState<ShareTheme>('default')
 
   const monthClosedTrades = useMemo(
     () =>
@@ -124,31 +129,48 @@ export function MonthlyCalendar({ trades, baseCurrency, onEditTrade }: MonthlyCa
     [trades, cursor],
   )
   const monthWinRate = winRate(monthClosedTrades)
+  const monthProfitFactor = profitFactor(monthClosedTrades)
 
   const handleShare = async () => {
     setSharing(true)
     try {
       const canvas = canvasRef.current ?? document.createElement('canvas')
-      renderMonthlyCalendarToCanvas(canvas, {
-        monthLabel: `${MONTHS[cursor.month]} ${cursor.year}`,
-        monthPnl: monthTotal,
-        winRatePct: monthWinRate,
-        tradingDays: monthEntries.length,
-        bestDayPnl: bestDay ? bestDay.pnl : null,
-        baseCurrency,
-        locale,
-        dow: DOW,
-        weeks: weeks.map((week) =>
-          week.map((day) => ({
-            date: day.date.getDate(),
-            inMonth: day.inMonth,
-            pnl: day.data ? day.data.pnl : null,
-            trades: day.data?.trades ?? 0,
-          })),
-        ),
-        maxAbs,
-        disclaimer: t('footer.disclaimer'),
-      })
+      if (shareTheme === 'candlestick') {
+        renderCandlestickCardCanvas(canvas, {
+          variant: 'summary',
+          eyebrowLabel: `${MONTHS[cursor.month]} ${cursor.year}`,
+          pnlLabel: formatCurrency(monthTotal, baseCurrency, locale),
+          pnlPositive: monthTotal >= 0,
+          pnlSubLabel: t('dashboard.candlestickNetMonthlyPnl'),
+          stats: [
+            { label: t('dashboard.kpiWinRate'), value: `${monthWinRate.toFixed(1)}%` },
+            { label: t('dashboard.kpiProfitFactor'), value: monthProfitFactor === null ? '∞' : monthProfitFactor.toFixed(2) },
+            { label: t('dashboard.colTrades'), value: String(totalTradesInMonth) },
+          ],
+          disclaimer: t('footer.disclaimer'),
+        })
+      } else {
+        renderMonthlyCalendarToCanvas(canvas, {
+          monthLabel: `${MONTHS[cursor.month]} ${cursor.year}`,
+          monthPnl: monthTotal,
+          winRatePct: monthWinRate,
+          tradingDays: monthEntries.length,
+          bestDayPnl: bestDay ? bestDay.pnl : null,
+          baseCurrency,
+          locale,
+          dow: DOW,
+          weeks: weeks.map((week) =>
+            week.map((day) => ({
+              date: day.date.getDate(),
+              inMonth: day.inMonth,
+              pnl: day.data ? day.data.pnl : null,
+              trades: day.data?.trades ?? 0,
+            })),
+          ),
+          maxAbs,
+          disclaimer: t('footer.disclaimer'),
+        })
+      }
       await shareOrDownloadCanvas(canvas, `tradepanel-calendar-${monthKey}.png`, `${MONTHS[cursor.month]} ${cursor.year}`)
     } finally {
       setSharing(false)
@@ -179,6 +201,14 @@ export function MonthlyCalendar({ trades, baseCurrency, onEditTrade }: MonthlyCa
             <button type="button" className={`${styles.navButton} btn-metal`} onClick={goNext} aria-label={t('monthlyCalendar.nextMonth')}>
               <ChevronRight size={18} />
             </button>
+            <div className={`${styles.themeToggle} btn-metal`} role="group" aria-label={t('common.share')}>
+              <button type="button" data-active={shareTheme === 'default'} onClick={() => setShareTheme('default')}>
+                {t('dashboard.shareThemeDefault')}
+              </button>
+              <button type="button" data-active={shareTheme === 'candlestick'} onClick={() => setShareTheme('candlestick')}>
+                {t('dashboard.shareThemeCandlestick')}
+              </button>
+            </div>
             <button type="button" className={`${styles.shareButton} btn-metal`} onClick={handleShare} disabled={sharing}>
               <Share2 size={14} />
               <span>{t('common.share')}</span>

@@ -35,7 +35,9 @@ import type { SlTpHistoryEntry } from '../lib/slTpHistoryApi'
 import type { WorkspaceTemplate } from '../lib/workspacesApi'
 import { BestWorstSpotlight } from './BestWorstSpotlight'
 import { DailyRiskBudgetCard } from './DailyRiskBudgetCard'
+import { DayTradeLimitCard } from './DayTradeLimitCard'
 import { LossSourceCard } from './LossSourceCard'
+import { PortfolioWeightCard } from './PortfolioWeightCard'
 import { PnlCalendar } from './PnlCalendar'
 import { RMultipleDistributionCard } from './RMultipleDistributionCard'
 import { SetupPerformanceCard } from './SetupPerformanceCard'
@@ -57,6 +59,10 @@ interface DashboardProps {
   template: WorkspaceTemplate | null
   /** תקציב סיכון יומי (Day Trading בלבד) - null = לא הוגדר, `DailyRiskBudgetCard` לא מוצג. */
   dailyRiskBudget: number | null
+  /** מגבלת טריידים ביום (Day Trading בלבד) - null = לא הוגדרה, `DayTradeLimitCard` לא מוצג. */
+  maxTradesPerDay: number | null
+  /** שווי תיק כולל (Long-term בלבד) - null = לא הוגדר, `PortfolioWeightCard` לא מוצג. */
+  totalPortfolioValue: number | null
   /** פותח את מודל קוד הגישה (שדרוג) - מועבר ל-`WeeklyRecapCard` (Pro-only), אותו מנגנון כמו שאר האפליקציה. */
   onOpenAccessCode: () => void
   onSelectSymbol?: (symbol: string) => void
@@ -197,6 +203,8 @@ export function Dashboard({
   tier,
   template,
   dailyRiskBudget,
+  maxTradesPerDay,
+  totalPortfolioValue,
   onOpenAccessCode,
   onSelectSymbol,
   onAddTrade,
@@ -246,6 +254,12 @@ export function Dashboard({
   const showRMultipleDistribution =
     isDayTemplate && (tier !== 'pro' || rMultipleDistribution(convertedTrades).some((b) => b.count > 0))
   const showInsights = showLossSource || showSetupPerformance || showSlTpAdjustment || showTimeOfDay || showRMultipleDistribution
+  const showDayTradeLimit = isDayTemplate && maxTradesPerDay !== null
+  // Long-term בלבד, ואותו עיקרון קריטי כמו שלושת הכרטיסים של Day למעלה - הבדיקה קודמת
+  // לכל תנאי אחר. showPortfolioWeight דורש גם totalPortfolioValue וגם לפחות פוזיציה פתוחה
+  // אחת (בלי זה אין מה להציג - כל המשקלים ריקים ממילא, ר' `portfolioWeights`).
+  const showPortfolioWeight =
+    template === 'longterm' && totalPortfolioValue !== null && convertedTrades.some((t) => isTradeOpen(t))
 
   return (
     <div className={styles.wrapper}>
@@ -260,6 +274,15 @@ export function Dashboard({
 
       {showDailyRiskBudget && (
         <DailyRiskBudgetCard trades={convertedTrades} dailyRiskBudget={dailyRiskBudget as number} baseCurrency={baseCurrency} locale={locale} />
+      )}
+      {showDayTradeLimit && <DayTradeLimitCard trades={convertedTrades} maxTradesPerDay={maxTradesPerDay as number} />}
+      {showPortfolioWeight && (
+        <PortfolioWeightCard
+          trades={convertedTrades}
+          totalPortfolioValue={totalPortfolioValue as number}
+          baseCurrency={baseCurrency}
+          locale={locale}
+        />
       )}
 
       {!hasClosedTrades ? (

@@ -5,8 +5,14 @@ import { tradeOfTheMonth } from '../lib/stats'
 import { formatCurrency } from '../lib/format'
 import { shareOrDownloadCanvas } from '../lib/canvasExport'
 import { renderTradeCardToCanvas } from '../lib/tradeCardCanvas'
+import { renderCandlestickCardCanvas } from '../lib/candlestickCardCanvas'
 import type { Trade } from '../types/trade'
 import styles from './TradeOfTheMonthCard.module.css'
+
+/** תבנית ה-PNG המיוצא (special-design round, פריט 4 - `share-card-directions.html`).
+ * 'default' = הקיים (`renderTradeCardToCanvas`, 9:16) - ברירת מחדל, לא משנה התנהגות קיימת.
+ * 'candlestick' = תבנית חדשה (`renderCandlestickCardCanvas`, 1:1). */
+type ShareTheme = 'default' | 'candlestick'
 
 interface TradeOfTheMonthCardProps {
   /** טריידים כבר-מומרים למטבע הבסיס (כמו ש-Dashboard מזין ל-bestTrade/worstTrade). */
@@ -49,6 +55,7 @@ function holdDays(trade: Trade): number {
 export function TradeOfTheMonthCard({ trades, locale, referenceDate, compact = false }: TradeOfTheMonthCardProps) {
   const { t } = useLanguage()
   const [sharing, setSharing] = useState(false)
+  const [shareTheme, setShareTheme] = useState<ShareTheme>('default')
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   const result = useMemo(() => tradeOfTheMonth(trades, referenceDate), [trades, referenceDate])
@@ -109,18 +116,31 @@ export function TradeOfTheMonthCard({ trades, locale, referenceDate, compact = f
     setSharing(true)
     try {
       const canvas = canvasRef.current ?? document.createElement('canvas')
-      renderTradeCardToCanvas(canvas, {
-        symbol: trade.symbol,
-        pnlLabel,
-        pnlPositive: positive,
-        pctLabel,
-        monthLabel,
-        bestOfLabel,
-        sideLabel,
-        metaLabel,
-        entryPrice: entry,
-        exitPrice: exit,
-      })
+      if (shareTheme === 'candlestick') {
+        renderCandlestickCardCanvas(canvas, {
+          variant: 'trade',
+          eyebrowLabel: t('dashboard.tradeOfTheMonthTitle'),
+          symbol: trade.symbol,
+          pnlLabel,
+          pnlPositive: positive,
+          pctLabel: `${pctLabel} · ${monthLabel}`,
+          metaLabel: `${sideLabel} · ${metaLabel}`,
+          disclaimer: t('footer.disclaimer'),
+        })
+      } else {
+        renderTradeCardToCanvas(canvas, {
+          symbol: trade.symbol,
+          pnlLabel,
+          pnlPositive: positive,
+          pctLabel,
+          monthLabel,
+          bestOfLabel,
+          sideLabel,
+          metaLabel,
+          entryPrice: entry,
+          exitPrice: exit,
+        })
+      }
       await shareOrDownloadCanvas(canvas, `${trade.symbol}-trade-of-the-month.png`, t('dashboard.tradeOfTheMonthTitle'))
     } finally {
       setSharing(false)
@@ -155,10 +175,20 @@ export function TradeOfTheMonthCard({ trades, locale, referenceDate, compact = f
     <div className={`${styles.section} metal-panel holo-edge holo-edge--amber count-in`}>
       <div className={styles.header}>
         <h3 className="eyebrow">{t('dashboard.tradeOfTheMonthTitle')}</h3>
-        <button type="button" className={`${styles.shareButton} btn-metal`} onClick={handleShare} disabled={sharing}>
-          <Share2 size={14} />
-          {t('common.share')}
-        </button>
+        <div className={styles.headerActions}>
+          <div className={`${styles.themeToggle} btn-metal`} role="group" aria-label={t('common.share')}>
+            <button type="button" data-active={shareTheme === 'default'} onClick={() => setShareTheme('default')}>
+              {t('dashboard.shareThemeDefault')}
+            </button>
+            <button type="button" data-active={shareTheme === 'candlestick'} onClick={() => setShareTheme('candlestick')}>
+              {t('dashboard.shareThemeCandlestick')}
+            </button>
+          </div>
+          <button type="button" className={`${styles.shareButton} btn-metal`} onClick={handleShare} disabled={sharing}>
+            <Share2 size={14} />
+            {t('common.share')}
+          </button>
+        </div>
       </div>
 
       <div className={`${styles.card} glass`}>

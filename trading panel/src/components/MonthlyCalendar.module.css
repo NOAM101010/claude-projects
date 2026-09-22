@@ -282,6 +282,35 @@
   cursor: not-allowed;
 }
 
+/* בורר תבנית ייצוא (special-design round, פריט 4) - אותו דפוס בדיוק כמו
+   `.themeToggle` ב-TradeOfTheMonthCard.module.css. */
+.themeToggle {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.themeToggle button {
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 5px 8px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.themeToggle button[data-active='true'] {
+  background: linear-gradient(180deg, rgba(var(--amber-hot-rgb), 0.14) 0%, rgba(var(--amber-hot-rgb), 0.05) 100%);
+  color: var(--accent-2);
+}
+
 .hiddenCanvas {
   position: absolute;
   width: 1px;
@@ -330,5 +359,10 @@
   .todayButton {
     padding: 6px 8px;
     font-size: 10.5px;
+  }
+  /* No room for a 3-button row (prev/next + toggle + share) at this width - the toggle
+     hides, default theme stays selected (candlestick still reachable at wider viewports). */
+  .themeToggle {
+    display: none;
   }
 }

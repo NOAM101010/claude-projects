@@ -481,6 +481,8 @@ function App() {
               tier={tier}
               template={workspace.template}
               dailyRiskBudget={workspace.dailyRiskBudget}
+              maxTradesPerDay={workspace.maxTradesPerDay}
+              totalPortfolioValue={workspace.totalPortfolioValue}
               onOpenAccessCode={() => openAccessModal(t('dashboard.weeklyRecapModalHint'))}
               subTab={journalSubTab}
               onSubTabChange={setJournalSubTab}

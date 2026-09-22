@@ -15,6 +15,40 @@
   margin: 0;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* בורר תבנית ייצוא (special-design round, פריט 4) - אותו דפוס segmented-control בדיוק
+   כמו `.subNav` ב-Journal.module.css, רק קומפקטי יותר לשני כפתורים בלבד. */
+.themeToggle {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+}
+
+.themeToggle button {
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 9px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.themeToggle button[data-active='true'] {
+  background: linear-gradient(180deg, rgba(var(--amber-hot-rgb), 0.14) 0%, rgba(var(--amber-hot-rgb), 0.05) 100%);
+  color: var(--accent-2);
+}
+
 .shareButton {
   display: inline-flex;
   align-items: center;
