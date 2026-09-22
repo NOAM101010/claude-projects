@@ -335,3 +335,26 @@
   border-radius: 10px;
   box-shadow: 0 24px 60px -18px rgba(0, 0, 0, 0.7);
 }
+
+/* כפתור X מפורש - קודם לא הייתה שום דרך לסגור את הלייטבוקס הזה עם מקלדת בלבד
+   (לא Escape, לא X) - ר' progress.md audit Stage 1. */
+.lightboxCloseButton {
+  position: absolute;
+  top: 16px;
+  inset-inline-end: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--metal-edge);
+  background: rgba(4, 5, 7, 0.6);
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.lightboxCloseButton:hover {
+  border-color: var(--border-hi);
+}

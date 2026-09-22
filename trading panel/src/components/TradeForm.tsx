@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { X } from 'lucide-react'
 import { useLanguage } from '../i18n/LanguageContext'
+import { useModalEscape } from '../hooks/useModalEscape'
 import { computePnl } from '../lib/stats'
 import { formatCurrency, isoToLocalInputValue, localInputValueToIso } from '../lib/format'
 import { CURRENCIES, SETUPS } from '../types/trade'
@@ -119,6 +121,11 @@ export function TradeForm({
   const [previewLoading, setPreviewLoading] = useState(false)
   const [showFullImage, setShowFullImage] = useState(false)
   const [imageError, setImageError] = useState<string | null>(null)
+  // Escape צריך לסגור רק את הלייטבוקס (הרמה הפנימית ביותר), לא את כל טופס Add/Edit
+  // Trade שמאחוריו - ה-hook רשום רק כש-showFullImage true, ולכן אף פעם לא מאזין
+  // ל-keydown של הטופס עצמו.
+  const closeLightbox = () => setShowFullImage(false)
+  const lightboxRef = useModalEscape<HTMLDivElement>(showFullImage, closeLightbox)
 
   // preview של קובץ חדש שנבחר - object URL מקומי, לא תלוי ברשת.
   useEffect(() => {
@@ -491,11 +498,23 @@ export function TradeForm({
 
       {showFullImage && previewUrl && createPortal(
         <div
+          ref={lightboxRef}
           className={`${styles.lightboxOverlay} modal-overlay-in`}
-          onClick={() => setShowFullImage(false)}
+          onClick={closeLightbox}
           role="dialog"
           aria-modal="true"
         >
+          <button
+            type="button"
+            className={styles.lightboxCloseButton}
+            onClick={(e) => {
+              e.stopPropagation()
+              closeLightbox()
+            }}
+            aria-label={t('common.close')}
+          >
+            <X size={18} />
+          </button>
           <img src={previewUrl} alt={t('tradeForm.fullImageAlt')} className={`${styles.lightboxImage} modal-panel-in`} />
         </div>,
         document.body,

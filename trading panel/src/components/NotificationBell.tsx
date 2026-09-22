@@ -1,6 +1,7 @@
 import { Bell, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
+import { useModalEscape } from '../hooks/useModalEscape'
 import { formatDateTime } from '../lib/format'
 import {
   clearAllNotifications,
@@ -76,6 +77,9 @@ export function NotificationBell({ accountId, onOpenWatchlist }: { accountId: st
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [open])
 
+  const closeDropdown = () => setOpen(false)
+  const dropdownRef = useModalEscape<HTMLDivElement>(open, closeDropdown)
+
   const unreadCount = countUnread(notifications)
 
   async function handleItemClick(notification: AppNotification) {
@@ -137,6 +141,7 @@ export function NotificationBell({ accountId, onOpenWatchlist }: { accountId: st
         className={`${styles.button} btn-metal ${justArrived ? styles.pulse : ''}`}
         onClick={() => setOpen((v) => !v)}
         aria-label={t('notifications.bellLabel')}
+        aria-expanded={open}
         title={t('notifications.bellLabel')}
       >
         <Bell size={16} />
@@ -148,7 +153,7 @@ export function NotificationBell({ accountId, onOpenWatchlist }: { accountId: st
       </button>
 
       {open && (
-        <div className={`${styles.dropdown} metal-panel holo-edge count-in`}>
+        <div ref={dropdownRef} className={`${styles.dropdown} metal-panel holo-edge count-in`}>
           <div className={styles.header}>
             <span className={styles.title}>{t('notifications.title')}</span>
             <div className={styles.headerActions}>

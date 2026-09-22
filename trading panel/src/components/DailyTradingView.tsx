@@ -1,6 +1,7 @@
 import { ExternalLink, X } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { useLanguage } from '../i18n/LanguageContext'
+import { useModalEscape } from '../hooks/useModalEscape'
 import { formatCurrency, formatDateTime } from '../lib/format'
 import { bestTrade, totalPnl, winRate, worstTrade } from '../lib/stats'
 import { tradingViewUrl } from '../lib/tradingView'
@@ -27,6 +28,7 @@ interface DailyTradingViewProps {
  */
 export function DailyTradingView({ date, dayTrades, locale, onClose, onEditTrade }: DailyTradingViewProps) {
   const { t } = useLanguage()
+  const dialogRef = useModalEscape<HTMLDivElement>(true, onClose)
 
   const netPnl = totalPnl(dayTrades)
   const wr = winRate(dayTrades)
@@ -40,6 +42,7 @@ export function DailyTradingView({ date, dayTrades, locale, onClose, onEditTrade
   return createPortal(
     <div className={`${styles.overlay} modal-overlay-in`} role="dialog" aria-modal="true" onClick={onClose}>
       <div
+        ref={dialogRef}
         className={`${styles.panel} metal-panel holo-edge holo-edge--amber det-frame modal-panel-in`}
         onClick={(e) => e.stopPropagation()}
       >

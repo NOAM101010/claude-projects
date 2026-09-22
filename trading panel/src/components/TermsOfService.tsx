@@ -1,4 +1,5 @@
 import { useLanguage } from '../i18n/LanguageContext'
+import { useModalEscape } from '../hooks/useModalEscape'
 import styles from './LegalModal.module.css'
 
 interface TermsOfServiceProps {
@@ -11,9 +12,14 @@ interface TermsOfServiceProps {
  */
 export function TermsOfService({ onClose }: TermsOfServiceProps) {
   const { t } = useLanguage()
+  const dialogRef = useModalEscape<HTMLDivElement>(true, onClose)
   return (
     <div className={`${styles.overlay} modal-overlay-in`} role="dialog" aria-modal="true" onClick={onClose}>
-      <div className={`${styles.dialog} metal-panel holo-edge modal-panel-in`} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={dialogRef}
+        className={`${styles.dialog} metal-panel holo-edge modal-panel-in`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className={styles.header}>
           <h2>{t('terms.title')}</h2>
           <button type="button" className={styles.closeButton} onClick={onClose} aria-label={t('common.close')}>

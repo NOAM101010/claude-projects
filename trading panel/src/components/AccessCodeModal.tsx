@@ -2,6 +2,7 @@ import type { FormEvent } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useRedeemCode } from '../hooks/useRedeemCode'
 import type { RedeemResult } from '../hooks/useRedeemCode'
+import { useModalEscape } from '../hooks/useModalEscape'
 import styles from './AccessCodeModal.module.css'
 
 interface AccessCodeModalProps {
@@ -20,6 +21,11 @@ interface AccessCodeModalProps {
 export function AccessCodeModal({ contextHint, onRedeemed, onClose }: AccessCodeModalProps) {
   const { t } = useLanguage()
   const { code, setCode, submitting, error, success, submit } = useRedeemCode()
+  // Escape לא אמור לסגור באמצע שליחה בתהליך - עקבי עם כפתור Cancel שגם הוא disabled אז.
+  const handleClose = () => {
+    if (!submitting) onClose()
+  }
+  const dialogRef = useModalEscape<HTMLFormElement>(true, handleClose)
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
@@ -28,7 +34,11 @@ export function AccessCodeModal({ contextHint, onRedeemed, onClose }: AccessCode
 
   return (
     <div className={`${styles.overlay} modal-overlay-in`} role="dialog" aria-modal="true">
-      <form className={`${styles.dialog} metal-panel holo-edge holo-edge--amber modal-panel-in`} onSubmit={handleSubmit}>
+      <form
+        ref={dialogRef}
+        className={`${styles.dialog} metal-panel holo-edge holo-edge--amber modal-panel-in`}
+        onSubmit={handleSubmit}
+      >
         <h2>{t('accessCode.title')}</h2>
         {contextHint && <p className={styles.contextHint}>{contextHint}</p>}
         <p className={styles.hint}>{t('accessCode.hint')}</p>

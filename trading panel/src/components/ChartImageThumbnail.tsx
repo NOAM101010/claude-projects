@@ -1,8 +1,9 @@
-import { Camera } from 'lucide-react'
+import { Camera, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLanguage } from '../i18n/LanguageContext'
 import { getChartImageUrl } from '../lib/chartImagesApi'
+import { useModalEscape } from '../hooks/useModalEscape'
 import styles from './ChartImageThumbnail.module.css'
 
 interface ChartImageThumbnailProps {
@@ -25,6 +26,8 @@ export function ChartImageThumbnail({ path, variant = 'thumb' }: ChartImageThumb
   const [url, setUrl] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
   const [expanded, setExpanded] = useState(false)
+  const closeLightbox = () => setExpanded(false)
+  const dialogRef = useModalEscape<HTMLDivElement>(expanded, closeLightbox)
 
   useEffect(() => {
     let cancelled = false
@@ -46,7 +49,18 @@ export function ChartImageThumbnail({ path, variant = 'thumb' }: ChartImageThumb
 
   const overlay = expanded && url
     ? createPortal(
-        <div className={styles.overlay} role="dialog" aria-modal="true" onClick={() => setExpanded(false)}>
+        <div ref={dialogRef} className={styles.overlay} role="dialog" aria-modal="true" onClick={closeLightbox}>
+          <button
+            type="button"
+            className={styles.closeButton}
+            onClick={(e) => {
+              e.stopPropagation()
+              closeLightbox()
+            }}
+            aria-label={t('common.close')}
+          >
+            <X size={18} />
+          </button>
           <img src={url} alt={t('chartImage.altFull')} className={styles.full} />
         </div>,
         document.body,
