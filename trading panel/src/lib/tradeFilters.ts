@@ -112,7 +112,11 @@ function matchesType(trade: Trade, type: TypeFilter): boolean {
 export function filterTrades(trades: Trade[], filters: TradeFiltersState, referenceDate: Date = new Date()): Trade[] {
   const search = filters.search.trim().toLowerCase()
   return trades.filter((trade) => {
-    if (search && !trade.symbol.toLowerCase().includes(search)) return false
+    if (search) {
+      const matchesSymbol = trade.symbol.toLowerCase().includes(search)
+      const matchesNotes = (trade.notes ?? '').toLowerCase().includes(search)
+      if (!matchesSymbol && !matchesNotes) return false
+    }
     if (filters.direction !== 'all' && trade.direction !== filters.direction) return false
     if (!matchesType(trade, filters.type)) return false
     if (!matchesDateRange(trade.entryAt, filters.datePreset, filters.customFrom, filters.customTo, referenceDate)) return false

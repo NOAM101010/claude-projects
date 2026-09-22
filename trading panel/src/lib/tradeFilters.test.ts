@@ -129,6 +129,30 @@ describe('filterTrades', () => {
     const filters: TradeFiltersState = { ...DEFAULT_TRADE_FILTERS, search: 'nvda', direction: 'long', type: 'open' }
     expect(filterTrades(trades, filters).map((t) => t.id)).toEqual(['3'])
   })
+
+  it('search matches notes case-insensitively when the term is absent from symbol', () => {
+    const withNotes = [
+      ...trades,
+      makeTrade({ id: '5', symbol: 'MSFT', notes: 'Earnings gap up, waited for pullback' }),
+    ]
+    const filters: TradeFiltersState = { ...DEFAULT_TRADE_FILTERS, search: 'EARNINGS' }
+    expect(filterTrades(withNotes, filters).map((t) => t.id)).toEqual(['5'])
+  })
+
+  it('search matching neither symbol nor notes returns nothing', () => {
+    const withNotes = [
+      ...trades,
+      makeTrade({ id: '5', symbol: 'MSFT', notes: 'Earnings gap up' }),
+    ]
+    const filters: TradeFiltersState = { ...DEFAULT_TRADE_FILTERS, search: 'nonexistentterm' }
+    expect(filterTrades(withNotes, filters)).toEqual([])
+  })
+
+  it('trades without notes never throw and are simply excluded from notes-only matches', () => {
+    const filters: TradeFiltersState = { ...DEFAULT_TRADE_FILTERS, search: 'pullback' }
+    expect(() => filterTrades(trades, filters)).not.toThrow()
+    expect(filterTrades(trades, filters)).toEqual([])
+  })
 })
 
 describe('hasActiveFilters', () => {
