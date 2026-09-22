@@ -191,6 +191,54 @@ export function TradeForm({
     return computePnl({ direction: form.direction, entryPrice, exitPrice, quantity, fee: parseOptionalNumber(form.fee) })
   }, [form.direction, form.entryPrice, form.quantity, form.exitPrice, form.fee])
 
+  /** נתוני פאנל ה"טיקט" (trade-form-directions.html כיוון 1) - Risk/Reward/R:R וציר
+   * Stop↔Entry↔Take/Exit, מבוססים על אותם form state hooks כמו livePnl למעלה, לא state
+   * נפרד. risk/reward משתמשים באותו נוסחה כמו `avgRiskReward`/`liveRMultiple` ב-stats.ts
+   * (|entry-stop|*qty / |take-entry|*qty) - טהור, לעולם לא זורק. */
+  const ticket = useMemo(() => {
+    const entry = Number(form.entryPrice)
+    const qty = Number(form.quantity)
+    const hasEntry = !Number.isNaN(entry) && entry > 0
+    const hasQty = !Number.isNaN(qty) && qty > 0
+    const stop = parseOptionalNumber(form.stopLoss)
+    const take = parseOptionalNumber(form.takeProfit)
+    const exitPrice = parseOptionalNumber(form.exitPrice)
+    const fee = parseOptionalNumber(form.fee) ?? 0
+
+    const risk = hasEntry && hasQty && stop !== null ? Math.abs(entry - stop) * qty : null
+    const reward = hasEntry && hasQty && take !== null ? Math.abs(take - entry) * qty : null
+    const riskReward = risk !== null && reward !== null && risk > 0 ? reward / risk : null
+
+    let line: {
+      entryPct: number
+      stopPct: number | null
+      takePct: number | null
+      exitPct: number | null
+      lo: number
+      hi: number
+    } | null = null
+    if (hasEntry) {
+      const points = [entry]
+      if (stop !== null) points.push(stop)
+      if (take !== null) points.push(take)
+      if (exitPrice !== null) points.push(exitPrice)
+      const lo = Math.min(...points)
+      const hi = Math.max(...points)
+      const span = hi - lo || 1
+      const pct = (v: number) => ((v - lo) / span) * 100
+      line = {
+        entryPct: pct(entry),
+        stopPct: stop !== null ? pct(stop) : null,
+        takePct: take !== null ? pct(take) : null,
+        exitPct: exitPrice !== null ? pct(exitPrice) : null,
+        lo,
+        hi,
+      }
+    }
+
+    return { hasEntry, hasQty, entry, qty, fee, risk, reward, riskReward, line }
+  }, [form.entryPrice, form.quantity, form.stopLoss, form.takeProfit, form.exitPrice, form.fee])
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -281,7 +329,8 @@ export function TradeForm({
   }
 
   return (
-    <form className={`${styles.form} count-in`} onSubmit={handleSubmit}>
+    <div className={`${styles.layout} count-in`}>
+    <form className={styles.form} onSubmit={handleSubmit}>
       <h2 className={styles.formTitle}>{initialTrade ? t('tradeForm.editTitle') : t('tradeForm.addTitle')}</h2>
       <div className={styles.row}>
         <div className={styles.field}>
@@ -422,13 +471,6 @@ export function TradeForm({
         </div>
       )}
 
-      <div className={`${styles.pnlPreview} metal-panel holo-edge holo-edge--amber`}>
-        <span>{t('tradeForm.pnlPreviewLabel')}</span>
-        <strong className={livePnl === null ? undefined : livePnl >= 0 ? styles.pnlPositive : styles.pnlNegative}>
-          {livePnl === null ? '—' : formatCurrency(livePnl, form.currency, locale)}
-        </strong>
-      </div>
-
       {fieldSettings.setup && (
         <div className={styles.field}>
           <label htmlFor="setup">
@@ -531,5 +573,111 @@ export function TradeForm({
         </button>
       </div>
     </form>
+
+    <aside className={styles.ticketCol}>
+      <div className={`${styles.ticket} metal-panel holo-edge holo-edge--amber det-frame`}>
+        <div className={styles.ticketHead}>
+          <div>
+            <span className="eyebrow">{t('tradeForm.ticketEyebrow')}</span>
+            <div className={styles.ticketSymbol}>{form.symbol.trim().toUpperCase() || '—'}</div>
+          </div>
+          <span className={`${styles.ticketBadge} ${form.direction === 'long' ? styles.ticketBadgeLong : styles.ticketBadgeShort}`}>
+            {form.direction === 'long' ? 'LONG' : 'SHORT'}
+          </span>
+        </div>
+
+        <div className={styles.ticketPerf}>
+          <span className={styles.ticketPnlLabel}>{t('tradeForm.ticketPnlLabel')}</span>
+          <div
+            className={`${styles.ticketPnlValue} ${
+              livePnl === null ? styles.ticketPnlNeutral : livePnl >= 0 ? styles.pnlPositive : styles.pnlNegative
+            }`}
+          >
+            {livePnl === null ? '—' : `${livePnl >= 0 ? '+' : ''}${formatCurrency(livePnl, form.currency, locale)}`}
+          </div>
+          <div className={styles.ticketPnlSub}>
+            {livePnl === null
+              ? t('tradeForm.ticketPnlWaiting')
+              : livePnl >= 0
+                ? t('tradeForm.ticketPnlProfit')
+                : t('tradeForm.ticketPnlLoss')}
+          </div>
+        </div>
+
+        <div className={styles.ticketRrRow}>
+          <div className={`${styles.ticketRrCell} ${styles.ticketRrCellRisk}`}>
+            <span className={styles.ticketRrLabel}>{t('tradeForm.ticketRiskLabel')}</span>
+            <span className={styles.ticketRrValue}>
+              {ticket.risk !== null ? formatCurrency(ticket.risk, form.currency, locale) : '—'}
+            </span>
+          </div>
+          <div className={`${styles.ticketRrCell} ${styles.ticketRrCellReward}`}>
+            <span className={styles.ticketRrLabel}>{t('tradeForm.ticketRewardLabel')}</span>
+            <span className={styles.ticketRrValue}>
+              {ticket.reward !== null ? formatCurrency(ticket.reward, form.currency, locale) : '—'}
+            </span>
+          </div>
+          <div className={styles.ticketRrCell}>
+            <span className={styles.ticketRrLabel}>{t('tradeForm.ticketRrLabel')}</span>
+            <span className={styles.ticketRrValue}>{ticket.riskReward !== null ? ticket.riskReward.toFixed(2) : '—'}</span>
+          </div>
+        </div>
+
+        {ticket.line && (
+          <div className={styles.ticketNumlineWrap}>
+            <div className={styles.ticketNumlineLabels}>
+              <span>{ticket.line.lo.toFixed(2)}</span>
+              <span>{ticket.line.hi.toFixed(2)}</span>
+            </div>
+            <div className={styles.ticketNumline}>
+              {ticket.line.stopPct !== null && (
+                <div
+                  className={styles.ticketNumlineSegRisk}
+                  style={{
+                    left: `${Math.min(ticket.line.entryPct, ticket.line.stopPct)}%`,
+                    width: `${Math.abs(ticket.line.entryPct - ticket.line.stopPct)}%`,
+                  }}
+                />
+              )}
+              {ticket.line.takePct !== null && (
+                <div
+                  className={styles.ticketNumlineSegReward}
+                  style={{
+                    left: `${Math.min(ticket.line.entryPct, ticket.line.takePct)}%`,
+                    width: `${Math.abs(ticket.line.entryPct - ticket.line.takePct)}%`,
+                  }}
+                />
+              )}
+              {ticket.line.stopPct !== null && (
+                <div className={`${styles.ticketNumlineMark} ${styles.ticketMarkStop}`} style={{ left: `${ticket.line.stopPct}%` }} />
+              )}
+              <div className={`${styles.ticketNumlineMark} ${styles.ticketMarkEntry}`} style={{ left: `${ticket.line.entryPct}%` }} />
+              {ticket.line.takePct !== null && (
+                <div className={`${styles.ticketNumlineMark} ${styles.ticketMarkTake}`} style={{ left: `${ticket.line.takePct}%` }} />
+              )}
+              {ticket.line.exitPct !== null && (
+                <div className={`${styles.ticketNumlineMark} ${styles.ticketMarkExit}`} style={{ left: `${ticket.line.exitPct}%` }} />
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className={styles.ticketStatStrip}>
+          <div className={styles.ticketStatCell}>
+            <span className={styles.ticketStatLabel}>{t('tradeForm.ticketQtyLabel')}</span>
+            <span className={styles.ticketStatValue}>{ticket.hasQty ? ticket.qty.toLocaleString('en-US') : '—'}</span>
+          </div>
+          <div className={styles.ticketStatCell}>
+            <span className={styles.ticketStatLabel}>{t('tradeForm.ticketEntryLabel')}</span>
+            <span className={styles.ticketStatValue}>{ticket.hasEntry ? ticket.entry.toFixed(2) : '—'}</span>
+          </div>
+          <div className={styles.ticketStatCell}>
+            <span className={styles.ticketStatLabel}>{t('tradeForm.ticketFeeLabel')}</span>
+            <span className={styles.ticketStatValue}>{ticket.fee.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+    </div>
   )
 }

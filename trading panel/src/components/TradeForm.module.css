@@ -1,11 +1,287 @@
+/* "טיקט מסחר" - פריסת 2 עמודות (trade-form-directions.html כיוון 1): שדות הקלט בעמודה
+   הרחבה, פאנל הטיקט הדביק בעמודה הצרה. grid רגיל תחת dir=rtl (בלי order הפוך) - הפריט
+   הראשון במקור (הטופס) נופל מימין, הטיקט משמאל, באופן טבעי. מ-900px ומטה (כמו PillNav's
+   .navLabel breakpoint) הטיקט עולה לראש הטופס - אין מספיק רוחב לשתי עמודות. */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 20px;
+  align-items: start;
+  max-width: 1020px;
+  margin: 0 auto;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+
+  .ticketCol {
+    order: -1;
+    position: static !important;
+  }
+}
+
 .form {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: 24px;
-  max-width: 640px;
-  margin: 0 auto;
   box-sizing: border-box;
+  min-width: 0;
+}
+
+.ticketCol {
+  position: sticky;
+  top: 80px;
+  min-width: 0;
+}
+
+.ticket {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ticketHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ticketSymbol {
+  font-family: var(--mono);
+  font-weight: 800;
+  font-size: 22px;
+  color: var(--text-h);
+  direction: ltr;
+  unicode-bidi: isolate;
+  letter-spacing: -0.01em;
+  margin-top: 2px;
+}
+
+.ticketBadge {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 4px 11px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.ticketBadgeLong {
+  background: var(--pnl-pos-bg);
+  color: var(--pnl-pos-2);
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.ticketBadgeShort {
+  background: var(--pnl-neg-bg);
+  color: var(--pnl-neg-2);
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.ticketPerf {
+  position: relative;
+  padding-top: 14px;
+  border-top: 1.5px dashed var(--border-hi);
+}
+
+.ticketPnlLabel {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.ticketPnlValue {
+  font-family: var(--mono);
+  font-weight: 800;
+  font-size: 28px;
+  direction: ltr;
+  unicode-bidi: isolate;
+  margin-top: 4px;
+  line-height: 1;
+}
+
+.ticketPnlNeutral {
+  color: var(--text-dim);
+  font-size: 20px;
+}
+
+.ticketPnlSub {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--text-dim);
+  margin-top: 6px;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.ticketRrRow {
+  display: flex;
+  gap: 10px;
+}
+
+.ticketRrCell {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(var(--overlay-tint), 0.02);
+}
+
+.ticketRrLabel {
+  display: block;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.ticketRrValue {
+  display: block;
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-h);
+  margin-top: 3px;
+  direction: ltr;
+  unicode-bidi: isolate;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ticketRrCellRisk .ticketRrValue {
+  color: var(--pnl-neg-2);
+}
+
+.ticketRrCellReward .ticketRrValue {
+  color: var(--pnl-pos-2);
+}
+
+/* ציר Stop <-> Entry <-> Take/Exit - direction:ltr מפורש (כמו .num בכל האפליקציה) כדי
+   שהציר תמיד יקרא "נמוך משמאל, גבוה מימין" ללא תלות בשפת הממשק (he=rtl, en/es/fr=ltr). */
+.ticketNumlineWrap {
+  direction: ltr;
+}
+
+.ticketNumlineLabels {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+.ticketNumline {
+  position: relative;
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(var(--overlay-tint), 0.06);
+}
+
+.ticketNumlineSegRisk,
+.ticketNumlineSegReward {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 99px;
+}
+
+.ticketNumlineSegRisk {
+  background: linear-gradient(90deg, var(--pnl-neg), var(--pnl-neg-2));
+  opacity: 0.55;
+}
+
+.ticketNumlineSegReward {
+  background: linear-gradient(90deg, var(--pnl-pos), var(--pnl-pos-2));
+  opacity: 0.55;
+}
+
+.ticketNumlineMark {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--bg-2);
+}
+
+.ticketMarkEntry {
+  background: var(--accent-2);
+  box-shadow: 0 0 10px rgba(var(--amber-rgb), 0.6);
+  z-index: 3;
+}
+
+.ticketMarkStop {
+  background: var(--pnl-neg-2);
+  z-index: 2;
+}
+
+.ticketMarkTake {
+  background: var(--pnl-pos-2);
+  z-index: 2;
+}
+
+.ticketMarkExit {
+  background: var(--text-h);
+  width: 9px;
+  height: 9px;
+  z-index: 4;
+}
+
+.ticketStatStrip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--border);
+}
+
+.ticketStatCell {
+  background: var(--bg-2);
+  padding: 9px 10px;
+  min-width: 0;
+}
+
+.ticketStatLabel {
+  display: block;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.ticketStatValue {
+  display: block;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-h);
+  margin-top: 3px;
+  direction: ltr;
+  unicode-bidi: isolate;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .formTitle {

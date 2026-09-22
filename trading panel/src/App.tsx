@@ -256,6 +256,18 @@ function App() {
     )
   }
 
+  /** נקרא מ-PillNav's badge popover כשנלחצת תבנית נעולה (Basic עם תבנית קיימת) - מנווט
+   * לטאב Settings וגורם ל-WorkspaceSettings לגלול לסעיף "Trading style" + לפתוח את טופס
+   * ה-switch-code מוכן מראש עם היעד שנלחץ (לא בונה שם UI מקביל, ראה WorkspaceSettings.tsx). */
+  const [templateSettingsFocus, setTemplateSettingsFocus] = useState<{ signal: number; template: WorkspaceTemplate | null }>({
+    signal: 0,
+    template: null,
+  })
+  const openTemplateSettings = (template?: WorkspaceTemplate) => {
+    setTemplateSettingsFocus((prev) => ({ signal: prev.signal + 1, template: template ?? null }))
+    handleChangeTab('settings')
+  }
+
   const switchWorkspace = async (id: string) => {
     if (id === activeWorkspaceId) return
     closeForm()
@@ -400,6 +412,10 @@ function App() {
         <PillNav
           tab={tab}
           onChangeTab={handleChangeTab}
+          workspace={workspace}
+          tier={tier}
+          onTemplateSelected={handleTemplateSelected}
+          onOpenTemplateSettings={openTemplateSettings}
           actions={
             <>
               <WorkspaceSwitcher
@@ -502,6 +518,8 @@ function App() {
               onTradesUpdated={handleTradesUpdated}
               onOpenAccessCode={() => openAccessModal(t('workspaceSettings.modalHint'))}
               onTemplateSelected={handleTemplateSelected}
+              focusTemplateSignal={templateSettingsFocus.signal}
+              presetSwitchTemplate={templateSettingsFocus.template}
             />
           )}
         </main>

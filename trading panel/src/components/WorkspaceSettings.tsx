@@ -43,6 +43,13 @@ interface WorkspaceSettingsProps {
   /** נקרא אחרי שהתבנית נשמרה בהצלחה (TemplatePicker) - זהה ל-App.tsx's handleTemplateSelected
    * שכבר מועבר ל-Tools, כאן משמש כדי לעדכן את אותו state כשהבחירה קורית מכאן. */
   onTemplateSelected: (template: WorkspaceTemplate) => void
+  /** מספר שעולה בכל פעם ש-PillNav's badge popover ניווט לכאן (תבנית נעולה שנלחצה) - גורם
+   * לגלילה אל סעיף "Trading style" + פתיחת טופס ה-switch-code (אם רלוונטי, ר' `presetSwitchTemplate`).
+   * לא מוגדר/0 = לא לגלול (ניווט רגיל לטאב Settings, לא דרך ה-badge). */
+  focusTemplateSignal?: number
+  /** התבנית הנעולה שנלחצה ב-badge popover - כשמוגדר ואי-אפשר לבחור ישירות (Basic עם תבנית
+   * קיימת), פותח את טופס ה-switch-code עם התבנית הזו כבר נבחרת, כדי שלא יצטרך לבחור שוב. */
+  presetSwitchTemplate?: WorkspaceTemplate | null
 }
 
 /**
@@ -64,6 +71,8 @@ export function WorkspaceSettings({
   onTradesUpdated,
   onOpenAccessCode,
   onTemplateSelected,
+  focusTemplateSignal,
+  presetSwitchTemplate,
 }: WorkspaceSettingsProps) {
   const { t } = useLanguage()
 
@@ -132,6 +141,23 @@ export function WorkspaceSettings({
   const [switchTemplate, setSwitchTemplate] = useState<WorkspaceTemplate | ''>('')
   const [switchSubmitting, setSwitchSubmitting] = useState(false)
   const [switchError, setSwitchError] = useState<string | null>(null)
+
+  // ניווט מ-PillNav's badge popover (תבנית נעולה שנלחצה) - גולל לסעיף הזה ופותח את טופס
+  // ה-switch-code מוכן-מראש, במקום UI מקביל בתוך הפופאובר עצמו (ר' focusTemplateSignal ב-props).
+  const templateSectionRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!focusTemplateSignal) return
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    templateSectionRef.current?.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' })
+    if (presetSwitchTemplate && !canPickTemplateDirectly) {
+      setPickerOpen(false)
+      setSwitchError(null)
+      setSwitchCode('')
+      setSwitchTemplate(presetSwitchTemplate)
+      setSwitchFormOpen(true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusTemplateSignal])
 
   const handleTemplatePicked = (template: WorkspaceTemplate) => {
     onTemplateSelected(template)
@@ -461,7 +487,7 @@ export function WorkspaceSettings({
         </div>
       </div>
 
-      <div className={styles.section}>
+      <div className={styles.section} ref={templateSectionRef}>
         <div className={styles.sectionHead}>
           <h3 className={styles.sectionTitle}>{t('workspaceSettings.templateTitle')}</h3>
           <span className={styles.sectionHint}>{t('workspaceSettings.templateHint')}</span>

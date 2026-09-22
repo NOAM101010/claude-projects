@@ -315,53 +315,67 @@ export function Dashboard({
 
       <div className={styles.kpiGroup}>
         <h3 className={`eyebrow ${styles.kpiGroupTitle}`}>{t('dashboard.groupPerformance')}</h3>
-        <div className={styles.performanceGrid}>
-          <div className={`${styles.kpiCard} metal-panel holo-edge`}>
-            <span className={styles.kpiLabel}>{t('dashboard.kpiProfitFactor')}</span>
-            <span
-              className={`${styles.kpiValue} ${pf === null || pf >= 1 ? styles.positive : styles.negative}`}
-              title={pf === null ? '∞' : pf.toFixed(2)}
-            >
-              {pf === null ? '∞' : pf.toFixed(2)}
-            </span>
-          </div>
-          <div className={`${styles.kpiCard} metal-panel holo-edge`}>
-            <span className={styles.kpiLabel}>{t('dashboard.kpiExpectancy')}</span>
-            <span
-              className={`${styles.kpiValue} ${exp >= 0 ? styles.positive : styles.negative}`}
-              title={formatBase(exp, baseCurrency, locale)}
-            >
-              {formatBase(exp, baseCurrency, locale)}
-            </span>
-          </div>
-          <div className={`${styles.kpiCard} metal-panel holo-edge`}>
-            <span className={styles.kpiLabel}>{t('dashboard.kpiAvgWin')}</span>
-            <span className={`${styles.kpiValue} ${styles.positive}`} title={formatBase(avgWin, baseCurrency, locale)}>
-              {formatBase(avgWin, baseCurrency, locale)}
-            </span>
-          </div>
-          <div className={`${styles.kpiCard} metal-panel holo-edge`}>
-            <span className={styles.kpiLabel}>{t('dashboard.kpiAvgLoss')}</span>
-            <span className={`${styles.kpiValue} ${styles.negative}`} title={formatBase(avgLoss, baseCurrency, locale)}>
-              {formatBase(avgLoss, baseCurrency, locale)}
-            </span>
-          </div>
-          <div className={`${styles.kpiCard} metal-panel holo-edge`}>
-            <span className={styles.kpiLabel}>{t('dashboard.kpiAvgRR')}</span>
-            <span className={styles.kpiValue} title={rr === null ? '—' : `1:${rr.toFixed(2)}`}>
-              {rr === null ? '—' : `1:${rr.toFixed(2)}`}
-            </span>
-          </div>
-          {showFeesPaid && (
-            <div className={`${styles.kpiCard} metal-panel holo-edge`}>
-              <span className={styles.kpiLabel}>{t('dashboard.kpiTotalFees')}</span>
-              {/* `formatCurrency` (בלי signDisplay) בכוונה, לא `formatBase` - עמלה היא לא
-                  "רווח"/"הפסד", אין טעם ל-"+" מלפנים כמו בשאר האריחים במסך הזה. */}
-              <span className={styles.kpiValue} title={formatCurrency(feesPaid, baseCurrency, locale)}>
-                {formatCurrency(feesPaid, baseCurrency, locale)}
-              </span>
+        {/* 5 אריחים דקים -> 2 כרטיסים רחבים (dashboard-layout-c-consolidated.html כיוון ג') -
+            אותם מספרים בדיוק, רק ארגון ויזואלי: "כלכלת עסקאות" (Profit Factor/Expectancy/
+            Avg Win) + "סיכון" (Avg Loss/Avg R:R/עמלות). עמלות עדיין מותנה ב-showFeesPaid. */}
+        <div className={styles.wideGrid}>
+          <div className={`${styles.wideCard} metal-panel holo-edge`}>
+            <h4 className={styles.wideCardTitle}>{t('dashboard.groupPerformanceEconomicsTitle')}</h4>
+            <div className={styles.wideRow}>
+              <div className={styles.wideStat}>
+                <span className={styles.kpiLabel}>{t('dashboard.kpiProfitFactor')}</span>
+                <span
+                  className={`${styles.kpiValue} ${pf === null || pf >= 1 ? styles.positive : styles.negative}`}
+                  title={pf === null ? '∞' : pf.toFixed(2)}
+                >
+                  {pf === null ? '∞' : pf.toFixed(2)}
+                </span>
+              </div>
+              <div className={styles.wideStat}>
+                <span className={styles.kpiLabel}>{t('dashboard.kpiExpectancy')}</span>
+                <span
+                  className={`${styles.kpiValue} ${exp >= 0 ? styles.positive : styles.negative}`}
+                  title={formatBase(exp, baseCurrency, locale)}
+                >
+                  {formatBase(exp, baseCurrency, locale)}
+                </span>
+              </div>
+              <div className={styles.wideStat}>
+                <span className={styles.kpiLabel}>{t('dashboard.kpiAvgWin')}</span>
+                <span className={`${styles.kpiValue} ${styles.positive}`} title={formatBase(avgWin, baseCurrency, locale)}>
+                  {formatBase(avgWin, baseCurrency, locale)}
+                </span>
+              </div>
             </div>
-          )}
+          </div>
+
+          <div className={`${styles.wideCard} metal-panel holo-edge`}>
+            <h4 className={styles.wideCardTitle}>{t('dashboard.groupPerformanceRiskTitle')}</h4>
+            <div className={styles.wideRow}>
+              <div className={styles.wideStat}>
+                <span className={styles.kpiLabel}>{t('dashboard.kpiAvgLoss')}</span>
+                <span className={`${styles.kpiValue} ${styles.negative}`} title={formatBase(avgLoss, baseCurrency, locale)}>
+                  {formatBase(avgLoss, baseCurrency, locale)}
+                </span>
+              </div>
+              <div className={styles.wideStat}>
+                <span className={styles.kpiLabel}>{t('dashboard.kpiAvgRR')}</span>
+                <span className={styles.kpiValue} title={rr === null ? '—' : `1:${rr.toFixed(2)}`}>
+                  {rr === null ? '—' : `1:${rr.toFixed(2)}`}
+                </span>
+              </div>
+              {showFeesPaid && (
+                <div className={styles.wideStat}>
+                  <span className={styles.kpiLabel}>{t('dashboard.kpiTotalFees')}</span>
+                  {/* `formatCurrency` (בלי signDisplay) בכוונה, לא `formatBase` - עמלה היא לא
+                      "רווח"/"הפסד", אין טעם ל-"+" מלפנים כמו בשאר האריחים במסך הזה. */}
+                  <span className={styles.kpiValue} title={formatCurrency(feesPaid, baseCurrency, locale)}>
+                    {formatCurrency(feesPaid, baseCurrency, locale)}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 

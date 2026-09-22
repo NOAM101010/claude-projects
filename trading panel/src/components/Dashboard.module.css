@@ -141,6 +141,39 @@
   }
 }
 
+/* "כלכלת עסקאות" + "סיכון" - 2 כרטיסים רחבים במקום 5 אריחי .kpiCard דקים
+   (dashboard-layout-c-consolidated.html כיוון ג') - display:contents בבסיס + grid דו-טורי
+   מ-860px, אותו דפוס בדיוק כמו .heroGrid/.behaviorGrid למעלה. */
+.wideGrid {
+  display: contents;
+}
+
+.wideCard {
+  border-radius: 16px;
+  padding: 18px 20px;
+  min-width: 0;
+}
+
+.wideCardTitle {
+  margin: 0 0 14px;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--text-h);
+}
+
+.wideRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 14px;
+}
+
+.wideStat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
 /* פידבק: StreakCard's "lg" באנר מלא-רוחב ליד 3 אריחים קטנים באותו grid יצר בדיוק את בעיית
    "אזור צבעוני גדול מצד אחד, קופסאות קטנות מנותקות מהצד השני" שכבר תוקנה קודם ב-
    BestWorstSpotlight/WeeklyRecapCard (ר' `.heroGrid`/`.spotlightGrid`) - הפתרון זהה: לא grid
@@ -443,7 +476,8 @@
   .chartsGrid,
   .groupsGrid,
   .spotlightGrid,
-  .behaviorGrid {
+  .behaviorGrid,
+  .wideGrid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 18px;
@@ -453,6 +487,25 @@
   .groupsGrid > .section,
   .spotlightGrid > .section {
     margin: 0;
+  }
+
+  /* תובנות: עמודות א-סימטריות (dashboard-layout-c-consolidated.html) - הכרטיסים ה"עשירים"
+     יותר (Loss Source/Setup Performance, בד"כ עם יותר שורות) מקבלים מעט יותר רוחב מ-
+     R-Multiple Distribution (כרטיס יחיד/קצר יותר בד"כ). לא grid רב-תאי אחיד. */
+  .insightsGrid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 0.8fr);
+    gap: 14px;
+    align-items: start;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .insightsGrid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
   }
 }
 
