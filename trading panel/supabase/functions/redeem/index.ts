@@ -7,6 +7,14 @@
 //   deviceId חדש ומגבלת המכשירים לקוד (ראה MAX_DEVICES_PER_CODE) כבר מוצתה, אז 403.
 //   קודי unlimited_devices=true (פיתוח/בדיקה אישי בלבד) פטורים ממגבלת המכשירים.
 // לא נוגע ב-mintAccessToken/APP_JWT_SECRET עצמם - רק מוסיף בדיקה לפני הקריאה להם.
+//
+// Rate limiting (029_redeem_rate_limit.sql): קוד גישה הוא אמצעי הזיהוי היחיד במוצר
+// (אין סיסמה) - בלי הגנה, ניחוש brute-force של קוד שכבר נוצל ע"י לקוח אחר מאפשר
+// להשתלט על החשבון שלו (redeemed_by branch למעלה מנפיק JWT ל-redeemed_by הקיים בלי
+// לבדוק שום דבר נוסף מלבד מגבלת מכשירים). recordRedeemAttempt נקראת בכל נקודת סיום
+// (הצלחה/קוד-לא-נמצא/kind-שגוי/מגבלת-מכשירים) ורושמת ל-redeem_attempts; אם מספר
+// הכשלים מאותו deviceId ב-RATE_LIMIT_WINDOW_MINUTES האחרונות עבר MAX_FAILED_ATTEMPTS,
+// דוחים מיידית ב-429 לפני כל שאילתה ל-access_codes (fail fast - לא חושף אם קוד קיים).
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.116.0'
 import { mintAccessToken } from '../_shared/jwt.ts'
 import { errorMessage, jsonResponse, preflightResponse } from '../_shared/http.ts'
@@ -14,6 +22,56 @@ import { errorMessage, jsonResponse, preflightResponse } from '../_shared/http.t
 const MAX_DEVICES_PER_CODE = 2
 /** מספר ניסיונות מקסימלי ל-appendDeviceWithRetry לפני שמוותרים - ראה שם. */
 const MAX_APPEND_ATTEMPTS = 5
+/** מספר ניסיונות כושלים מקסימלי לאותו deviceId בחלון הזמן, לפני חסימת 429 - ראה recordRedeemAttempt. */
+const MAX_FAILED_ATTEMPTS = 5
+const RATE_LIMIT_WINDOW_MINUTES = 10
+
+/**
+ * רושמת ניסיון redeem (הצלחה/כישלון) ל-redeem_attempts - best-effort בכוונה: זו טבלת
+ * bookkeeping משנית לצורך rate limiting, כשל בכתיבה אליה (למשל המיגרציה עוד לא רצה
+ * אצל משתמש קיים) לא אמור להפיל redeem עצמו - אותו עיקרון כמו recordSlTpChanges
+ * (src/lib/slTpHistoryApi.ts).
+ */
+async function recordRedeemAttempt(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  admin: any,
+  deviceId: string,
+  success: boolean,
+): Promise<void> {
+  try {
+    const { error } = await admin.from('redeem_attempts').insert({ device_id: deviceId, success })
+    if (error) throw error
+  } catch (err) {
+    console.error('[redeem] failed to record redeem attempt:', err)
+  }
+}
+
+/**
+ * סופרת ניסיונות כושלים בלבד מאותו deviceId בתוך חלון הזמן - ולא "כשלים רצופים מאז
+ * ההצלחה האחרונה", כדי שהצלחה מזוייפת/ביניים לא תאפס את המונה ותאפשר retries אינסופיים.
+ * best-effort: כשל בשאילתה עצמה (למשל הטבלה עוד לא קיימת) לא חוסם redeem לגיטימי -
+ * מתייחסים אליו כ"לא חסום" ומדפיסים אזהרה, בדיוק כמו listSlTpHistoryForTrades.
+ */
+async function isRateLimited(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  admin: any,
+  deviceId: string,
+): Promise<boolean> {
+  try {
+    const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60 * 1000).toISOString()
+    const { count, error } = await admin
+      .from('redeem_attempts')
+      .select('id', { count: 'exact', head: true })
+      .eq('device_id', deviceId)
+      .eq('success', false)
+      .gte('attempted_at', windowStart)
+    if (error) throw error
+    return (count ?? 0) >= MAX_FAILED_ATTEMPTS
+  } catch (err) {
+    console.error('[redeem] failed to check rate limit (treating as not limited):', err)
+    return false
+  }
+}
 
 interface RedeemBody {
   code?: string
@@ -110,18 +168,31 @@ Deno.serve(async (req) => {
 
     const admin = createClient(supabaseUrl, serviceRoleKey)
 
+    // Rate limiting (029_redeem_rate_limit.sql, ראה הערת המודול) - fail fast לפני כל
+    // שאילתה ל-access_codes, כך שגם קיום/אי-קיום קוד לא נחשף למי שכבר חסום.
+    if (await isRateLimited(admin, deviceId)) {
+      return jsonResponse(
+        { error: 'יותר מדי ניסיונות כושלים. נסה שוב בעוד כמה דקות, או פנה לתמיכה.' },
+        429,
+      )
+    }
+
     const { data: codeRow, error: codeError } = await admin
       .from('access_codes')
       .select('code, tier, kind, redeemed_by, redeemed_devices, unlimited_devices')
       .eq('code', code)
       .maybeSingle()
     if (codeError) throw codeError
-    if (!codeRow) return jsonResponse({ error: 'קוד גישה לא נמצא' }, 404)
+    if (!codeRow) {
+      await recordRedeemAttempt(admin, deviceId, false)
+      return jsonResponse({ error: 'קוד גישה לא נמצא' }, 404)
+    }
     // קודי 'template_switch' (026_template_switch_codes.sql) לא שדרוג דרגה כלל - נדחים כאן
     // בלי לגעת בכלום, לפני כל בדיקת redeemed_by/מכשירים. יש להם זרימה נפרדת לגמרי
     // (switch-template Edge Function). ברירת המחדל 'tier' על כל קוד קיים שומרת על ההתנהגות
     // המקורית ללא שינוי לאף קוד שכבר נמכר.
     if (codeRow.kind !== 'tier') {
+      await recordRedeemAttempt(admin, deviceId, false)
       return jsonResponse({ error: 'קוד זה אינו קוד שדרוג דרגה - נדרשת זרימה אחרת' }, 400)
     }
 
@@ -137,6 +208,7 @@ Deno.serve(async (req) => {
       const redeemedDevices = (codeRow.redeemed_devices as string[] | null) ?? []
       const appendResult = await appendDeviceWithRetry(admin, code, redeemedDevices, deviceId, Boolean(codeRow.unlimited_devices))
       if (!appendResult.ok) {
+        await recordRedeemAttempt(admin, deviceId, false)
         return jsonResponse(
           {
             error: `This access code is already active on the maximum number of devices (${MAX_DEVICES_PER_CODE}). Contact support if you need help.`,
@@ -180,6 +252,7 @@ Deno.serve(async (req) => {
         const redeemedDevices = (refetched.redeemed_devices as string[] | null) ?? []
         const appendResult = await appendDeviceWithRetry(admin, code, redeemedDevices, deviceId, Boolean(refetched.unlimited_devices))
         if (!appendResult.ok) {
+          await recordRedeemAttempt(admin, deviceId, false)
           return jsonResponse(
             {
               error: `This access code is already active on the maximum number of devices (${MAX_DEVICES_PER_CODE}). Contact support if you need help.`,
@@ -205,6 +278,7 @@ Deno.serve(async (req) => {
 
     const accessToken = await mintAccessToken(account.id, jwtSecret)
 
+    await recordRedeemAttempt(admin, deviceId, true)
     return jsonResponse({ accountId: account.id, accessToken, tier: account.tier })
   } catch (err) {
     return jsonResponse({ error: errorMessage(err) }, 500)
