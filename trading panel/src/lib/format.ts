@@ -44,6 +44,24 @@ export function formatCurrency(value: number, currency: CurrencyCode, locale?: s
 }
 
 /**
+ * כמו `formatCurrency` אבל בלי סימן/קוד המטבע - למקומות צרים מאוד (תא לוח-שנה במובייל,
+ * ר' `MonthlyCalendar.module.css` `.dayPnl`) שבהם אין מקום גם לסימן וגם לסכום המלא.
+ * שומר את הסימן (+/-), הפרדות אלפים והעשרוניות המדויקות של המטבע - אף ספרה לא נחתכת,
+ * רק הסמל מוסר (המטבע כבר מוצג בכותרת/בסטטיסטיקות שמעל הלוח).
+ */
+export function formatCurrencyCompact(value: number, currency: CurrencyCode, locale?: string): string {
+  const parts = new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: 2,
+  }).formatToParts(value)
+  return parts
+    .filter((p) => p.type !== 'currency' && p.type !== 'literal')
+    .map((p) => p.value)
+    .join('')
+}
+
+/**
  * ממיר ISO string לערך תואם input[type=datetime-local] בזמן המקומי (לא UTC).
  * `dateOnly=true` מחזיר רק את חלק התאריך (YYYY-MM-DD), תואם input[type=date] - למקרה
  * שה-workspace כיבה `requireExactTime` (ראה workspacesApi.ts/TradeForm.tsx). זורק את

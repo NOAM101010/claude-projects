@@ -2,7 +2,7 @@ import { ChevronLeft, ChevronRight, Share2 } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
 import { CALENDAR_DOW, MONTH_NAMES } from '../i18n/translations'
-import { formatCurrency } from '../lib/format'
+import { formatCurrency, formatCurrencyCompact } from '../lib/format'
 import { dailyPnl, dayActivityLevel, isTradeOpen, winRate } from '../lib/stats'
 import type { DailyPnl } from '../lib/stats'
 import { shareOrDownloadCanvas } from '../lib/canvasExport'
@@ -256,7 +256,7 @@ export function MonthlyCalendar({ trades, baseCurrency, onEditTrade }: MonthlyCa
                   {hasData ? (
                     <>
                       <span className={`num ${styles.dayPnl} ${day.data!.pnl >= 0 ? styles.positive : styles.negative}`}>
-                        {formatCurrency(day.data!.pnl, baseCurrency, locale)}
+                        {formatCurrencyCompact(day.data!.pnl, baseCurrency, locale)}
                       </span>
                       <span className={styles.dayTrades}>{t('monthlyCalendar.dayTradesCount', { count: day.data!.trades })}</span>
                     </>

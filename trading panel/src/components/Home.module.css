@@ -179,7 +179,7 @@
 @media (min-width: 1024px) {
   .stack {
     position: relative;
-    min-height: 230px;
+    min-height: 340px;
     display: block;
   }
 
@@ -204,7 +204,7 @@
   }
 
   .c2 {
-    top: 74px;
+    top: 112px;
     width: 88%;
     left: auto;
     right: 6%;
@@ -216,7 +216,7 @@
   }
 
   .c3 {
-    top: 148px;
+    top: 224px;
     width: 76%;
     left: auto;
     right: 12%;

@@ -262,7 +262,7 @@ export function TradeList({ trades, filter, onClearFilter, onAdd, onEdit, onDele
                 </tr>
               </thead>
               <tbody>
-                {sorted.map((trade, index) => {
+                {sorted.map((trade) => {
                   const sizePercent = maxPositionValue > 0 ? ((trade.entryPrice * trade.quantity) / maxPositionValue) * 100 : 0
                   const rowAccent = isTradeOpen(trade)
                     ? styles.rowNeutral
@@ -271,9 +271,9 @@ export function TradeList({ trades, filter, onClearFilter, onAdd, onEdit, onDele
                       : (trade.pnl ?? 0) < 0
                         ? styles.rowNegative
                         : styles.rowNeutral
-                  // "טרי" מסומן רק על הטרייד העדכני ביותר בתצוגה הנוכחית (index 0 אחרי המיון
-                  // לפי entryAt) - לא על כל שורה, כדי שהאפקט יישאר משמעותי ולא רועש.
-                  const isFreshest = index === 0
+                  // תג "LIVE" מסומן על כל טרייד פתוח (לא רק שורה 0) - מבוסס מצב הטרייד
+                  // ולא על מיקום בתצוגה הממוינת/מסוננת.
+                  const isFreshest = isTradeOpen(trade)
                   return (
                     <tr className={`${styles.row} ${rowAccent} ${isFreshest ? styles.rowFresh : ''} row-hover count-in`} key={trade.id}>
                       <td className={styles.symbol}>
