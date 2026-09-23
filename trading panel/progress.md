@@ -144,7 +144,17 @@ Every mockup-approved direction from the big design round (access gate, trade fo
 2. Live-verify the remaining not-yet-clicked-through items when real data supports it: Day trade-limit card's dots with actual today's trades, Portfolio-weight treemap with real open Long-term positions, both PNG export themes opened and visually inspected (not just clicked).
 3. The two new screens from the original brainstorm (Workspace Comparison for Pro, Goals) still need their own design mockup round before being built — separate from the 19-item list, not started.
 4. Revisit the Dashboard Insights-area merge question flagged in Round C1 if the user still wants those 5 cards visually unified, not just regrouped.
-5. The Swing Trader Vercel-10GB audit task (see below) — still not started, medium priority, gates deploy only.
+5. ✅ The Swing Trader Vercel-10GB audit task is done — see below.
+
+## Swing Trader Vercel-10GB audit — DONE (investigation + preventive fix)
+Investigated the sibling `C:\CLAUDE AI\TRAIDING\swing-trader` project's codebase (read-only, no changes made there — different project). **Root cause found, ranked by severity**:
+1. **Client-side polling every 10-15s with no `document.hidden` guard** (`market-indices.tsx:53` — 10s, `sector-heatmap.tsx:43` — 15s) — keeps firing even when the tab is backgrounded/minimized. A `command-center.tsx` component on the same page independently re-polls the *same* `/api/quotes/ticker` endpoint every 30s — two overlapping pollers hitting one endpoint.
+2. **Zero server-side caching** — every API route (`api/quotes/ticker`, `api/sectors`, `api/positions`, `api/regime`) sets `revalidate = 0` / `force-dynamic`, so every single poll re-fans-out to Yahoo Finance from scratch (up to 29 external calls per request on the ticker route alone).
+3. Cron jobs, static assets (~1.8MB total in `public/`), and bundle size were all ruled out as material contributors.
+4. Git history suggests a solo-dev project in active development, not a large user base — reinforcing that the *pattern* (aggressive uncached polling), not traffic volume, is what burned through 10GB fast.
+
+**TradePanel comparison — already in much better shape**: polling intervals are 60-120s (4-12× more conservative), and `market-indices`/`watchlist-prices` Edge Functions already have real caching (in-memory TTL + DB-backed fallback via `market_data_cache`, migration 011) — exactly the layer Swing Trader is missing. **One gap was shared, now fixed**: TradePanel had no `document.hidden` guard either. Added one to all 4 client-side polling sites (`useMarketData.ts`'s indices+crypto intervals, `OpenPositions.tsx`, `Tools.tsx`'s watchlist, `NotificationBell.tsx`) — polling now skips its fetch while the tab is hidden, plus an immediate refresh on `visibilitychange` back to visible (NotificationBell already had an equivalent via its existing `window.addEventListener('focus', ...)`, not duplicated). Pure addition, no UX change while the tab is active. `npx tsc --noEmit` clean, `npm run build` succeeds, `npx vitest run src` 317/317 pass.
+- Nothing changed in the Swing Trader project itself — it wasn't in scope to fix, only to learn from. If the user wants that project's actual issues fixed too, that's a separate task in that project's own session.
 
 ## Key decisions & context
 - User trades **Swing only** — for any Day/Long-term/Crypto feature suggestion, explicitly flag must-have vs nice-to-have (he can't judge domain relevance himself). Saved as a durable memory: `feedback_tradepanel_flag_must_have_by_style`.

@@ -53,6 +53,7 @@ export function useMarketData(ready: boolean): MarketDataState {
     if (!ready) return
     let cancelled = false
     const load = async () => {
+      if (document.hidden) return
       try {
         const result = await fetchStockIndices()
         if (!cancelled) {
@@ -67,9 +68,14 @@ export function useMarketData(ready: boolean): MarketDataState {
     }
     load()
     const id = setInterval(load, INDICES_REFRESH_MS)
+    const onVisibilityChange = () => {
+      if (!document.hidden) load()
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
     return () => {
       cancelled = true
       clearInterval(id)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
     }
   }, [ready])
 
@@ -77,6 +83,7 @@ export function useMarketData(ready: boolean): MarketDataState {
     if (!ready) return
     let cancelled = false
     const load = async () => {
+      if (document.hidden) return
       try {
         const [result, fearGreedResult] = await Promise.all([fetchCryptoPrices(), fetchFearGreedIndex()])
         if (!cancelled) {
@@ -92,9 +99,14 @@ export function useMarketData(ready: boolean): MarketDataState {
     }
     load()
     const id = setInterval(load, CRYPTO_REFRESH_MS)
+    const onVisibilityChange = () => {
+      if (!document.hidden) load()
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
     return () => {
       cancelled = true
       clearInterval(id)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
     }
   }, [ready])
 

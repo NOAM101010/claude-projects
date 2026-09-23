@@ -676,15 +676,21 @@ function Watchlist({ accountId, tier, focusSignal, onOpenAccessCode }: Watchlist
   useEffect(() => {
     let cancelled = false
     const refresh = () => {
+      if (document.hidden) return
       fetchWatchlistPrices().then((data) => {
         if (!cancelled) setQuotes(data)
       })
     }
     refresh()
     const interval = setInterval(refresh, LIVE_PRICE_REFRESH_MS)
+    const onVisibilityChange = () => {
+      if (!document.hidden) refresh()
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
     return () => {
       cancelled = true
       clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
     }
   }, [activeAlerts.length])
 

@@ -40,6 +40,7 @@ export function NotificationBell({ accountId, onOpenWatchlist }: { accountId: st
     let cancelled = false
 
     const refresh = () => {
+      if (document.hidden) return
       listNotifications(accountId)
         .then((rows) => {
           if (cancelled) return

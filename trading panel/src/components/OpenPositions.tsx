@@ -37,6 +37,7 @@ export function OpenPositions({ trades, baseCurrency }: OpenPositionsProps) {
     if (openTrades.length === 0) return
     let cancelled = false
     const refresh = () => {
+      if (document.hidden) return
       fetchOpenPositionPrices().then((data) => {
         if (!cancelled) {
           setQuotes(data)
@@ -46,9 +47,14 @@ export function OpenPositions({ trades, baseCurrency }: OpenPositionsProps) {
     }
     refresh()
     const interval = setInterval(refresh, LIVE_PRICE_REFRESH_MS)
+    const onVisibilityChange = () => {
+      if (!document.hidden) refresh()
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
     return () => {
       cancelled = true
       clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openTrades.length])
